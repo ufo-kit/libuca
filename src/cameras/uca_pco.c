@@ -11,7 +11,7 @@ static void uca_pco_destroy(struct uca_t *uca)
     pco_destroy(pco);
 }
 
-uint8_t uca_pco_init(struct uca_t *uca)
+int uca_pco_init(struct uca_t *uca)
 {
     pco = pco_init();
     if (!pco_active(pco)) {

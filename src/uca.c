@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "config.h"
 #include "uca.h"
 
 #ifdef HAVE_PCO_EDGE
