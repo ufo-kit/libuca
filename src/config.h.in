@@ -1,0 +1,4 @@
+
+#cmakedefine HAVE_PCO_EDGE
+#cmakedefine HAVE_PHOTON_FOCUS
+#cmakedefine HAVE_IPE_CAMERA
