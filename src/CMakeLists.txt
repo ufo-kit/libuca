@@ -15,10 +15,11 @@ set(uca_LIBS "")
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 find_package(PCO)
+find_package(FgLib5)
 find_package(ClSerMe4)
 
 # --- Add sources if camera access sources are available ----------------------
-if(PCO_FOUND AND CLSERME4_FOUND)
+if(PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
     set(HAVE_PCO_EDGE TRUE)
 
     set(uca_SRCS 
@@ -29,12 +30,14 @@ if(PCO_FOUND AND CLSERME4_FOUND)
     set(uca_LIBS 
         ${uca_LIBS}
         ${CLSERME4_LIBRARY}
+        ${FGLIB5_LIBRARY}
         ${PCO_LIBRARIES}
         )
 
     include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CLSERME4_INCLUDE_DIR}
+        ${FGLIB5_INCLUDE_DIR}
         ${PCO_INCLUDE_DIRS}
         )
 endif()

@@ -33,7 +33,7 @@ struct uca_t *uca_init()
     int i = 0;
     while (inits[i] != NULL) {
         uca_cam_init init = inits[i];
-        if (init(uca))
+        if (init(uca) != UCA_ERR_INIT_NOT_FOUND)
             return uca;
         i++;
     }
@@ -45,6 +45,8 @@ struct uca_t *uca_init()
 
 void uca_destroy(struct uca_t *uca)
 {
-    uca->cam_destroy(uca);
-    free(uca);
+    if (uca != NULL) {
+        uca->cam_destroy(uca);
+        free(uca);
+    }
 }

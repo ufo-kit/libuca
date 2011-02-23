@@ -3,6 +3,6 @@
 
 struct uca_t;
 
-int uca_pco_init(struct uca_t *uca);
+uint32_t uca_pco_init(struct uca_t *uca);
 
 #endif
