@@ -62,7 +62,6 @@ uint32_t uca_pco_init(struct uca_t *uca)
 {
     uca->user = (struct pco_cam_t *) malloc(sizeof(struct pco_cam_t));
 
-
     struct pco_cam_t *pco_cam = uca->user;
     struct pco_edge_t *pco = pco_cam->pco = pco_init();
 
@@ -86,11 +85,26 @@ uint32_t uca_pco_init(struct uca_t *uca)
     /* ... and some properties */
     pco_get_actual_size(pco, &uca->image_width, &uca->image_height);
 
-    /* Prepare camera for recording. */
+    /* Prepare camera for recording */
     pco_set_rec_state(pco, 0);
     pco_set_timestamp_mode(pco, 2);
     pco_set_timebase(pco, 1, 1); 
     pco_arm_camera(pco);
+
+    /* Prepare frame grabber for recording */
+    int val = FG_CL_8BIT_FULL_10;
+    Fg_setParameter(fg, FG_CAMERA_LINK_CAMTYP, &val, PORT_A);
+
+    val = FG_GRAY;
+    Fg_setParameter(fg, FG_FORMAT, &val, PORT_A);
+
+    val = FREE_RUN;
+    Fg_setParameter(fg, FG_TRIGGERMODE, &val, PORT_A);
+
+    Fg_setParameter(fg, FG_WIDTH, &uca->image_width, PORT_A);
+    Fg_setParameter(fg, FG_HEIGHT, &uca->image_height, PORT_A);
+
+    pco_set_rec_state(pco, 1);
 
     return 0;
 }

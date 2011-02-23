@@ -30,6 +30,14 @@ struct uca_t *uca_init()
 #endif
     NULL };
 
+    /* Set all function pointers to NULL and thus make the class abstract */
+    uca->cam_destroy = NULL;
+    uca->cam_set_dimensions = NULL;
+    uca->cam_set_bitdepth = NULL;
+    uca->cam_set_delay = NULL;
+    uca->cam_set_exposure = NULL;
+    uca->cam_acquire_image = NULL;
+
     int i = 0;
     while (inits[i] != NULL) {
         uca_cam_init init = inits[i];
@@ -38,7 +46,7 @@ struct uca_t *uca_init()
         i++;
     }
 
-    /* No camera found then return nothing */
+    /* No camera found then indicate error */
     free(uca);
     return NULL;
 }
