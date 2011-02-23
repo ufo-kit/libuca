@@ -74,6 +74,7 @@ int32_t uca_get_property_id(const char *property_name)
     while (property_map[i] != NULL) {
         if (!strcmp(property_map[i], property_name))
             return i;
+        i++;
     }
     return UCA_PROP_INVALID;
 }
