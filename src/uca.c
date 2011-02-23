@@ -38,6 +38,8 @@ struct uca_t *uca_init()
     uca->cam_set_exposure = NULL;
     uca->cam_acquire_image = NULL;
 
+    uca->camera_name = NULL;
+
     int i = 0;
     while (inits[i] != NULL) {
         uca_cam_init init = inits[i];

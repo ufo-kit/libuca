@@ -72,6 +72,8 @@ struct uca_t {
     unsigned int image_height;
     unsigned int image_bitdepth;
     unsigned int image_flags;
+
+    char *camera_name;
     
     /* Function pointers to camera-specific methods */
     uca_cam_set_dimensions  cam_set_dimensions;

@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <string.h>
 #include <clser.h>
 #include <fgrab_struct.h>
 #include <fgrab_prototyp.h>
@@ -56,6 +57,7 @@ static uint32_t uca_pco_destroy(struct uca_t *uca)
     Fg_FreeGrabber(GET_FG(uca));
     pco_destroy(GET_PCO(uca));
     free(uca->user);
+    free(uca->camera_name);
 }
 
 uint32_t uca_pco_init(struct uca_t *uca)
@@ -70,7 +72,7 @@ uint32_t uca_pco_init(struct uca_t *uca)
         return UCA_ERR_INIT_NOT_FOUND;
     }
 
-    pco_cam->fg = Fg_Init("libFullAreaGray8.so", 0);
+    Fg_Struct *fg = pco_cam->fg = Fg_Init("libFullAreaGray8.so", 0);
 
     pco_scan_and_set_baud_rate(pco);
 
@@ -84,6 +86,10 @@ uint32_t uca_pco_init(struct uca_t *uca)
 
     /* ... and some properties */
     pco_get_actual_size(pco, &uca->image_width, &uca->image_height);
+
+    SC2_Camera_Name_Response name;
+    if (pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name)) == PCO_NOERROR)
+        uca->camera_name = strdup(name.szName);
 
     /* Prepare camera for recording */
     pco_set_rec_state(pco, 0);

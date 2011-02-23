@@ -14,6 +14,9 @@ int main(int argc, char *argv[])
 
     uca->cam_set_dimensions(uca, &width, &height);
 
+    if (uca->camera_name != NULL)
+        printf("Camera name: %s\n", uca->camera_name);
+
     uca_destroy(uca);
     return 0;
 }
