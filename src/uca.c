@@ -31,14 +31,8 @@ struct uca_t *uca_init()
     NULL };
 
     /* Set all function pointers to NULL and thus make the class abstract */
-    uca->cam_destroy = NULL;
-    uca->cam_set_dimensions = NULL;
-    uca->cam_set_bitdepth = NULL;
-    uca->cam_set_delay = NULL;
-    uca->cam_set_exposure = NULL;
-    uca->cam_acquire_image = NULL;
-
-    uca->camera_name = NULL;
+    uca->cam_set_property = NULL;
+    uca->cam_get_property = NULL;
 
     int i = 0;
     while (inits[i] != NULL) {
@@ -59,4 +53,33 @@ void uca_destroy(struct uca_t *uca)
         uca->cam_destroy(uca);
         free(uca);
     }
+}
+
+static const char* property_map[] = {
+    "name",
+    "width",
+    "height",
+    "max-width",
+    "max-height",
+    "bit-depth",
+    "exposure",
+    "frame-rate",
+    NULL
+};
+
+int32_t uca_get_property_id(const char *property_name)
+{
+    char *name;
+    int i = 0;
+    while (property_map[i] != NULL) {
+        if (!strcmp(property_map[i], property_name))
+            return i;
+    }
+    return UCA_PROP_INVALID;
+}
+
+const char* uca_get_property_name(int32_t property_id)
+{
+    /* TODO: guard that thing */
+    return property_map[property_id];
 }

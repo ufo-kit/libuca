@@ -12,10 +12,13 @@ int main(int argc, char *argv[])
 
     uint32_t width = 2560, height = 2160;
 
-    uca->cam_set_dimensions(uca, &width, &height);
+    uca->cam_set_property(uca, UCA_PROP_WIDTH, &width);
+    uca->cam_set_property(uca, UCA_PROP_HEIGHT, &height);
 
-    if (uca->camera_name != NULL)
-        printf("Camera name: %s\n", uca->camera_name);
+    char camera_name[256] = "foobar";
+    uca->cam_get_property(uca, UCA_PROP_NAME, camera_name);
+
+    printf("Camera name: %s\n", camera_name);
 
     uca_destroy(uca);
     return 0;

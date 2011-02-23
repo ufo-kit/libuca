@@ -17,14 +17,6 @@ struct pco_cam_t {
 #define GET_FG(uca) (((struct pco_cam_t *)(uca->user))->fg)
 
 
-static uint32_t uca_pco_set_dimensions(struct uca_t *uca, uint32_t *width, uint32_t *height)
-{
-    Fg_Struct *fg = GET_FG(uca);
-    Fg_setParameter(fg, FG_WIDTH, width, PORT_A);
-    Fg_setParameter(fg, FG_HEIGHT, height, PORT_A);
-    return 0;
-}
-
 static uint32_t uca_pco_set_bitdepth(struct uca_t *uca, uint8_t *bitdepth)
 {
     /* TODO: it's not possible via CameraLink so do it via frame grabber */
@@ -57,7 +49,64 @@ static uint32_t uca_pco_destroy(struct uca_t *uca)
     Fg_FreeGrabber(GET_FG(uca));
     pco_destroy(GET_PCO(uca));
     free(uca->user);
-    free(uca->camera_name);
+}
+
+static uint32_t uca_pco_set_property(struct uca_t *uca, int32_t property, void *data)
+{
+    switch (property) {
+        case UCA_PROP_WIDTH:
+            Fg_setParameter(GET_FG(uca), FG_WIDTH, (uint32_t *) data, PORT_A);
+            break;
+
+        case UCA_PROP_HEIGHT:
+            Fg_setParameter(GET_FG(uca), FG_HEIGHT, (uint32_t *) data, PORT_A);
+            break;
+
+        case UCA_PROP_EXPOSURE:
+            uca_pco_set_exposure(uca, (uint32_t *) data);
+            break;
+
+        case UCA_PROP_FRAMERATE:
+            break;
+
+        default:
+            break;
+    }
+    return 0;
+}
+
+static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *data)
+{
+    struct pco_edge_t *pco = GET_PCO(uca);
+
+    switch (property) {
+        /* FIXME: how to ensure, that data is large enough? */
+        case UCA_PROP_NAME: 
+            {
+                SC2_Camera_Name_Response name;
+                if (pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name)) == PCO_NOERROR)
+                    strcpy((char *) data, name.szName);
+            }
+            break;
+
+        case UCA_PROP_MAX_WIDTH:
+            {
+                uint32_t w, h;
+                pco_get_actual_size(pco, &w, &h);
+                *((uint32_t *) data) = w;
+            }
+
+        case UCA_PROP_MAX_HEIGHT:
+            {
+                int w, h;
+                pco_get_actual_size(pco, &w, &h);
+                *((uint32_t *) data) = h;
+            }
+
+        default:
+            break;
+    }
+    return 0;
 }
 
 uint32_t uca_pco_init(struct uca_t *uca)
@@ -78,24 +127,18 @@ uint32_t uca_pco_init(struct uca_t *uca)
 
     /* Camera found, set function pointers... */
     uca->cam_destroy = &uca_pco_destroy;
-    uca->cam_set_dimensions = &uca_pco_set_dimensions;
-    uca->cam_set_bitdepth = &uca_pco_set_bitdepth;
-    uca->cam_set_exposure = &uca_pco_set_exposure;
-    uca->cam_set_delay = &uca_pco_set_delay;
+    uca->cam_set_property = &uca_pco_set_property;
+    uca->cam_get_property = &uca_pco_get_property;
     uca->cam_acquire_image = &uca_pco_acquire_image;
-
-    /* ... and some properties */
-    pco_get_actual_size(pco, &uca->image_width, &uca->image_height);
-
-    SC2_Camera_Name_Response name;
-    if (pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name)) == PCO_NOERROR)
-        uca->camera_name = strdup(name.szName);
 
     /* Prepare camera for recording */
     pco_set_rec_state(pco, 0);
     pco_set_timestamp_mode(pco, 2);
     pco_set_timebase(pco, 1, 1); 
     pco_arm_camera(pco);
+
+    if (pco->transfer.DataFormat != (SCCMOS_FORMAT_TOP_CENTER_BOTTOM_CENTER | PCO_CL_DATAFORMAT_5x16))
+        pco->transfer.DataFormat = SCCMOS_FORMAT_TOP_CENTER_BOTTOM_CENTER | PCO_CL_DATAFORMAT_5x16;
 
     /* Prepare frame grabber for recording */
     int val = FG_CL_8BIT_FULL_10;
@@ -107,8 +150,15 @@ uint32_t uca_pco_init(struct uca_t *uca)
     val = FREE_RUN;
     Fg_setParameter(fg, FG_TRIGGERMODE, &val, PORT_A);
 
-    Fg_setParameter(fg, FG_WIDTH, &uca->image_width, PORT_A);
-    Fg_setParameter(fg, FG_HEIGHT, &uca->image_height, PORT_A);
+    int width, height;
+    pco_get_actual_size(pco, &width, &height);
+
+    /* Yes, we really have to take an image twice as large because we set the
+     * CameraLink interface to 8-bit 10 Taps, but are actually using 5x16 bits. */
+    width *= 2;
+    height *= 2;
+    Fg_setParameter(fg, FG_WIDTH, &width, PORT_A);
+    Fg_setParameter(fg, FG_HEIGHT, &height, PORT_A);
 
     pco_set_rec_state(pco, 1);
 

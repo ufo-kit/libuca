@@ -27,70 +27,70 @@ typedef uint32_t (*uca_cam_init) (struct uca_t *uca);
 typedef uint32_t (*uca_cam_destroy) (struct uca_t *uca);
 
 /**
- * \brief Set dimension of grabbed images
- * \param[in] width Width of the image
- * \param[in] height Height of the image
- * \note input parameters might be changed if dimensions couldn't be set
+ * \brief Set a property
+ * \param[in] property_name Name of the property as defined in XXX
  */
-typedef uint32_t (*uca_cam_set_dimensions) (struct uca_t *uca, uint32_t *width, uint32_t *height);
+typedef uint32_t (*uca_cam_set_property) (struct uca_t *uca, int32_t property, void *data);
 
 /**
- * \brief Set bitdepth of grabbed images
+ * \brief Set a property
+ * \param[in] property_name Name of the property as defined in XXX
  */
-typedef uint32_t (*uca_cam_set_bitdepth) (struct uca_t *uca, uint8_t *bitdepth);
-
-/**
- * \brief Set exposure time in milliseconds
- */
-typedef uint32_t (*uca_cam_set_exposure) (struct uca_t *uca, uint32_t *exposure);
-
-/**
- * \brief Set delay time in milliseconds
- */
-typedef uint32_t (*uca_cam_set_delay) (struct uca_t *uca, uint32_t *delay);
+typedef uint32_t (*uca_cam_get_property) (struct uca_t *uca, int32_t property, void *data);
 
 /**
  * \brief Acquire one frame
  */
 typedef uint32_t (*uca_cam_acquire_image) (struct uca_t *uca, void *buffer);
 
+/**
+ * \brief Initialize the unified camera access interface
+ * \return Pointer to a uca_t structure
+ */
+struct uca_t *uca_init();
+
+/**
+ * \brief Free resources of the unified camera access interface
+ */
+void uca_destroy(struct uca_t *uca);
+
+/**
+ * \brief Convert a property string to the corresponding ID
+ */
+int32_t uca_get_property_id(const char *property_name);
+
+/**
+ * \brief Convert a property ID to the corresponding string 
+ */
+const char* uca_get_property_name(int32_t property_id);
+
 
 #define UCA_NO_ERROR                    0
-
 #define UCA_ERR_INIT_NOT_FOUND          1   /**< camera probing or initialization failed */
+#define UCA_ERR_PROP_INVALID            2
 
-#define UCA_ERR_DIMENSION_NOT_SUPPORTED 1
-
-#define UCA_ERR_BITDEPTH_NOT_SUPPORTED  1
-
-#define UCA_BIG_ENDIAN      1
-#define UCA_LITTLE_ENDIAN   2
+/* The property IDs must start with 0 and be continuous */
+#define UCA_PROP_INVALID    -1
+#define UCA_PROP_NAME       0
+#define UCA_PROP_WIDTH      1
+#define UCA_PROP_HEIGHT     2
+#define UCA_PROP_MAX_WIDTH  3
+#define UCA_PROP_MAX_HEIGHT 4
+#define UCA_PROP_BITDEPTH   5
+#define UCA_PROP_EXPOSURE   6
+#define UCA_PROP_FRAMERATE  7
 
 struct uca_t {
-    /* These must be set by uca_*_init() */
-    unsigned int image_width;
-    unsigned int image_height;
-    unsigned int image_bitdepth;
-    unsigned int image_flags;
-
-    char *camera_name;
-    
     /* Function pointers to camera-specific methods */
-    uca_cam_set_dimensions  cam_set_dimensions;
-    uca_cam_set_bitdepth    cam_set_bitdepth;
-    uca_cam_set_exposure    cam_set_exposure;
-    uca_cam_set_delay       cam_set_delay;
-
+    uca_cam_set_property    cam_set_property;
+    uca_cam_get_property    cam_get_property;
     uca_cam_acquire_image   cam_acquire_image;
 
     /* Private */
-    uca_cam_destroy cam_destroy;
+    uca_cam_destroy         cam_destroy;
 
     void *user; /**< private user data to be used by the camera driver */
 };
-
-struct uca_t *uca_init();
-void uca_destroy(struct uca_t *uca);
 
 
 #endif
