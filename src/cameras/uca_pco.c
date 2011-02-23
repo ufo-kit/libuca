@@ -70,9 +70,9 @@ static uint32_t uca_pco_set_property(struct uca_t *uca, int32_t property, void *
             break;
 
         default:
-            break;
+            return UCA_ERR_PROP_INVALID;
     }
-    return 0;
+    return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *data)
@@ -104,9 +104,9 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
             }
 
         default:
-            break;
+            return UCA_ERR_PROP_INVALID;
     }
-    return 0;
+    return UCA_NO_ERROR;
 }
 
 uint32_t uca_pco_init(struct uca_t *uca)

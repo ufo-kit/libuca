@@ -29,12 +29,14 @@ typedef uint32_t (*uca_cam_destroy) (struct uca_t *uca);
 /**
  * \brief Set a property
  * \param[in] property_name Name of the property as defined in XXX
+ * \return UCA_ERR_PROP_INVALID if property is not supported on the camera
  */
 typedef uint32_t (*uca_cam_set_property) (struct uca_t *uca, int32_t property, void *data);
 
 /**
  * \brief Set a property
  * \param[in] property_name Name of the property as defined in XXX
+ * \return UCA_ERR_PROP_INVALID if property is not supported on the camera
  */
 typedef uint32_t (*uca_cam_get_property) (struct uca_t *uca, int32_t property, void *data);
 
@@ -67,18 +69,23 @@ const char* uca_get_property_name(int32_t property_id);
 
 #define UCA_NO_ERROR                    0
 #define UCA_ERR_INIT_NOT_FOUND          1   /**< camera probing or initialization failed */
-#define UCA_ERR_PROP_INVALID            2
+#define UCA_ERR_PROP_INVALID            1   /**< the requested property is not supported by the camera */
 
-/* The property IDs must start with 0 and be continuous */
+/* The property IDs must start with 0 and must be continuous */
 #define UCA_PROP_INVALID    -1
 #define UCA_PROP_NAME       0
 #define UCA_PROP_WIDTH      1
 #define UCA_PROP_HEIGHT     2
-#define UCA_PROP_MAX_WIDTH  3
-#define UCA_PROP_MAX_HEIGHT 4
-#define UCA_PROP_BITDEPTH   5
-#define UCA_PROP_EXPOSURE   6
-#define UCA_PROP_FRAMERATE  7
+#define UCA_PROP_X_OFFSET   3
+#define UCA_PROP_Y_OFFSET   4
+#define UCA_PROP_MAX_WIDTH  5
+#define UCA_PROP_MAX_HEIGHT 6
+#define UCA_PROP_BITDEPTH   7
+#define UCA_PROP_EXPOSURE   8
+#define UCA_PROP_DELAY      9
+#define UCA_PROP_FRAMERATE  10 
+
+#define UCA_PROP_INTERLACE  -1
 
 struct uca_t {
     /* Function pointers to camera-specific methods */

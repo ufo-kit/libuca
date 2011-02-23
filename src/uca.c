@@ -59,10 +59,13 @@ static const char* property_map[] = {
     "name",
     "width",
     "height",
+    "x-offset",
+    "y-offset",
     "max-width",
     "max-height",
     "bit-depth",
     "exposure",
+    "delay",
     "frame-rate",
     NULL
 };
