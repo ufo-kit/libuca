@@ -67,6 +67,10 @@ static const char* property_map[] = {
     "exposure",
     "delay",
     "frame-rate",
+    "trigger-mode",
+    "interlace-sample-rate",
+    "interlace-pixel-threshold",
+    "interlace-row-threshold",
     NULL
 };
 

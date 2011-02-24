@@ -71,21 +71,37 @@ const char* uca_get_property_name(int32_t property_id);
 #define UCA_ERR_INIT_NOT_FOUND          1   /**< camera probing or initialization failed */
 #define UCA_ERR_PROP_INVALID            1   /**< the requested property is not supported by the camera */
 
-/* The property IDs must start with 0 and must be continuous */
-#define UCA_PROP_INVALID    -1
-#define UCA_PROP_NAME       0
-#define UCA_PROP_WIDTH      1
-#define UCA_PROP_HEIGHT     2
-#define UCA_PROP_X_OFFSET   3
-#define UCA_PROP_Y_OFFSET   4
-#define UCA_PROP_MAX_WIDTH  5
-#define UCA_PROP_MAX_HEIGHT 6
-#define UCA_PROP_BITDEPTH   7
-#define UCA_PROP_EXPOSURE   8
-#define UCA_PROP_DELAY      9
-#define UCA_PROP_FRAMERATE  10 
+/* The property IDs must start with 0 and must be continuous. Whenever this
+ * library is released, the IDs must not change to guarantee binary compatibility! */
+#define UCA_PROP_INVALID        -1
+#define UCA_PROP_NAME           0
+#define UCA_PROP_WIDTH          1
+#define UCA_PROP_HEIGHT         2
+#define UCA_PROP_X_OFFSET       3
+#define UCA_PROP_Y_OFFSET       4
+#define UCA_PROP_MAX_WIDTH      5
+#define UCA_PROP_MAX_HEIGHT     6
+#define UCA_PROP_BITDEPTH       7
+#define UCA_PROP_EXPOSURE       8
+#define UCA_PROP_DELAY          9
+#define UCA_PROP_FRAMERATE      10 
+#define UCA_PROP_TRIGGER_MODE   11
 
-#define UCA_PROP_INTERLACE  -1
+#define UCA_PROP_INTERLACE_SAMPLE_RATE  12
+#define UCA_PROP_INTERLACE_PIXEL_THRESH 13
+#define UCA_PROP_INTERLACE_ROW_THRESH   14
+
+#define UCA_PROP_CORRECTION_MODE        15
+
+/* Trigger mode for UCA_PROP_TRIGGERMODE */
+#define UCA_TRIGGER_AUTO        1
+#define UCA_TRIGGER_INTERNAL    2
+#define UCA_TRIGGER_EXTERNAL    3
+
+/* Correction modes for UCA_PROP_CORRECTION_MODE */
+#define UCA_CORRECT_OFFSET      0x01
+#define UCA_CORRECT_HOTPIXEL    0x02
+#define UCA_CORRECT_GAIN        0x04
 
 struct uca_t {
     /* Function pointers to camera-specific methods */
