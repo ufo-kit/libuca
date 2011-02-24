@@ -89,11 +89,20 @@ const char* uca_get_property_name(int32_t property_id);
 #define UCA_PROP_FRAMERATE      10 
 #define UCA_PROP_TRIGGER_MODE   11
 
-#define UCA_PROP_INTERLACE_SAMPLE_RATE  12
-#define UCA_PROP_INTERLACE_PIXEL_THRESH 13
-#define UCA_PROP_INTERLACE_ROW_THRESH   14
+/* pco.edge specific */
+#define UCA_PROP_TIMESTAMP_MODE 12
 
-#define UCA_PROP_CORRECTION_MODE        15
+/* IPE camera specific */
+#define UCA_PROP_INTERLACE_SAMPLE_RATE  13
+#define UCA_PROP_INTERLACE_PIXEL_THRESH 14
+#define UCA_PROP_INTERLACE_ROW_THRESH   15
+
+/* Photon Focus specific */
+#define UCA_PROP_CORRECTION_MODE        16
+
+/* Possible timestamp modes for UCA_PROP_TIMESTAMP_MODE */
+#define UCA_TIMESTAMP_ASCII     0x01
+#define UCA_TIMESTAMP_BINARY    0x02
 
 /* Trigger mode for UCA_PROP_TRIGGERMODE */
 #define UCA_TRIGGER_AUTO        1
