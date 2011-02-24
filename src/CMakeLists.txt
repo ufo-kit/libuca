@@ -14,7 +14,10 @@ set(uca_LIBS "")
 # --- Find packages and libraries ---------------------------------------------
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# --- Find camera interfaces
 find_package(PCO)
+
+# --- Find frame grabber interfaces
 find_package(FgLib5)
 find_package(ClSerMe4)
 
@@ -40,6 +43,10 @@ if(PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
         ${FGLIB5_INCLUDE_DIR}
         ${PCO_INCLUDE_DIRS}
         )
+endif()
+
+if(CLSERME4_FOUND AND FGLIB5_FOUND)
+    set(HAVE_ME4_FRAMEGRABBER TRUE)
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
