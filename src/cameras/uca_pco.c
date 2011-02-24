@@ -26,22 +26,26 @@ static uint32_t uca_pco_set_bitdepth(struct uca_t *uca, uint8_t *bitdepth)
 static uint32_t uca_pco_set_exposure(struct uca_t *uca, uint32_t *exposure)
 {
     uint32_t e, d;
-    pco_get_delay_exposure(GET_PCO(uca), &d, &e);
-    pco_set_delay_exposure(GET_PCO(uca), d, *exposure);
-    return 0;
+    if (pco_get_delay_exposure(GET_PCO(uca), &d, &e) != PCO_NOERROR)
+        return UCA_ERR_PROP_GENERAL;
+    if (pco_set_delay_exposure(GET_PCO(uca), d, *exposure) != PCO_NOERROR)
+        return UCA_ERR_PROP_GENERAL;
+    return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_set_delay(struct uca_t *uca, uint32_t *delay)
 {
     uint32_t e, d;
-    pco_get_delay_exposure(GET_PCO(uca), &d, &e);
-    pco_set_delay_exposure(GET_PCO(uca), *delay, e);
-    return 0;
+    if (pco_get_delay_exposure(GET_PCO(uca), &d, &e) != PCO_NOERROR)
+        return UCA_ERR_PROP_GENERAL;
+    if (pco_set_delay_exposure(GET_PCO(uca), *delay, e) != PCO_NOERROR)
+        return UCA_ERR_PROP_GENERAL;
+    return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_acquire_image(struct uca_t *uca, void *buffer)
 {
-    return 0;
+    return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_destroy(struct uca_t *uca)
@@ -49,6 +53,7 @@ static uint32_t uca_pco_destroy(struct uca_t *uca)
     Fg_FreeGrabber(GET_FG(uca));
     pco_destroy(GET_PCO(uca));
     free(uca->user);
+    return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_set_property(struct uca_t *uca, int32_t property, void *data)
@@ -63,11 +68,10 @@ static uint32_t uca_pco_set_property(struct uca_t *uca, int32_t property, void *
             break;
 
         case UCA_PROP_EXPOSURE:
-            uca_pco_set_exposure(uca, (uint32_t *) data);
-            break;
+            return uca_pco_set_exposure(uca, (uint32_t *) data);
 
-        case UCA_PROP_FRAMERATE:
-            break;
+        case UCA_PROP_DELAY:
+            return uca_pco_set_delay(uca, (uint32_t *) data);
 
         default:
             return UCA_ERR_PROP_INVALID;

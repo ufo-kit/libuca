@@ -69,7 +69,9 @@ const char* uca_get_property_name(int32_t property_id);
 
 #define UCA_NO_ERROR                    0
 #define UCA_ERR_INIT_NOT_FOUND          1   /**< camera probing or initialization failed */
-#define UCA_ERR_PROP_INVALID            1   /**< the requested property is not supported by the camera */
+#define UCA_ERR_PROP_INVALID            2   /**< the requested property is not supported by the camera */
+#define UCA_ERR_PROP_GENERAL            3   /**< error occured reading/writing the property */
+
 
 /* The property IDs must start with 0 and must be continuous. Whenever this
  * library is released, the IDs must not change to guarantee binary compatibility! */
