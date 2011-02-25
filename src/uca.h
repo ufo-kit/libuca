@@ -91,28 +91,28 @@ const char* uca_get_property_name(int32_t property_id);
 #define UCA_PROP_HEIGHT         4
 #define UCA_PROP_HEIGHT_MIN     5
 #define UCA_PROP_HEIGHT_MAX     6
-#define UCA_PROP_X_OFFSET       3
-#define UCA_PROP_Y_OFFSET       4
-#define UCA_PROP_MAX_WIDTH      5
-#define UCA_PROP_MAX_HEIGHT     6
-#define UCA_PROP_BITDEPTH       7
-#define UCA_PROP_EXPOSURE       8
-#define UCA_PROP_EXPOSURE_MIN   9
-#define UCA_PROP_EXPOSURE_MAX   10
-#define UCA_PROP_DELAY          11
-#define UCA_PROP_DELAY_MIN      12
-#define UCA_PROP_DELAY_MAX      13
-#define UCA_PROP_FRAMERATE      14 
-#define UCA_PROP_TRIGGER_MODE   15
+#define UCA_PROP_X_OFFSET       7
+#define UCA_PROP_Y_OFFSET       8
+#define UCA_PROP_MAX_WIDTH      9
+#define UCA_PROP_MAX_HEIGHT     10
+#define UCA_PROP_BITDEPTH       11
+#define UCA_PROP_EXPOSURE       12
+#define UCA_PROP_EXPOSURE_MIN   13
+#define UCA_PROP_EXPOSURE_MAX   14
+#define UCA_PROP_DELAY          15
+#define UCA_PROP_DELAY_MIN      16
+#define UCA_PROP_DELAY_MAX      17
+#define UCA_PROP_FRAMERATE      18 
+#define UCA_PROP_TRIGGER_MODE   19
 
 /* pco.edge specific */
-#define UCA_PROP_TIMESTAMP_MODE 16
-#define UCA_PROP_SCAN_MODE      17
+#define UCA_PROP_TIMESTAMP_MODE 20
+#define UCA_PROP_SCAN_MODE      21
 
 /* IPE camera specific */
-#define UCA_PROP_INTERLACE_SAMPLE_RATE  18
-#define UCA_PROP_INTERLACE_PIXEL_THRESH 19
-#define UCA_PROP_INTERLACE_ROW_THRESH   20
+#define UCA_PROP_INTERLACE_SAMPLE_RATE  22
+#define UCA_PROP_INTERLACE_PIXEL_THRESH 23
+#define UCA_PROP_INTERLACE_ROW_THRESH   24
 
 /* Photon Focus specific */
 #define UCA_PROP_CORRECTION_MODE        21
@@ -136,6 +136,7 @@ struct uca_t {
     uca_cam_set_property    cam_set_property;
     uca_cam_get_property    cam_get_property;
     uca_cam_acquire_image   cam_acquire_image;
+    uca_cam_alloc           cam_alloc;
 
     /* Private */
     uca_cam_destroy         cam_destroy;

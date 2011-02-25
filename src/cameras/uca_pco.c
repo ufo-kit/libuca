@@ -16,6 +16,8 @@ struct pco_cam_t {
 #define GET_PCO(uca) (((struct pco_cam_t *)(uca->user))->pco)
 #define GET_FG(uca) (((struct pco_cam_t *)(uca->user))->fg)
 
+#define set_void(p, type, value) { *((type *) p) = value; }
+
 
 static uint32_t uca_pco_set_bitdepth(struct uca_t *uca, uint8_t *bitdepth)
 {
@@ -91,6 +93,7 @@ static uint32_t uca_pco_set_property(struct uca_t *uca, int32_t property, void *
     return UCA_NO_ERROR;
 }
 
+
 static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *data)
 {
     struct pco_edge_t *pco = GET_PCO(uca);
@@ -110,9 +113,25 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
                 return UCA_ERR_PROP_GENERAL;
             break;
 
+        case UCA_PROP_WIDTH_MIN:
+            set_void(data, uint32_t, 1);
+            break;
+
+        case UCA_PROP_WIDTH_MAX:
+            set_void(data, uint32_t, pco->description.wMaxHorzResStdDESC);
+            break;
+
         case UCA_PROP_HEIGHT:
             if (Fg_getParameter(GET_FG(uca), FG_HEIGHT, (uint32_t *) data, PORT_A) != FG_OK)
                 return UCA_ERR_PROP_GENERAL;
+            break;
+
+        case UCA_PROP_HEIGHT_MIN:
+            set_void(data, uint32_t, 1);
+            break;
+
+        case UCA_PROP_HEIGHT_MAX:
+            set_void(data, uint32_t, pco->description.wMaxVertResStdDESC);
             break;
 
         case UCA_PROP_X_OFFSET:
@@ -125,19 +144,21 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
                 return UCA_ERR_PROP_GENERAL;
             break;
 
-        case UCA_PROP_MAX_WIDTH:
-            {
-                uint32_t w, h;
-                pco_get_actual_size(pco, &w, &h);
-                *((uint32_t *) data) = w;
-            }
+        case UCA_PROP_DELAY_MIN:
+            set_void(data, uint32_t, pco->description.dwMinDelayDESC);
+            break;
 
-        case UCA_PROP_MAX_HEIGHT:
-            {
-                int w, h;
-                pco_get_actual_size(pco, &w, &h);
-                *((uint32_t *) data) = h;
-            }
+        case UCA_PROP_DELAY_MAX:
+            set_void(data, uint32_t, pco->description.dwMaxDelayDESC);
+            break;
+
+        case UCA_PROP_EXPOSURE_MIN:
+            set_void(data, uint32_t, pco->description.dwMinExposureDESC);
+            break;
+
+        case UCA_PROP_EXPOSURE_MAX:
+            set_void(data, uint32_t, pco->description.dwMaxExposureDESC);
+            break;
 
         default:
             return UCA_ERR_PROP_INVALID;
@@ -157,14 +178,18 @@ uint32_t uca_pco_init(struct uca_t *uca)
     struct pco_cam_t *pco_cam = uca->user;
     struct pco_edge_t *pco = pco_cam->pco = pco_init();
 
+    if (pco == NULL) {
+        free(uca->user);
+        return UCA_ERR_INIT_NOT_FOUND;
+    }
+
     if ((pco->serial_ref == NULL) || !pco_active(pco)) {
+        free(uca->user);
         pco_destroy(pco);
         return UCA_ERR_INIT_NOT_FOUND;
     }
 
     Fg_Struct *fg = pco_cam->fg = Fg_Init("libFullAreaGray8.so", 0);
-
-    pco_scan_and_set_baud_rate(pco);
 
     /* Camera found, set function pointers... */
     uca->cam_destroy = &uca_pco_destroy;
