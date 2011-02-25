@@ -23,9 +23,11 @@ struct uca_t *uca_init()
     uca_cam_init inits[] = {
 #ifdef HAVE_PCO_EDGE
         uca_pco_init,
-#elif HAVE_PHOTON_FOCUS
+#endif
+#ifdef HAVE_PHOTON_FOCUS
         uca_pf_init,
-#elif HAVE_IPE_CAM
+#endif
+#ifdef HAVE_IPE_CAM
         uca_ipe_init,
 #endif
     NULL };
