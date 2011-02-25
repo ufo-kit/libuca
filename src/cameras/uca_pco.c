@@ -99,9 +99,9 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
     struct pco_edge_t *pco = GET_PCO(uca);
 
     switch (property) {
-        /* FIXME: how to ensure, that data is large enough? */
         case UCA_PROP_NAME: 
             {
+                /* FIXME: how to ensure, that buffer is large enough? */
                 SC2_Camera_Name_Response name;
                 if (pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name)) == PCO_NOERROR)
                     strcpy((char *) data, name.szName);
@@ -109,8 +109,11 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
             break;
 
         case UCA_PROP_WIDTH:
-            if (Fg_getParameter(GET_FG(uca), FG_WIDTH, (uint32_t *) data, PORT_A) != FG_OK)
-                return UCA_ERR_PROP_GENERAL;
+            {
+                int w, h;
+                if (pco_get_actual_size(pco, &w, &h) == PCO_NOERROR)
+                    set_void(data, uint32_t, w);
+            }
             break;
 
         case UCA_PROP_WIDTH_MIN:
@@ -122,8 +125,11 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
             break;
 
         case UCA_PROP_HEIGHT:
-            if (Fg_getParameter(GET_FG(uca), FG_HEIGHT, (uint32_t *) data, PORT_A) != FG_OK)
-                return UCA_ERR_PROP_GENERAL;
+            {
+                int w, h;
+                if (pco_get_actual_size(pco, &w, &h) == PCO_NOERROR)
+                    set_void(data, uint32_t, h);
+            }
             break;
 
         case UCA_PROP_HEIGHT_MIN:
@@ -158,6 +164,10 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
 
         case UCA_PROP_EXPOSURE_MAX:
             set_void(data, uint32_t, pco->description.dwMaxExposureDESC);
+            break;
+
+        case UCA_PROP_BITDEPTH:
+            set_void(data, uint8_t, 16);
             break;
 
         default:
