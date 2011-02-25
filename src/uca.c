@@ -59,48 +59,55 @@ void uca_destroy(struct uca_t *uca)
     }
 }
 
-static const char* property_map[] = {
-    "name",
-    "width",
-    "width.min",
-    "width.max",
-    "height",
-    "height.min",
-    "height.max",
-    "offset.x",
-    "offset.y",
-    "bit-depth",
-    "exposure",
-    "exposure.min",
-    "exposure.max",
-    "delay",
-    "delay.min",
-    "delay.max",
-    "trigger-mode",
-    "frame-rate",
-    "timestamp-mode",
-    "scan-mode",
-    "interlace.sample-rate",
-    "interlace.threshold.pixel",
-    "interlace.threshold.row",
-    "correction-mode",
-    NULL
+static struct uca_property_t property_map[UCA_PROP_LAST] = {
+    { "name",       uca_na,    uca_string }, 
+    { "width",      uca_pixel, uca_uint32t }, 
+    { "width.min",  uca_pixel, uca_uint32t }, 
+    { "width.max",  uca_pixel, uca_uint32t }, 
+    { "height",     uca_pixel, uca_uint32t }, 
+    { "height.min", uca_pixel, uca_uint32t }, 
+    { "height.max", uca_pixel, uca_uint32t }, 
+    { "offset.x",   uca_pixel, uca_uint32t }, 
+    { "offset.y",   uca_pixel, uca_uint32t }, 
+    { "bit-depth",  uca_pixel, uca_uint8t }, 
+    { "exposure",   uca_us,    uca_uint32t }, 
+    { "exposure.min", uca_ns, uca_uint32t }, 
+    { "exposure.max", uca_ms, uca_uint32t }, 
+    { "delay",      uca_us, uca_uint32t }, 
+    { "delay.min",  uca_ns, uca_uint32t }, 
+    { "delay.max",  uca_ms, uca_uint32t }, 
+    { "frame-rate", uca_na, uca_uint32t }, 
+    { "trigger-mode", uca_na, uca_uint32t }, 
+    { "timestamp-mode", uca_na, uca_uint32t }, 
+    { "scan-mode",  uca_na, uca_uint32t }, 
+    { "interlace.sample-rate", uca_na, uca_uint32t }, 
+    { "interlace.threshold.pixel", uca_na, uca_uint32t }, 
+    { "interlace.threshold.row", uca_na, uca_uint32t }, 
+    { "correction-mode", uca_na, uca_uint32t }, 
+    { NULL, 0, 0 }
 };
 
 int32_t uca_get_property_id(const char *property_name)
 {
     char *name;
     int i = 0;
-    while (property_map[i] != NULL) {
-        if (!strcmp(property_map[i], property_name))
+    while (property_map[i].name != NULL) {
+        if (!strcmp(property_map[i].name, property_name))
             return i;
         i++;
     }
     return UCA_PROP_INVALID;
 }
 
+struct uca_property_t *uca_get_full_property(int32_t property_id)
+{
+    if ((property_id >= 0) && (property_id < UCA_PROP_LAST))
+        return &property_map[property_id];
+    return NULL;
+}
+
 const char* uca_get_property_name(int32_t property_id)
 {
     /* TODO: guard that thing */
-    return property_map[property_id];
+    return property_map[property_id].name;
 }

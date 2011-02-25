@@ -14,6 +14,7 @@
 #include <stdint.h>
 
 struct uca_t;
+struct uca_property_t;
 
 /**
  * \brief Camera probing and initialization
@@ -73,6 +74,7 @@ int32_t uca_get_property_id(const char *property_name);
  */
 const char* uca_get_property_name(int32_t property_id);
 
+struct uca_property_t *uca_get_full_property(int32_t property_id);
 
 #define UCA_NO_ERROR                    0
 #define UCA_ERR_INIT_NOT_FOUND          1   /**< camera probing or initialization failed */
@@ -115,7 +117,9 @@ const char* uca_get_property_name(int32_t property_id);
 #define UCA_PROP_INTERLACE_ROW_THRESH   24
 
 /* Photon Focus specific */
-#define UCA_PROP_CORRECTION_MODE        21
+#define UCA_PROP_CORRECTION_MODE        25
+
+#define UCA_PROP_LAST                   26
 
 /* Possible timestamp modes for UCA_PROP_TIMESTAMP_MODE */
 #define UCA_TIMESTAMP_ASCII     0x01
@@ -130,6 +134,27 @@ const char* uca_get_property_name(int32_t property_id);
 #define UCA_CORRECT_OFFSET      0x01
 #define UCA_CORRECT_HOTPIXEL    0x02
 #define UCA_CORRECT_GAIN        0x04
+
+struct uca_property_t {
+    const char *name;
+
+    enum uca_unit {
+        uca_pixel,
+        uca_bits,
+        uca_ns,
+        uca_us,
+        uca_ms,
+        uca_s,
+        uca_rows,
+        uca_na
+    } unit;
+
+    enum uca_types {
+        uca_uint32t,
+        uca_uint8t,
+        uca_string
+    } type;
+};
 
 struct uca_t {
     /* Function pointers to camera-specific methods */
