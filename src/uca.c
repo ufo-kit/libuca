@@ -33,6 +33,8 @@ struct uca_t *uca_init()
     /* Set all function pointers to NULL and thus make the class abstract */
     uca->cam_set_property = NULL;
     uca->cam_get_property = NULL;
+    uca->cam_alloc = NULL;
+    uca->cam_acquire_image = NULL;
 
     int i = 0;
     while (inits[i] != NULL) {
@@ -58,19 +60,28 @@ void uca_destroy(struct uca_t *uca)
 static const char* property_map[] = {
     "name",
     "width",
+    "width.min",
+    "width.max",
     "height",
-    "x-offset",
-    "y-offset",
-    "max-width",
-    "max-height",
+    "height.min",
+    "height.max",
+    "offset.x",
+    "offset.y",
     "bit-depth",
     "exposure",
+    "exposure.min",
+    "exposure.max",
     "delay",
-    "frame-rate",
+    "delay.min",
+    "delay.max",
     "trigger-mode",
-    "interlace-sample-rate",
-    "interlace-pixel-threshold",
-    "interlace-row-threshold",
+    "frame-rate",
+    "timestamp-mode",
+    "scan-mode",
+    "interlace.sample-rate",
+    "interlace.threshold.pixel",
+    "interlace.threshold.row",
+    "correction-mode",
     NULL
 };
 

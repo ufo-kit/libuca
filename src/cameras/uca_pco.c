@@ -60,11 +60,23 @@ static uint32_t uca_pco_set_property(struct uca_t *uca, int32_t property, void *
 {
     switch (property) {
         case UCA_PROP_WIDTH:
-            Fg_setParameter(GET_FG(uca), FG_WIDTH, (uint32_t *) data, PORT_A);
+            if (Fg_setParameter(GET_FG(uca), FG_WIDTH, (uint32_t *) data, PORT_A) != FG_OK)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_HEIGHT:
-            Fg_setParameter(GET_FG(uca), FG_HEIGHT, (uint32_t *) data, PORT_A);
+            if (Fg_setParameter(GET_FG(uca), FG_HEIGHT, (uint32_t *) data, PORT_A) != FG_OK)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+            break;
+
+        case UCA_PROP_X_OFFSET:
+            if (Fg_setParameter(GET_FG(uca), FG_XOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+            break;
+
+        case UCA_PROP_Y_OFFSET:
+            if (Fg_setParameter(GET_FG(uca), FG_YOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_EXPOSURE:
@@ -93,6 +105,26 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
             }
             break;
 
+        case UCA_PROP_WIDTH:
+            if (Fg_getParameter(GET_FG(uca), FG_WIDTH, (uint32_t *) data, PORT_A) != FG_OK)
+                return UCA_ERR_PROP_GENERAL;
+            break;
+
+        case UCA_PROP_HEIGHT:
+            if (Fg_getParameter(GET_FG(uca), FG_HEIGHT, (uint32_t *) data, PORT_A) != FG_OK)
+                return UCA_ERR_PROP_GENERAL;
+            break;
+
+        case UCA_PROP_X_OFFSET:
+            if (Fg_getParameter(GET_FG(uca), FG_XOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+                return UCA_ERR_PROP_GENERAL;
+            break;
+
+        case UCA_PROP_Y_OFFSET:
+            if (Fg_getParameter(GET_FG(uca), FG_YOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+                return UCA_ERR_PROP_GENERAL;
+            break;
+
         case UCA_PROP_MAX_WIDTH:
             {
                 uint32_t w, h;
@@ -111,6 +143,11 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
             return UCA_ERR_PROP_INVALID;
     }
     return UCA_NO_ERROR;
+}
+
+uint32_t uca_pco_alloc(struct uca_t *uca, uint32_t n_buffers)
+{
+
 }
 
 uint32_t uca_pco_init(struct uca_t *uca)
@@ -133,6 +170,7 @@ uint32_t uca_pco_init(struct uca_t *uca)
     uca->cam_destroy = &uca_pco_destroy;
     uca->cam_set_property = &uca_pco_set_property;
     uca->cam_get_property = &uca_pco_get_property;
+    uca->cam_alloc = &uca_pco_alloc;
     uca->cam_acquire_image = &uca_pco_acquire_image;
 
     /* Prepare camera for recording */
@@ -160,7 +198,6 @@ uint32_t uca_pco_init(struct uca_t *uca)
     /* Yes, we really have to take an image twice as large because we set the
      * CameraLink interface to 8-bit 10 Taps, but are actually using 5x16 bits. */
     width *= 2;
-    height *= 2;
     Fg_setParameter(fg, FG_WIDTH, &width, PORT_A);
     Fg_setParameter(fg, FG_HEIGHT, &height, PORT_A);
 
