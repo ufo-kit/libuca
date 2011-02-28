@@ -58,7 +58,7 @@ static uint32_t uca_pco_destroy(struct uca_camera_t *cam)
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_set_property(struct uca_camera_t *cam, int32_t property, void *data)
+static uint32_t uca_pco_set_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
     switch (property) {
         case UCA_PROP_WIDTH:
@@ -94,7 +94,7 @@ static uint32_t uca_pco_set_property(struct uca_camera_t *cam, int32_t property,
 }
 
 
-static uint32_t uca_pco_get_property(struct uca_camera_t *cam, int32_t property, void *data)
+static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
     struct pco_edge_t *pco = GET_PCO(cam);
 
@@ -201,7 +201,6 @@ uint32_t uca_pco_init(struct uca_camera_t **cam)
 
     struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
     uca->user = pco_cam;
-    *cam = uca;
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_pco_destroy;
@@ -238,7 +237,8 @@ uint32_t uca_pco_init(struct uca_camera_t **cam)
     Fg_setParameter(fg, FG_WIDTH, &width, PORT_A);
     Fg_setParameter(fg, FG_HEIGHT, &height, PORT_A);
 
-    pco_set_rec_state(pco, 1);
+    uca->state = UCA_CAM_CONFIGURABLE;
+    *cam = uca;
 
-    return 0;
+    return UCA_NO_ERROR;
 }

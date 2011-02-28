@@ -112,7 +112,7 @@ static struct uca_property_t property_map[UCA_PROP_LAST+1] = {
     { NULL, 0, 0 }
 };
 
-int32_t uca_get_property_id(const char *property_name)
+enum uca_property_ids uca_get_property_id(const char *property_name)
 {
     char *name;
     int i = 0;
@@ -124,14 +124,14 @@ int32_t uca_get_property_id(const char *property_name)
     return UCA_ERR_PROP_INVALID;
 }
 
-struct uca_property_t *uca_get_full_property(int32_t property_id)
+struct uca_property_t *uca_get_full_property(enum uca_property_ids property_id)
 {
     if ((property_id >= 0) && (property_id < UCA_PROP_LAST))
         return &property_map[property_id];
     return NULL;
 }
 
-const char* uca_get_property_name(int32_t property_id)
+const char* uca_get_property_name(enum uca_property_ids property_id)
 {
     if ((property_id >= 0) && (property_id < UCA_PROP_LAST))
         return property_map[property_id].name;

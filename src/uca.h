@@ -18,6 +18,7 @@ struct uca_camera_t;
 struct uca_property_t;
 
 enum uca_camera_state;
+enum uca_property_ids;
 
 /**
  * \brief Camera probing and initialization
@@ -36,14 +37,14 @@ typedef uint32_t (*uca_cam_destroy) (struct uca_camera_t *cam);
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera or
  * UCA_ERR_PROP_VALUE_OUT_OF_RANGE if value cannot be set.
  */
-typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, int32_t property, void *data);
+typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);
 
 /**
  * \brief Set a property
  * \param[in] property_name Name of the property as defined in XXX
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera
  */
-typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, int32_t property, void *data);
+typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);
 
 /** \brief Allocate number of buffers
  *
@@ -73,14 +74,14 @@ enum uca_cam_state uca_get_camera_state(struct uca_camera_t *cam);
 /**
  * \brief Convert a property string to the corresponding ID
  */
-int32_t uca_get_property_id(const char *property_name);
+enum uca_property_ids uca_get_property_id(const char *property_name);
 
 /**
  * \brief Convert a property ID to the corresponding string 
  */
-const char* uca_get_property_name(int32_t property_id);
+const char* uca_get_property_name(enum uca_property_ids property_id);
 
-struct uca_property_t *uca_get_full_property(int32_t property_id);
+struct uca_property_t *uca_get_full_property(enum uca_property_ids property_id);
 
 #define UCA_NO_ERROR                    0
 #define UCA_ERR_INIT_NOT_FOUND          1   /**< camera probing or initialization failed */
@@ -91,38 +92,40 @@ struct uca_property_t *uca_get_full_property(int32_t property_id);
 
 /* The property IDs must start with 0 and must be continuous. Whenever this
  * library is released, the IDs must not change to guarantee binary compatibility! */
-#define UCA_PROP_NAME           0
-#define UCA_PROP_WIDTH          1
-#define UCA_PROP_WIDTH_MIN      2
-#define UCA_PROP_WIDTH_MAX      3
-#define UCA_PROP_HEIGHT         4
-#define UCA_PROP_HEIGHT_MIN     5
-#define UCA_PROP_HEIGHT_MAX     6
-#define UCA_PROP_X_OFFSET       7
-#define UCA_PROP_Y_OFFSET       8
-#define UCA_PROP_BITDEPTH       9
-#define UCA_PROP_EXPOSURE       10
-#define UCA_PROP_EXPOSURE_MIN   11
-#define UCA_PROP_EXPOSURE_MAX   12
-#define UCA_PROP_DELAY          13
-#define UCA_PROP_DELAY_MIN      14
-#define UCA_PROP_DELAY_MAX      15
-#define UCA_PROP_FRAMERATE      16 
-#define UCA_PROP_TRIGGER_MODE   17
+enum uca_property_ids {
+    UCA_PROP_NAME = 0,
+    UCA_PROP_WIDTH,
+    UCA_PROP_WIDTH_MIN,
+    UCA_PROP_WIDTH_MAX,
+    UCA_PROP_HEIGHT,
+    UCA_PROP_HEIGHT_MIN,
+    UCA_PROP_HEIGHT_MAX,
+    UCA_PROP_X_OFFSET,
+    UCA_PROP_Y_OFFSET,
+    UCA_PROP_BITDEPTH,
+    UCA_PROP_EXPOSURE,
+    UCA_PROP_EXPOSURE_MIN,
+    UCA_PROP_EXPOSURE_MAX,
+    UCA_PROP_DELAY,
+    UCA_PROP_DELAY_MIN,
+    UCA_PROP_DELAY_MAX,
+    UCA_PROP_FRAMERATE,
+    UCA_PROP_TRIGGER_MODE,
 
-/* pco.edge specific */
-#define UCA_PROP_TIMESTAMP_MODE 18
-#define UCA_PROP_SCAN_MODE      19
+    /* pco.edge specific */
+    UCA_PROP_TIMESTAMP_MODE,
+    UCA_PROP_SCAN_MODE,
 
-/* IPE camera specific */
-#define UCA_PROP_INTERLACE_SAMPLE_RATE  20
-#define UCA_PROP_INTERLACE_PIXEL_THRESH 21
-#define UCA_PROP_INTERLACE_ROW_THRESH   22
+    /* IPE camera specific */
+    UCA_PROP_INTERLACE_SAMPLE_RATE,
+    UCA_PROP_INTERLACE_PIXEL_THRESH,
+    UCA_PROP_INTERLACE_ROW_THRESH,
 
-/* Photon Focus specific */
-#define UCA_PROP_CORRECTION_MODE        23
+    /* Photon Focus specific */
+    UCA_PROP_CORRECTION_MODE,
 
-#define UCA_PROP_LAST                   24
+    UCA_PROP_LAST
+};
 
 /* Possible timestamp modes for UCA_PROP_TIMESTAMP_MODE */
 #define UCA_TIMESTAMP_ASCII     0x01
