@@ -4,11 +4,13 @@ cmake_minimum_required(VERSION 2.8)
 set(uca_SRCS
     uca.c
     uca-cam.c
+    uca-grabber.c
     )
 
 set(uca_HDRS
     uca.h
     uca-cam.h
+    uca-grabber.h
     )
 
 set(uca_LIBS "")
@@ -74,3 +76,31 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_library(uca SHARED ${uca_SRCS})
 
 target_link_libraries(uca ${uca_LIBS})
+
+# --- Install target ----------------------------------------------------------
+install(TARGETS uca 
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)
+
+install(FILES ${uca_HDRS} 
+    DESTINATION include/libuca)
+
+set(CPACK_PACKAGE_DESCRIPTION "Unified Camera Access library")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Abstract interface for different camera classes and frame grabber devices")
+set(CPACK_PACKAGE_NAME "libuca")
+
+# --- Distro specific
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.3.6), libgcc1 (>= 1:4.1)")
+set(CPACK_SET_DESTDIR ON)
+
+set(CPACK_PACKAGE_CONTACT "Matthias Vogelgesang")
+set(CPACK_PACKAGE_VENDOR "Karlsruhe Institute of Technology/IPE")
+set(CPACK_PACKAGE_VERSION_MAJOR "0")
+set(CPACK_PACKAGE_VERSION_MINOR "1")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+
+set(CPACK_GENERATOR "DEB;RPM;")
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}-${CMAKE_SYSTEM_PROCESSOR}")
+
+include(CPack)
