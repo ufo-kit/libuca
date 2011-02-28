@@ -36,6 +36,7 @@ struct uca_grabber_t {
     struct uca_grabber_t    *next;
 
     /* Function pointers to grabber-specific methods */
+    uca_grabber_destroy      destroy;
     uca_grabber_set_property set_property;
     uca_grabber_get_property get_property;
 

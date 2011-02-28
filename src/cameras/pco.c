@@ -1,21 +1,16 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <clser.h>
-#include <fgrab_struct.h>
-#include <fgrab_prototyp.h>
 #include <libpco/libpco.h>
 #include "uca.h"
 #include "uca-cam.h"
+#include "uca-grabber.h"
 #include "pco.h"
 
-struct pco_cam_t {
-    struct pco_edge_t *pco;
-    Fg_Struct *fg;
-};
+/* TODO: REMOVE THIS ASAP */
+#include <fgrab_struct.h>
 
-#define GET_PCO(uca) (((struct pco_cam_t *)(uca->user))->pco)
-#define GET_FG(uca) (((struct pco_cam_t *)(uca->user))->fg)
+#define GET_PCO(uca) ((struct pco_edge_t *)(uca->user))
 
 #define set_void(p, type, value) { *((type *) p) = value; }
 
@@ -53,32 +48,32 @@ static uint32_t uca_pco_acquire_image(struct uca_camera_t *cam, void *buffer)
 
 static uint32_t uca_pco_destroy(struct uca_camera_t *cam)
 {
-    Fg_FreeGrabber(GET_FG(cam));
     pco_destroy(GET_PCO(cam));
-    free(cam->user);
     return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_set_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
+    struct uca_grabber_t *grabber = cam->grabber;
+
     switch (property) {
         case UCA_PROP_WIDTH:
-            if (Fg_setParameter(GET_FG(cam), FG_WIDTH, (uint32_t *) data, PORT_A) != FG_OK)
+            if (grabber->set_property(grabber, FG_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_HEIGHT:
-            if (Fg_setParameter(GET_FG(cam), FG_HEIGHT, (uint32_t *) data, PORT_A) != FG_OK)
+            if (grabber->set_property(grabber, FG_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_X_OFFSET:
-            if (Fg_setParameter(GET_FG(cam), FG_XOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+            if (grabber->set_property(grabber, FG_XOFFSET, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_Y_OFFSET:
-            if (Fg_setParameter(GET_FG(cam), FG_YOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+            if (grabber->set_property(grabber, FG_YOFFSET, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
@@ -98,6 +93,7 @@ static uint32_t uca_pco_set_property(struct uca_camera_t *cam, enum uca_property
 static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
     struct pco_edge_t *pco = GET_PCO(cam);
+    struct uca_grabber_t *grabber = cam->grabber;
 
     switch (property) {
         case UCA_PROP_NAME: 
@@ -142,12 +138,12 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
             break;
 
         case UCA_PROP_X_OFFSET:
-            if (Fg_getParameter(GET_FG(cam), FG_XOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+            if (grabber->get_property(grabber, FG_XOFFSET, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_GENERAL;
             break;
 
         case UCA_PROP_Y_OFFSET:
-            if (Fg_getParameter(GET_FG(cam), FG_YOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+            if (grabber->get_property(grabber, FG_YOFFSET, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_GENERAL;
             break;
 
@@ -182,26 +178,22 @@ uint32_t uca_pco_alloc(struct uca_camera_t *cam, uint32_t n_buffers)
 
 }
 
-uint32_t uca_pco_init(struct uca_camera_t **cam)
+uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
 {
-    struct pco_cam_t *pco_cam = (struct pco_cam_t *) malloc(sizeof(struct pco_cam_t));
-    struct pco_edge_t *pco = pco_cam->pco = pco_init();
+    struct pco_edge_t *pco = pco_init();
 
     if (pco == NULL) {
-        free(pco_cam);
         return UCA_ERR_INIT_NOT_FOUND;
     }
 
     if ((pco->serial_ref == NULL) || !pco_active(pco)) {
-        free(pco_cam);
         pco_destroy(pco);
         return UCA_ERR_INIT_NOT_FOUND;
     }
 
-    Fg_Struct *fg = pco_cam->fg = Fg_Init("libFullAreaGray8.so", 0);
-
     struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
-    uca->user = pco_cam;
+    uca->user = pco;
+    uca->grabber = grabber;
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_pco_destroy;
@@ -221,13 +213,13 @@ uint32_t uca_pco_init(struct uca_camera_t **cam)
 
     /* Prepare frame grabber for recording */
     int val = FG_CL_8BIT_FULL_10;
-    Fg_setParameter(fg, FG_CAMERA_LINK_CAMTYP, &val, PORT_A);
+    grabber->set_property(grabber, FG_CAMERA_LINK_CAMTYP, &val);
 
     val = FG_GRAY;
-    Fg_setParameter(fg, FG_FORMAT, &val, PORT_A);
+    grabber->set_property(grabber, FG_FORMAT, &val);
 
     val = FREE_RUN;
-    Fg_setParameter(fg, FG_TRIGGERMODE, &val, PORT_A);
+    grabber->set_property(grabber, FG_TRIGGERMODE, &val);
 
     int width, height;
     pco_get_actual_size(pco, &width, &height);
@@ -235,8 +227,8 @@ uint32_t uca_pco_init(struct uca_camera_t **cam)
     /* Yes, we really have to take an image twice as large because we set the
      * CameraLink interface to 8-bit 10 Taps, but are actually using 5x16 bits. */
     width *= 2;
-    Fg_setParameter(fg, FG_WIDTH, &width, PORT_A);
-    Fg_setParameter(fg, FG_HEIGHT, &height, PORT_A);
+    grabber->set_property(grabber, FG_WIDTH, &width);
+    grabber->set_property(grabber, FG_HEIGHT, &height);
 
     uca->state = UCA_CAM_CONFIGURABLE;
     *cam = uca;
