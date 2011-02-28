@@ -7,7 +7,13 @@
 #include "uca.h"
 #include "uca-grabber.h"
 
-#define GET_FG(grabber) ((Fg_Struct *)(grabber->user))
+struct uca_me4_grabber_t {
+    Fg_Struct   *fg;
+    dma_mem     *mem;
+};
+
+#define GET_FG(grabber) (((struct uca_me4_grabber_t *) grabber->user)->fg)
+#define GET_MEM(grabber) (((struct uca_me4_grabber_t *) grabber->user)->mem)
 
 uint32_t uca_me4_destroy(struct uca_grabber_t *grabber)
 {
@@ -24,6 +30,19 @@ uint32_t uca_me4_get_property(struct uca_grabber_t *grabber, enum uca_property_i
     return Fg_getParameter(GET_FG(grabber), property, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
 }
 
+uint32_t uca_me4_allocate(struct uca_grabber_t *grabber, uint32_t n_buffers)
+{
+    if (GET_MEM(grabber) != NULL)
+        /* FIXME: invent better error code */
+        return UCA_ERR_PROP_GENERAL;
+
+    uint32_t width, height;
+    uca_me4_get_property(grabber, FG_WIDTH, &width);
+    uca_me4_get_property(grabber, FG_HEIGHT, &height);
+    /* FIXME: get size of pixel */
+    ((struct uca_me4_grabber_t *) grabber->user)->mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*sizeof(uint16_t), n_buffers);
+}
+
 uint32_t uca_me4_init(struct uca_grabber_t **grabber)
 {
     /* FIXME: find out if this board/grabber is running */
@@ -32,10 +51,15 @@ uint32_t uca_me4_init(struct uca_grabber_t **grabber)
         return UCA_ERR_INIT_NOT_FOUND;
 
     struct uca_grabber_t *uca = (struct uca_grabber_t *) malloc(sizeof(struct uca_grabber_t));
-    uca->user = fg;
+    struct uca_me4_grabber_t *me4 = (struct uca_me4_grabber_t *) malloc(sizeof(struct uca_me4_grabber_t));
+
+    me4->fg = fg;
+    me4->mem = NULL;
+    uca->user = me4;
     uca->destroy = &uca_me4_destroy;
     uca->set_property = &uca_me4_set_property;
     uca->get_property = &uca_me4_get_property;
+    uca->allocate = &uca_me4_allocate;
     
     *grabber = uca;
     return UCA_NO_ERROR;

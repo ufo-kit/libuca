@@ -31,6 +31,13 @@ typedef uint32_t (*uca_grabber_set_property) (struct uca_grabber_t *grabber, enu
  */
 typedef uint32_t (*uca_grabber_get_property) (struct uca_grabber_t *grabber, enum uca_property_ids property, void *data);
 
+/**
+ * \brief Allocate buffers with current width, height and bitdepth
+ * \note Subsequent changes of width and height might corrupt memory
+ */
+typedef uint32_t (*uca_grabber_allocate) (struct uca_grabber_t *grabber, uint32_t n_buffers);
+
+
 
 struct uca_grabber_t {
     struct uca_grabber_t    *next;
@@ -39,6 +46,7 @@ struct uca_grabber_t {
     uca_grabber_destroy      destroy;
     uca_grabber_set_property set_property;
     uca_grabber_get_property get_property;
+    uca_grabber_allocate     allocate;
 
     /* Private */
     void *user;

@@ -35,9 +35,7 @@ int main(int argc, char *argv[])
     uint8_t uint8_value;
 
     const char *unit_map[] = {
-        "px", "bits",
-        "ns", "µs", "ms", "s",
-        "rows", "" 
+        "px", "bits", "ns", "µs", "ms", "s", "rows", "" 
     };
 
     while (cam != NULL) {
