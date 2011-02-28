@@ -47,11 +47,11 @@ typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, enum uca_pro
  */
 typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);
 
-/**
- * \brief Acquire one frame
- */
-typedef uint32_t (*uca_cam_acquire_image) (struct uca_camera_t *cam, void *buffer);
+typedef uint32_t (*uca_cam_start_recording) (struct uca_camera_t *cam);
 
+typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera_t *cam);
+
+typedef uint32_t (*uca_cam_grab) (struct uca_camera_t *cam, char *buffer, size_t n_bytes);
 
 
 enum uca_cam_state {
@@ -67,7 +67,9 @@ struct uca_camera_t {
     /* Function pointers to camera-specific methods */
     uca_cam_set_property    set_property;
     uca_cam_get_property    get_property;
-    uca_cam_acquire_image   acquire_image;
+    uca_cam_start_recording start_recording;
+    uca_cam_stop_recording  stop_recording;
+    uca_cam_grab            grab;
 
     /* Private */
     uca_cam_destroy         destroy;

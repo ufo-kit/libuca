@@ -83,6 +83,9 @@ static uint32_t uca_pco_set_property(struct uca_camera_t *cam, enum uca_property
         case UCA_PROP_DELAY:
             return uca_pco_set_delay(cam, (uint32_t *) data);
 
+        case UCA_PROP_TIMESTAMP_MODE:
+            return pco_set_timestamp_mode(GET_PCO(cam), *((uint16_t *) data));
+
         default:
             return UCA_ERR_PROP_INVALID;
     }
@@ -173,6 +176,23 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
     return UCA_NO_ERROR;
 }
 
+uint32_t uca_pco_start_recording(struct uca_camera_t *cam)
+{
+    struct pco_edge_t *pco = GET_PCO(cam);
+    pco_arm_camera(pco);
+    pco_set_rec_state(pco, 1);
+    cam->grabber->acquire(cam->grabber, -1, true);
+}
+
+uint32_t uca_pco_stop_recording(struct uca_camera_t *cam)
+{
+    pco_set_rec_state(GET_PCO(cam), 0);
+}
+
+uint32_t uca_pco_grab(struct uca_camera_t *cam, char *buffer, size_t n_bytes)
+{
+    cam->grabber->grab(cam->grabber, buffer, n_bytes);
+}
 
 uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
 {
@@ -195,7 +215,9 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     uca->destroy = &uca_pco_destroy;
     uca->set_property = &uca_pco_set_property;
     uca->get_property = &uca_pco_get_property;
-    uca->acquire_image = &uca_pco_acquire_image;
+    uca->start_recording = &uca_pco_start_recording;
+    uca->stop_recording = &uca_pco_stop_recording;
+    uca->grab = &uca_pco_grab;
 
     /* Prepare camera for recording */
     pco_set_rec_state(pco, 0);

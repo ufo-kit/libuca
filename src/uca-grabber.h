@@ -1,6 +1,8 @@
 #ifndef __UNIFIED_CAMERA_ACCESS_GRABBER_H
 #define __UNIFIED_CAMERA_ACCESS_GRABBER_H
 
+#include <stdbool.h>
+
 /*
  * --- virtual methods --------------------------------------------------------
  */
@@ -37,6 +39,14 @@ typedef uint32_t (*uca_grabber_get_property) (struct uca_grabber_t *grabber, enu
  */
 typedef uint32_t (*uca_grabber_alloc) (struct uca_grabber_t *grabber, uint32_t n_buffers);
 
+/**
+ * \brief Begin acquiring frames
+ * \param[in] n_frames Number of frames to acquire, -1 means infinite number
+ * \param[in] async Grab asynchronous if true
+ */
+typedef uint32_t (*uca_grabber_acquire) (struct uca_grabber_t *grabber, int32_t n_frames, bool async);
+
+typedef uint32_t (*uca_grabber_grab) (struct uca_grabber_t *grabber, char *buffer, size_t n_bytes);
 
 
 struct uca_grabber_t {
@@ -47,6 +57,8 @@ struct uca_grabber_t {
     uca_grabber_set_property set_property;
     uca_grabber_get_property get_property;
     uca_grabber_alloc        alloc;
+    uca_grabber_acquire      acquire;
+    uca_grabber_grab         grab;
 
     /* Private */
     void *user;

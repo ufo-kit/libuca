@@ -91,6 +91,7 @@ struct uca_t *uca_init()
         /* FIXME: we don't only want to take the first one */
         if (init(&grabber) != UCA_ERR_INIT_NOT_FOUND)
             break;
+        i++;
     }
 
     if (grabber == NULL) {
