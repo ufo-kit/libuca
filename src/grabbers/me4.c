@@ -30,7 +30,7 @@ uint32_t uca_me4_get_property(struct uca_grabber_t *grabber, enum uca_property_i
     return Fg_getParameter(GET_FG(grabber), property, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
 }
 
-uint32_t uca_me4_allocate(struct uca_grabber_t *grabber, uint32_t n_buffers)
+uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t n_buffers)
 {
     if (GET_MEM(grabber) != NULL)
         /* FIXME: invent better error code */
@@ -59,7 +59,7 @@ uint32_t uca_me4_init(struct uca_grabber_t **grabber)
     uca->destroy = &uca_me4_destroy;
     uca->set_property = &uca_me4_set_property;
     uca->get_property = &uca_me4_get_property;
-    uca->allocate = &uca_me4_allocate;
+    uca->alloc = &uca_me4_alloc;
     
     *grabber = uca;
     return UCA_NO_ERROR;

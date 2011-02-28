@@ -173,10 +173,6 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_alloc(struct uca_camera_t *cam, uint32_t n_buffers)
-{
-
-}
 
 uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
 {
@@ -199,7 +195,6 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     uca->destroy = &uca_pco_destroy;
     uca->set_property = &uca_pco_set_property;
     uca->get_property = &uca_pco_get_property;
-    uca->alloc = &uca_pco_alloc;
     uca->acquire_image = &uca_pco_acquire_image;
 
     /* Prepare camera for recording */

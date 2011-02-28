@@ -12,7 +12,9 @@ enum uca_property_ids;
 /*
  * --- non-virtual methods ----------------------------------------------------
  */
-enum uca_cam_state uca_get_camera_state(struct uca_camera_t *cam);
+uint32_t uca_cam_alloc(struct uca_camera_t *cam, uint32_t n_buffers);
+
+enum uca_cam_state uca_cam_get_state(struct uca_camera_t *cam);
 
 
 /*
@@ -45,12 +47,6 @@ typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, enum uca_pro
  */
 typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);
 
-/** \brief Allocate number of buffers
- *
- * The size of each buffer is width x height x bits
- */
-typedef uint32_t (*uca_cam_alloc) (struct uca_camera_t *cam, uint32_t n_buffers);
-
 /**
  * \brief Acquire one frame
  */
@@ -72,7 +68,6 @@ struct uca_camera_t {
     uca_cam_set_property    set_property;
     uca_cam_get_property    get_property;
     uca_cam_acquire_image   acquire_image;
-    uca_cam_alloc           alloc;
 
     /* Private */
     uca_cam_destroy         destroy;
