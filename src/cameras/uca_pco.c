@@ -19,73 +19,73 @@ struct pco_cam_t {
 #define set_void(p, type, value) { *((type *) p) = value; }
 
 
-static uint32_t uca_pco_set_bitdepth(struct uca_t *uca, uint8_t *bitdepth)
+static uint32_t uca_pco_set_bitdepth(struct uca_camera_t *cam, uint8_t *bitdepth)
 {
     /* TODO: it's not possible via CameraLink so do it via frame grabber */
     return 0;
 }
 
-static uint32_t uca_pco_set_exposure(struct uca_t *uca, uint32_t *exposure)
+static uint32_t uca_pco_set_exposure(struct uca_camera_t *cam, uint32_t *exposure)
 {
     uint32_t e, d;
-    if (pco_get_delay_exposure(GET_PCO(uca), &d, &e) != PCO_NOERROR)
+    if (pco_get_delay_exposure(GET_PCO(cam), &d, &e) != PCO_NOERROR)
         return UCA_ERR_PROP_GENERAL;
-    if (pco_set_delay_exposure(GET_PCO(uca), d, *exposure) != PCO_NOERROR)
+    if (pco_set_delay_exposure(GET_PCO(cam), d, *exposure) != PCO_NOERROR)
         return UCA_ERR_PROP_GENERAL;
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_set_delay(struct uca_t *uca, uint32_t *delay)
+static uint32_t uca_pco_set_delay(struct uca_camera_t *cam, uint32_t *delay)
 {
     uint32_t e, d;
-    if (pco_get_delay_exposure(GET_PCO(uca), &d, &e) != PCO_NOERROR)
+    if (pco_get_delay_exposure(GET_PCO(cam), &d, &e) != PCO_NOERROR)
         return UCA_ERR_PROP_GENERAL;
-    if (pco_set_delay_exposure(GET_PCO(uca), *delay, e) != PCO_NOERROR)
+    if (pco_set_delay_exposure(GET_PCO(cam), *delay, e) != PCO_NOERROR)
         return UCA_ERR_PROP_GENERAL;
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_acquire_image(struct uca_t *uca, void *buffer)
+static uint32_t uca_pco_acquire_image(struct uca_camera_t *cam, void *buffer)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_destroy(struct uca_t *uca)
+static uint32_t uca_pco_destroy(struct uca_camera_t *cam)
 {
-    Fg_FreeGrabber(GET_FG(uca));
-    pco_destroy(GET_PCO(uca));
-    free(uca->user);
+    Fg_FreeGrabber(GET_FG(cam));
+    pco_destroy(GET_PCO(cam));
+    free(cam->user);
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_set_property(struct uca_t *uca, int32_t property, void *data)
+static uint32_t uca_pco_set_property(struct uca_camera_t *cam, int32_t property, void *data)
 {
     switch (property) {
         case UCA_PROP_WIDTH:
-            if (Fg_setParameter(GET_FG(uca), FG_WIDTH, (uint32_t *) data, PORT_A) != FG_OK)
+            if (Fg_setParameter(GET_FG(cam), FG_WIDTH, (uint32_t *) data, PORT_A) != FG_OK)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_HEIGHT:
-            if (Fg_setParameter(GET_FG(uca), FG_HEIGHT, (uint32_t *) data, PORT_A) != FG_OK)
+            if (Fg_setParameter(GET_FG(cam), FG_HEIGHT, (uint32_t *) data, PORT_A) != FG_OK)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_X_OFFSET:
-            if (Fg_setParameter(GET_FG(uca), FG_XOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+            if (Fg_setParameter(GET_FG(cam), FG_XOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_Y_OFFSET:
-            if (Fg_setParameter(GET_FG(uca), FG_YOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+            if (Fg_setParameter(GET_FG(cam), FG_YOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_EXPOSURE:
-            return uca_pco_set_exposure(uca, (uint32_t *) data);
+            return uca_pco_set_exposure(cam, (uint32_t *) data);
 
         case UCA_PROP_DELAY:
-            return uca_pco_set_delay(uca, (uint32_t *) data);
+            return uca_pco_set_delay(cam, (uint32_t *) data);
 
         default:
             return UCA_ERR_PROP_INVALID;
@@ -94,9 +94,9 @@ static uint32_t uca_pco_set_property(struct uca_t *uca, int32_t property, void *
 }
 
 
-static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *data)
+static uint32_t uca_pco_get_property(struct uca_camera_t *cam, int32_t property, void *data)
 {
-    struct pco_edge_t *pco = GET_PCO(uca);
+    struct pco_edge_t *pco = GET_PCO(cam);
 
     switch (property) {
         case UCA_PROP_NAME: 
@@ -141,12 +141,12 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
             break;
 
         case UCA_PROP_X_OFFSET:
-            if (Fg_getParameter(GET_FG(uca), FG_XOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+            if (Fg_getParameter(GET_FG(cam), FG_XOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
                 return UCA_ERR_PROP_GENERAL;
             break;
 
         case UCA_PROP_Y_OFFSET:
-            if (Fg_getParameter(GET_FG(uca), FG_YOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
+            if (Fg_getParameter(GET_FG(cam), FG_YOFFSET, (uint32_t *) data, PORT_A) != FG_OK)
                 return UCA_ERR_PROP_GENERAL;
             break;
 
@@ -176,37 +176,39 @@ static uint32_t uca_pco_get_property(struct uca_t *uca, int32_t property, void *
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_alloc(struct uca_t *uca, uint32_t n_buffers)
+uint32_t uca_pco_alloc(struct uca_camera_t *cam, uint32_t n_buffers)
 {
 
 }
 
-uint32_t uca_pco_init(struct uca_t *uca)
+uint32_t uca_pco_init(struct uca_camera_t **cam)
 {
-    uca->user = (struct pco_cam_t *) malloc(sizeof(struct pco_cam_t));
-
-    struct pco_cam_t *pco_cam = uca->user;
+    struct pco_cam_t *pco_cam = (struct pco_cam_t *) malloc(sizeof(struct pco_cam_t));
     struct pco_edge_t *pco = pco_cam->pco = pco_init();
 
     if (pco == NULL) {
-        free(uca->user);
+        free(pco_cam);
         return UCA_ERR_INIT_NOT_FOUND;
     }
 
     if ((pco->serial_ref == NULL) || !pco_active(pco)) {
-        free(uca->user);
+        free(pco_cam);
         pco_destroy(pco);
         return UCA_ERR_INIT_NOT_FOUND;
     }
 
     Fg_Struct *fg = pco_cam->fg = Fg_Init("libFullAreaGray8.so", 0);
 
+    struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
+    uca->user = pco_cam;
+    *cam = uca;
+
     /* Camera found, set function pointers... */
-    uca->cam_destroy = &uca_pco_destroy;
-    uca->cam_set_property = &uca_pco_set_property;
-    uca->cam_get_property = &uca_pco_get_property;
-    uca->cam_alloc = &uca_pco_alloc;
-    uca->cam_acquire_image = &uca_pco_acquire_image;
+    uca->destroy = &uca_pco_destroy;
+    uca->set_property = &uca_pco_set_property;
+    uca->get_property = &uca_pco_get_property;
+    uca->alloc = &uca_pco_alloc;
+    uca->acquire_image = &uca_pco_acquire_image;
 
     /* Prepare camera for recording */
     pco_set_rec_state(pco, 0);

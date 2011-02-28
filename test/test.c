@@ -26,44 +26,50 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    /* take first camera */
+    struct uca_camera_t *cam = uca->cameras;
+
     char string_value[256];
     uint32_t uint32_value;
     uint8_t uint8_value;
 
     const char *unit_map[] = {
-        "px",
-        "bits",
-        "ns",
-        "µs",
-        "ms",
-        "s",
-        "rows",
-        "" 
+        "px", "bits",
+        "ns", "µs", "ms", "s",
+        "rows", "" 
     };
 
-    for (int i = 0; i < UCA_PROP_LAST-2; i++) {
-        struct uca_property_t *prop = uca_get_full_property(i);
-        switch (prop->type) {
-            case uca_string:
-                if (uca->cam_get_property(uca, i, string_value) != UCA_PROP_INVALID) {
-                    print_level(count_dots(prop->name));
-                    printf("%s = %s %s ", prop->name, string_value, unit_map[prop->unit]);
-                }
-                break;
-            case uca_uint32t:
-                if (uca->cam_get_property(uca, i, &uint32_value) != UCA_PROP_INVALID) {
-                    print_level(count_dots(prop->name));
-                    printf("%s = %i %s ", prop->name, uint32_value, unit_map[prop->unit]);
-                }
-                break;
-            case uca_uint8t:
-                if (uca->cam_get_property(uca, i, &uint8_value) != UCA_PROP_INVALID) {
-                    print_level(count_dots(prop->name));
-                    printf("%s = %i %s ", prop->name, uint8_value, unit_map[prop->unit]);
-                }
-                break;
+    while (cam != NULL) {
+        for (int i = 0; i < UCA_PROP_LAST; i++) {
+            struct uca_property_t *prop = uca_get_full_property(i);
+            print_level(count_dots(prop->name));
+            printf("%s = ", prop->name);
+            switch (prop->type) {
+                case uca_string:
+                    if (cam->get_property(cam, i, string_value) != UCA_ERR_PROP_INVALID) {
+                        printf("%s ", string_value);
+                    }
+                    else
+                        printf("n/a");
+                    break;
+                case uca_uint32t:
+                    if (cam->get_property(cam, i, &uint32_value) != UCA_ERR_PROP_INVALID) {
+                        printf("%i %s", uint32_value, unit_map[prop->unit]);
+                    }
+                    else
+                        printf("n/a");
+                    break;
+                case uca_uint8t:
+                    if (cam->get_property(cam, i, &uint8_value) != UCA_ERR_PROP_INVALID) {
+                        printf("%i %s", uint8_value, unit_map[prop->unit]);
+                    }
+                    else
+                        printf("n/a");
+                    break;
+            }
+            printf("\n");
         }
-        printf("\n");
+        cam = cam->next;
     }
     
     uca_destroy(uca);
