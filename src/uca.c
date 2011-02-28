@@ -15,6 +15,10 @@
 #include "cameras/uca_ipe.h"
 #endif
 
+#ifdef HAVE_PHOTRON_FASTCAM
+#include "cameras/uca_photron.h"
+#endif
+
 
 struct uca_t *uca_init()
 {
@@ -30,6 +34,9 @@ struct uca_t *uca_init()
 #endif
 #ifdef HAVE_IPE_CAM
         uca_ipe_init,
+#endif
+#ifdef HAVE_PH
+        uca_photron_init,
 #endif
     NULL };
 
