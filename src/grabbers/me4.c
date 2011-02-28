@@ -39,8 +39,14 @@ uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t n_buffers)
     uint32_t width, height;
     uca_me4_get_property(grabber, FG_WIDTH, &width);
     uca_me4_get_property(grabber, FG_HEIGHT, &height);
+
     /* FIXME: get size of pixel */
-    ((struct uca_me4_grabber_t *) grabber->user)->mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*sizeof(uint16_t), n_buffers);
+    dma_mem *mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*sizeof(uint16_t), n_buffers);
+    if (mem != NULL) {
+        ((struct uca_me4_grabber_t *) grabber->user)->mem = mem;
+        return UCA_NO_ERROR;
+    }
+    return UCA_ERR_PROP_GENERAL;
 }
 
 uint32_t uca_me4_init(struct uca_grabber_t **grabber)
