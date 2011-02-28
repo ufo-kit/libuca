@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include "uca.h"
+#include "uca-cam.h"
 
 int count_dots(const char *s)
 {

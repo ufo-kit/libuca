@@ -1,5 +1,6 @@
 
-#cmakedefine HAVE_ME4_FRAMEGRABBER
+#cmakedefine HAVE_ME4
+
 #cmakedefine HAVE_PCO_EDGE
 #cmakedefine HAVE_PHOTON_FOCUS
 #cmakedefine HAVE_PHOTRON_FASTCAM

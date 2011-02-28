@@ -6,7 +6,8 @@
 #include <fgrab_prototyp.h>
 #include <libpco/libpco.h>
 #include "uca.h"
-#include "uca_pco.h"
+#include "uca-cam.h"
+#include "pco.h"
 
 struct pco_cam_t {
     struct pco_edge_t *pco;
