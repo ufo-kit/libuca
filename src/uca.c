@@ -79,6 +79,11 @@ void uca_destroy(struct uca_t *uca)
     }
 }
 
+enum uca_cam_state uca_get_camera_state(struct uca_camera_t *cam)
+{
+    return cam->state;
+}
+
 static struct uca_property_t property_map[UCA_PROP_LAST+1] = {
     { "name",           uca_na,     uca_string }, 
     { "width",          uca_pixel,  uca_uint32t }, 

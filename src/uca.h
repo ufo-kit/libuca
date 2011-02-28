@@ -17,6 +17,8 @@ struct uca_t;
 struct uca_camera_t;
 struct uca_property_t;
 
+enum uca_camera_state;
+
 /**
  * \brief Camera probing and initialization
  * \return UCA_ERR_INIT_NOT_FOUND if camera is not found or could not be initialized
@@ -64,6 +66,9 @@ struct uca_t *uca_init(void);
  * \brief Free resources of the unified camera access interface
  */
 void uca_destroy(struct uca_t *uca);
+
+enum uca_cam_state uca_get_camera_state(struct uca_camera_t *cam);
+
 
 /**
  * \brief Convert a property string to the corresponding ID
@@ -154,6 +159,13 @@ struct uca_property_t {
     } type;
 };
 
+enum uca_cam_state {
+    UCA_CAM_ERROR,
+    UCA_CAM_CONFIGURABLE,
+    UCA_CAM_ARMED,
+    UCA_CAM_RECORDING,
+};
+
 struct uca_camera_t {
     struct uca_camera_t     *next;
 
@@ -165,6 +177,7 @@ struct uca_camera_t {
 
     /* Private */
     uca_cam_destroy         destroy;
+    enum uca_cam_state      state;
 
     void *user; /**< private user data to be used by the camera driver */
 };
