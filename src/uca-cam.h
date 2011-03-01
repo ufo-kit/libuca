@@ -76,6 +76,8 @@ struct uca_camera_t {
 
     struct uca_grabber_t    *grabber;
     enum uca_cam_state      state;
+    uint32_t                frame_width;
+    uint32_t                frame_height;
 
     void *user; /**< private user data to be used by the camera driver */
 };

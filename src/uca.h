@@ -117,12 +117,19 @@ struct uca_property_t {
     } type;
 };
 
+enum uca_errors {
+    UCA_NO_ERROR = 0,
+    UCA_ERR_INIT_NOT_FOUND,             /**< camera probing or initialization failed */
+    UCA_ERR_PROP_INVALID,               /**< the requested property is not supported by the camera */
+    UCA_ERR_PROP_GENERAL,               /**< error occured reading/writing the property */
+    UCA_ERR_PROP_VALUE_OUT_OF_RANGE,    /**< error occured writing the property */
 
-#define UCA_NO_ERROR                    0
-#define UCA_ERR_INIT_NOT_FOUND          1   /**< camera probing or initialization failed */
-#define UCA_ERR_PROP_INVALID            2   /**< the requested property is not supported by the camera */
-#define UCA_ERR_PROP_GENERAL            3   /**< error occured reading/writing the property */
-#define UCA_ERR_PROP_VALUE_OUT_OF_RANGE 4   /**< error occured writing the property */
+    UCA_ERR_CAM_ARM,
+    UCA_ERR_CAM_RECORD,
+
+    UCA_ERR_GRABBER_ACQUIRE,
+    UCA_ERR_GRABBER_NOMEM
+};
 
 struct uca_t {
     struct uca_camera_t *cameras;

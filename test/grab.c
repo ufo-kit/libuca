@@ -23,10 +23,8 @@ int main(int argc, char *argv[])
     uint32_t width, height;
     cam->get_property(cam, UCA_PROP_WIDTH, &width);
     cam->get_property(cam, UCA_PROP_HEIGHT, &height);
-    printf("Image dimensions: %ix%i\n", width, height);
 
-    if (uca_cam_alloc(cam, 20) != UCA_NO_ERROR)
-        printf("Couldn't allocate buffer memory\n");
+    uca_cam_alloc(cam, 20);
 
     uint16_t *buffer = (uint16_t *) malloc(width * height * 2);
 

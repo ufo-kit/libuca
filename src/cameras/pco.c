@@ -60,11 +60,13 @@ static uint32_t uca_pco_set_property(struct uca_camera_t *cam, enum uca_property
         case UCA_PROP_WIDTH:
             if (grabber->set_property(grabber, FG_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+            cam->frame_width = *((uint32_t *) data);
             break;
 
         case UCA_PROP_HEIGHT:
             if (grabber->set_property(grabber, FG_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+            cam->frame_height = *((uint32_t *) data);
             break;
 
         case UCA_PROP_X_OFFSET:
@@ -109,11 +111,7 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
             break;
 
         case UCA_PROP_WIDTH:
-            {
-                int w, h;
-                if (pco_get_actual_size(pco, &w, &h) == PCO_NOERROR)
-                    set_void(data, uint32_t, w);
-            }
+            set_void(data, uint32_t, cam->frame_width);
             break;
 
         case UCA_PROP_WIDTH_MIN:
@@ -125,11 +123,7 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
             break;
 
         case UCA_PROP_HEIGHT:
-            {
-                int w, h;
-                if (pco_get_actual_size(pco, &w, &h) == PCO_NOERROR)
-                    set_void(data, uint32_t, h);
-            }
+            set_void(data, uint32_t, cam->frame_height);
             break;
 
         case UCA_PROP_HEIGHT_MIN:
@@ -179,19 +173,28 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
 uint32_t uca_pco_start_recording(struct uca_camera_t *cam)
 {
     struct pco_edge_t *pco = GET_PCO(cam);
-    pco_arm_camera(pco);
-    pco_set_rec_state(pco, 1);
-    cam->grabber->acquire(cam->grabber, -1, true);
+    if (pco_arm_camera(pco) != PCO_NOERROR)
+        return UCA_ERR_CAM_ARM;
+    if (pco_set_rec_state(pco, 1) != PCO_NOERROR)
+        return UCA_ERR_CAM_RECORD;
+    return cam->grabber->acquire(cam->grabber, -1);
 }
 
 uint32_t uca_pco_stop_recording(struct uca_camera_t *cam)
 {
-    pco_set_rec_state(GET_PCO(cam), 0);
+    if (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR)
+        return UCA_ERR_PROP_GENERAL;
 }
 
 uint32_t uca_pco_grab(struct uca_camera_t *cam, char *buffer, size_t n_bytes)
 {
-    cam->grabber->grab(cam->grabber, buffer, n_bytes);
+    uint16_t *frame;
+    uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, n_bytes);
+    if (err != UCA_NO_ERROR)
+        return err;
+    /* FIXME: choose according to data format */
+    pco_reorder_image_5x16((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
+    return UCA_NO_ERROR;
 }
 
 uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
@@ -202,7 +205,7 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
         return UCA_ERR_INIT_NOT_FOUND;
     }
 
-    if ((pco->serial_ref == NULL) || !pco_active(pco)) {
+    if ((pco->serial_ref == NULL) || !pco_is_active(pco)) {
         pco_destroy(pco);
         return UCA_ERR_INIT_NOT_FOUND;
     }
@@ -210,6 +213,7 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
     uca->user = pco;
     uca->grabber = grabber;
+    uca->grabber->asynchronous = false;
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_pco_destroy;
@@ -240,6 +244,8 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
 
     int width, height;
     pco_get_actual_size(pco, &width, &height);
+    uca->frame_width = width;
+    uca->frame_height = height;
 
     /* Yes, we really have to take an image twice as large because we set the
      * CameraLink interface to 8-bit 10 Taps, but are actually using 5x16 bits. */

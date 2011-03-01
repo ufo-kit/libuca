@@ -44,9 +44,11 @@ typedef uint32_t (*uca_grabber_alloc) (struct uca_grabber_t *grabber, uint32_t n
  * \param[in] n_frames Number of frames to acquire, -1 means infinite number
  * \param[in] async Grab asynchronous if true
  */
-typedef uint32_t (*uca_grabber_acquire) (struct uca_grabber_t *grabber, int32_t n_frames, bool async);
+typedef uint32_t (*uca_grabber_acquire) (struct uca_grabber_t *grabber, int32_t n_frames);
 
-typedef uint32_t (*uca_grabber_grab) (struct uca_grabber_t *grabber, char *buffer, size_t n_bytes);
+typedef uint32_t (*uca_grabber_stop_acquire) (struct uca_grabber_t *grabber);
+
+typedef uint32_t (*uca_grabber_grab) (struct uca_grabber_t *grabber, void **buffer, size_t n_bytes);
 
 
 struct uca_grabber_t {
@@ -58,9 +60,11 @@ struct uca_grabber_t {
     uca_grabber_get_property get_property;
     uca_grabber_alloc        alloc;
     uca_grabber_acquire      acquire;
+    uca_grabber_stop_acquire stop_acquire;
     uca_grabber_grab         grab;
 
     /* Private */
+    bool asynchronous;
     void *user;
 };
 

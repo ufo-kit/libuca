@@ -50,19 +50,40 @@ uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t n_buffers)
     return UCA_ERR_PROP_GENERAL;
 }
 
-uint32_t uca_me4_acquire(struct uca_grabber_t *grabber, int32_t n_frames, bool async)
+uint32_t uca_me4_acquire(struct uca_grabber_t *grabber, int32_t n_frames)
 {
-    if (GET_MEM(grabber) != NULL) {
-        if (Fg_AcquireEx(GET_FG(grabber), 0, n_frames, ACQ_STANDARD, GET_MEM(grabber)) != FG_OK)
-            return UCA_NO_ERROR;
-    }
-    return UCA_ERR_PROP_GENERAL;
+    if (GET_MEM(grabber) == NULL)
+        return UCA_ERR_GRABBER_NOMEM;
+
+    int flag = grabber->asynchronous ? ACQ_STANDARD : ACQ_BLOCK;
+    n_frames = n_frames < 0 ? GRAB_INFINITE : n_frames;
+    if (Fg_AcquireEx(GET_FG(grabber), 0, n_frames, flag, GET_MEM(grabber)) == FG_OK)
+        return UCA_NO_ERROR;
+
+    return UCA_ERR_GRABBER_ACQUIRE;
 }
 
-uint32_t uca_me4_grab(struct uca_grabber_t *grabber, char *buffer, size_t n_bytes)
+uint32_t uca_me4_stop_acquire(struct uca_grabber_t *grabber)
 {
-    uint32_t last_frame = Fg_getLastPicNumber(GET_FG(grabber), PORT_A);
-    memcpy(buffer, Fg_getImagePtrEx(GET_FG(grabber), last_frame, PORT_A, GET_MEM(grabber)), n_bytes);
+    if (GET_MEM(grabber) != NULL)
+        if (Fg_stopAcquireEx(GET_FG(grabber), 0, GET_MEM(grabber), STOP_SYNC) != FG_OK)
+            return UCA_ERR_PROP_GENERAL;
+    return UCA_NO_ERROR;
+}
+
+uint32_t uca_me4_grab(struct uca_grabber_t *grabber, void **buffer, size_t n_bytes)
+{
+    int32_t last_frame;
+    if (grabber->asynchronous)
+        last_frame = Fg_getLastPicNumberEx(GET_FG(grabber), PORT_A, GET_MEM(grabber));
+    else 
+        last_frame = Fg_getLastPicNumberBlockingEx(GET_FG(grabber), 1, PORT_A, 10, GET_MEM(grabber));
+
+    if (last_frame <= 0)
+        return UCA_ERR_PROP_GENERAL;
+
+    *buffer = Fg_getImagePtrEx(GET_FG(grabber), last_frame, PORT_A, GET_MEM(grabber));
+    return UCA_NO_ERROR;
 }
 
 uint32_t uca_me4_init(struct uca_grabber_t **grabber)
@@ -83,6 +104,7 @@ uint32_t uca_me4_init(struct uca_grabber_t **grabber)
     uca->get_property = &uca_me4_get_property;
     uca->alloc = &uca_me4_alloc;
     uca->acquire = &uca_me4_acquire;
+    uca->stop_acquire = &uca_me4_stop_acquire;
     uca->grab = &uca_me4_grab;
     
     *grabber = uca;
