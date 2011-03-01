@@ -124,11 +124,11 @@ enum uca_errors {
     UCA_ERR_PROP_GENERAL,               /**< error occured reading/writing the property */
     UCA_ERR_PROP_VALUE_OUT_OF_RANGE,    /**< error occured writing the property */
 
-    UCA_ERR_CAM_ARM,
-    UCA_ERR_CAM_RECORD,
+    UCA_ERR_CAM_ARM,                    /**< camera is not armed */
+    UCA_ERR_CAM_RECORD,                 /**< could not record */
 
-    UCA_ERR_GRABBER_ACQUIRE,
-    UCA_ERR_GRABBER_NOMEM
+    UCA_ERR_GRABBER_ACQUIRE,            /**< grabber couldn't acquire a frame */
+    UCA_ERR_GRABBER_NOMEM               /**< no memory was allocated using uca_grabber->alloc() */
 };
 
 struct uca_t {

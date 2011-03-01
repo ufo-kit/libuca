@@ -186,10 +186,10 @@ uint32_t uca_pco_stop_recording(struct uca_camera_t *cam)
         return UCA_ERR_PROP_GENERAL;
 }
 
-uint32_t uca_pco_grab(struct uca_camera_t *cam, char *buffer, size_t n_bytes)
+uint32_t uca_pco_grab(struct uca_camera_t *cam, char *buffer)
 {
     uint16_t *frame;
-    uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, n_bytes);
+    uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame);
     if (err != UCA_NO_ERROR)
         return err;
     /* FIXME: choose according to data format */

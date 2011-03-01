@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     uint16_t *buffer = (uint16_t *) malloc(width * height * 2);
 
     cam->start_recording(cam);
-    cam->grab(cam, (char *) buffer, width*height*2);
+    cam->grab(cam, (char *) buffer);
     cam->stop_recording(cam);
     uca_destroy(uca);
 

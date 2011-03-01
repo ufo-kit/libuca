@@ -46,9 +46,19 @@ typedef uint32_t (*uca_grabber_alloc) (struct uca_grabber_t *grabber, uint32_t n
  */
 typedef uint32_t (*uca_grabber_acquire) (struct uca_grabber_t *grabber, int32_t n_frames);
 
+/**
+ * \brief Stop acquiring frames
+ */
 typedef uint32_t (*uca_grabber_stop_acquire) (struct uca_grabber_t *grabber);
 
-typedef uint32_t (*uca_grabber_grab) (struct uca_grabber_t *grabber, void **buffer, size_t n_bytes);
+/**
+ * \brief Grab a frame
+ *
+ * This method is usually called through the camera interface and not directly.
+ *
+ * \param[in] buffer The pointer of the frame buffer is set here
+ */
+typedef uint32_t (*uca_grabber_grab) (struct uca_grabber_t *grabber, void **buffer);
 
 
 struct uca_grabber_t {

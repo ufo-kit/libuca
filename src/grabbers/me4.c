@@ -71,7 +71,7 @@ uint32_t uca_me4_stop_acquire(struct uca_grabber_t *grabber)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_me4_grab(struct uca_grabber_t *grabber, void **buffer, size_t n_bytes)
+uint32_t uca_me4_grab(struct uca_grabber_t *grabber, void **buffer)
 {
     int32_t last_frame;
     if (grabber->asynchronous)

@@ -12,6 +12,11 @@ enum uca_property_ids;
 /*
  * --- non-virtual methods ----------------------------------------------------
  */
+
+/**
+ * \brief Allocates buffer memory for the internal frame grabber
+ * \param[in] n_buffers Number of sub-buffers with size frame_width*frame_height
+ */
 uint32_t uca_cam_alloc(struct uca_camera_t *cam, uint32_t n_buffers);
 
 enum uca_cam_state uca_cam_get_state(struct uca_camera_t *cam);
@@ -47,11 +52,25 @@ typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, enum uca_pro
  */
 typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);
 
+/**
+ * \brief Begin recording
+ *
+ * Usually this also involves the frame acquisition of the frame grabber but is
+ * hidden by this function.
+ */
 typedef uint32_t (*uca_cam_start_recording) (struct uca_camera_t *cam);
 
 typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera_t *cam);
 
-typedef uint32_t (*uca_cam_grab) (struct uca_camera_t *cam, char *buffer, size_t n_bytes);
+/**
+ * \brief Grab one image from the camera
+ * 
+ * The grabbing involves a memory copy because we might have to decode the image
+ * coming from the camera, which the frame grabber is not able to do.
+ *
+ * \param[in] buffer Destination buffer
+ */
+typedef uint32_t (*uca_cam_grab) (struct uca_camera_t *cam, char *buffer);
 
 
 enum uca_cam_state {
