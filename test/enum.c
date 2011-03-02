@@ -16,7 +16,7 @@ void print_level(int depth)
 {
     for (int i = 0; i < depth; i++)
         printf("|  ");
-    printf("`-- ");
+    printf("|-- ");
 }
 
 int main(int argc, char *argv[])
