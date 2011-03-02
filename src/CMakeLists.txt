@@ -26,6 +26,16 @@ find_package(FgLib5)
 find_package(ClSerMe4)
 
 # --- Add sources if camera/framegrabber access sources are available ---------
+
+# FIXME: create some kind of libphoton and search for it
+set(HAVE_PHOTON_FOCUS TRUE)
+if(HAVE_PHOTON_FOCUS)
+    set(uca_SRCS
+        ${uca_SRCS}
+        cameras/pf.c
+        )
+endif()
+
 if(PCO_FOUND)
     set(HAVE_PCO_EDGE TRUE)
 
