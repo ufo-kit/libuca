@@ -54,6 +54,11 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
+        case UCA_PROP_EXPOSURE:
+            if (grabber->set_property(grabber, FG_EXPOSURE, (uint32_t *) data) != UCA_NO_ERROR)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+            break;
+
         default:
             return UCA_ERR_PROP_INVALID;
     }
