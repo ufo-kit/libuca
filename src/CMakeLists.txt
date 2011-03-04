@@ -24,6 +24,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # --- Find camera interfaces
 find_package(PCO)
+find_package(PF)
 
 # --- Find frame grabber interfaces
 find_package(FgLib5)
@@ -32,11 +33,22 @@ find_package(ClSerMe4)
 # --- Add sources if camera/framegrabber access sources are available ---------
 
 # FIXME: create some kind of libphoton and search for it
-set(HAVE_PHOTON_FOCUS TRUE)
-if(HAVE_PHOTON_FOCUS)
+if (PF_FOUND)
+    set(HAVE_PHOTON_FOCUS TRUE)
+
     set(uca_SRCS
         ${uca_SRCS}
         cameras/pf.c
+        )
+
+    set(uca_LIBS
+        ${uca_LIBS}
+        ${PF_LIBRARIES}
+        )
+
+    include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${PF_INCLUDE_DIRS}
         )
 endif()
 

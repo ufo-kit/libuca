@@ -9,7 +9,7 @@
 find_package(PackageHandleStandardArgs)
 
 find_path(PF_INCLUDE_DIRS libpf/pfcam.h)
-find_library(PF_LIBRARIES libcomdll libmv2_d1280_64)
+find_library(PF_LIBRARIES NAMES comdll mv2_d1280_640)
 
 find_package_handle_standard_args(PF DEFAULT_MSG PF_LIBRARIES PF_INCLUDE_DIRS)
 
