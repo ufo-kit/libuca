@@ -1,15 +1,50 @@
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libpf/pfcam.h>
 #include "uca.h"
 #include "uca-cam.h"
 #include "uca-grabber.h"
 
 /* TODO: REMOVE THIS ASAP */
-#include <fgrab_struct.h>
+#define FG_WIDTH	100
+#define FG_HEIGHT	200
+
+#define FG_MAXWIDTH	    6100
+#define FG_MAXHEIGHT    6200
+#define FG_ACTIVEPORT   6300
+#define FG_XOFFSET      300
+#define FG_YOFFSET      400
+#define FG_FORMAT       700
+#define FG_GRAY         3
+#define FG_CAMERA_LINK_CAMTYP   11011
+#define FG_CL_8BIT_FULL_8       308
+#define FG_TRIGGERMODE          8100
 
 #define set_void(p, type, value) { *((type *) p) = value; }
 
+struct uca_pf_map {
+    enum uca_property_ids uca_prop;
+    const char *pf_prop;
+};
+
+static struct uca_pf_map uca_to_pf[] = {
+    { UCA_PROP_NAME, "CameraName" },
+    { UCA_PROP_WIDTH, "Window.W" },
+    { UCA_PROP_WIDTH_MIN, "Window.W.Min" },
+    { UCA_PROP_WIDTH_MAX, "Window.W.Max" },
+    { UCA_PROP_HEIGHT, "Window.H" },
+    { UCA_PROP_HEIGHT_MIN, "Window.H.Min" },
+    { UCA_PROP_HEIGHT_MAX, "Window.H.Max" },
+    { UCA_PROP_X_OFFSET, "Window.X" },
+    { UCA_PROP_Y_OFFSET, "Window.Y" },
+    { UCA_PROP_EXPOSURE, "ExposureTime" },
+    { UCA_PROP_EXPOSURE_MIN, "ExposureTime.Min" },
+    { UCA_PROP_EXPOSURE_MAX, "ExposureTime.Max" },
+    { UCA_PROP_FRAMERATE, "FrameRate" },
+    { -1, NULL }
+};
 
 static uint32_t uca_pf_set_bitdepth(struct uca_camera_t *cam, uint8_t *bitdepth)
 {
@@ -22,16 +57,12 @@ static uint32_t uca_pf_acquire_image(struct uca_camera_t *cam, void *buffer)
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pf_destroy(struct uca_camera_t *cam)
-{
-    return UCA_NO_ERROR;
-}
-
 static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
     struct uca_grabber_t *grabber = cam->grabber;
 
     switch (property) {
+        /*
         case UCA_PROP_WIDTH:
             if (grabber->set_property(grabber, FG_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
@@ -58,6 +89,7 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
             if (grabber->set_property(grabber, FG_EXPOSURE, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
+            */
 
         default:
             return UCA_ERR_PROP_INVALID;
@@ -69,39 +101,35 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
 static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
     struct uca_grabber_t *grabber = cam->grabber;
+    TOKEN t;    /* You gotta love developers who name types capitalized... */
+    PFValue value;
+
+    int i = 0;
+    while (uca_to_pf[i].uca_prop != -1) {
+        if (uca_to_pf[i].uca_prop == property) {
+            t = pfProperty_ParseName(0, uca_to_pf[i].pf_prop);
+            if (t == INVALID_TOKEN || (pfDevice_GetProperty(0, t, &value) < 0))
+                return UCA_ERR_PROP_INVALID;
+
+            switch (value.type) {
+                case PF_INT:
+                    set_void(data, uint32_t, value.value.i);
+                    break;
+
+                case PF_FLOAT:
+                    set_void(data, uint32_t, (uint32_t) floor(value.value.f+0.5));
+                    break;
+
+                case PF_STRING:
+                    strcpy((char *) data, value.value.p);
+                    break;
+            }
+            return UCA_NO_ERROR;
+        }
+        i++;
+    }
 
     switch (property) {
-        case UCA_PROP_NAME: 
-            /* FIXME: read name from camera */
-            strcpy((char *) data, "Photonfocus MV2-D1280-640");
-            break;
-
-        case UCA_PROP_WIDTH:
-            set_void(data, uint32_t, cam->frame_width);
-            break;
-
-        case UCA_PROP_WIDTH_MIN:
-            set_void(data, uint32_t, 1);
-            break;
-
-        case UCA_PROP_HEIGHT:
-            set_void(data, uint32_t, cam->frame_height);
-            break;
-
-        case UCA_PROP_HEIGHT_MIN:
-            set_void(data, uint32_t, 1);
-            break;
-
-        case UCA_PROP_X_OFFSET:
-            if (grabber->get_property(grabber, FG_XOFFSET, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_GENERAL;
-            break;
-
-        case UCA_PROP_Y_OFFSET:
-            if (grabber->get_property(grabber, FG_YOFFSET, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_GENERAL;
-            break;
-
         case UCA_PROP_BITDEPTH:
             set_void(data, uint8_t, 8);
             break;
@@ -133,8 +161,24 @@ uint32_t uca_pf_grab(struct uca_camera_t *cam, char *buffer)
     return UCA_NO_ERROR;
 }
 
+static uint32_t uca_pf_destroy(struct uca_camera_t *cam)
+{
+    pfDeviceClose(0);
+    return UCA_NO_ERROR;
+}
+
 uint32_t uca_pf_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
 {
+    int num_ports;
+    if (pfPortInit(&num_ports) < 0)
+        return UCA_ERR_INIT_NOT_FOUND;
+
+    if (pfDeviceOpen(0) < 0)
+        return UCA_ERR_INIT_NOT_FOUND;
+
+    /* We could check if a higher baud rate is supported, but... forget about
+     * it. We don't need high speed configuration. */
+
     struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
     uca->grabber = grabber;
     uca->grabber->asynchronous = false;
@@ -154,7 +198,7 @@ uint32_t uca_pf_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     val = FG_GRAY;
     grabber->set_property(grabber, FG_FORMAT, &val);
 
-    val = FREE_RUN;
+    val = 0;
     grabber->set_property(grabber, FG_TRIGGERMODE, &val);
 
     uca->frame_width = 1280;
