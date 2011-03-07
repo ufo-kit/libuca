@@ -91,7 +91,7 @@ uint32_t uca_me4_init(struct uca_grabber_t **grabber)
     /* FIXME: find out if this board/grabber is running */
     Fg_Struct *fg = Fg_Init("libFullAreaGray8.so", 0);
     if (fg == NULL)
-        return UCA_ERR_INIT_NOT_FOUND;
+        return UCA_ERR_GRABBER_NOT_FOUND;
 
     struct uca_grabber_t *uca = (struct uca_grabber_t *) malloc(sizeof(struct uca_grabber_t));
     struct uca_me4_grabber_t *me4 = (struct uca_me4_grabber_t *) malloc(sizeof(struct uca_me4_grabber_t));

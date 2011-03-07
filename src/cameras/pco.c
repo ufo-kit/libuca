@@ -202,12 +202,12 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     struct pco_edge_t *pco = pco_init();
 
     if (pco == NULL) {
-        return UCA_ERR_INIT_NOT_FOUND;
+        return UCA_ERR_CAM_NOT_FOUND;
     }
 
     if ((pco->serial_ref == NULL) || !pco_is_active(pco)) {
         pco_destroy(pco);
-        return UCA_ERR_INIT_NOT_FOUND;
+        return UCA_ERR_CAM_NOT_FOUND;
     }
 
     struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));

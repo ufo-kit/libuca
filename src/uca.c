@@ -53,7 +53,7 @@ static struct uca_property_t property_map[UCA_PROP_LAST+1] = {
     { NULL, 0, 0 }
 };
 
-struct uca_t *uca_init()
+struct uca_t *uca_init(void)
 {
     struct uca_t *uca = (struct uca_t *) malloc(sizeof(struct uca_t));
     uca->cameras = NULL;
@@ -89,7 +89,7 @@ struct uca_t *uca_init()
     while (grabber_inits[i] != NULL) {
         uca_grabber_init init = grabber_inits[i];
         /* FIXME: we don't only want to take the first one */
-        if (init(&grabber) != UCA_ERR_INIT_NOT_FOUND)
+        if (init(&grabber) != UCA_ERR_GRABBER_NOT_FOUND)
             break;
         i++;
     }
@@ -105,7 +105,7 @@ struct uca_t *uca_init()
     while (cam_inits[i] != NULL) {
         struct uca_camera_t *cam = NULL;
         uca_cam_init init = cam_inits[i];
-        if (init(&cam, grabber) != UCA_ERR_INIT_NOT_FOUND) {
+        if (init(&cam, grabber) != UCA_ERR_CAM_NOT_FOUND) {
             if (current == NULL) 
                 uca->cameras = current = cam;
             else {

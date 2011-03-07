@@ -171,10 +171,10 @@ uint32_t uca_pf_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
 {
     int num_ports;
     if (pfPortInit(&num_ports) < 0)
-        return UCA_ERR_INIT_NOT_FOUND;
+        return UCA_ERR_CAM_NOT_FOUND;
 
     if (pfDeviceOpen(0) < 0)
-        return UCA_ERR_INIT_NOT_FOUND;
+        return UCA_ERR_CAM_NOT_FOUND;
 
     /* We could check if a higher baud rate is supported, but... forget about
      * it. We don't need high speed configuration. */

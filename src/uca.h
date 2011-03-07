@@ -119,7 +119,8 @@ struct uca_property_t {
 
 enum uca_errors {
     UCA_NO_ERROR = 0,
-    UCA_ERR_INIT_NOT_FOUND,             /**< camera probing or initialization failed */
+    UCA_ERR_GRABBER_NOT_FOUND,
+    UCA_ERR_CAM_NOT_FOUND,             /**< camera probing or initialization failed */
     UCA_ERR_PROP_INVALID,               /**< the requested property is not supported by the camera */
     UCA_ERR_PROP_GENERAL,               /**< error occured reading/writing the property */
     UCA_ERR_PROP_VALUE_OUT_OF_RANGE,    /**< error occured writing the property */
