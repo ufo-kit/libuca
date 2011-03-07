@@ -9,6 +9,9 @@ pkg_check_modules(GTK2 gtk+-2.0)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/control.glade
+    DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 # --- Build targets -----------------------------------------------------------
 add_executable(enum enum.c)
 add_executable(grab grab.c)
