@@ -98,6 +98,7 @@ struct uca_t *uca_init(void)
         free(uca);
         return NULL;
     }
+    uca->grabbers = grabber;
     grabber->next = NULL;
 
     /* Probe each camera that is configured */
