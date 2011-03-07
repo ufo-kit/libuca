@@ -58,6 +58,76 @@ void *grab_thread(void *args)
     }
 }
 
+void get_first_level_root(GtkTreeStore *store, GtkTreeIter *iter, gchar *group)
+{
+    GtkTreeIter root;
+    if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store), &root)) {
+        gchar *str;
+        gtk_tree_model_get(GTK_TREE_MODEL(store), &root, 0, &str, -1);
+        if (g_strcmp0(group, str) == 0) {
+            *iter = root;
+            return;
+        }
+
+        /* Iterate through all groups */
+        while (gtk_tree_model_iter_next(GTK_TREE_MODEL(store), &root)) {
+            gtk_tree_model_get(GTK_TREE_MODEL(store), &root, 0, &str, -1);
+            if (g_strcmp0(group, str) == 0) {
+                *iter = root;
+                g_free(str);
+                return;
+            }
+        }
+
+        /* Not found, append the group */
+        g_free(str);
+    }
+
+    /* Tree is empty or group is not found */
+    gtk_tree_store_append(store, iter, NULL);
+    gtk_tree_store_set(store, iter, 0, group, -1);
+}
+
+void find_recursively(GtkTreeStore *store, GtkTreeIter *root, GtkTreeIter *result, gchar **tokens, int depth)
+{
+    GtkTreeIter iter;
+    gchar *str;
+    gchar *current_token = tokens[depth];
+
+    if (current_token == NULL) {
+        *result = *root;
+        return;
+    }
+
+    if (!gtk_tree_model_iter_has_child(GTK_TREE_MODEL(store), root)) {
+        gtk_tree_store_append(store, &iter, root);
+        if (tokens[depth+1] == NULL) {
+            *result = iter;
+            return;
+        }
+        else {
+            gtk_tree_store_set(store, &iter, 0, current_token, -1);
+            find_recursively(store, &iter, result, tokens, depth+1);
+        }
+    }
+
+    gtk_tree_model_iter_children(GTK_TREE_MODEL(store), &iter, root);
+    do {
+        gtk_tree_model_get(GTK_TREE_MODEL(store), &iter, 0, &str, -1);
+        if (g_strcmp0(current_token, str) == 0) {
+            find_recursively(store, &iter, result, tokens, depth+1);
+            g_free(str);
+            return;
+        }
+    } while (gtk_tree_model_iter_next(GTK_TREE_MODEL(store), &iter));
+
+    g_free(str);
+    gtk_tree_store_append(store, &iter, root);
+    gtk_tree_store_set(store, &iter, 0, current_token, -1);
+    //*result = iter;
+    find_recursively(store, &iter, result, tokens, depth+1);
+}
+
 void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
 {
     GtkTreeIter iter, child;
@@ -66,7 +136,6 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
     guint8 value_8;
     guint32 value_32;
 
-    gtk_tree_store_append(tree_store, &iter, NULL);
     for (int prop_id = 0; prop_id < UCA_PROP_LAST; prop_id++) {
         property = uca_get_full_property(prop_id);
         switch (property->type) {
@@ -84,11 +153,22 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
                 g_sprintf(value_string, "%d", value_32);
                 break;
         }
-        gtk_tree_store_set(tree_store, &iter, 
-                0, property->name,
+
+        /* Find first level root */
+        gchar **tokens = g_strsplit(property->name, ".", 0);
+        get_first_level_root(tree_store, &iter, tokens[0]);
+        find_recursively(tree_store, &iter, &child, tokens, 1);
+
+        int count = 0;
+        while (tokens[count++] != NULL);
+
+        gtk_tree_store_set(tree_store, &child, 
+                0, tokens[count-2],
                 1, value_string,
+                2, uca_unit_map[property->unit],
                 -1);
-        gtk_tree_store_append(tree_store, &iter, NULL);
+
+        g_strfreev(tokens);
     }
 
     g_free(value_string);

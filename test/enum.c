@@ -34,10 +34,6 @@ int main(int argc, char *argv[])
     uint32_t uint32_value;
     uint8_t uint8_value;
 
-    const char *unit_map[] = {
-        "px", "bits", "ns", "µs", "ms", "s", "rows", "" 
-    };
-
     while (cam != NULL) {
         for (int i = 0; i < UCA_PROP_LAST; i++) {
             struct uca_property_t *prop = uca_get_full_property(i);
@@ -53,14 +49,14 @@ int main(int argc, char *argv[])
                     break;
                 case uca_uint32t:
                     if (cam->get_property(cam, i, &uint32_value) != UCA_ERR_PROP_INVALID) {
-                        printf("%i %s", uint32_value, unit_map[prop->unit]);
+                        printf("%i %s", uint32_value, uca_unit_map[prop->unit]);
                     }
                     else
                         printf("n/a");
                     break;
                 case uca_uint8t:
                     if (cam->get_property(cam, i, &uint8_value) != UCA_ERR_PROP_INVALID) {
-                        printf("%i %s", uint8_value, unit_map[prop->unit]);
+                        printf("%i %s", uint8_value, uca_unit_map[prop->unit]);
                     }
                     else
                         printf("n/a");

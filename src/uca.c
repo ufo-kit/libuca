@@ -25,31 +25,43 @@
 #include "cameras/photron.h"
 #endif
 
+const char *uca_unit_map[] = {
+    "px",
+    "bits",
+    "ns",
+    "µs",
+    "ms",
+    "s",
+    "rows",
+    "fps"
+    "" 
+};
+
 static struct uca_property_t property_map[UCA_PROP_LAST+1] = {
-    { "name",           uca_na,     uca_string }, 
-    { "width",          uca_pixel,  uca_uint32t }, 
-    { "width.min",      uca_pixel,  uca_uint32t }, 
-    { "width.max",      uca_pixel,  uca_uint32t }, 
-    { "height",         uca_pixel,  uca_uint32t }, 
-    { "height.min",     uca_pixel,  uca_uint32t }, 
-    { "height.max",     uca_pixel,  uca_uint32t }, 
-    { "offset.x",       uca_pixel,  uca_uint32t }, 
-    { "offset.y",       uca_pixel,  uca_uint32t }, 
-    { "bitdepth",       uca_bits,   uca_uint8t }, 
-    { "exposure",       uca_us,     uca_uint32t }, 
-    { "exposure.min",   uca_ns,     uca_uint32t }, 
-    { "exposure.max",   uca_ms,     uca_uint32t }, 
-    { "delay",          uca_us,     uca_uint32t }, 
-    { "delay.min",      uca_ns,     uca_uint32t }, 
-    { "delay.max",      uca_ms,     uca_uint32t }, 
-    { "framerate",      uca_na,     uca_uint32t }, 
-    { "triggermode",    uca_na,     uca_uint32t }, 
-    { "timestampmode",  uca_na,     uca_uint32t }, 
-    { "scan-mode",      uca_na,     uca_uint32t }, 
-    { "interlace.samplerate", uca_na, uca_uint32t }, 
-    { "interlace.threshold.pixel", uca_na, uca_uint32t }, 
-    { "interlace.threshold.row", uca_na, uca_uint32t }, 
-    { "correctionmode", uca_na, uca_uint32t }, 
+    { "general.name",           uca_na,     uca_string }, 
+    { "image.width",            uca_pixel,  uca_uint32t }, 
+    { "image.width.min",        uca_pixel,  uca_uint32t }, 
+    { "image.width.max",        uca_pixel,  uca_uint32t }, 
+    { "image.height",           uca_pixel,  uca_uint32t }, 
+    { "image.height.min",       uca_pixel,  uca_uint32t }, 
+    { "image.height.max",       uca_pixel,  uca_uint32t }, 
+    { "image.offset.x",         uca_pixel,  uca_uint32t }, 
+    { "image.offset.y",         uca_pixel,  uca_uint32t }, 
+    { "image.bitdepth",         uca_bits,   uca_uint8t }, 
+    { "time.exposure",          uca_us,     uca_uint32t }, 
+    { "time.exposure.min",      uca_ns,     uca_uint32t }, 
+    { "time.exposure.max",      uca_ms,     uca_uint32t }, 
+    { "time.delay",             uca_us,     uca_uint32t }, 
+    { "time.delay.min",         uca_ns,     uca_uint32t }, 
+    { "time.delay.max",         uca_ms,     uca_uint32t }, 
+    { "time.framerate",         uca_fps,    uca_uint32t }, 
+    { "mode.trigger",           uca_na,     uca_uint32t }, 
+    { "mode.timestamp",         uca_na,     uca_uint32t }, 
+    { "mode.scan",              uca_na,     uca_uint32t }, 
+    { "ipe.interlace.samplerate", uca_na, uca_uint32t }, 
+    { "ipe.interlace.threshold.pixel", uca_na, uca_uint32t }, 
+    { "ipe.interlace.threshold.row", uca_na, uca_uint32t }, 
+    { "mode.correction", uca_na, uca_uint32t }, 
     { NULL, 0, 0 }
 };
 

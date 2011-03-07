@@ -93,6 +93,7 @@ enum uca_property_ids {
 #define UCA_CORRECT_HOTPIXEL    0x02
 #define UCA_CORRECT_GAIN        0x04
 
+
 /**
  * \brief Describe a property used by cameras and frame grabbers
  */
@@ -100,13 +101,14 @@ struct uca_property_t {
     const char *name;
 
     enum uca_unit {
-        uca_pixel,
+        uca_pixel = 0,
         uca_bits,
         uca_ns,
         uca_us,
         uca_ms,
         uca_s,
         uca_rows,
+        uca_fps,
         uca_na
     } unit;
 
@@ -117,10 +119,12 @@ struct uca_property_t {
     } type;
 };
 
+extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding strings */
+
 enum uca_errors {
     UCA_NO_ERROR = 0,
     UCA_ERR_GRABBER_NOT_FOUND,
-    UCA_ERR_CAM_NOT_FOUND,             /**< camera probing or initialization failed */
+    UCA_ERR_CAM_NOT_FOUND,              /**< camera probing or initialization failed */
     UCA_ERR_PROP_INVALID,               /**< the requested property is not supported by the camera */
     UCA_ERR_PROP_GENERAL,               /**< error occured reading/writing the property */
     UCA_ERR_PROP_VALUE_OUT_OF_RANGE,    /**< error occured writing the property */
