@@ -30,19 +30,19 @@ struct uca_pf_map {
 };
 
 static struct uca_pf_map uca_to_pf[] = {
-    { UCA_PROP_NAME, "CameraName" },
-    { UCA_PROP_WIDTH, "Window.W" },
-    { UCA_PROP_WIDTH_MIN, "Window.W.Min" },
-    { UCA_PROP_WIDTH_MAX, "Window.W.Max" },
-    { UCA_PROP_HEIGHT, "Window.H" },
-    { UCA_PROP_HEIGHT_MIN, "Window.H.Min" },
-    { UCA_PROP_HEIGHT_MAX, "Window.H.Max" },
-    { UCA_PROP_X_OFFSET, "Window.X" },
-    { UCA_PROP_Y_OFFSET, "Window.Y" },
-    { UCA_PROP_EXPOSURE, "ExposureTime" },
+    { UCA_PROP_NAME,        "CameraName" },
+    { UCA_PROP_WIDTH,       "Window.W" },
+    { UCA_PROP_WIDTH_MIN,   "Window.W.Min" },
+    { UCA_PROP_WIDTH_MAX,   "Window.W.Max" },
+    { UCA_PROP_HEIGHT,      "Window.H" },
+    { UCA_PROP_HEIGHT_MIN,  "Window.H.Min" },
+    { UCA_PROP_HEIGHT_MAX,  "Window.H.Max" },
+    { UCA_PROP_X_OFFSET,    "Window.X" },
+    { UCA_PROP_Y_OFFSET,    "Window.Y" },
+    { UCA_PROP_EXPOSURE,    "ExposureTime" },
     { UCA_PROP_EXPOSURE_MIN, "ExposureTime.Min" },
     { UCA_PROP_EXPOSURE_MAX, "ExposureTime.Max" },
-    { UCA_PROP_FRAMERATE, "FrameRate" },
+    { UCA_PROP_FRAMERATE,   "FrameRate" },
     { -1, NULL }
 };
 
@@ -60,18 +60,38 @@ static uint32_t uca_pf_acquire_image(struct uca_camera_t *cam, void *buffer)
 static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
     struct uca_grabber_t *grabber = cam->grabber;
+    TOKEN t = INVALID_TOKEN;
+    int i = 0;
+    while (uca_to_pf[i].uca_prop != -1) {
+        if (uca_to_pf[i].uca_prop == property)
+            t = pfProperty_ParseName(0, uca_to_pf[i].pf_prop);
+        i++;
+    }
+    if (t == INVALID_TOKEN)
+        return UCA_ERR_PROP_INVALID;
+
+    PFValue value;
 
     switch (property) {
-        /*
         case UCA_PROP_WIDTH:
             if (grabber->set_property(grabber, FG_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
-            cam->frame_width = *((uint32_t *) data);
+
+            value.value.i = *((uint32_t *) data);
+            if (pfDevice_SetProperty(0, t, &value) < 0)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+
+            cam->frame_width = value.value.i;
             break;
 
         case UCA_PROP_HEIGHT:
             if (grabber->set_property(grabber, FG_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+
+            value.value.i = *((uint32_t *) data);
+            if (pfDevice_SetProperty(0, t, &value) < 0)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+
             cam->frame_height = *((uint32_t *) data);
             break;
 
@@ -85,6 +105,7 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
+            /*
         case UCA_PROP_EXPOSURE:
             if (grabber->set_property(grabber, FG_EXPOSURE, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
@@ -121,7 +142,12 @@ static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_
                     break;
 
                 case PF_STRING:
-                    strcpy((char *) data, value.value.p);
+                    if (property == UCA_PROP_FRAMERATE) {
+                        set_void(data, uint32_t, (uint32_t) floor(atof(value.value.p)+0.5));
+                    }
+                    else {
+                        strcpy((char *) data, value.value.p);
+                    }
                     break;
             }
             return UCA_NO_ERROR;
@@ -201,8 +227,8 @@ uint32_t uca_pf_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     val = 0;
     grabber->set_property(grabber, FG_TRIGGERMODE, &val);
 
-    uca->frame_width = 1280;
-    uca->frame_height = 1024;
+    uca_pf_get_property(uca, UCA_PROP_WIDTH, &uca->frame_width);
+    uca_pf_get_property(uca, UCA_PROP_HEIGHT, &uca->frame_height);
 
     grabber->set_property(grabber, FG_WIDTH, &uca->frame_width);
     grabber->set_property(grabber, FG_HEIGHT, &uca->frame_height);
