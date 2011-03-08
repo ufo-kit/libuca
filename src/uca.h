@@ -66,7 +66,10 @@ enum uca_property_ids {
     UCA_PROP_DELAY_MIN,
     UCA_PROP_DELAY_MAX,
     UCA_PROP_FRAMERATE,
+    UCA_PROP_TEMPERATURE_SENSOR,
+    UCA_PROP_TEMPERATURE_CAMERA,
     UCA_PROP_TRIGGER_MODE,
+    UCA_PROP_TRIGGER_EXPOSURE,
 
     /* pco.edge specific */
     UCA_PROP_TIMESTAMP_MODE,
@@ -87,10 +90,13 @@ enum uca_property_ids {
 #define UCA_TIMESTAMP_ASCII     0x01
 #define UCA_TIMESTAMP_BINARY    0x02
 
-/* Trigger mode for UCA_PROP_TRIGGERMODE */
-#define UCA_TRIGGER_AUTO        1
-#define UCA_TRIGGER_INTERNAL    2
+/* Trigger mode for UCA_PROP_TRIGGER_MODE */
+#define UCA_TRIGGER_AUTO        1   /**< free-run mode */
+#define UCA_TRIGGER_SOFTWARE    2
 #define UCA_TRIGGER_EXTERNAL    3
+
+#define UCA_TRIGGER_EXP_CAMERA  1   /**< camera-controlled exposure time */
+#define UCA_TRIGGER_EXP_LEVEL   2   /**< level-controlled (trigger signal) exposure time */
 
 /* Correction modes for UCA_PROP_CORRECTION_MODE */
 #define UCA_CORRECT_OFFSET      0x01
@@ -107,12 +113,13 @@ struct uca_property_t {
     enum uca_unit {
         uca_pixel = 0,
         uca_bits,
-        uca_ns,
-        uca_us,
-        uca_ms,
+        uca_ns,     /**< nano seconds */
+        uca_us,     /**< micro seconds */
+        uca_ms,     /**< milli seconds */
         uca_s,
         uca_rows,
-        uca_fps,
+        uca_fps,    /**< frames per second */
+        uca_dc,     /**< degree celsius */
         uca_na
     } unit;
 

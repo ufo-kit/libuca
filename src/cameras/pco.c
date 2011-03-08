@@ -12,7 +12,7 @@
 
 #define GET_PCO(uca) ((struct pco_edge_t *)(uca->user))
 
-#define set_void(p, type, value) { *((type *) p) = value; }
+#define set_void(p, type, value) { *((type *) p) = (type) value; }
 
 
 static uint32_t uca_pco_set_bitdepth(struct uca_camera_t *cam, uint8_t *bitdepth)
@@ -105,8 +105,30 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
             {
                 /* FIXME: how to ensure, that buffer is large enough? */
                 SC2_Camera_Name_Response name;
-                if (pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name)) == PCO_NOERROR)
-                    strcpy((char *) data, name.szName);
+
+                /* FIXME: This is _not_ a mistake. For some reason (which I
+                 * still have to figure out), it is sometimes not possible to
+                 * read the camera name... unless the same call precedes that
+                 * one.*/
+                pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name));
+                pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name));
+                strcpy((char *) data, name.szName);
+            }
+            break;
+
+        case UCA_PROP_TEMPERATURE_SENSOR:
+            {
+                SC2_Temperature_Response temperature;
+                if (pco_read_property(pco, GET_TEMPERATURE, &temperature, sizeof(temperature)) == PCO_NOERROR)
+                    set_void(data, uint32_t, temperature.sCCDtemp / 10);
+            }
+            break;
+
+        case UCA_PROP_TEMPERATURE_CAMERA:
+            {
+                SC2_Temperature_Response temperature;
+                if (pco_read_property(pco, GET_TEMPERATURE, &temperature, sizeof(temperature)) == PCO_NOERROR)
+                    set_void(data, uint32_t, temperature.sCamtemp);
             }
             break;
 
@@ -144,12 +166,28 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
                 return UCA_ERR_PROP_GENERAL;
             break;
 
+        case UCA_PROP_DELAY:
+            {
+                uint32_t exposure;
+                if (pco_get_delay_exposure(pco, (uint32_t *) data, &exposure) != PCO_NOERROR)
+                    return UCA_ERR_PROP_INVALID;
+            }
+            break;
+
         case UCA_PROP_DELAY_MIN:
             set_void(data, uint32_t, pco->description.dwMinDelayDESC);
             break;
 
         case UCA_PROP_DELAY_MAX:
             set_void(data, uint32_t, pco->description.dwMaxDelayDESC);
+            break;
+
+        case UCA_PROP_EXPOSURE:
+            {
+                uint32_t delay;
+                if (pco_get_delay_exposure(pco, &delay, (uint32_t *) data) != PCO_NOERROR)
+                    return UCA_ERR_PROP_INVALID;
+            }
             break;
 
         case UCA_PROP_EXPOSURE_MIN:
@@ -161,7 +199,7 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
             break;
 
         case UCA_PROP_BITDEPTH:
-            set_void(data, uint8_t, 16);
+            set_void(data, uint32_t, 16);
             break;
 
         default:
@@ -224,13 +262,11 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     uca->grab = &uca_pco_grab;
 
     /* Prepare camera for recording */
+    pco_set_scan_mode(pco, PCO_SCANMODE_SLOW);
     pco_set_rec_state(pco, 0);
     pco_set_timestamp_mode(pco, 2);
     pco_set_timebase(pco, 1, 1); 
     pco_arm_camera(pco);
-
-    if (pco->transfer.DataFormat != (SCCMOS_FORMAT_TOP_CENTER_BOTTOM_CENTER | PCO_CL_DATAFORMAT_5x16))
-        pco->transfer.DataFormat = SCCMOS_FORMAT_TOP_CENTER_BOTTOM_CENTER | PCO_CL_DATAFORMAT_5x16;
 
     /* Prepare frame grabber for recording */
     int val = FG_CL_8BIT_FULL_10;

@@ -45,17 +45,15 @@ static struct uca_pf_map uca_to_pf[] = {
     { UCA_PROP_Y_OFFSET_MIN,"Window.Y.Min" },
     { UCA_PROP_Y_OFFSET_MAX,"Window.Y.Max" },
     { UCA_PROP_EXPOSURE,    "ExposureTime" },
-    { UCA_PROP_EXPOSURE_MIN, "ExposureTime.Min" },
-    { UCA_PROP_EXPOSURE_MAX, "ExposureTime.Max" },
+    { UCA_PROP_EXPOSURE_MIN,"ExposureTime.Min" },
+    { UCA_PROP_EXPOSURE_MAX,"ExposureTime.Max" },
+    { UCA_PROP_DELAY,       "Trigger.Delay" },
+    { UCA_PROP_DELAY_MIN,   "Trigger.Delay.Min" },
+    { UCA_PROP_DELAY_MAX,   "Trigger.Delay.Max" },
     { UCA_PROP_FRAMERATE,   "FrameRate" },
+    { UCA_PROP_TRIGGER_MODE,"Trigger.Source" },
     { -1, NULL }
 };
-
-static uint32_t uca_pf_set_bitdepth(struct uca_camera_t *cam, uint8_t *bitdepth)
-{
-    /* TODO: it's not possible via CameraLink so do it via frame grabber */
-    return 0;
-}
 
 static uint32_t uca_pf_acquire_image(struct uca_camera_t *cam, void *buffer)
 {
@@ -67,6 +65,8 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
     struct uca_grabber_t *grabber = cam->grabber;
     TOKEN t = INVALID_TOKEN;
     int i = 0;
+
+    /* Find a valid pf token for the property */
     while (uca_to_pf[i].uca_prop != -1) {
         if (uca_to_pf[i].uca_prop == property)
             t = pfProperty_ParseName(0, uca_to_pf[i].pf_prop);
@@ -156,12 +156,17 @@ static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_
                         strcpy((char *) data, value.value.p);
                     }
                     break;
+
+                case PF_MODE:
+                    set_void(data, uint32_t, (uint32_t) value.value.i);
+                    break;
             }
             return UCA_NO_ERROR;
         }
         i++;
     }
 
+    /* Handle all special cases */
     switch (property) {
         case UCA_PROP_BITDEPTH:
             set_void(data, uint8_t, 8);

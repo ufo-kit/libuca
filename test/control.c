@@ -11,7 +11,7 @@ struct ThreadData {
     GdkPixbuf *pixbuf;
     int width;
     int height;
-
+    int bits;
     struct uca_camera_t *cam;
 };
 
@@ -35,7 +35,7 @@ static void destroy(GtkWidget *widget, gpointer data)
     gtk_main_quit ();
 }
 
-void grey_to_rgb(guchar *output, guchar *input, int width, int height)
+void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
 {
     for (int x = 0; x < width; x++) {
         for (int y = 0; y < height; y++) {
@@ -47,6 +47,20 @@ void grey_to_rgb(guchar *output, guchar *input, int width, int height)
     }
 }
 
+void convert_16bit_to_rgb(guchar *output, guchar *input, int width, int height)
+{
+    uint16_t *in = (uint16_t *) input;
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            const int off = y*width + x;
+            guchar val = (uint8_t) ((in[off]/65536.0f)*256.0f);
+            output[off*3] = val;
+            output[off*3+1] = val;
+            output[off*3+2] = val;
+        }
+    }
+}
+
 void *grab_thread(void *args)
 {
     struct ThreadData *data = (struct ThreadData *) args;
@@ -54,7 +68,10 @@ void *grab_thread(void *args)
 
     while (TRUE) {
         cam->grab(cam, (char *) data->buffer);
-        grey_to_rgb(data->pixels, data->buffer, data->width, data->height);
+        if (data->bits == 8)
+            convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
+        else if (data->bits == 16)
+            convert_16bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
 
         gdk_threads_enter();
         gdk_flush();
@@ -216,7 +233,6 @@ int main(int argc, char *argv[])
     cam->get_property(cam, UCA_PROP_WIDTH, &width);
     cam->get_property(cam, UCA_PROP_HEIGHT, &height);
     cam->get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample);
-    bits_per_sample = 8;
 
     g_thread_init(NULL);
     gdk_threads_init();
@@ -246,21 +262,23 @@ int main(int argc, char *argv[])
     g_signal_connect (window, "destroy",
               G_CALLBACK (destroy), uca);
     
-    GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, bits_per_sample, width, height);
+    GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, width, height);
     gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf);
     
     gtk_widget_show(image);
     gtk_widget_show(window);
 
     /* start grabbing and thread */
+    int mem_size = bits_per_sample == 8 ? 1 : 2;
     struct ThreadData td;
     uca_cam_alloc(cam, 20);
     td.image  = image;
     td.pixbuf = pixbuf;
-    td.buffer = (guchar *) g_malloc(width * height);
+    td.buffer = (guchar *) g_malloc(mem_size * width * height);
     td.pixels = gdk_pixbuf_get_pixels(pixbuf);
     td.width  = width;
     td.height = height;
+    td.bits   = bits_per_sample;
     td.cam    = cam;
     cam->start_recording(cam);
     if (!g_thread_create(grab_thread, &td, FALSE, &error)) {
