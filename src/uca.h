@@ -117,6 +117,12 @@ struct uca_property_t {
         uca_uint8t,
         uca_string
     } type;
+
+    enum uca_access_rights {
+        uca_read = 0x01,
+        uca_write = 0x02,
+        uca_readwrite = 0x01 | 0x02
+    } access;
 };
 
 extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding strings */

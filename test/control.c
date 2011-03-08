@@ -15,12 +15,19 @@ struct ThreadData {
     struct uca_camera_t *cam;
 };
 
+enum {
+    COLUMN_NAME = 0,
+    COLUMN_VALUE,
+    COLUMN_UNIT,
+    COLUMN_UCA_ID,
+    NUM_COLUMNS
+};
+
 static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
     return FALSE;
 }
 
-/* Another callback */
 static void destroy(GtkWidget *widget, gpointer data)
 {
     struct uca_t *uca = (struct uca_t *) data;
@@ -123,8 +130,7 @@ void find_recursively(GtkTreeStore *store, GtkTreeIter *root, GtkTreeIter *resul
 
     g_free(str);
     gtk_tree_store_append(store, &iter, root);
-    gtk_tree_store_set(store, &iter, 0, current_token, -1);
-    //*result = iter;
+    gtk_tree_store_set(store, &iter, COLUMN_NAME, current_token, -1);
     find_recursively(store, &iter, result, tokens, depth+1);
 }
 
@@ -163,15 +169,34 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
         while (tokens[count++] != NULL);
 
         gtk_tree_store_set(tree_store, &child, 
-                0, tokens[count-2],
-                1, value_string,
-                2, uca_unit_map[property->unit],
+                COLUMN_NAME, tokens[count-2],
+                COLUMN_VALUE, value_string,
+                COLUMN_UNIT, uca_unit_map[property->unit],
+                COLUMN_UCA_ID, prop_id,
                 -1);
 
         g_strfreev(tokens);
     }
 
     g_free(value_string);
+}
+
+void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
+{
+    uint32_t prop_id;
+
+    gtk_tree_model_get(model, iter, COLUMN_UCA_ID, &prop_id, -1);
+    struct uca_property_t *property = uca_get_full_property(prop_id);
+    if (property->access & uca_write) {
+        g_object_set(cell, "mode", GTK_CELL_RENDERER_MODE_EDITABLE, NULL);
+        g_object_set(GTK_CELL_RENDERER_TEXT(cell), "editable", TRUE, NULL);
+        g_object_set(GTK_CELL_RENDERER_TEXT(cell), "style", PANGO_STYLE_NORMAL, NULL);
+    }
+    else {
+        g_object_set(cell, "mode", GTK_CELL_RENDERER_MODE_INERT, NULL);
+        g_object_set(GTK_CELL_RENDERER_TEXT(cell), "editable", FALSE, NULL);
+        g_object_set(GTK_CELL_RENDERER_TEXT(cell), "style", PANGO_STYLE_ITALIC, NULL);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -203,8 +228,13 @@ int main(int argc, char *argv[])
 
     GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
     GtkWidget *image = GTK_WIDGET(gtk_builder_get_object(builder, "image"));
+
     GtkTreeStore *tree_store = GTK_TREE_STORE(gtk_builder_get_object(builder, "cameraproperties"));
+    GtkTreeViewColumn *value_column = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "valuecolumn"));
+    GtkCellRendererText *value_renderer = GTK_CELL_RENDERER_TEXT(gtk_builder_get_object(builder, "valuecell"));
     fill_tree_store(tree_store, cam);
+
+    gtk_tree_view_column_set_cell_data_func(value_column, GTK_CELL_RENDERER(value_renderer), value_cell_data_func, NULL, NULL);
 
     g_signal_connect (window, "delete-event",
               G_CALLBACK (delete_event), NULL);
