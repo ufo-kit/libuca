@@ -144,18 +144,19 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
 
     for (int prop_id = 0; prop_id < UCA_PROP_LAST; prop_id++) {
         property = uca_get_full_property(prop_id);
+        uint32_t result = UCA_NO_ERROR;
         switch (property->type) {
             case uca_string:
-                cam->get_property(cam, prop_id, value_string);
+                result = cam->get_property(cam, prop_id, value_string);
                 break;
 
             case uca_uint8t:
-                cam->get_property(cam, prop_id, &value_8);
+                result = cam->get_property(cam, prop_id, &value_8);
                 g_sprintf(value_string, "%d", value_8);
                 break;
 
             case uca_uint32t:
-                cam->get_property(cam, prop_id, &value_32);
+                result = cam->get_property(cam, prop_id, &value_32);
                 g_sprintf(value_string, "%d", value_32);
                 break;
         }
@@ -164,6 +165,9 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
         gchar **tokens = g_strsplit(property->name, ".", 0);
         get_first_level_root(tree_store, &iter, tokens[0]);
         find_recursively(tree_store, &iter, &child, tokens, 1);
+
+        if (result == UCA_ERR_PROP_INVALID)
+            g_sprintf(value_string, "n/a");
 
         int count = 0;
         while (tokens[count++] != NULL);

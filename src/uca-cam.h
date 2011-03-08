@@ -39,15 +39,17 @@ typedef uint32_t (*uca_cam_destroy) (struct uca_camera_t *cam);
 
 /**
  * \brief Set a property
- * \param[in] property_name Name of the property as defined in XXX
+ * \param[in] property ID of the property as defined in XXX
+ * \param[out] data Where to read the property's value from
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera or
  * UCA_ERR_PROP_VALUE_OUT_OF_RANGE if value cannot be set.
  */
 typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);
 
 /**
- * \brief Set a property
- * \param[in] property_name Name of the property as defined in XXX
+ * \brief Get a property
+ * \param[in] property ID of the property as defined in XXX
+ * \param[out] data Where to store the property's value
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera
  */
 typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);

@@ -21,6 +21,7 @@
 #define FG_CAMERA_LINK_CAMTYP   11011
 #define FG_CL_8BIT_FULL_8       308
 #define FG_TRIGGERMODE          8100
+#define FG_EXPOSURE			10020			/**< Exposure Time in us (Brigthness) (float) */
 
 #define set_void(p, type, value) { *((type *) p) = value; }
 
@@ -38,7 +39,11 @@ static struct uca_pf_map uca_to_pf[] = {
     { UCA_PROP_HEIGHT_MIN,  "Window.H.Min" },
     { UCA_PROP_HEIGHT_MAX,  "Window.H.Max" },
     { UCA_PROP_X_OFFSET,    "Window.X" },
+    { UCA_PROP_X_OFFSET_MIN,"Window.X.Min" },
+    { UCA_PROP_X_OFFSET_MAX,"Window.X.Max" },
     { UCA_PROP_Y_OFFSET,    "Window.Y" },
+    { UCA_PROP_Y_OFFSET_MIN,"Window.Y.Min" },
+    { UCA_PROP_Y_OFFSET_MAX,"Window.Y.Max" },
     { UCA_PROP_EXPOSURE,    "ExposureTime" },
     { UCA_PROP_EXPOSURE_MIN, "ExposureTime.Min" },
     { UCA_PROP_EXPOSURE_MAX, "ExposureTime.Max" },
@@ -105,12 +110,14 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
-            /*
         case UCA_PROP_EXPOSURE:
             if (grabber->set_property(grabber, FG_EXPOSURE, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+
+            value.value.f = (float) *((uint32_t *) data);
+            if (pfDevice_SetProperty(0, t, &value) < 0)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
-            */
 
         default:
             return UCA_ERR_PROP_INVALID;
