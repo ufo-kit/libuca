@@ -169,7 +169,7 @@ static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_
     /* Handle all special cases */
     switch (property) {
         case UCA_PROP_BITDEPTH:
-            set_void(data, uint8_t, 8);
+            set_void(data, uint32_t, 8);
             break;
 
         default:
@@ -219,7 +219,7 @@ uint32_t uca_pf_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
 
     struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
     uca->grabber = grabber;
-    uca->grabber->asynchronous = false;
+    uca->grabber->asynchronous = true;
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_pf_destroy;

@@ -278,10 +278,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int width = 640, height = 480, bits_per_sample;
+    int width, height, bits_per_sample;
     struct uca_camera_t *cam = uca->cameras;
-    cam->set_property(cam, UCA_PROP_WIDTH, &width);
-    cam->set_property(cam, UCA_PROP_HEIGHT, &height);
+    cam->get_property(cam, UCA_PROP_WIDTH, &width);
+    cam->get_property(cam, UCA_PROP_HEIGHT, &height);
     cam->get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample);
 
     g_thread_init(NULL);
