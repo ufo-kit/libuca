@@ -6,7 +6,10 @@
 
 uint32_t uca_cam_alloc(struct uca_camera_t *cam, uint32_t n_buffers)
 {
-    cam->grabber->alloc(cam->grabber, n_buffers);
+    uint32_t bitdepth;
+    cam->get_property(cam, UCA_PROP_BITDEPTH, &bitdepth);
+    const int pixel_size = bitdepth == 8 ? 1 : 2;
+    cam->grabber->alloc(cam->grabber, pixel_size, n_buffers);
 }
 
 enum uca_cam_state uca_cam_get_state(struct uca_camera_t *cam)

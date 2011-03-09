@@ -15,18 +15,20 @@ int main(int argc, char *argv[])
     /* take first camera */
     struct uca_camera_t *cam = uca->cameras;
 
-    uint32_t val = 5000;
+    uint32_t val = 1;
     cam->set_property(cam, UCA_PROP_EXPOSURE, &val);
     val = 0;
     cam->set_property(cam, UCA_PROP_DELAY, &val);
 
-    uint32_t width, height;
+    uint32_t width, height, bits;
     cam->get_property(cam, UCA_PROP_WIDTH, &width);
     cam->get_property(cam, UCA_PROP_HEIGHT, &height);
+    cam->get_property(cam, UCA_PROP_BITDEPTH, &bits);
 
-    uca_cam_alloc(cam, 20);
+    uca_cam_alloc(cam, 10);
 
-    uint16_t *buffer = (uint16_t *) malloc(width * height * 2);
+    const int pixel_size = bits == 8 ? 1 : 2;
+    uint16_t *buffer = (uint16_t *) malloc(width * height * pixel_size);
 
     cam->start_recording(cam);
     cam->grab(cam, (char *) buffer);
@@ -34,7 +36,7 @@ int main(int argc, char *argv[])
     uca_destroy(uca);
 
     FILE *fp = fopen("out.raw", "wb");
-    fwrite(buffer, width*height, 2, fp);
+    fwrite(buffer, width*height, pixel_size, fp);
     fclose(fp);
 
     free(buffer);

@@ -34,7 +34,7 @@ uint32_t uca_me4_get_property(struct uca_grabber_t *grabber, enum uca_property_i
     return Fg_getParameter(GET_FG(grabber), property, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
 }
 
-uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t n_buffers)
+uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t pixel_size, uint32_t n_buffers)
 {
     if (GET_MEM(grabber) != NULL)
         /* FIXME: invent better error code */
@@ -45,7 +45,7 @@ uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t n_buffers)
     uca_me4_get_property(grabber, FG_HEIGHT, &height);
 
     /* FIXME: get size of pixel */
-    dma_mem *mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*sizeof(uint16_t), n_buffers);
+    dma_mem *mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*pixel_size, n_buffers);
     if (mem != NULL) {
         ((struct uca_me4_grabber_t *) grabber->user)->mem = mem;
         return UCA_NO_ERROR;

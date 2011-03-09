@@ -309,12 +309,12 @@ int main(int argc, char *argv[])
     gtk_tree_view_column_set_cell_data_func(value_column, GTK_CELL_RENDERER(value_renderer), value_cell_data_func, NULL, NULL);
 
     /* start grabbing and thread */
-    int mem_size = bits_per_sample == 8 ? 1 : 2;
+    int pixel_size = bits_per_sample == 8 ? 1 : 2;
     struct ThreadData td;
     uca_cam_alloc(cam, 20);
     td.image  = image;
     td.pixbuf = pixbuf;
-    td.buffer = (guchar *) g_malloc(mem_size * width * height);
+    td.buffer = (guchar *) g_malloc(pixel_size * width * height);
     td.pixels = gdk_pixbuf_get_pixels(pixbuf);
     td.width  = width;
     td.height = height;

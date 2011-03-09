@@ -37,7 +37,7 @@ typedef uint32_t (*uca_grabber_get_property) (struct uca_grabber_t *grabber, enu
  * \brief Allocate buffers with current width, height and bitdepth
  * \note Subsequent changes of width and height might corrupt memory
  */
-typedef uint32_t (*uca_grabber_alloc) (struct uca_grabber_t *grabber, uint32_t n_buffers);
+typedef uint32_t (*uca_grabber_alloc) (struct uca_grabber_t *grabber, uint32_t pixel_size, uint32_t n_buffers);
 
 /**
  * \brief Begin acquiring frames
