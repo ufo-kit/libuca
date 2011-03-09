@@ -97,7 +97,7 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
             if (pfDevice_SetProperty(0, t, &value) < 0)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
 
-            cam->frame_height = *((uint32_t *) data);
+            cam->frame_height = value.value.i;
             break;
 
         case UCA_PROP_X_OFFSET:
@@ -111,10 +111,10 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
             break;
 
         case UCA_PROP_EXPOSURE:
-            if (grabber->set_property(grabber, FG_EXPOSURE, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
-
-            value.value.f = (float) *((uint32_t *) data);
+            /* I haven't found a specification but it looks like PF uses milli
+             * seconds. We also by-pass the frame grabber... */
+            value.type = PF_FLOAT;
+            value.value.f = (float) *((uint32_t *) data) / 1000.0;
             if (pfDevice_SetProperty(0, t, &value) < 0)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
@@ -145,7 +145,7 @@ static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_
                     break;
 
                 case PF_FLOAT:
-                    set_void(data, uint32_t, (uint32_t) floor(value.value.f+0.5));
+                    set_void(data, uint32_t, (uint32_t) floor((value.value.f * 1000.0)+0.5));
                     break;
 
                 case PF_STRING:

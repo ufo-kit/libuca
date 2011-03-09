@@ -5,9 +5,9 @@
 #include "uca.h"
 #include "uca-cam.h"
 
-struct ThreadData {
+typedef struct {
     guchar *buffer, *pixels;
-    gboolean run;
+    gboolean running;
     GtkWidget *image;
     GdkPixbuf *pixbuf;
     int width;
@@ -15,12 +15,12 @@ struct ThreadData {
     int bits;
     struct uca_camera_t *cam;
     struct uca_t *uca;
-};
+} ThreadData ;
 
-struct ValueCellData {
-    struct ThreadData *thread_data;
+typedef struct {
+    ThreadData *thread_data;
     GtkTreeStore *tree_store;
-};
+} ValueCellData;
 
 enum {
     COLUMN_NAME = 0,
@@ -63,17 +63,18 @@ static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
 
 static void destroy(GtkWidget *widget, gpointer data)
 {
-    struct uca_t *uca = (struct uca_t *) data;
-    uca_destroy(uca);
-    gtk_main_quit ();
+    ThreadData *td = (ThreadData *) data;
+    td->running = FALSE;
+    uca_destroy(td->uca);
+    gtk_main_quit();
 }
 
 void *grab_thread(void *args)
 {
-    struct ThreadData *data = (struct ThreadData *) args;
+    ThreadData *data = (ThreadData *) args;
     struct uca_camera_t *cam = data->cam;
 
-    while (data->run) {
+    while (data->running) {
         cam->grab(cam, (char *) data->buffer);
         if (data->bits == 8)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
@@ -92,9 +93,9 @@ void *grab_thread(void *args)
 
 static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
 {
-    struct ThreadData *data = (struct ThreadData *) args;
+    ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
-    data->run = TRUE;
+    data->running = TRUE;
     data->cam->start_recording(data->cam);
     if (!g_thread_create(grab_thread, data, FALSE, &error)) {
         g_printerr("Failed to create thread: %s\n", error->message);
@@ -104,16 +105,16 @@ static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
 
 static void on_toolbutton_stop_clicked(GtkWidget *widget, gpointer args)
 {
-    struct ThreadData *data = (struct ThreadData *) args;
-    data->run = FALSE;
+    ThreadData *data = (ThreadData *) args;
+    data->running = FALSE;
     data->cam->stop_recording(data->cam);
 }
 
 static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gchar *new_text, gpointer data)
 {
-    struct ValueCellData *value_data = (struct ValueCellData *) data;
+    ValueCellData *value_data = (ValueCellData *) data;
 
-    if (value_data->thread_data->run)
+    if (value_data->thread_data->running)
         return;
 
     GtkTreeModel *tree_model = GTK_TREE_MODEL(value_data->tree_store);
@@ -310,7 +311,7 @@ int main(int argc, char *argv[])
 
     /* start grabbing and thread */
     int pixel_size = bits_per_sample == 8 ? 1 : 2;
-    struct ThreadData td;
+    ThreadData td;
     uca_cam_alloc(cam, 20);
     td.image  = image;
     td.pixbuf = pixbuf;
@@ -321,12 +322,13 @@ int main(int argc, char *argv[])
     td.bits   = bits_per_sample;
     td.cam    = cam;
     td.uca    = uca;
+    td.running = FALSE;
 
     g_signal_connect(window, "delete-event",
         G_CALLBACK (delete_event), NULL);
     
     g_signal_connect(window, "destroy",
-        G_CALLBACK (destroy), uca);
+        G_CALLBACK (destroy), &td);
 
     g_signal_connect(GTK_WIDGET(gtk_builder_get_object(builder, "toolbutton_run")), "clicked",
         G_CALLBACK(on_toolbutton_run_clicked), &td);
@@ -334,8 +336,7 @@ int main(int argc, char *argv[])
     g_signal_connect(GTK_WIDGET(gtk_builder_get_object(builder, "toolbutton_stop")), "clicked",
         G_CALLBACK(on_toolbutton_stop_clicked), &td);
 
-
-    struct ValueCellData value_cell_data;
+    ValueCellData value_cell_data;
     value_cell_data.thread_data = &td;
     value_cell_data.tree_store = tree_store;
 
