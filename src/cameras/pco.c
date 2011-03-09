@@ -48,6 +48,7 @@ static uint32_t uca_pco_acquire_image(struct uca_camera_t *cam, void *buffer)
 
 static uint32_t uca_pco_destroy(struct uca_camera_t *cam)
 {
+    pco_set_rec_state(GET_PCO(cam), 0);
     pco_destroy(GET_PCO(cam));
     return UCA_NO_ERROR;
 }
@@ -231,7 +232,8 @@ uint32_t uca_pco_grab(struct uca_camera_t *cam, char *buffer)
     if (err != UCA_NO_ERROR)
         return err;
     /* FIXME: choose according to data format */
-    pco_reorder_image_5x16((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
+    //pco_reorder_image_5x16((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
+    memcpy(buffer, frame, cam->frame_width*cam->frame_height*2);
     return UCA_NO_ERROR;
 }
 
@@ -251,7 +253,7 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
     uca->user = pco;
     uca->grabber = grabber;
-    uca->grabber->asynchronous = false;
+    uca->grabber->asynchronous = true;
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_pco_destroy;

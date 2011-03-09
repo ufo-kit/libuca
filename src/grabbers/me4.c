@@ -18,8 +18,10 @@ struct uca_me4_grabber_t {
 
 uint32_t uca_me4_destroy(struct uca_grabber_t *grabber)
 {
-    if (grabber != NULL)
+    if (grabber != NULL) {
+        Fg_FreeMemEx(GET_FG(grabber), GET_MEM(grabber));
         Fg_FreeGrabber(GET_FG(grabber));
+    }
 }
 
 uint32_t uca_me4_set_property(struct uca_grabber_t *grabber, enum uca_property_ids property, void *data)

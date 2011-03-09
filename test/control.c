@@ -7,12 +7,19 @@
 
 struct ThreadData {
     guchar *buffer, *pixels;
+    gboolean run;
     GtkWidget *image;
     GdkPixbuf *pixbuf;
     int width;
     int height;
     int bits;
     struct uca_camera_t *cam;
+    struct uca_t *uca;
+};
+
+struct ValueCellData {
+    struct ThreadData *thread_data;
+    GtkTreeStore *tree_store;
 };
 
 enum {
@@ -22,18 +29,6 @@ enum {
     COLUMN_UCA_ID,
     NUM_COLUMNS
 };
-
-static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
-{
-    return FALSE;
-}
-
-static void destroy(GtkWidget *widget, gpointer data)
-{
-    struct uca_t *uca = (struct uca_t *) data;
-    uca_destroy(uca);
-    gtk_main_quit ();
-}
 
 void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
 {
@@ -61,12 +56,24 @@ void convert_16bit_to_rgb(guchar *output, guchar *input, int width, int height)
     }
 }
 
+static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
+{
+    return FALSE;
+}
+
+static void destroy(GtkWidget *widget, gpointer data)
+{
+    struct uca_t *uca = (struct uca_t *) data;
+    uca_destroy(uca);
+    gtk_main_quit ();
+}
+
 void *grab_thread(void *args)
 {
     struct ThreadData *data = (struct ThreadData *) args;
     struct uca_camera_t *cam = data->cam;
 
-    while (TRUE) {
+    while (data->run) {
         cam->grab(cam, (char *) data->buffer);
         if (data->bits == 8)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
@@ -79,6 +86,49 @@ void *grab_thread(void *args)
         gtk_image_set_from_pixbuf(GTK_IMAGE(data->image), data->pixbuf);
         gtk_widget_queue_draw_area(data->image, 0, 0, data->width, data->height);
         gdk_threads_leave();
+    }
+    return NULL;
+}
+
+static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
+{
+    struct ThreadData *data = (struct ThreadData *) args;
+    GError *error = NULL;
+    data->run = TRUE;
+    data->cam->start_recording(data->cam);
+    if (!g_thread_create(grab_thread, data, FALSE, &error)) {
+        g_printerr("Failed to create thread: %s\n", error->message);
+        uca_destroy(data->uca);
+    }
+}
+
+static void on_toolbutton_stop_clicked(GtkWidget *widget, gpointer args)
+{
+    struct ThreadData *data = (struct ThreadData *) args;
+    data->run = FALSE;
+    data->cam->stop_recording(data->cam);
+}
+
+static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gchar *new_text, gpointer data)
+{
+    struct ValueCellData *value_data = (struct ValueCellData *) data;
+
+    if (value_data->thread_data->run)
+        return;
+
+    GtkTreeModel *tree_model = GTK_TREE_MODEL(value_data->tree_store);
+    GtkTreePath *tree_path = gtk_tree_path_new_from_string(path);
+    GtkTreeIter iter;
+
+    if (gtk_tree_model_get_iter(tree_model, &iter, tree_path)) {
+        struct uca_camera_t *cam = value_data->thread_data->cam;
+        uint32_t prop_id;
+        gtk_tree_model_get(tree_model, &iter, COLUMN_UCA_ID, &prop_id, -1);
+
+        /* TODO: extensive value checking */
+        uint32_t val = (uint32_t) g_ascii_strtoull(new_text, NULL, 10);
+        cam->set_property(cam, prop_id, &val);
+        gtk_tree_store_set(value_data->tree_store, &iter, COLUMN_VALUE, new_text, -1);
     }
 }
 
@@ -228,10 +278,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int width, height, bits_per_sample;
+    int width = 640, height = 480, bits_per_sample;
     struct uca_camera_t *cam = uca->cameras;
-    cam->get_property(cam, UCA_PROP_WIDTH, &width);
-    cam->get_property(cam, UCA_PROP_HEIGHT, &height);
+    cam->set_property(cam, UCA_PROP_WIDTH, &width);
+    cam->set_property(cam, UCA_PROP_HEIGHT, &height);
     cam->get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample);
 
     g_thread_init(NULL);
@@ -248,6 +298,8 @@ int main(int argc, char *argv[])
 
     GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
     GtkWidget *image = GTK_WIDGET(gtk_builder_get_object(builder, "image"));
+    GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, width, height);
+    gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf);
 
     GtkTreeStore *tree_store = GTK_TREE_STORE(gtk_builder_get_object(builder, "cameraproperties"));
     GtkTreeViewColumn *value_column = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "valuecolumn"));
@@ -255,18 +307,6 @@ int main(int argc, char *argv[])
     fill_tree_store(tree_store, cam);
 
     gtk_tree_view_column_set_cell_data_func(value_column, GTK_CELL_RENDERER(value_renderer), value_cell_data_func, NULL, NULL);
-
-    g_signal_connect (window, "delete-event",
-              G_CALLBACK (delete_event), NULL);
-    
-    g_signal_connect (window, "destroy",
-              G_CALLBACK (destroy), uca);
-    
-    GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, width, height);
-    gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf);
-    
-    gtk_widget_show(image);
-    gtk_widget_show(window);
 
     /* start grabbing and thread */
     int mem_size = bits_per_sample == 8 ? 1 : 2;
@@ -280,13 +320,31 @@ int main(int argc, char *argv[])
     td.height = height;
     td.bits   = bits_per_sample;
     td.cam    = cam;
-    cam->start_recording(cam);
-    if (!g_thread_create(grab_thread, &td, FALSE, &error)) {
-        g_printerr("Failed to create thread: %s\n", error->message);
-        uca_destroy(uca);
-        return 1;
-    }
+    td.uca    = uca;
+
+    g_signal_connect(window, "delete-event",
+        G_CALLBACK (delete_event), NULL);
     
+    g_signal_connect(window, "destroy",
+        G_CALLBACK (destroy), uca);
+
+    g_signal_connect(GTK_WIDGET(gtk_builder_get_object(builder, "toolbutton_run")), "clicked",
+        G_CALLBACK(on_toolbutton_run_clicked), &td);
+
+    g_signal_connect(GTK_WIDGET(gtk_builder_get_object(builder, "toolbutton_stop")), "clicked",
+        G_CALLBACK(on_toolbutton_stop_clicked), &td);
+
+
+    struct ValueCellData value_cell_data;
+    value_cell_data.thread_data = &td;
+    value_cell_data.tree_store = tree_store;
+
+    g_signal_connect(gtk_builder_get_object(builder, "valuecell"), "edited",
+        G_CALLBACK(on_valuecell_edited), &value_cell_data);
+    
+    gtk_widget_show(image);
+    gtk_widget_show(window);
+
     gdk_threads_enter();
     gtk_main ();
     gdk_threads_leave();
