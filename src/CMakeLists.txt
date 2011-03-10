@@ -25,6 +25,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 # --- Find camera interfaces
 find_package(PCO)
 find_package(PF)
+find_package(IPE)
 
 # --- Find frame grabber interfaces
 find_package(FgLib5)
@@ -68,6 +69,24 @@ if(PCO_FOUND)
     include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${PCO_INCLUDE_DIRS}
+        )
+endif()
+
+if(IPE_FOUND)
+    set(HAVE_IPE_CAMERA TRUE)
+
+    set(uca_SRCS
+        ${uca_SRCS}
+        cameras/ipe.c
+        )
+
+    set(uca_LIBS
+        ${uca_LIBS}
+        ${IPE_LIBRARIES}
+        )
+    include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${IPE_INCLUDE_DIRS}
         )
 endif()
 
