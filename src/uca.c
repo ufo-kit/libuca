@@ -4,6 +4,7 @@
 #include "uca.h"
 #include "uca-cam.h"
 #include "uca-grabber.h"
+#include "cameras/dummy.h"
 
 #ifdef HAVE_ME4
 #include "grabbers/me4.h"
@@ -98,13 +99,12 @@ struct uca_t *uca_init(void)
 #ifdef HAVE_PH
         uca_photron_init,
 #endif
+        uca_dummy_init,
         NULL
     };
 
-    int i = 0;
-    struct uca_camera_t *current = NULL;
-
     /* Probe each frame grabber that is configured */
+    int i = 0;
     struct uca_grabber_t *grabber = NULL;
     while (grabber_inits[i] != NULL) {
         uca_grabber_init init = grabber_inits[i];
@@ -125,6 +125,7 @@ struct uca_t *uca_init(void)
 
     /* Probe each camera that is configured */
     i = 0;
+    struct uca_camera_t *current = NULL;
     while (cam_inits[i] != NULL) {
         struct uca_camera_t *cam = NULL;
         uca_cam_init init = cam_inits[i];

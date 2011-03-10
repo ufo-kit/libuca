@@ -9,12 +9,14 @@ set(uca_SRCS
     uca.c
     uca-cam.c
     uca-grabber.c
+    cameras/dummy.c
     )
 
 set(uca_HDRS
     uca.h
     uca-cam.h
     uca-grabber.h
+    cameras/dummy.h
     )
 
 set(uca_LIBS "")
@@ -117,6 +119,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 
 # --- Build target ------------------------------------------------------------
+add_definitions("-std=c99 -Wall")
 add_library(uca SHARED ${uca_SRCS})
 
 target_link_libraries(uca ${uca_LIBS})

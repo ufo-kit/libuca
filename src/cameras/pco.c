@@ -243,7 +243,6 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
         return UCA_ERR_CAM_NOT_FOUND;
 
     struct pco_edge_t *pco = pco_init();
-
     if (pco == NULL) {
         return UCA_ERR_CAM_NOT_FOUND;
     }
