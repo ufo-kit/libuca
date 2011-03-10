@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "config.h"
 #include "uca.h"
@@ -173,7 +174,6 @@ void uca_destroy(struct uca_t *uca)
 
 enum uca_property_ids uca_get_property_id(const char *property_name)
 {
-    char *name;
     int i = 0;
     while (property_map[i].name != NULL) {
         if (!strcmp(property_map[i].name, property_name))
@@ -194,4 +194,5 @@ const char* uca_get_property_name(enum uca_property_ids property_id)
 {
     if ((property_id >= 0) && (property_id < UCA_PROP_LAST))
         return property_map[property_id].name;
+    return UCA_NO_ERROR;
 }

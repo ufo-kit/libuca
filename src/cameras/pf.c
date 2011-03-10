@@ -55,11 +55,6 @@ static struct uca_pf_map uca_to_pf[] = {
     { -1, NULL }
 };
 
-static uint32_t uca_pf_acquire_image(struct uca_camera_t *cam, void *buffer)
-{
-    return UCA_NO_ERROR;
-}
-
 static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
     struct uca_grabber_t *grabber = cam->grabber;
@@ -128,7 +123,6 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
 
 static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
-    struct uca_grabber_t *grabber = cam->grabber;
     TOKEN t;    /* You gotta love developers who name types capitalized... */
     PFValue value;
 
@@ -159,6 +153,9 @@ static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_
 
                 case PF_MODE:
                     set_void(data, uint32_t, (uint32_t) value.value.i);
+                    break;
+
+                default:
                     break;
             }
             return UCA_NO_ERROR;

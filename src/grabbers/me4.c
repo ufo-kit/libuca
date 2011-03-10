@@ -22,6 +22,7 @@ uint32_t uca_me4_destroy(struct uca_grabber_t *grabber)
         Fg_FreeMemEx(GET_FG(grabber), GET_MEM(grabber));
         Fg_FreeGrabber(GET_FG(grabber));
     }
+    return UCA_NO_ERROR;
 }
 
 uint32_t uca_me4_set_property(struct uca_grabber_t *grabber, enum uca_property_ids property, void *data)

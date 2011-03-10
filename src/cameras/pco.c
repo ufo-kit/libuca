@@ -15,12 +15,6 @@
 #define set_void(p, type, value) { *((type *) p) = (type) value; }
 
 
-static uint32_t uca_pco_set_bitdepth(struct uca_camera_t *cam, uint8_t *bitdepth)
-{
-    /* TODO: it's not possible via CameraLink so do it via frame grabber */
-    return 0;
-}
-
 static uint32_t uca_pco_set_exposure(struct uca_camera_t *cam, uint32_t *exposure)
 {
     uint32_t e, d;
@@ -38,11 +32,6 @@ static uint32_t uca_pco_set_delay(struct uca_camera_t *cam, uint32_t *delay)
         return UCA_ERR_PROP_GENERAL;
     if (pco_set_delay_exposure(GET_PCO(cam), *delay, e) != PCO_NOERROR)
         return UCA_ERR_PROP_GENERAL;
-    return UCA_NO_ERROR;
-}
-
-static uint32_t uca_pco_acquire_image(struct uca_camera_t *cam, void *buffer)
-{
     return UCA_NO_ERROR;
 }
 
@@ -223,6 +212,7 @@ uint32_t uca_pco_stop_recording(struct uca_camera_t *cam)
 {
     if (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR)
         return UCA_ERR_PROP_GENERAL;
+    return UCA_NO_ERROR;
 }
 
 uint32_t uca_pco_grab(struct uca_camera_t *cam, char *buffer)
@@ -282,7 +272,7 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     val = FREE_RUN;
     grabber->set_property(grabber, FG_TRIGGERMODE, &val);
 
-    int width, height;
+    uint32_t width, height;
     pco_get_actual_size(pco, &width, &height);
     uca->frame_width = width;
     uca->frame_height = height;
