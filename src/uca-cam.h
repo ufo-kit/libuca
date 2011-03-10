@@ -3,11 +3,23 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct uca_camera_t;
 struct uca_grabber_t;
 struct uca_property_t;
 
 enum uca_property_ids;
+
+enum uca_cam_state {
+    UCA_CAM_ERROR,
+    UCA_CAM_CONFIGURABLE,
+    UCA_CAM_ARMED,
+    UCA_CAM_RECORDING,
+};
+
 
 /*
  * --- non-virtual methods ----------------------------------------------------
@@ -75,13 +87,6 @@ typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera_t *cam);
 typedef uint32_t (*uca_cam_grab) (struct uca_camera_t *cam, char *buffer);
 
 
-enum uca_cam_state {
-    UCA_CAM_ERROR,
-    UCA_CAM_CONFIGURABLE,
-    UCA_CAM_ARMED,
-    UCA_CAM_RECORDING,
-};
-
 struct uca_camera_t {
     struct uca_camera_t     *next;
 
@@ -102,5 +107,9 @@ struct uca_camera_t {
 
     void *user; /**< private user data to be used by the camera driver */
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

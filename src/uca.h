@@ -1,6 +1,10 @@
 #ifndef __UNIFIED_CAMERA_ACCESS_H
 #define __UNIFIED_CAMERA_ACCESS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \file uca.h
  * \brief Abstract camera model
@@ -14,33 +18,6 @@
 struct uca_t;
 struct uca_camera_t;
 struct uca_property_t;
-
-/**
- * \brief Initialize the unified camera access interface
- * \return Pointer to a uca_t structure
- */
-struct uca_t *uca_init(void);
-
-/**
- * \brief Free resources of the unified camera access interface
- */
-void uca_destroy(struct uca_t *uca);
-
-/**
- * \brief Convert a property string to the corresponding ID
- */
-enum uca_property_ids uca_get_property_id(const char *property_name);
-
-/**
- * \brief Convert a property ID to the corresponding string 
- */
-const char* uca_get_property_name(enum uca_property_ids property_id);
-
-/**
- * \brief Return the full property structure for a given ID
- */
-struct uca_property_t *uca_get_full_property(enum uca_property_ids property_id);
-
 
 /* The property IDs must start with 0 and must be continuous. Whenever this
  * library is released, the IDs must not change to guarantee binary compatibility! */
@@ -85,6 +62,34 @@ enum uca_property_ids {
 
     UCA_PROP_LAST
 };
+
+/**
+ * \brief Initialize the unified camera access interface
+ * \return Pointer to a uca_t structure
+ */
+struct uca_t *uca_init(void);
+
+/**
+ * \brief Free resources of the unified camera access interface
+ */
+void uca_destroy(struct uca_t *uca);
+
+/**
+ * \brief Convert a property string to the corresponding ID
+ */
+enum uca_property_ids uca_get_property_id(const char *property_name);
+
+/**
+ * \brief Convert a property ID to the corresponding string 
+ */
+const char* uca_get_property_name(enum uca_property_ids property_id);
+
+/**
+ * \brief Return the full property structure for a given ID
+ */
+struct uca_property_t *uca_get_full_property(enum uca_property_ids property_id);
+
+
 
 /* Possible timestamp modes for UCA_PROP_TIMESTAMP_MODE */
 #define UCA_TIMESTAMP_ASCII     0x01
@@ -158,5 +163,8 @@ struct uca_t {
     struct uca_grabber_t *grabbers;
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

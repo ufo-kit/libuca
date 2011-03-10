@@ -33,8 +33,12 @@ find_package(IPE)
 find_package(FgLib5)
 find_package(ClSerMe4)
 
-# --- Add sources if camera/framegrabber access sources are available ---------
+# --- Miscellanous packages
+find_package(SWIG)
+find_package(PythonLibs)
 
+
+# --- Add sources if camera/framegrabber access sources are available ---------
 if (PF_FOUND)
     set(HAVE_PHOTON_FOCUS TRUE)
 
@@ -112,11 +116,22 @@ if(CLSERME4_FOUND AND FGLIB5_FOUND)
         )
 endif()
 
+# --- Configure step
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+# --- Build language bindings via SWIG
+if(SWIG_FOUND AND PYTHONLIBS_FOUND)
+    include(${SWIG_USE_FILE})
+    include_directories(${PYTHON_INCLUDE_DIR})
+    set(CMAKE_SWIG_FLAGS "")
+
+    set_source_files_properties(uca.i PROPERTIES CPLUSPLUS ON)
+    SWIG_ADD_MODULE(uca python uca.i ${uca_SRCS})
+    SWIG_LINK_LIBRARIES(uca ${PYTHON_LIBRARIES} ${uca_LIBS})
+endif()
 
 # --- Build target ------------------------------------------------------------
 add_definitions("-std=c99 -Wall")
