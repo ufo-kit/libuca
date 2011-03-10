@@ -33,7 +33,6 @@ find_package(ClSerMe4)
 
 # --- Add sources if camera/framegrabber access sources are available ---------
 
-# FIXME: create some kind of libphoton and search for it
 if (PF_FOUND)
     set(HAVE_PHOTON_FOCUS TRUE)
 

@@ -114,12 +114,14 @@ struct uca_t *uca_init(void)
         i++;
     }
 
-    if (grabber == NULL) {
-        free(uca);
-        return NULL;
-    }
+    /* XXX: We could have no grabber (aka NULL) which is good anyway, since
+     * some cameras don't need a grabber device (such as the IPE camera),
+     * therefore we also probe each camera against the NULL grabber. However,
+     * each camera must make sure to check for such a situation. */
+
     uca->grabbers = grabber;
-    grabber->next = NULL;
+    if (grabber != NULL)
+        grabber->next = NULL;
 
     /* Probe each camera that is configured */
     i = 0;
