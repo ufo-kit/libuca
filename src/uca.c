@@ -19,7 +19,7 @@
 #include "cameras/pf.h"
 #endif
 
-#ifdef HAVE_IPE_CAM
+#ifdef HAVE_IPE_CAMERA
 #include "cameras/ipe.h"
 #endif
 
@@ -94,7 +94,7 @@ struct uca_t *uca_init(void)
 #ifdef HAVE_PHOTON_FOCUS
         uca_pf_init,
 #endif
-#ifdef HAVE_IPE_CAM
+#ifdef HAVE_IPE_CAMERA
         uca_ipe_init,
 #endif
 #ifdef HAVE_PH

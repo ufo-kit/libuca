@@ -9,7 +9,7 @@
 find_package(PackageHandleStandardArgs)
 
 find_path(IPE_INCLUDE_DIRS pcilib.h)
-find_library(IPE_LIBRARIES pcidriver)
+find_library(IPE_LIBRARIES pcilib)
 
 find_package_handle_standard_args(IPE DEFAULT_MSG IPE_LIBRARIES IPE_INCLUDE_DIRS)
 
