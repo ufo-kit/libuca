@@ -6,13 +6,8 @@
 #include "uca-cam.h"
 #include "uca-grabber.h"
 
-struct ipe_desc_t {
-    pcilib_t *handle;
-    pcilib_model_t model;
-};
-
 #define set_void(p, type, value) { *((type *) p) = value; }
-#define GET_IPE_DESC(cam) ((struct ipe_desc_t *) cam->user)
+#define GET_HANDLE(cam) ((pcilib_t *) cam->user)
 
 static void uca_ipe_handle_error(const char *format, ...)
 {
@@ -26,9 +21,17 @@ static uint32_t uca_ipe_set_property(struct uca_camera_t *cam, enum uca_property
 
 static uint32_t uca_ipe_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
 {
+    pcilib_t *handle = GET_HANDLE(cam);
+    pcilib_register_value_t value = 0;
+
     switch (property) {
         case UCA_PROP_NAME:
             strcpy((char *) data, "IPE PCIe");
+            break;
+
+        case UCA_PROP_TEMPERATURE_SENSOR:
+            pcilib_read_register(handle, NULL, "cmosis_temperature", &value);
+            set_void(data, uint32_t, (uint32_t) value);
             break;
 
         default:
@@ -54,9 +57,7 @@ static uint32_t uca_ipe_grab(struct uca_camera_t *cam, char *buffer)
 
 static uint32_t uca_ipe_destroy(struct uca_camera_t *cam)
 {
-    struct ipe_desc_t *ipe_desc = GET_IPE_DESC(cam);
-    pcilib_close(ipe_desc->handle);
-    free(ipe_desc);
+    pcilib_close(GET_HANDLE(cam));
     return UCA_NO_ERROR;
 }
 
@@ -67,10 +68,6 @@ uint32_t uca_ipe_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
     if (handle < 0)
         return UCA_ERR_CAM_NOT_FOUND;
-
-    struct ipe_desc_t *ipe_desc = (struct ipe_desc_t *) malloc(sizeof(struct ipe_desc_t));
-    ipe_desc->handle = handle;
-    ipe_desc->model  = model;
 
     pcilib_set_error_handler(&uca_ipe_handle_error);
     model = pcilib_get_model(handle);
@@ -86,7 +83,7 @@ uint32_t uca_ipe_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     uca->grab = &uca_ipe_grab;
 
     uca->state = UCA_CAM_CONFIGURABLE;
-    uca->user = ipe_desc;
+    uca->user = handle;
     *cam = uca;
 
     return UCA_NO_ERROR;
