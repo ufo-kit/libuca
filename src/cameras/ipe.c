@@ -26,8 +26,20 @@ static uint32_t uca_ipe_get_property(struct uca_camera_t *cam, enum uca_property
 
     switch (property) {
         case UCA_PROP_NAME:
-            strcpy((char *) data, "IPE PCIe");
+            strcpy((char *) data, "IPE PCIe based on CMOSIS CMV2000");
             break;
+
+        case UCA_PROP_WIDTH:
+            set_void(data, uint32_t, 2048);
+            break;
+
+        case UCA_PROP_HEIGHT:
+            set_void(data, uint32_t, 1088);
+            break;
+
+        case UCA_PROP_EXPOSURE:
+            pcilib_read_register(handle, NULL, "exp_time", &value);
+            set_void(data, uint32_t, (uint32_t) value);
 
         case UCA_PROP_TEMPERATURE_SENSOR:
             pcilib_read_register(handle, NULL, "cmosis_temperature", &value);
