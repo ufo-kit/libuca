@@ -7,22 +7,6 @@
 #include "uca-cam.h"
 #include "uca-grabber.h"
 
-/* TODO: REMOVE THIS ASAP */
-#define FG_WIDTH	100
-#define FG_HEIGHT	200
-
-#define FG_MAXWIDTH	    6100
-#define FG_MAXHEIGHT    6200
-#define FG_ACTIVEPORT   6300
-#define FG_XOFFSET      300
-#define FG_YOFFSET      400
-#define FG_FORMAT       700
-#define FG_GRAY         3
-#define FG_CAMERA_LINK_CAMTYP   11011
-#define FG_CL_8BIT_FULL_8       308
-#define FG_TRIGGERMODE          8100
-#define FG_EXPOSURE			10020			/**< Exposure Time in us (Brigthness) (float) */
-
 #define set_void(p, type, value) { *((type *) p) = value; }
 
 struct uca_pf_map {
@@ -63,8 +47,10 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
 
     /* Find a valid pf token for the property */
     while (uca_to_pf[i].uca_prop != -1) {
-        if (uca_to_pf[i].uca_prop == property)
+        if (uca_to_pf[i].uca_prop == property) {
             t = pfProperty_ParseName(0, uca_to_pf[i].pf_prop);
+            break;
+        }
         i++;
     }
     if (t == INVALID_TOKEN)
@@ -74,7 +60,7 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
 
     switch (property) {
         case UCA_PROP_WIDTH:
-            if (grabber->set_property(grabber, FG_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
+            if (grabber->set_property(grabber, UCA_GRABBER_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
 
             value.value.i = *((uint32_t *) data);
@@ -85,7 +71,7 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
             break;
 
         case UCA_PROP_HEIGHT:
-            if (grabber->set_property(grabber, FG_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
+            if (grabber->set_property(grabber, UCA_GRABBER_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
 
             value.value.i = *((uint32_t *) data);
@@ -96,12 +82,12 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
             break;
 
         case UCA_PROP_X_OFFSET:
-            if (grabber->set_property(grabber, FG_XOFFSET, (uint32_t *) data) != UCA_NO_ERROR)
+            if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_X, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_Y_OFFSET:
-            if (grabber->set_property(grabber, FG_YOFFSET, (uint32_t *) data) != UCA_NO_ERROR)
+            if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_Y, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
@@ -224,20 +210,20 @@ uint32_t uca_pf_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     uca->grab = &uca_pf_grab;
 
     /* Prepare frame grabber for recording */
-    int val = FG_CL_8BIT_FULL_8;
-    grabber->set_property(grabber, FG_CAMERA_LINK_CAMTYP, &val);
+    int val = UCA_CL_8BIT_FULL_8;
+    grabber->set_property(grabber, UCA_GRABBER_CAMERALINK_TYPE, &val);
 
-    val = FG_GRAY;
-    grabber->set_property(grabber, FG_FORMAT, &val);
+    val = UCA_FORMAT_GRAY8;
+    grabber->set_property(grabber, UCA_GRABBER_FORMAT, &val);
 
-    val = 0;
-    grabber->set_property(grabber, FG_TRIGGERMODE, &val);
+    val = UCA_TRIGGER_FREERUN;
+    grabber->set_property(grabber, UCA_GRABBER_TRIGGER_MODE, &val);
 
     uca_pf_get_property(uca, UCA_PROP_WIDTH, &uca->frame_width);
     uca_pf_get_property(uca, UCA_PROP_HEIGHT, &uca->frame_height);
 
-    grabber->set_property(grabber, FG_WIDTH, &uca->frame_width);
-    grabber->set_property(grabber, FG_HEIGHT, &uca->frame_height);
+    grabber->set_property(grabber, UCA_GRABBER_WIDTH, &uca->frame_width);
+    grabber->set_property(grabber, UCA_GRABBER_HEIGHT, &uca->frame_height);
 
     uca->state = UCA_CAM_CONFIGURABLE;
     *cam = uca;

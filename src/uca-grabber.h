@@ -3,6 +3,30 @@
 
 #include <stdbool.h>
 
+enum uca_grabber_constants {
+    UCA_GRABBER_INVALID = -1,
+    /* properties */
+    UCA_GRABBER_WIDTH = 0,
+    UCA_GRABBER_HEIGHT,
+    UCA_GRABBER_WIDTH_MAX,
+    UCA_GRABBER_WIDTH_MIN,
+    UCA_GRABBER_OFFSET_X,
+    UCA_GRABBER_OFFSET_Y,
+    UCA_GRABBER_EXPOSURE,
+    UCA_GRABBER_FORMAT,
+    UCA_GRABBER_TRIGGER_MODE,
+    UCA_GRABBER_CAMERALINK_TYPE,
+
+    /* values */
+    UCA_FORMAT_GRAY8,
+    UCA_FORMAT_GRAY16,
+
+    UCA_CL_8BIT_FULL_8,
+    UCA_CL_8BIT_FULL_10,
+
+    UCA_TRIGGER_FREERUN
+};
+
 /*
  * --- virtual methods --------------------------------------------------------
  */
@@ -24,14 +48,14 @@ typedef uint32_t (*uca_grabber_destroy) (struct uca_grabber_t *grabber);
  * \return UCA_ERR_PROP_INVALID if property is not supported on the frame
  * grabber or UCA_ERR_PROP_VALUE_OUT_OF_RANGE if value cannot be set.
  */
-typedef uint32_t (*uca_grabber_set_property) (struct uca_grabber_t *grabber, enum uca_property_ids property, void *data);
+typedef uint32_t (*uca_grabber_set_property) (struct uca_grabber_t *grabber, enum uca_grabber_constants prop, void *data);
 
 /**
  * \brief Set a property
  * \param[in] property_name Name of the property as defined in XXX
  * \return UCA_ERR_PROP_INVALID if property is not supported on the frame grabber 
  */
-typedef uint32_t (*uca_grabber_get_property) (struct uca_grabber_t *grabber, enum uca_property_ids property, void *data);
+typedef uint32_t (*uca_grabber_get_property) (struct uca_grabber_t *grabber, enum uca_grabber_constants prop, void *data);
 
 /**
  * \brief Allocate buffers with current width, height and bitdepth

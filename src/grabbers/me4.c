@@ -13,6 +13,32 @@ struct uca_me4_grabber_t {
     dma_mem     *mem;
 };
 
+struct uca_sisofg_map_t {
+    enum uca_grabber_constants uca_prop;
+    int  fg_id;
+    bool interpret_data;    /**< is data a constant or a value? */
+};
+
+static struct uca_sisofg_map_t uca_to_fg[] = {
+    /* properties */
+    { UCA_GRABBER_WIDTH,            FG_WIDTH,               false },
+    { UCA_GRABBER_HEIGHT,           FG_HEIGHT,              false },
+    { UCA_GRABBER_OFFSET_X,         FG_XOFFSET,             false },
+    { UCA_GRABBER_OFFSET_Y,         FG_YOFFSET,             false },
+    { UCA_GRABBER_EXPOSURE,         FG_EXPOSURE,            false },
+    { UCA_GRABBER_TRIGGER_MODE,     FG_TRIGGERMODE,         true},
+    { UCA_GRABBER_FORMAT,           FG_FORMAT,              true},
+    { UCA_GRABBER_CAMERALINK_TYPE,  FG_CAMERA_LINK_CAMTYP,  true },
+
+    /* values */
+    { UCA_FORMAT_GRAY8,             FG_GRAY,                false },
+    { UCA_FORMAT_GRAY16,            FG_GRAY16,              false },
+    { UCA_CL_8BIT_FULL_8,           FG_CL_8BIT_FULL_8,      false },
+    { UCA_CL_8BIT_FULL_10,          FG_CL_8BIT_FULL_10,     false },
+    { UCA_TRIGGER_FREERUN,          FREE_RUN,               false },
+    { UCA_GRABBER_INVALID,          0,                      false }
+};
+
 #define GET_FG(grabber) (((struct uca_me4_grabber_t *) grabber->user)->fg)
 #define GET_MEM(grabber) (((struct uca_me4_grabber_t *) grabber->user)->mem)
 
@@ -25,14 +51,44 @@ uint32_t uca_me4_destroy(struct uca_grabber_t *grabber)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_me4_set_property(struct uca_grabber_t *grabber, enum uca_property_ids property, void *data)
+static struct uca_sisofg_map_t *uca_me4_find_property(enum uca_grabber_constants property)
 {
-    return Fg_setParameter(GET_FG(grabber), property, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
+    int i = 0;
+    /* Find a valid frame grabber id for the property */
+    while (uca_to_fg[i].uca_prop != UCA_GRABBER_INVALID) {
+        if (uca_to_fg[i].uca_prop == property)
+            return &uca_to_fg[i];
+        i++;
+    }
+    return NULL;
 }
 
-uint32_t uca_me4_get_property(struct uca_grabber_t *grabber, enum uca_property_ids property, void *data)
+uint32_t uca_me4_set_property(struct uca_grabber_t *grabber, enum uca_grabber_constants property, void *data)
 {
-    return Fg_getParameter(GET_FG(grabber), property, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
+    struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
+    if (fg_prop == NULL)
+        return UCA_ERR_PROP_INVALID;
+
+    if (fg_prop->interpret_data) {
+        /* Data is not a value but a constant that we need to translate to
+         * Silicon Software speak. Therefore, we try to find it in the map also. */
+        struct uca_sisofg_map_t *constant = uca_me4_find_property(*((uint32_t *) data));
+        if (constant != NULL)
+            return Fg_setParameter(GET_FG(grabber), fg_prop->fg_id, &constant->fg_id, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_INVALID;
+        return UCA_ERR_PROP_INVALID;
+    }
+    else
+        return Fg_setParameter(GET_FG(grabber), fg_prop->fg_id, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
+}
+
+uint32_t uca_me4_get_property(struct uca_grabber_t *grabber, enum uca_grabber_constants property, void *data)
+{
+    struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
+    if (fg_prop == NULL)
+        return UCA_ERR_PROP_INVALID;
+
+    /* FIXME: translate data back to UCA_ normalized constants */
+    return Fg_getParameter(GET_FG(grabber), fg_prop->fg_id, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
 }
 
 uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t pixel_size, uint32_t n_buffers)
@@ -45,7 +101,6 @@ uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t pixel_size, uint3
     uca_me4_get_property(grabber, FG_WIDTH, &width);
     uca_me4_get_property(grabber, FG_HEIGHT, &height);
 
-    /* FIXME: get size of pixel */
     dma_mem *mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*pixel_size, n_buffers);
     if (mem != NULL) {
         ((struct uca_me4_grabber_t *) grabber->user)->mem = mem;
