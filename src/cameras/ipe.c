@@ -107,7 +107,7 @@ uint32_t uca_ipe_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     if (handle < 0)
         return UCA_ERR_CAM_NOT_FOUND;
 
-    pcilib_set_error_handler(&uca_ipe_handle_error);
+    pcilib_set_error_handler(&uca_ipe_handle_error, &uca_ipe_handle_error);
     model = pcilib_get_model(handle);
 
     struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
