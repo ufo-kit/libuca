@@ -5,7 +5,10 @@
 #include "uca.h"
 #include "uca-cam.h"
 #include "uca-grabber.h"
+
+#ifdef HAVE_DUMMY_CAMERA
 #include "cameras/dummy.h"
+#endif
 
 #ifdef HAVE_ME4
 #include "grabbers/me4.h"
@@ -108,7 +111,9 @@ struct uca_t *uca_init(void)
 #ifdef HAVE_PH
         uca_photron_init,
 #endif
+#ifdef HAVE_DUMMY_CAMERA
         uca_dummy_init,
+#endif
         NULL
     };
 

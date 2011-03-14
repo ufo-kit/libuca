@@ -5,3 +5,5 @@
 #cmakedefine HAVE_PHOTON_FOCUS
 #cmakedefine HAVE_PHOTRON_FASTCAM
 #cmakedefine HAVE_IPE_CAMERA
+
+#cmakedefine HAVE_DUMMY_CAMERA

@@ -9,14 +9,12 @@ set(uca_SRCS
     uca.c
     uca-cam.c
     uca-grabber.c
-    cameras/dummy.c
     )
 
 set(uca_HDRS
     uca.h
     uca-cam.h
     uca-grabber.h
-    cameras/dummy.h
     )
 
 set(uca_LIBS "")
@@ -36,6 +34,10 @@ find_package(ClSerMe4)
 # --- Miscellanous packages
 find_package(SWIG)
 find_package(PythonLibs)
+
+
+# --- Build options -----------------------------------------------------------
+option(HAVE_DUMMY_CAMERA "Build a dummy camera model" OFF)
 
 
 # --- Add sources if camera/framegrabber access sources are available ---------
@@ -113,6 +115,13 @@ if(CLSERME4_FOUND AND FGLIB5_FOUND)
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CLSERME4_INCLUDE_DIR}
         ${FGLIB5_INCLUDE_DIR}
+        )
+endif()
+
+if(HAVE_DUMMY_CAMERA)
+    set(uca_SRCS
+        ${uca_SRCS}
+        cameras/dummy.c
         )
 endif()
 
