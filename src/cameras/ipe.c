@@ -46,6 +46,32 @@ static uint32_t uca_ipe_get_property(struct uca_camera_t *cam, enum uca_property
             set_void(data, uint32_t, (uint32_t) value);
             break;
 
+        case UCA_PROP_PGA_GAIN:
+            pcilib_read_register(handle, NULL, "pga", &value);
+            set_void(data, uint32_t, (uint32_t) value);
+            break;
+
+        case UCA_PROP_PGA_GAIN_MIN:
+            set_void(data, uint32_t, 0);
+            break;
+
+        case UCA_PROP_PGA_GAIN_MAX:
+            set_void(data, uint32_t, 3);
+            break;
+
+        case UCA_PROP_ADC_GAIN:
+            pcilib_read_register(handle, NULL, "adc_gain", &value);
+            set_void(data, uint32_t, (uint32_t) value);
+            break;
+
+        case UCA_PROP_ADC_GAIN_MIN:
+            set_void(data, uint32_t, 32);
+            break;
+
+        case UCA_PROP_ADC_GAIN_MAX:
+            set_void(data, uint32_t, 55);
+            break;
+
         default:
             return UCA_ERR_PROP_INVALID;
     }
