@@ -145,9 +145,16 @@ uint32_t uca_me4_grab(struct uca_grabber_t *grabber, void **buffer)
     return UCA_NO_ERROR;
 }
 
+uint32_t uca_me4_register_callback(struct uca_grabber_t *grabber, uca_grabber_grab_callback cb)
+{
+    grabber->callback = cb;
+
+    /* TODO: add me4 registerApc stuff */
+    return UCA_NO_ERROR;
+}
+
 uint32_t uca_me4_init(struct uca_grabber_t **grabber)
 {
-    /* FIXME: find out if this board/grabber is running */
     Fg_Struct *fg = Fg_Init("libFullAreaGray8.so", 0);
     if (fg == NULL)
         return UCA_ERR_GRABBER_NOT_FOUND;
@@ -165,6 +172,7 @@ uint32_t uca_me4_init(struct uca_grabber_t **grabber)
     uca->acquire = &uca_me4_acquire;
     uca->stop_acquire = &uca_me4_stop_acquire;
     uca->grab = &uca_me4_grab;
+    uca->callback = NULL;
     
     *grabber = uca;
     return UCA_NO_ERROR;

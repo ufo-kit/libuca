@@ -141,6 +141,9 @@ typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera_t *cam);
 typedef uint32_t (*uca_cam_grab) (struct uca_camera_t *cam, char *buffer);
 
 
+/**
+ * Represents a camera abstraction, that concrete cameras must implement.
+ */
 struct uca_camera_t {
     /**
      * Points to the next available camera in a linked-list fashion.
