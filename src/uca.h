@@ -15,6 +15,54 @@ extern "C" {
  * to their respective implementation.
  */
 
+/**
+ * \mainpage
+ *
+ * \section intro_sec Introduction
+ *
+ * libuca is a thin wrapper to make different cameras and their access
+ * interfaces (via CameraLink, PCIe, Thunderbolt …) accessible in an easy way.
+ * It builds support for cameras, when it can find the necessary dependencies,
+ * so there is no need to have camera SDKs installed when you don't own a
+ * camera. 
+ *
+ * \section intro_quickstart Quick Start
+ *
+ * First you would create a new uca_t structure
+ *
+ * \code struct uca_t *uca = uca_init() \endcode
+ *
+ * and see if it is not NULL. If it is NULL, no camera or frame grabber was
+ * found. If you build with HAVE_DUMMY_CAMERA, there will always be at least the
+ * dummy camera available.
+ *
+ * You can then iterate through all available cameras using
+ * 
+ * \code
+ * struct uca_camera_t *i = uca->cameras;
+ * while (i != NULL) {
+ *     // do something with i
+ *     i = i->next;
+ * }
+ * \endcode
+ *
+ * With such a uca_camera_t structure, you can set properties, retrieve
+ * properties or start grabbing frames. Be aware, to check bit depth and frame 
+ * dimensions in order to allocate enough memory.
+ *
+ * \section intro_usage Adding new cameras
+ *
+ * Up to now, new cameras have to be integrated into libuca directly. Later on,
+ * we might provide a plugin mechanism. To add a new camera, add
+ * cameras/new-cam.c and cameras/new-cam.h to the source tree and change
+ * CMakeLists.txt to include these files. Furthermore, if this camera relies on
+ * external dependencies, these have to be found first via the CMake system.
+ *
+ * The new camera must export exactly one function: uca_new_camera_init() which
+ * checks if (given the grabber) the camera is available and sets the function
+ * pointers to access the camera accordingly.
+ */
+
 struct uca_t;
 struct uca_camera_t;
 struct uca_property_t;
@@ -73,7 +121,8 @@ enum uca_property_ids {
 };
 
 /**
- * \brief Initialize the unified camera access interface
+ * Initialize the unified camera access interface.
+ *
  * \return Pointer to a uca_t structure
  */
 struct uca_t *uca_init(void);
@@ -119,34 +168,62 @@ struct uca_property_t *uca_get_full_property(enum uca_property_ids property_id);
 
 
 /**
- * \brief Describe a property used by cameras and frame grabbers
+ * A uca_property_t describes a vendor-independent property used by cameras and
+ * frame grabbers. It basically consists of a human-readable name, a physical
+ * unit, a type and some access rights.
  */
 struct uca_property_t {
+    /**
+     * A human-readable string for this property.
+     *
+     * A name is defined in a tree-like structure, to build some form of
+     * hierarchical namespace. To define a parent-child-relationship a dot '.'
+     * is used. For example "image.width.min" might be the name for the minimal
+     * acceptable frame width.
+     */
     const char *name;
 
+    /**
+     * The physical unit of this property.
+     *
+     * This is important in order to let the camera drivers know, how to convert
+     * the values into their respective target value. It is also used for human
+     * interfaces.
+     */
     enum uca_unit {
-        uca_pixel = 0,
-        uca_bits,
-        uca_ns,     /**< nano seconds */
-        uca_us,     /**< micro seconds */
-        uca_ms,     /**< milli seconds */
-        uca_s,
-        uca_rows,
+        uca_pixel,  /**< number of pixels */
+        uca_bits,   /**< number of bits */
+        uca_ns,     /**< nanoseconds */
+        uca_us,     /**< microseconds */
+        uca_ms,     /**< milliseconds */
+        uca_s,      /**< seconds */
+        uca_rows,   /**< number of rows */
         uca_fps,    /**< frames per second */
         uca_dc,     /**< degree celsius */
-        uca_na
+        uca_na      /**< no unit available (for example modes) */
     } unit;
 
+    /**
+     * The data type of this property.
+     *
+     * When using uca_cam_set_property() and uca_cam_get_property() this field
+     * must be respected and correct data transfered, as the values are
+     * interpreted like defined here.
+     */
     enum uca_types {
         uca_uint32t,
         uca_uint8t,
         uca_string
     } type;
 
+    /**
+     * Access rights determine if uca_cam_get_property() and/or
+     * uca_cam_set_property() can be used with this property.
+     */
     enum uca_access_rights {
-        uca_read = 0x01,
-        uca_write = 0x02,
-        uca_readwrite = 0x01 | 0x02
+        uca_read = 0x01,                /**< property can be read */
+        uca_write = 0x02,               /**< property can be written */
+        uca_readwrite = 0x01 | 0x02     /**< property can be read and written */
     } access;
 };
 
@@ -167,8 +244,13 @@ enum uca_errors {
     UCA_ERR_GRABBER_NOMEM               /**< no memory was allocated using uca_grabber->alloc() */
 };
 
+/**
+ * Keeps a list of cameras and grabbers.
+ */
 struct uca_t {
     struct uca_camera_t *cameras;
+
+    /* private */
     struct uca_grabber_t *grabbers;
 };
 
