@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
 
-set(UCA_VERSION_MAJOR "0")
-set(UCA_VERSION_MINOR "3")
-set(UCA_VERSION_PATCH "0")
-
 # --- Set sources -------------------------------------------------------------
 set(uca_SRCS
     uca.c
@@ -145,8 +141,7 @@ target_link_libraries(uca ${uca_LIBS})
 
 # --- Install target ----------------------------------------------------------
 install(TARGETS uca 
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib)
+    LIBRARY DESTINATION lib{LIB_SUFFIX})
 
 install(FILES ${uca_HDRS} 
     DESTINATION include/libuca)

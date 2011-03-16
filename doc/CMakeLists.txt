@@ -5,6 +5,7 @@ find_package(Doxygen)
 # --- Create Doxygen source documentation by typing `make doc`
 if(DOXYGEN_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/publish.sh.in ${CMAKE_CURRENT_BINARY_DIR}/publish.sh)
 
     # add 'ALL after 'doc' to create documentation, whenever you type make
     add_custom_target(doc

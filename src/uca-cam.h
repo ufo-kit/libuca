@@ -196,9 +196,9 @@ struct uca_camera_t {
 
     struct uca_grabber_t    *grabber;   /**< grabber associated with this camera */
     enum uca_cam_state      state;      /**< camera state */
-    uint32_t                frame_width;
-    uint32_t                frame_height;
-    uint32_t                current_frame;
+    uint32_t                frame_width;    /**< current frame width */
+    uint32_t                frame_height;   /**< current frame height */
+    uint32_t                current_frame;  /**< last grabbed frame number */
 
     void *user; /**< private user data to be used by the camera driver */
 };

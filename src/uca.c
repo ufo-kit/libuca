@@ -141,9 +141,10 @@ struct uca_t *uca_init(const char *config_filename)
     if (grabber != NULL)
         grabber->next = NULL;
 
-    /* Probe each camera that is configured */
     i = 0;
     struct uca_camera_t *current = NULL;
+    /* Probe each camera that is configured and append a found camera to the
+     * linked list. */
     while (cam_inits[i] != NULL) {
         struct uca_camera_t *cam = NULL;
         uca_cam_init init = cam_inits[i];

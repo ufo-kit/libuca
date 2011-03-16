@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo -n "user: "
+read -e USER
+echo -n "host (:~/public_html is appended): "
+read -e HOST
+
+scp -r html/ $USER@$HOST:~/public_html/libuca-${UCA_VERSION_MAJOR}.${UCA_VERSION_MINOR}.${UCA_VERSION_PATCH}
