@@ -26,7 +26,7 @@ static uint32_t uca_ipe_get_property(struct uca_camera_t *cam, enum uca_property
 
     switch (property) {
         case UCA_PROP_NAME:
-            strncpy((char *) data, "IPE PCIe based on CMOSIS CMV2000", bytes);
+            strncpy((char *) data, "IPE PCIe based on CMOSIS CMV2000", num);
             break;
 
         case UCA_PROP_WIDTH:
@@ -102,7 +102,6 @@ static uint32_t uca_ipe_destroy(struct uca_camera_t *cam)
 uint32_t uca_ipe_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
 {
     pcilib_model_t model = PCILIB_MODEL_DETECT;
-    pcilib_bar_t bar = PCILIB_BAR_DETECT;
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
     if (handle < 0)
         return UCA_ERR_CAM_NOT_FOUND;
