@@ -245,7 +245,9 @@ enum uca_errors {
     UCA_ERR_CAM_RECORD,                 /**< could not record */
 
     UCA_ERR_GRABBER_ACQUIRE,            /**< grabber couldn't acquire a frame */
-    UCA_ERR_GRABBER_NOMEM               /**< no memory was allocated using uca_grabber->alloc() */
+    UCA_ERR_GRABBER_NOMEM,               /**< no memory was allocated using uca_grabber->alloc() */
+    UCA_ERR_GRABBER_CALLBACK_REGISTRATION_FAILED,
+    UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED
 };
 
 /**

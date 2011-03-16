@@ -110,7 +110,8 @@ typedef uint32_t (*uca_grabber_grab) (struct uca_grabber_t *grabber, void **buff
 typedef void (*uca_grabber_grab_callback) (uint32_t image_number, void *buffer);
 
 /**
- * Register callback for given frame grabber.
+ * Register callback for given frame grabber. To actually start receiving
+ * frames, call uca_grabber_acquire().
  *
  * \param[in] grabber The grabber for which the callback should be installed
  *

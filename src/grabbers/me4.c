@@ -8,9 +8,10 @@
 #include "uca.h"
 #include "uca-grabber.h"
 
-struct uca_me4_grabber_t {
+struct fg_apc_data {
     Fg_Struct   *fg;
     dma_mem     *mem;
+    uca_grabber_grab_callback cb;
 };
 
 struct uca_sisofg_map_t {
@@ -39,8 +40,8 @@ static struct uca_sisofg_map_t uca_to_fg[] = {
     { UCA_GRABBER_INVALID,          0,                      false }
 };
 
-#define GET_FG(grabber) (((struct uca_me4_grabber_t *) grabber->user)->fg)
-#define GET_MEM(grabber) (((struct uca_me4_grabber_t *) grabber->user)->mem)
+#define GET_FG(grabber) (((struct fg_apc_data *) grabber->user)->fg)
+#define GET_MEM(grabber) (((struct fg_apc_data *) grabber->user)->mem)
 
 uint32_t uca_me4_destroy(struct uca_grabber_t *grabber)
 {
@@ -103,7 +104,7 @@ uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t pixel_size, uint3
 
     dma_mem *mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*pixel_size, n_buffers);
     if (mem != NULL) {
-        ((struct uca_me4_grabber_t *) grabber->user)->mem = mem;
+        ((struct fg_apc_data *) grabber->user)->mem = mem;
         return UCA_NO_ERROR;
     }
     return UCA_ERR_PROP_GENERAL;
@@ -145,11 +146,31 @@ uint32_t uca_me4_grab(struct uca_grabber_t *grabber, void **buffer)
     return UCA_NO_ERROR;
 }
 
+static int uca_me4_callback(frameindex_t frame, struct fg_apc_data *apc)
+{
+    apc->cb(frame, Fg_getImagePtr(apc->fg, frame, PORT_A));
+    return 0;
+}
+
 uint32_t uca_me4_register_callback(struct uca_grabber_t *grabber, uca_grabber_grab_callback cb)
 {
-    grabber->callback = cb;
+    if (grabber->callback == NULL) {
+        grabber->callback = cb;
+        ((struct fg_apc_data *) grabber->user)->cb = cb;
 
-    /* TODO: add me4 registerApc stuff */
+        struct FgApcControl ctrl;
+        ctrl.version = 0;
+        ctrl.data = (struct fg_apc_data *) grabber->user;
+        ctrl.func = &uca_me4_callback;
+        ctrl.flags = FG_APC_DEFAULTS;
+        ctrl.timeout = 1;
+
+        if (Fg_registerApcHandler(GET_FG(grabber), PORT_A, &ctrl, FG_APC_CONTROL_BASIC) != FG_OK)
+            return UCA_ERR_GRABBER_CALLBACK_REGISTRATION_FAILED;
+    }
+    else
+        return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
+
     return UCA_NO_ERROR;
 }
 
@@ -160,10 +181,12 @@ uint32_t uca_me4_init(struct uca_grabber_t **grabber)
         return UCA_ERR_GRABBER_NOT_FOUND;
 
     struct uca_grabber_t *uca = (struct uca_grabber_t *) malloc(sizeof(struct uca_grabber_t));
-    struct uca_me4_grabber_t *me4 = (struct uca_me4_grabber_t *) malloc(sizeof(struct uca_me4_grabber_t));
+    struct fg_apc_data *me4 = (struct fg_apc_data *) malloc(sizeof(struct fg_apc_data));
 
-    me4->fg = fg;
+    me4->fg  = fg;
     me4->mem = NULL;
+    me4->cb  = NULL;
+
     uca->user = me4;
     uca->destroy = &uca_me4_destroy;
     uca->set_property = &uca_me4_set_property;
