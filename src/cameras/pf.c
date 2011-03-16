@@ -107,7 +107,7 @@ static uint32_t uca_pf_set_property(struct uca_camera_t *cam, enum uca_property_
 }
 
 
-static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data, size_t num)
 {
     TOKEN t;    /* You gotta love developers who name types capitalized... */
     PFValue value;
@@ -133,7 +133,7 @@ static uint32_t uca_pf_get_property(struct uca_camera_t *cam, enum uca_property_
                         set_void(data, uint32_t, (uint32_t) floor(atof(value.value.p)+0.5));
                     }
                     else {
-                        strcpy((char *) data, value.value.p);
+                        strncpy((char *) data, value.value.p, num);
                     }
                     break;
 
@@ -219,8 +219,8 @@ uint32_t uca_pf_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     val = UCA_TRIGGER_FREERUN;
     grabber->set_property(grabber, UCA_GRABBER_TRIGGER_MODE, &val);
 
-    uca_pf_get_property(uca, UCA_PROP_WIDTH, &uca->frame_width);
-    uca_pf_get_property(uca, UCA_PROP_HEIGHT, &uca->frame_height);
+    uca_pf_get_property(uca, UCA_PROP_WIDTH, &uca->frame_width, 0);
+    uca_pf_get_property(uca, UCA_PROP_HEIGHT, &uca->frame_height, 0);
 
     grabber->set_property(grabber, UCA_GRABBER_WIDTH, &uca->frame_width);
     grabber->set_property(grabber, UCA_GRABBER_HEIGHT, &uca->frame_height);

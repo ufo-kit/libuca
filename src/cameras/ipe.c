@@ -19,14 +19,14 @@ static uint32_t uca_ipe_set_property(struct uca_camera_t *cam, enum uca_property
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_ipe_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data, size_t num)
 {
     pcilib_t *handle = GET_HANDLE(cam);
     pcilib_register_value_t value = 0;
 
     switch (property) {
         case UCA_PROP_NAME:
-            strcpy((char *) data, "IPE PCIe based on CMOSIS CMV2000");
+            strncpy((char *) data, "IPE PCIe based on CMOSIS CMV2000", bytes);
             break;
 
         case UCA_PROP_WIDTH:

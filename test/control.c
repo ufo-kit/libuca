@@ -206,7 +206,8 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
 {
     GtkTreeIter iter, child;
     struct uca_property_t *property;
-    gchar *value_string = g_malloc(256);
+    const size_t num_bytes = 256;
+    gchar *value_string = g_malloc(num_bytes);
     guint8 value_8;
     guint32 value_32;
 
@@ -215,16 +216,16 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
         uint32_t result = UCA_NO_ERROR;
         switch (property->type) {
             case uca_string:
-                result = cam->get_property(cam, prop_id, value_string);
+                result = cam->get_property(cam, prop_id, value_string, num_bytes);
                 break;
 
             case uca_uint8t:
-                result = cam->get_property(cam, prop_id, &value_8);
+                result = cam->get_property(cam, prop_id, &value_8, 0);
                 g_sprintf(value_string, "%d", value_8);
                 break;
 
             case uca_uint32t:
-                result = cam->get_property(cam, prop_id, &value_32);
+                result = cam->get_property(cam, prop_id, &value_32, 0);
                 g_sprintf(value_string, "%d", value_32);
                 break;
         }
@@ -281,9 +282,9 @@ int main(int argc, char *argv[])
 
     int width, height, bits_per_sample;
     struct uca_camera_t *cam = uca->cameras;
-    cam->get_property(cam, UCA_PROP_WIDTH, &width);
-    cam->get_property(cam, UCA_PROP_HEIGHT, &height);
-    cam->get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample);
+    cam->get_property(cam, UCA_PROP_WIDTH, &width, 0);
+    cam->get_property(cam, UCA_PROP_HEIGHT, &height, 0);
+    cam->get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample, 0);
 
     g_thread_init(NULL);
     gdk_threads_init();

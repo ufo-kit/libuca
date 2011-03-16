@@ -113,9 +113,12 @@ typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, enum uca_pro
  *
  * \param[out] data Where to store the property's value
  *
+ * \param[in] num Number of bytes of string storage. Ignored for uca_uint8t
+ *   and uca_uint32t properties.
+ *
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera
  */
-typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);
+typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data, size_t num);
 
 /**
  * Begin recording.

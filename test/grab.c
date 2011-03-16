@@ -21,9 +21,9 @@ int main(int argc, char *argv[])
     cam->set_property(cam, UCA_PROP_DELAY, &val);
 
     uint32_t width, height, bits;
-    cam->get_property(cam, UCA_PROP_WIDTH, &width);
-    cam->get_property(cam, UCA_PROP_HEIGHT, &height);
-    cam->get_property(cam, UCA_PROP_BITDEPTH, &bits);
+    cam->get_property(cam, UCA_PROP_WIDTH, &width, 0);
+    cam->get_property(cam, UCA_PROP_HEIGHT, &height, 0);
+    cam->get_property(cam, UCA_PROP_BITDEPTH, &bits, 0);
 
     uca_cam_alloc(cam, 10);
 

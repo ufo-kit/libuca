@@ -82,7 +82,7 @@ static uint32_t uca_pco_set_property(struct uca_camera_t *cam, enum uca_property
 }
 
 
-static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data, size_t num)
 {
     struct pco_edge_t *pco = GET_PCO(cam);
     struct uca_grabber_t *grabber = cam->grabber;
@@ -99,7 +99,7 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
                  * one.*/
                 pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name));
                 pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name));
-                strcpy((char *) data, name.szName);
+                strncpy((char *) data, name.szName, num);
             }
             break;
 

@@ -30,7 +30,8 @@ int main(int argc, char *argv[])
     /* take first camera */
     struct uca_camera_t *cam = uca->cameras;
 
-    char string_value[256];
+    const size_t num_bytes = 256;
+    char string_value[num_bytes];
     uint32_t uint32_value;
     uint8_t uint8_value;
 
@@ -41,21 +42,21 @@ int main(int argc, char *argv[])
             printf("%s = ", prop->name);
             switch (prop->type) {
                 case uca_string:
-                    if (cam->get_property(cam, i, string_value) != UCA_ERR_PROP_INVALID) {
+                    if (cam->get_property(cam, i, string_value, num_bytes) != UCA_ERR_PROP_INVALID) {
                         printf("%s ", string_value);
                     }
                     else
                         printf("n/a");
                     break;
                 case uca_uint32t:
-                    if (cam->get_property(cam, i, &uint32_value) != UCA_ERR_PROP_INVALID) {
+                    if (cam->get_property(cam, i, &uint32_value, 0) != UCA_ERR_PROP_INVALID) {
                         printf("%i %s", uint32_value, uca_unit_map[prop->unit]);
                     }
                     else
                         printf("n/a");
                     break;
                 case uca_uint8t:
-                    if (cam->get_property(cam, i, &uint8_value) != UCA_ERR_PROP_INVALID) {
+                    if (cam->get_property(cam, i, &uint8_value, 0) != UCA_ERR_PROP_INVALID) {
                         printf("%i %s", uint8_value, uca_unit_map[prop->unit]);
                     }
                     else
