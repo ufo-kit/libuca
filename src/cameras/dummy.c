@@ -6,11 +6,8 @@
 #include "uca-grabber.h"
 
 struct dummy_cam_t {
-    uint32_t width;
-    uint32_t height;
     uint32_t bitdepth;
     uint32_t framerate;
-    uint32_t current_frame;
     char*   buffer;
 };
 
@@ -22,17 +19,15 @@ static uint32_t uca_dummy_set_property(struct uca_camera_t *cam, enum uca_proper
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_dummy_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data, size_t num)
 {
-    struct dummy_cam_t *dummy_cam = (struct dummy_cam_t *) cam->user;
-
     switch (property) {
         case UCA_PROP_NAME:
-            strcpy((char *) data, "dummy");
+            strncpy((char *) data, "dummy", num);
             break;
 
         case UCA_PROP_WIDTH:
-            set_void(data, uint32_t, dummy_cam->width);
+            set_void(data, uint32_t, cam->frame_width);
             break;
 
         case UCA_PROP_WIDTH_MIN:
@@ -44,7 +39,7 @@ static uint32_t uca_dummy_get_property(struct uca_camera_t *cam, enum uca_proper
             break;
 
         case UCA_PROP_HEIGHT:
-            set_void(data, uint32_t, dummy_cam->height);
+            set_void(data, uint32_t, cam->frame_height);
             break;
 
         case UCA_PROP_HEIGHT_MIN:
@@ -67,7 +62,7 @@ static uint32_t uca_dummy_get_property(struct uca_camera_t *cam, enum uca_proper
 
 uint32_t uca_dummy_start_recording(struct uca_camera_t *cam)
 {
-    GET_DUMMY(cam)->current_frame = 0;
+    cam->current_frame = 0;
     return UCA_NO_ERROR;
 }
 
@@ -139,14 +134,14 @@ static const char digits[10][20] = {
       0xff, 0xff, 0xff, 0x00 }
 };
 
-static void uca_dummy_print_number(struct dummy_cam_t *dummy, int number, int x, int y)
+static void uca_dummy_print_number(struct dummy_cam_t *dummy, int number, int x, int y, int width)
 {
     const int digit_width = 4;
     const int digit_height = 5;
     char *buffer = dummy->buffer;
     for (int i = 0; i < digit_width; i++) {
         for (int j = 0; j < digit_height; j++) {
-            buffer[(y+j)*dummy->width + (x+i)] = digits[number][j*digit_width+i];
+            buffer[(y+j)*width + (x+i)] = digits[number][j*digit_width+i];
         }
     }
 }
@@ -157,16 +152,16 @@ uint32_t uca_dummy_grab(struct uca_camera_t *cam, char *buffer)
     dummy->buffer = buffer;
 
     /* print current frame number */
-    unsigned int number = dummy->current_frame;
+    unsigned int number = cam->current_frame;
     unsigned int divisor = 100000000;
     int x = 10;
     while (divisor > 1) {
-        uca_dummy_print_number(dummy, number / divisor, x, 10);
+        uca_dummy_print_number(dummy, number / divisor, x, 10, cam->frame_width);
         number = number % divisor;
         divisor = divisor / 10;
         x += 5;
     }
-    dummy->current_frame++;
+    cam->current_frame++;
     return UCA_NO_ERROR;
 }
 
@@ -186,10 +181,11 @@ uint32_t uca_dummy_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber
     uca->stop_recording = &uca_dummy_stop_recording;
     uca->grab = &uca_dummy_grab;
     uca->state = UCA_CAM_CONFIGURABLE;
+    uca->frame_width = 320;
+    uca->frame_height = 240;
+    uca->current_frame = 0;
 
     struct dummy_cam_t *dummy_cam = (struct dummy_cam_t *) malloc(sizeof(struct dummy_cam_t));
-    dummy_cam->width = 320;
-    dummy_cam->height = 240;
     dummy_cam->bitdepth = 8;
     dummy_cam->framerate = 100;
     dummy_cam->buffer = NULL;

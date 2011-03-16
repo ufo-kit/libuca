@@ -140,6 +140,7 @@ typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera_t *cam);
  * coming from the camera, which the frame grabber is not able to do.
  *
  * \param[in] buffer Destination buffer
+ *
  */
 typedef uint32_t (*uca_cam_grab) (struct uca_camera_t *cam, char *buffer);
 
@@ -197,6 +198,7 @@ struct uca_camera_t {
     enum uca_cam_state      state;      /**< camera state */
     uint32_t                frame_width;
     uint32_t                frame_height;
+    uint32_t                current_frame;
 
     void *user; /**< private user data to be used by the camera driver */
 };
