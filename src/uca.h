@@ -123,9 +123,13 @@ enum uca_property_ids {
 /**
  * Initialize the unified camera access interface.
  *
+ * \param[in] config_filename Configuration file in JSON format for cameras
+ *   relying on external calibration data. It is ignored when no JSON parser can
+ *   be found at compile time or config_filename is NULL.
+ *
  * \return Pointer to a uca_t structure
  */
-struct uca_t *uca_init(void);
+struct uca_t *uca_init(const char *config_filename);
 
 /**
  * \brief Free resources of the unified camera access interface

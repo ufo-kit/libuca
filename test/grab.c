@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[])
 {
-    struct uca_t *uca = uca_init();
+    struct uca_t *uca = uca_init(NULL);
     if (uca == NULL) {
         printf("Couldn't find a camera\n");
         return 1;

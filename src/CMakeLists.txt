@@ -32,8 +32,9 @@ find_package(FgLib5)
 find_package(ClSerMe4)
 
 # --- Miscellanous packages
-find_package(SWIG)
-find_package(PythonLibs)
+find_package(PkgConfig)
+
+pkg_check_modules(MJSON mjson-1.2)
 
 
 # --- Build options -----------------------------------------------------------
@@ -54,13 +55,10 @@ if (PF_FOUND)
         ${PF_LIBRARIES}
         )
 
-    include_directories(
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${PF_INCLUDE_DIRS}
-        )
+    include_directories(${PF_INCLUDE_DIRS})
 endif()
 
-if(PCO_FOUND)
+if (PCO_FOUND)
     set(HAVE_PCO_EDGE TRUE)
 
     set(uca_SRCS 
@@ -73,13 +71,10 @@ if(PCO_FOUND)
         ${PCO_LIBRARIES}
         )
 
-    include_directories(
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${PCO_INCLUDE_DIRS}
-        )
+    include_directories(${PCO_INCLUDE_DIRS})
 endif()
 
-if(IPE_FOUND)
+if (IPE_FOUND)
     set(HAVE_IPE_CAMERA TRUE)
 
     set(uca_SRCS
@@ -91,13 +86,11 @@ if(IPE_FOUND)
         ${uca_LIBS}
         ${IPE_LIBRARIES}
         )
-    include_directories(
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${IPE_INCLUDE_DIRS}
-        )
+
+    include_directories(${IPE_INCLUDE_DIRS})
 endif()
 
-if(CLSERME4_FOUND AND FGLIB5_FOUND)
+if (CLSERME4_FOUND AND FGLIB5_FOUND)
     set(HAVE_ME4 TRUE)
 
     set(uca_SRCS 
@@ -112,35 +105,37 @@ if(CLSERME4_FOUND AND FGLIB5_FOUND)
         )
 
     include_directories(
-        ${CMAKE_CURRENT_SOURCE_DIR}
         ${CLSERME4_INCLUDE_DIR}
         ${FGLIB5_INCLUDE_DIR}
         )
 endif()
 
-if(HAVE_DUMMY_CAMERA)
+if (HAVE_DUMMY_CAMERA)
     set(uca_SRCS
         ${uca_SRCS}
         cameras/dummy.c
         )
 endif()
 
+if (MJSON_FOUND)
+    set(HAVE_MJSON TRUE)
+
+    set(uca_LIBS
+        ${uca_LIBS}
+        ${MJSON_LIBRARIES}
+        )
+
+    include_directories(${MJSON_INCLUDE_DIRS})
+endif()
+
 # --- Configure step
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-# --- Build language bindings via SWIG
-if(SWIG_FOUND AND PYTHONLIBS_FOUND)
-    include(${SWIG_USE_FILE})
-    include_directories(${PYTHON_INCLUDE_DIR})
-    set(CMAKE_SWIG_FLAGS "")
-
-    set_source_files_properties(uca.i PROPERTIES CPLUSPLUS ON)
-    SWIG_ADD_MODULE(uca python uca.i ${uca_SRCS})
-    SWIG_LINK_LIBRARIES(uca ${PYTHON_LIBRARIES} ${uca_LIBS})
-endif()
+include_directories(
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    )
 
 # --- Build target ------------------------------------------------------------
 add_definitions("-std=c99 -Wall")

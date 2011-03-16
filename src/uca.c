@@ -6,6 +6,10 @@
 #include "uca-cam.h"
 #include "uca-grabber.h"
 
+#ifdef HAVE_MJSON
+#include "json.h"
+#endif
+
 #ifdef HAVE_DUMMY_CAMERA
 #include "cameras/dummy.h"
 #endif
@@ -86,7 +90,7 @@ static struct uca_property_t property_map[UCA_PROP_LAST+1] = {
     { NULL, 0, 0, 0 }
 };
 
-struct uca_t *uca_init(void)
+struct uca_t *uca_init(const char *config_filename)
 {
     struct uca_t *uca = (struct uca_t *) malloc(sizeof(struct uca_t));
     uca->cameras = NULL;

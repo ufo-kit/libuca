@@ -274,7 +274,7 @@ void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkT
 
 int main(int argc, char *argv[])
 {
-    struct uca_t *uca = uca_init();
+    struct uca_t *uca = uca_init(NULL);
     if (uca == NULL) {
         g_print("Couldn't initialize frame grabber and/or cameras\n");
         return 1;

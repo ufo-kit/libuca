@@ -7,3 +7,5 @@
 #cmakedefine HAVE_IPE_CAMERA
 
 #cmakedefine HAVE_DUMMY_CAMERA
+
+#cmakedefine HAVE_MJSON
