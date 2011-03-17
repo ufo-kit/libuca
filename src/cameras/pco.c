@@ -12,7 +12,7 @@
 #define set_void(p, type, value) { *((type *) p) = (type) value; }
 
 
-static uint32_t uca_pco_set_exposure(struct uca_camera_t *cam, uint32_t *exposure)
+static uint32_t uca_pco_set_exposure(struct uca_camera *cam, uint32_t *exposure)
 {
     uint32_t e, d;
     if (pco_get_delay_exposure(GET_PCO(cam), &d, &e) != PCO_NOERROR)
@@ -22,7 +22,7 @@ static uint32_t uca_pco_set_exposure(struct uca_camera_t *cam, uint32_t *exposur
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_set_delay(struct uca_camera_t *cam, uint32_t *delay)
+static uint32_t uca_pco_set_delay(struct uca_camera *cam, uint32_t *delay)
 {
     uint32_t e, d;
     if (pco_get_delay_exposure(GET_PCO(cam), &d, &e) != PCO_NOERROR)
@@ -32,16 +32,16 @@ static uint32_t uca_pco_set_delay(struct uca_camera_t *cam, uint32_t *delay)
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_destroy(struct uca_camera_t *cam)
+static uint32_t uca_pco_destroy(struct uca_camera *cam)
 {
     pco_set_rec_state(GET_PCO(cam), 0);
     pco_destroy(GET_PCO(cam));
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_set_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
 {
-    struct uca_grabber_t *grabber = cam->grabber;
+    struct uca_grabber *grabber = cam->grabber;
 
     switch (property) {
         case UCA_PROP_WIDTH:
@@ -82,10 +82,10 @@ static uint32_t uca_pco_set_property(struct uca_camera_t *cam, enum uca_property
 }
 
 
-static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num)
 {
     struct pco_edge_t *pco = GET_PCO(cam);
-    struct uca_grabber_t *grabber = cam->grabber;
+    struct uca_grabber *grabber = cam->grabber;
 
     switch (property) {
         case UCA_PROP_NAME: 
@@ -195,7 +195,7 @@ static uint32_t uca_pco_get_property(struct uca_camera_t *cam, enum uca_property
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_start_recording(struct uca_camera_t *cam)
+uint32_t uca_pco_start_recording(struct uca_camera *cam)
 {
     struct pco_edge_t *pco = GET_PCO(cam);
     if (pco_arm_camera(pco) != PCO_NOERROR)
@@ -205,14 +205,14 @@ uint32_t uca_pco_start_recording(struct uca_camera_t *cam)
     return cam->grabber->acquire(cam->grabber, -1);
 }
 
-uint32_t uca_pco_stop_recording(struct uca_camera_t *cam)
+uint32_t uca_pco_stop_recording(struct uca_camera *cam)
 {
     if (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR)
         return UCA_ERR_PROP_GENERAL;
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_grab(struct uca_camera_t *cam, char *buffer)
+uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer)
 {
     uint16_t *frame;
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
@@ -224,7 +224,7 @@ uint32_t uca_pco_grab(struct uca_camera_t *cam, char *buffer)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
+uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
 {
     if (grabber == NULL)
         return UCA_ERR_CAM_NOT_FOUND;
@@ -239,7 +239,7 @@ uint32_t uca_pco_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
         return UCA_ERR_CAM_NOT_FOUND;
     }
 
-    struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
+    struct uca_camera *uca = (struct uca_camera *) malloc(sizeof(struct uca_camera));
     uca->user = pco;
     uca->grabber = grabber;
     uca->grabber->asynchronous = true;

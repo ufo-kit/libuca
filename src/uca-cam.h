@@ -17,10 +17,6 @@ extern "C" {
  * and sets all function pointers to their respective implementations.
  */
 
-struct uca_camera_t;
-struct uca_grabber_t;
-struct uca_property_t;
-
 enum uca_property_ids;
 
 /**
@@ -32,7 +28,6 @@ enum uca_cam_state {
     UCA_CAM_ARMED,          /**< Camera is ready for recording */
     UCA_CAM_RECORDING,      /**< Camera is currently recording */
 };
-
 
 /*
  * --- non-virtual methods ----------------------------------------------------
@@ -48,7 +43,7 @@ enum uca_cam_state {
  * 
  * \param[in] n_buffers Number of sub-buffers with size frame_width*frame_height.
  */
-uint32_t uca_cam_alloc(struct uca_camera_t *cam, uint32_t n_buffers);
+uint32_t uca_cam_alloc(struct uca_camera *cam, uint32_t n_buffers);
 
 /**
  * Retrieve current state of the camera.
@@ -58,7 +53,7 @@ uint32_t uca_cam_alloc(struct uca_camera_t *cam, uint32_t n_buffers);
  * \return A value from the uca_cam_state enum representing the current state of
  *   the camera.
  */
-enum uca_cam_state uca_cam_get_state(struct uca_camera_t *cam);
+enum uca_cam_state uca_cam_get_state(struct uca_camera *cam);
 
 
 /*
@@ -79,7 +74,7 @@ enum uca_cam_state uca_cam_get_state(struct uca_camera_t *cam);
  *
  * \note This is a private function and should be called exclusively by uca_init().
  */
-typedef uint32_t (*uca_cam_init) (struct uca_camera_t **cam, struct uca_grabber_t *grabber);
+typedef uint32_t (*uca_cam_init) (struct uca_camera **cam, struct uca_grabber *grabber);
 
 /**
  * \brief Function pointer to free camera resources.
@@ -88,7 +83,7 @@ typedef uint32_t (*uca_cam_init) (struct uca_camera_t **cam, struct uca_grabber_
  *
  * \note This is a private function and should be called exclusively by uca_init().
  */
-typedef uint32_t (*uca_cam_destroy) (struct uca_camera_t *cam);
+typedef uint32_t (*uca_cam_destroy) (struct uca_camera *cam);
 
 /**
  * Function pointer to set a camera property.
@@ -102,7 +97,7 @@ typedef uint32_t (*uca_cam_destroy) (struct uca_camera_t *cam);
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera or
  *   UCA_ERR_PROP_VALUE_OUT_OF_RANGE if value cannot be set.
  */
-typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data);
+typedef uint32_t (*uca_cam_set_property) (struct uca_camera *cam, enum uca_property_ids property, void *data);
 
 /**
  * Function pointer to get a property.
@@ -118,7 +113,7 @@ typedef uint32_t (*uca_cam_set_property) (struct uca_camera_t *cam, enum uca_pro
  *
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera
  */
-typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_property_ids property, void *data, size_t num);
+typedef uint32_t (*uca_cam_get_property) (struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num);
 
 /**
  * Begin recording.
@@ -126,12 +121,12 @@ typedef uint32_t (*uca_cam_get_property) (struct uca_camera_t *cam, enum uca_pro
  * Usually this also involves the frame acquisition of the frame grabber but is
  * hidden by this function.
  */
-typedef uint32_t (*uca_cam_start_recording) (struct uca_camera_t *cam);
+typedef uint32_t (*uca_cam_start_recording) (struct uca_camera *cam);
 
 /**
  * Stop recording.
  */
-typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera_t *cam);
+typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera *cam);
 
 /**
  * \brief Grab one image from the camera
@@ -142,19 +137,19 @@ typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera_t *cam);
  * \param[in] buffer Destination buffer
  *
  */
-typedef uint32_t (*uca_cam_grab) (struct uca_camera_t *cam, char *buffer);
+typedef uint32_t (*uca_cam_grab) (struct uca_camera *cam, char *buffer);
 
 
 /**
  * Represents a camera abstraction, that concrete cameras must implement.
  */
-struct uca_camera_t {
+typedef struct uca_camera {
     /**
      * Points to the next available camera in a linked-list fashion.
      *
      * End of list is specified with next == NULL.
      */
-    struct uca_camera_t     *next;
+    struct uca_camera     *next;
 
     /* Function pointers to camera-specific methods */
     /**
@@ -194,14 +189,15 @@ struct uca_camera_t {
      */
     uca_cam_destroy         destroy;
 
-    struct uca_grabber_t    *grabber;   /**< grabber associated with this camera */
+    struct uca_grabber      *grabber;   /**< grabber associated with this camera */
     enum uca_cam_state      state;      /**< camera state */
     uint32_t                frame_width;    /**< current frame width */
     uint32_t                frame_height;   /**< current frame height */
     uint32_t                current_frame;  /**< last grabbed frame number */
 
     void *user; /**< private user data to be used by the camera driver */
-};
+} uca_camera_t;
+
 
 #ifdef __cplusplus
 }

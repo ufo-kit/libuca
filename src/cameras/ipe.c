@@ -14,12 +14,12 @@ static void uca_ipe_handle_error(const char *format, ...)
     /* Do nothing, we just check errno. */
 }
 
-static uint32_t uca_ipe_set_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_ipe_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_get_property(struct uca_camera_t *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_ipe_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num)
 {
     pcilib_t *handle = GET_HANDLE(cam);
     pcilib_register_value_t value = 0;
@@ -78,28 +78,28 @@ static uint32_t uca_ipe_get_property(struct uca_camera_t *cam, enum uca_property
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_start_recording(struct uca_camera_t *cam)
+static uint32_t uca_ipe_start_recording(struct uca_camera *cam)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_stop_recording(struct uca_camera_t *cam)
+static uint32_t uca_ipe_stop_recording(struct uca_camera *cam)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_grab(struct uca_camera_t *cam, char *buffer)
+static uint32_t uca_ipe_grab(struct uca_camera *cam, char *buffer)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_destroy(struct uca_camera_t *cam)
+static uint32_t uca_ipe_destroy(struct uca_camera *cam)
 {
     pcilib_close(GET_HANDLE(cam));
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_ipe_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
+uint32_t uca_ipe_init(struct uca_camera **cam, struct uca_grabber *grabber)
 {
     pcilib_model_t model = PCILIB_MODEL_DETECT;
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
@@ -109,7 +109,7 @@ uint32_t uca_ipe_init(struct uca_camera_t **cam, struct uca_grabber_t *grabber)
     pcilib_set_error_handler(&uca_ipe_handle_error, &uca_ipe_handle_error);
     model = pcilib_get_model(handle);
 
-    struct uca_camera_t *uca = (struct uca_camera_t *) malloc(sizeof(struct uca_camera_t));
+    struct uca_camera *uca = (struct uca_camera *) malloc(sizeof(struct uca_camera));
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_ipe_destroy;

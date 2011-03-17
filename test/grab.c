@@ -6,14 +6,14 @@
 
 int main(int argc, char *argv[])
 {
-    struct uca_t *uca = uca_init(NULL);
-    if (uca == NULL) {
+    struct uca *u = uca_init(NULL);
+    if (u == NULL) {
         printf("Couldn't find a camera\n");
         return 1;
     }
 
     /* take first camera */
-    struct uca_camera_t *cam = uca->cameras;
+    struct uca_camera *cam = u->cameras;
 
     uint32_t val = 1;
     cam->set_property(cam, UCA_PROP_EXPOSURE, &val);
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     cam->start_recording(cam);
     cam->grab(cam, (char *) buffer);
     cam->stop_recording(cam);
-    uca_destroy(uca);
+    uca_destroy(u);
 
     FILE *fp = fopen("out.raw", "wb");
     fwrite(buffer, width*height, pixel_size, fp);

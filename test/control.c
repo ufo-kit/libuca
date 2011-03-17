@@ -13,8 +13,8 @@ typedef struct {
     int width;
     int height;
     int bits;
-    struct uca_camera_t *cam;
-    struct uca_t *uca;
+    struct uca_camera *cam;
+    struct uca *u;
 } ThreadData ;
 
 typedef struct {
@@ -65,14 +65,14 @@ static void destroy(GtkWidget *widget, gpointer data)
 {
     ThreadData *td = (ThreadData *) data;
     td->running = FALSE;
-    uca_destroy(td->uca);
+    uca_destroy(td->u);
     gtk_main_quit();
 }
 
 void *grab_thread(void *args)
 {
     ThreadData *data = (ThreadData *) args;
-    struct uca_camera_t *cam = data->cam;
+    struct uca_camera *cam = data->cam;
 
     while (data->running) {
         cam->grab(cam, (char *) data->buffer);
@@ -99,7 +99,7 @@ static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
     data->cam->start_recording(data->cam);
     if (!g_thread_create(grab_thread, data, FALSE, &error)) {
         g_printerr("Failed to create thread: %s\n", error->message);
-        uca_destroy(data->uca);
+        uca_destroy(data->u);
     }
 }
 
@@ -122,7 +122,7 @@ static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gcha
     GtkTreeIter iter;
 
     if (gtk_tree_model_get_iter(tree_model, &iter, tree_path)) {
-        struct uca_camera_t *cam = value_data->thread_data->cam;
+        struct uca_camera *cam = value_data->thread_data->cam;
         uint32_t prop_id;
         gtk_tree_model_get(tree_model, &iter, COLUMN_UCA_ID, &prop_id, -1);
 
@@ -202,10 +202,10 @@ void find_recursively(GtkTreeStore *store, GtkTreeIter *root, GtkTreeIter *resul
     find_recursively(store, &iter, result, tokens, depth+1);
 }
 
-void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera_t *cam)
+void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera *cam)
 {
     GtkTreeIter iter, child;
-    struct uca_property_t *property;
+    struct uca_property *property;
     const size_t num_bytes = 256;
     gchar *value_string = g_malloc(num_bytes);
     guint8 value_8;
@@ -259,7 +259,7 @@ void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkT
     uint32_t prop_id;
 
     gtk_tree_model_get(model, iter, COLUMN_UCA_ID, &prop_id, -1);
-    struct uca_property_t *property = uca_get_full_property(prop_id);
+    struct uca_property *property = uca_get_full_property(prop_id);
     if (property->access & uca_write) {
         g_object_set(cell, "mode", GTK_CELL_RENDERER_MODE_EDITABLE, NULL);
         g_object_set(GTK_CELL_RENDERER_TEXT(cell), "editable", TRUE, NULL);
@@ -274,14 +274,14 @@ void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkT
 
 int main(int argc, char *argv[])
 {
-    struct uca_t *uca = uca_init(NULL);
-    if (uca == NULL) {
+    struct uca *u = uca_init(NULL);
+    if (u == NULL) {
         g_print("Couldn't initialize frame grabber and/or cameras\n");
         return 1;
     }
 
     int width, height, bits_per_sample;
-    struct uca_camera_t *cam = uca->cameras;
+    struct uca_camera *cam = u->cameras;
     cam->get_property(cam, UCA_PROP_WIDTH, &width, 0);
     cam->get_property(cam, UCA_PROP_HEIGHT, &height, 0);
     cam->get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample, 0);
@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
     td.height = height;
     td.bits   = bits_per_sample;
     td.cam    = cam;
-    td.uca    = uca;
+    td.u      = u;
     td.running = FALSE;
 
     g_signal_connect(window, "delete-event",

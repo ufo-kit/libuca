@@ -41,12 +41,12 @@ enum uca_grabber_constants {
  *
  * \return UCA_ERR_INIT_NOT_FOUND if grabber is not found or could not be initialized
  */
-typedef uint32_t (*uca_grabber_init) (struct uca_grabber_t **grabber);
+typedef uint32_t (*uca_grabber_init) (struct uca_grabber **grabber);
 
 /**
  * Free frame grabber resouces.
  */
-typedef uint32_t (*uca_grabber_destroy) (struct uca_grabber_t *grabber);
+typedef uint32_t (*uca_grabber_destroy) (struct uca_grabber *grabber);
 
 /**
  * Set a frame grabber property.
@@ -56,7 +56,7 @@ typedef uint32_t (*uca_grabber_destroy) (struct uca_grabber_t *grabber);
  * \return UCA_ERR_PROP_INVALID if property is not supported on the frame
  *   grabber or UCA_ERR_PROP_VALUE_OUT_OF_RANGE if value cannot be set.
  */
-typedef uint32_t (*uca_grabber_set_property) (struct uca_grabber_t *grabber, enum uca_grabber_constants prop, void *data);
+typedef uint32_t (*uca_grabber_set_property) (struct uca_grabber *grabber, enum uca_grabber_constants prop, void *data);
 
 /**
  * Get a frame grabber property.
@@ -65,14 +65,14 @@ typedef uint32_t (*uca_grabber_set_property) (struct uca_grabber_t *grabber, enu
  * 
  * \return UCA_ERR_PROP_INVALID if property is not supported on the frame grabber 
  */
-typedef uint32_t (*uca_grabber_get_property) (struct uca_grabber_t *grabber, enum uca_grabber_constants prop, void *data);
+typedef uint32_t (*uca_grabber_get_property) (struct uca_grabber *grabber, enum uca_grabber_constants prop, void *data);
 
 /**
  * Allocate buffers with current width, height and bitdepth.
  *
  * \warning Subsequent changes of width and height might corrupt memory.
  */
-typedef uint32_t (*uca_grabber_alloc) (struct uca_grabber_t *grabber, uint32_t pixel_size, uint32_t n_buffers);
+typedef uint32_t (*uca_grabber_alloc) (struct uca_grabber *grabber, uint32_t pixel_size, uint32_t n_buffers);
 
 /**
  * Begin acquiring frames.
@@ -81,12 +81,12 @@ typedef uint32_t (*uca_grabber_alloc) (struct uca_grabber_t *grabber, uint32_t p
  *
  * \param[in] async Grab asynchronous if true
  */
-typedef uint32_t (*uca_grabber_acquire) (struct uca_grabber_t *grabber, int32_t n_frames);
+typedef uint32_t (*uca_grabber_acquire) (struct uca_grabber *grabber, int32_t n_frames);
 
 /**
  * Stop acquiring frames.
  */
-typedef uint32_t (*uca_grabber_stop_acquire) (struct uca_grabber_t *grabber);
+typedef uint32_t (*uca_grabber_stop_acquire) (struct uca_grabber *grabber);
 
 /**
  * Grab a frame.
@@ -97,7 +97,7 @@ typedef uint32_t (*uca_grabber_stop_acquire) (struct uca_grabber_t *grabber);
  *
  * \param[out] frame_number Number of the grabbed frame
  */
-typedef uint32_t (*uca_grabber_grab) (struct uca_grabber_t *grabber, void **buffer, uint32_t *frame_number);
+typedef uint32_t (*uca_grabber_grab) (struct uca_grabber *grabber, void **buffer, uint32_t *frame_number);
 
 /**
  * Function pointer to a grab callback.
@@ -119,7 +119,7 @@ typedef void (*uca_grabber_grab_callback) (uint32_t image_number, void *buffer);
  *
  * \param[in] cb Callback function for when a frame arrived
  */
-typedef uint32_t (*uca_grabber_register_callback) (struct uca_grabber_t *grabber, uca_grabber_grab_callback cb);
+typedef uint32_t (*uca_grabber_register_callback) (struct uca_grabber *grabber, uca_grabber_grab_callback cb);
 
 
 /**
@@ -130,8 +130,8 @@ typedef uint32_t (*uca_grabber_register_callback) (struct uca_grabber_t *grabber
  * uca_camera_t interface in order to keep certain duplicated properties in sync
  * (e.g. image dimensions can be set on frame grabber and camera).
  */
-struct uca_grabber_t {
-    struct uca_grabber_t    *next;
+typedef struct uca_grabber {
+    struct uca_grabber    *next;
 
     /* Function pointers to grabber-specific methods */
     uca_grabber_destroy      destroy;
@@ -147,6 +147,8 @@ struct uca_grabber_t {
     uca_grabber_grab_callback callback;
     bool asynchronous;
     void *user;
-};
+} uca_grabber_t;
+
+
 
 #endif

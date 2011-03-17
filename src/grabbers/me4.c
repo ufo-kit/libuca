@@ -43,7 +43,7 @@ static struct uca_sisofg_map_t uca_to_fg[] = {
 #define GET_FG(grabber) (((struct fg_apc_data *) grabber->user)->fg)
 #define GET_MEM(grabber) (((struct fg_apc_data *) grabber->user)->mem)
 
-uint32_t uca_me4_destroy(struct uca_grabber_t *grabber)
+uint32_t uca_me4_destroy(struct uca_grabber *grabber)
 {
     if (grabber != NULL) {
         Fg_FreeMemEx(GET_FG(grabber), GET_MEM(grabber));
@@ -64,7 +64,7 @@ static struct uca_sisofg_map_t *uca_me4_find_property(enum uca_grabber_constants
     return NULL;
 }
 
-uint32_t uca_me4_set_property(struct uca_grabber_t *grabber, enum uca_grabber_constants property, void *data)
+uint32_t uca_me4_set_property(struct uca_grabber *grabber, enum uca_grabber_constants property, void *data)
 {
     struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
     if (fg_prop == NULL)
@@ -82,7 +82,7 @@ uint32_t uca_me4_set_property(struct uca_grabber_t *grabber, enum uca_grabber_co
         return Fg_setParameter(GET_FG(grabber), fg_prop->fg_id, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
 }
 
-uint32_t uca_me4_get_property(struct uca_grabber_t *grabber, enum uca_grabber_constants property, void *data)
+uint32_t uca_me4_get_property(struct uca_grabber *grabber, enum uca_grabber_constants property, void *data)
 {
     struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
     if (fg_prop == NULL)
@@ -92,7 +92,7 @@ uint32_t uca_me4_get_property(struct uca_grabber_t *grabber, enum uca_grabber_co
     return Fg_getParameter(GET_FG(grabber), fg_prop->fg_id, data, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_GENERAL;
 }
 
-uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t pixel_size, uint32_t n_buffers)
+uint32_t uca_me4_alloc(struct uca_grabber *grabber, uint32_t pixel_size, uint32_t n_buffers)
 {
     if (GET_MEM(grabber) != NULL)
         /* FIXME: invent better error code */
@@ -110,7 +110,7 @@ uint32_t uca_me4_alloc(struct uca_grabber_t *grabber, uint32_t pixel_size, uint3
     return UCA_ERR_PROP_GENERAL;
 }
 
-uint32_t uca_me4_acquire(struct uca_grabber_t *grabber, int32_t n_frames)
+uint32_t uca_me4_acquire(struct uca_grabber *grabber, int32_t n_frames)
 {
     if (GET_MEM(grabber) == NULL)
         return UCA_ERR_GRABBER_NOMEM;
@@ -123,7 +123,7 @@ uint32_t uca_me4_acquire(struct uca_grabber_t *grabber, int32_t n_frames)
     return UCA_ERR_GRABBER_ACQUIRE;
 }
 
-uint32_t uca_me4_stop_acquire(struct uca_grabber_t *grabber)
+uint32_t uca_me4_stop_acquire(struct uca_grabber *grabber)
 {
     if (GET_MEM(grabber) != NULL)
         if (Fg_stopAcquireEx(GET_FG(grabber), 0, GET_MEM(grabber), STOP_SYNC) != FG_OK)
@@ -131,7 +131,7 @@ uint32_t uca_me4_stop_acquire(struct uca_grabber_t *grabber)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_me4_grab(struct uca_grabber_t *grabber, void **buffer, uint32_t *frame_number)
+uint32_t uca_me4_grab(struct uca_grabber *grabber, void **buffer, uint32_t *frame_number)
 {
     int32_t last_frame;
     if (grabber->asynchronous)
@@ -153,7 +153,7 @@ static int uca_me4_callback(frameindex_t frame, struct fg_apc_data *apc)
     return 0;
 }
 
-uint32_t uca_me4_register_callback(struct uca_grabber_t *grabber, uca_grabber_grab_callback cb)
+uint32_t uca_me4_register_callback(struct uca_grabber *grabber, uca_grabber_grab_callback cb)
 {
     if (grabber->callback == NULL) {
         grabber->callback = cb;
@@ -175,13 +175,13 @@ uint32_t uca_me4_register_callback(struct uca_grabber_t *grabber, uca_grabber_gr
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_me4_init(struct uca_grabber_t **grabber)
+uint32_t uca_me4_init(struct uca_grabber **grabber)
 {
     Fg_Struct *fg = Fg_Init("libFullAreaGray8.so", 0);
     if (fg == NULL)
         return UCA_ERR_GRABBER_NOT_FOUND;
 
-    struct uca_grabber_t *uca = (struct uca_grabber_t *) malloc(sizeof(struct uca_grabber_t));
+    struct uca_grabber *uca = (struct uca_grabber *) malloc(sizeof(struct uca_grabber));
     struct fg_apc_data *me4 = (struct fg_apc_data *) malloc(sizeof(struct fg_apc_data));
 
     me4->fg  = fg;

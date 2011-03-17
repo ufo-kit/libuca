@@ -43,7 +43,7 @@ const char *uca_unit_map[] = {
     "" 
 };
 
-static struct uca_property_t property_map[UCA_PROP_LAST+1] = {
+static struct uca_property property_map[UCA_PROP_LAST+1] = {
     { "General.Name",           uca_na,     uca_string,  uca_read }, 
     { "Image.Width",            uca_pixel,  uca_uint32t, uca_readwrite }, 
     { "Image.Width.Min",        uca_pixel,  uca_uint32t, uca_read }, 
@@ -96,16 +96,16 @@ static pthread_mutex_t g_uca_init_lock = PTHREAD_MUTEX_INITIALIZER;
 #define uca_unlock(lock) 
 #endif
 
-struct uca_t *g_uca = NULL;
+struct uca *g_uca = NULL;
 
-struct uca_t *uca_init(const char *config_filename)
+struct uca *uca_init(const char *config_filename)
 {
     uca_lock();
     if (g_uca != NULL) {
         uca_unlock();
         return g_uca;
     }
-    g_uca = (struct uca_t *) malloc(sizeof(struct uca_t));
+    g_uca = (struct uca *) malloc(sizeof(struct uca));
     g_uca->cameras = NULL;
 
     uca_grabber_init grabber_inits[] = {
@@ -133,7 +133,7 @@ struct uca_t *uca_init(const char *config_filename)
 
     /* Probe each frame grabber that is configured */
     int i = 0;
-    struct uca_grabber_t *grabber = NULL;
+    struct uca_grabber *grabber = NULL;
     while (grabber_inits[i] != NULL) {
         uca_grabber_init init = grabber_inits[i];
         /* FIXME: we don't only want to take the first one */
@@ -152,11 +152,11 @@ struct uca_t *uca_init(const char *config_filename)
         grabber->next = NULL;
 
     i = 0;
-    struct uca_camera_t *current = NULL;
+    struct uca_camera *current = NULL;
     /* Probe each camera that is configured and append a found camera to the
      * linked list. */
     while (cam_inits[i] != NULL) {
-        struct uca_camera_t *cam = NULL;
+        struct uca_camera *cam = NULL;
         uca_cam_init init = cam_inits[i];
         if (init(&cam, grabber) != UCA_ERR_CAM_NOT_FOUND) {
             if (current == NULL) 
@@ -180,11 +180,11 @@ struct uca_t *uca_init(const char *config_filename)
     return g_uca;
 }
 
-void uca_destroy(struct uca_t *uca)
+void uca_destroy(struct uca *u)
 {
     uca_lock();
-    if (uca != NULL) {
-        struct uca_camera_t *cam = uca->cameras, *tmp;
+    if (u != NULL) {
+        struct uca_camera *cam = u->cameras, *tmp;
         while (cam != NULL) {
             tmp = cam;
             cam->destroy(cam);
@@ -192,7 +192,7 @@ void uca_destroy(struct uca_t *uca)
             free(tmp);
         }
 
-        struct uca_grabber_t *grabber = uca->grabbers, *tmpg;
+        struct uca_grabber *grabber = u->grabbers, *tmpg;
         while (grabber != NULL) {
             tmpg = grabber;
             grabber->destroy(grabber);
@@ -200,7 +200,7 @@ void uca_destroy(struct uca_t *uca)
             free(grabber);
         }
 
-        free(uca);
+        free(u);
     }
     uca_unlock();
 }
@@ -216,7 +216,7 @@ enum uca_property_ids uca_get_property_id(const char *property_name)
     return UCA_ERR_PROP_INVALID;
 }
 
-struct uca_property_t *uca_get_full_property(enum uca_property_ids property_id)
+struct uca_property *uca_get_full_property(enum uca_property_ids property_id)
 {
     if ((property_id >= 0) && (property_id < UCA_PROP_LAST))
         return &property_map[property_id];
