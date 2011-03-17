@@ -15,9 +15,11 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/control.glade
 # --- Build targets -----------------------------------------------------------
 add_executable(enum enum.c)
 add_executable(grab grab.c)
+add_executable(grab-async grab-async.c)
 
 target_link_libraries(enum uca)
 target_link_libraries(grab uca)
+target_link_libraries(grab-async uca)
 
 if (GTK2_FOUND)
     include_directories(${GTK2_INCLUDE_DIRS})

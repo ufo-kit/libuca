@@ -129,6 +129,28 @@ typedef uint32_t (*uca_cam_start_recording) (struct uca_camera *cam);
 typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera *cam);
 
 /**
+ * Function pointer to a grab callback.
+ * 
+ * Register such a callback function with uca_cam_register_callback() to
+ * receive data as soon as it is delivered.
+ *
+ * \param[in] image_number Current frame number
+ *
+ * \param[in] buffer Image data
+ */
+typedef void (*uca_cam_grab_callback) (uint32_t image_number, void *buffer);
+
+/**
+ * Register callback for given frame grabber. To actually start receiving
+ * frames, call uca_grabber_acquire().
+ *
+ * \param[in] grabber The grabber for which the callback should be installed
+ *
+ * \param[in] cb Callback function for when a frame arrived
+ */
+typedef uint32_t (*uca_cam_register_callback) (struct uca_camera *cam, uca_cam_grab_callback cb);
+
+/**
  * \brief Grab one image from the camera
  * 
  * The grabbing involves a memory copy because we might have to decode the image
@@ -182,6 +204,13 @@ typedef struct uca_camera {
      */
     uca_cam_grab            grab;
 
+    /**
+     * Method to register an frame acquisition callback.
+     *
+     * \see uca_cam_register_callback
+     */
+    uca_cam_register_callback   register_callback;
+
     /* Private */
     /**
      * Method to close the camera.
@@ -189,11 +218,13 @@ typedef struct uca_camera {
      */
     uca_cam_destroy         destroy;
 
-    struct uca_grabber      *grabber;   /**< grabber associated with this camera */
-    enum uca_cam_state      state;      /**< camera state */
+    /* private */
+    struct uca_grabber      *grabber;       /**< grabber associated with this camera */
+    enum uca_cam_state      state;          /**< camera state */
     uint32_t                frame_width;    /**< current frame width */
     uint32_t                frame_height;   /**< current frame height */
     uint32_t                current_frame;  /**< last grabbed frame number */
+    uca_cam_grab_callback   callback;
 
     void *user; /**< private user data to be used by the camera driver */
 } uca_camera_t;
