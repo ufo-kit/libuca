@@ -29,8 +29,7 @@ find_package(ClSerMe4)
 
 # --- Miscellanous packages
 find_package(PkgConfig)
-
-pkg_check_modules(MJSON mjson-1.2)
+find_package(Threads)
 
 
 # --- Build options -----------------------------------------------------------
@@ -113,15 +112,13 @@ if (HAVE_DUMMY_CAMERA)
         )
 endif()
 
-if (MJSON_FOUND)
-    set(HAVE_MJSON TRUE)
+if (Threads_FOUND)
+    set(HAVE_PTHREADS TRUE)
 
     set(uca_LIBS
         ${uca_LIBS}
-        ${MJSON_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
         )
-
-    include_directories(${MJSON_INCLUDE_DIRS})
 endif()
 
 # --- Configure step

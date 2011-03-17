@@ -6,8 +6,8 @@
 #include "uca-cam.h"
 #include "uca-grabber.h"
 
-#ifdef HAVE_MJSON
-#include "json.h"
+#ifdef HAVE_PTHREADS
+#include <pthread.h>
 #endif
 
 #ifdef HAVE_DUMMY_CAMERA
@@ -28,10 +28,6 @@
 
 #ifdef HAVE_IPE_CAMERA
 #include "cameras/ipe.h"
-#endif
-
-#ifdef HAVE_PHOTRON_FASTCAM
-#include "cameras/photron.h"
 #endif
 
 const char *uca_unit_map[] = {
@@ -90,10 +86,27 @@ static struct uca_property_t property_map[UCA_PROP_LAST+1] = {
     { NULL, 0, 0, 0 }
 };
 
+
+#ifdef HAVE_PTHREADS
+static pthread_mutex_t g_uca_init_lock = PTHREAD_MUTEX_INITIALIZER;
+#define uca_lock() pthread_mutex_lock((&g_uca_init_lock))
+#define uca_unlock() pthread_mutex_unlock((&g_uca_init_lock))
+#else
+#define uca_lock(lock) 
+#define uca_unlock(lock) 
+#endif
+
+struct uca_t *g_uca = NULL;
+
 struct uca_t *uca_init(const char *config_filename)
 {
-    struct uca_t *uca = (struct uca_t *) malloc(sizeof(struct uca_t));
-    uca->cameras = NULL;
+    uca_lock();
+    if (g_uca != NULL) {
+        uca_unlock();
+        return g_uca;
+    }
+    g_uca = (struct uca_t *) malloc(sizeof(struct uca_t));
+    g_uca->cameras = NULL;
 
     uca_grabber_init grabber_inits[] = {
 #ifdef HAVE_ME4
@@ -111,9 +124,6 @@ struct uca_t *uca_init(const char *config_filename)
 #endif
 #ifdef HAVE_IPE_CAMERA
         uca_ipe_init,
-#endif
-#ifdef HAVE_PH
-        uca_photron_init,
 #endif
 #ifdef HAVE_DUMMY_CAMERA
         uca_dummy_init,
@@ -137,7 +147,7 @@ struct uca_t *uca_init(const char *config_filename)
      * therefore we also probe each camera against the NULL grabber. However,
      * each camera must make sure to check for such a situation. */
 
-    uca->grabbers = grabber;
+    g_uca->grabbers = grabber;
     if (grabber != NULL)
         grabber->next = NULL;
 
@@ -150,7 +160,7 @@ struct uca_t *uca_init(const char *config_filename)
         uca_cam_init init = cam_inits[i];
         if (init(&cam, grabber) != UCA_ERR_CAM_NOT_FOUND) {
             if (current == NULL) 
-                uca->cameras = current = cam;
+                g_uca->cameras = current = cam;
             else {
                 current->next = cam;
                 current = cam;
@@ -160,15 +170,19 @@ struct uca_t *uca_init(const char *config_filename)
         i++;
     }
 
-    if (uca->cameras == NULL) {
-        free(uca);
+    if (g_uca->cameras == NULL) {
+        free(g_uca);
+        g_uca = NULL;
+        uca_unlock();
         return NULL;
     }
-    return uca;
+    uca_unlock();
+    return g_uca;
 }
 
 void uca_destroy(struct uca_t *uca)
 {
+    uca_lock();
     if (uca != NULL) {
         struct uca_camera_t *cam = uca->cameras, *tmp;
         while (cam != NULL) {
@@ -188,6 +202,7 @@ void uca_destroy(struct uca_t *uca)
 
         free(uca);
     }
+    uca_unlock();
 }
 
 enum uca_property_ids uca_get_property_id(const char *property_name)
