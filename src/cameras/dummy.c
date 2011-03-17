@@ -5,17 +5,33 @@
 #include "uca-cam.h"
 #include "uca-grabber.h"
 
-struct dummy_cam_t {
+typedef struct dummy_cam {
     uint32_t bitdepth;
     uint32_t framerate;
     char*   buffer;
-};
+} dummy_cam_t;
 
-#define GET_DUMMY(uca) ((struct dummy_cam_t *)(uca->user))
+#define GET_DUMMY(uca) ((struct dummy_cam *)(uca->user))
 #define set_void(p, type, value) { *((type *) p) = value; }
 
 static uint32_t uca_dummy_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
 {
+    if (cam->state == UCA_CAM_RECORDING)
+        return UCA_ERR_PROP_CAMERA_RECORDING;
+
+    switch (property) {
+        case UCA_PROP_WIDTH:
+            cam->frame_width = *((uint32_t *) data);
+            break;
+
+        case UCA_PROP_HEIGHT:
+            cam->frame_height = *((uint32_t *) data);
+            break;
+
+        default:
+            return UCA_ERR_PROP_INVALID;
+    }
+
     return UCA_NO_ERROR;
 }
 
@@ -63,11 +79,13 @@ static uint32_t uca_dummy_get_property(struct uca_camera *cam, enum uca_property
 uint32_t uca_dummy_start_recording(struct uca_camera *cam)
 {
     cam->current_frame = 0;
+    cam->state = UCA_CAM_RECORDING;
     return UCA_NO_ERROR;
 }
 
 uint32_t uca_dummy_stop_recording(struct uca_camera *cam)
 {
+    cam->state = UCA_CAM_ARMED;
     return UCA_NO_ERROR;
 }
 
@@ -134,7 +152,7 @@ static const char digits[10][20] = {
       0xff, 0xff, 0xff, 0x00 }
 };
 
-static void uca_dummy_print_number(struct dummy_cam_t *dummy, int number, int x, int y, int width)
+static void uca_dummy_print_number(struct dummy_cam *dummy, int number, int x, int y, int width)
 {
     const int digit_width = 4;
     const int digit_height = 5;
@@ -148,7 +166,7 @@ static void uca_dummy_print_number(struct dummy_cam_t *dummy, int number, int x,
 
 uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer)
 {
-    struct dummy_cam_t *dummy = GET_DUMMY(cam);
+    struct dummy_cam *dummy = GET_DUMMY(cam);
     dummy->buffer = buffer;
 
     /* print current frame number */
@@ -185,7 +203,7 @@ uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->frame_height = 240;
     uca->current_frame = 0;
 
-    struct dummy_cam_t *dummy_cam = (struct dummy_cam_t *) malloc(sizeof(struct dummy_cam_t));
+    struct dummy_cam *dummy_cam = (struct dummy_cam *) malloc(sizeof(struct dummy_cam));
     dummy_cam->bitdepth = 8;
     dummy_cam->framerate = 100;
     dummy_cam->buffer = NULL;

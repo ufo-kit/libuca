@@ -1,9 +1,11 @@
 #include <glib/gprintf.h>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
+#include <string.h>
 
 #include "uca.h"
 #include "uca-cam.h"
+
 
 typedef struct {
     guchar *buffer, *pixels;
@@ -12,15 +14,17 @@ typedef struct {
     GdkPixbuf *pixbuf;
     int width;
     int height;
-    int bits;
+    int pixel_size;
     struct uca_camera *cam;
     struct uca *u;
-} ThreadData ;
+} ThreadData;
+
 
 typedef struct {
     ThreadData *thread_data;
     GtkTreeStore *tree_store;
 } ValueCellData;
+
 
 enum {
     COLUMN_NAME = 0,
@@ -29,6 +33,7 @@ enum {
     COLUMN_UCA_ID,
     NUM_COLUMNS
 };
+
 
 void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
 {
@@ -56,6 +61,22 @@ void convert_16bit_to_rgb(guchar *output, guchar *input, int width, int height)
     }
 }
 
+void reallocate_buffers(ThreadData *td, int width, int height)
+{
+    const size_t num_bytes = width * height * td->pixel_size;
+
+    g_object_unref(td->pixbuf);
+    g_free(td->buffer);
+
+    td->pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, width, height);
+    td->buffer = (guchar *) g_malloc(num_bytes);
+    td->width  = width;
+    td->height = height;
+    td->pixels = gdk_pixbuf_get_pixels(td->pixbuf);
+    gtk_image_set_from_pixbuf(GTK_IMAGE(td->image), td->pixbuf);
+    memset(td->buffer, 0, num_bytes);
+}
+
 static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
     return FALSE;
@@ -76,9 +97,9 @@ void *grab_thread(void *args)
 
     while (data->running) {
         cam->grab(cam, (char *) data->buffer);
-        if (data->bits == 8)
+        if (data->pixel_size == 1)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
-        else if (data->bits == 16)
+        else if (data->pixel_size == 2)
             convert_16bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
 
         gdk_threads_enter();
@@ -129,6 +150,9 @@ static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gcha
         /* TODO: extensive value checking */
         uint32_t val = (uint32_t) g_ascii_strtoull(new_text, NULL, 10);
         cam->set_property(cam, prop_id, &val);
+        if ((prop_id == UCA_PROP_WIDTH) || (prop_id == UCA_PROP_HEIGHT))
+            reallocate_buffers(value_data->thread_data, cam->frame_width, cam->frame_height);
+
         gtk_tree_store_set(value_data->tree_store, &iter, COLUMN_VALUE, new_text, -1);
     }
 }
@@ -320,10 +344,10 @@ int main(int argc, char *argv[])
     td.pixels = gdk_pixbuf_get_pixels(pixbuf);
     td.width  = width;
     td.height = height;
-    td.bits   = bits_per_sample;
     td.cam    = cam;
     td.u      = u;
     td.running = FALSE;
+    td.pixel_size = pixel_size;
 
     g_signal_connect(window, "delete-event",
         G_CALLBACK (delete_event), NULL);
