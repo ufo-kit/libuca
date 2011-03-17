@@ -273,6 +273,7 @@ uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->frame_width = 320;
     uca->frame_height = 240;
     uca->current_frame = 0;
+    uca->grabber = NULL;
 
     struct dummy_cam *dummy_cam = (struct dummy_cam *) malloc(sizeof(struct dummy_cam));
     dummy_cam->bitdepth = 8;
