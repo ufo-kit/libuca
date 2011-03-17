@@ -3,6 +3,7 @@
 #define __USE_BSD
 #include <unistd.h>
 #undef __USE_BSD
+#include <assert.h>
 
 #include "config.h"
 #include "uca.h"
@@ -124,6 +125,7 @@ static void *uca_dummy_grab_thread(void *arg)
     struct uca_camera *cam = ((struct uca_camera *) arg);
     struct dummy_cam *dc = GET_DUMMY(cam);
 
+    assert(dc->frame_rate > 0);
     const __useconds_t sleep_time = (unsigned int) 1000000.0f / dc->frame_rate;
 
     while (dc->thread_running) {
