@@ -208,7 +208,7 @@ uint32_t uca_pf_init(struct uca_camera **cam, struct uca_grabber *grabber)
     /* We could check if a higher baud rate is supported, but... forget about
      * it. We don't need high speed configuration. */
 
-    struct uca_camera *uca = (struct uca_camera *) malloc(sizeof(struct uca_camera));
+    struct uca_camera *uca = uca_cam_new();
     uca->grabber = grabber;
     uca->grabber->asynchronous = true;
 

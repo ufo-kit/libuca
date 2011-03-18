@@ -283,7 +283,7 @@ static uint32_t uca_dummy_destroy(struct uca_camera *cam)
 
 uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
 {
-    struct uca_camera *uca = (struct uca_camera *) malloc(sizeof(struct uca_camera));
+    struct uca_camera *uca = uca_cam_new();
 
     uca->destroy = &uca_dummy_destroy;
     uca->set_property = &uca_dummy_set_property;
@@ -296,10 +296,6 @@ uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->state = UCA_CAM_CONFIGURABLE;
     uca->frame_width = 320;
     uca->frame_height = 240;
-    uca->current_frame = 0;
-    uca->grabber = NULL;
-    uca->callback = NULL;
-    uca->callback_user = NULL;
 
     struct dummy_cam *dummy_cam = (struct dummy_cam *) malloc(sizeof(struct dummy_cam));
     dummy_cam->bitdepth = 8;

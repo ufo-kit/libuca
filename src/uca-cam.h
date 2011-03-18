@@ -43,7 +43,9 @@ enum uca_cam_state {
  * 
  * \param[in] n_buffers Number of sub-buffers with size frame_width*frame_height.
  */
+/* FIXME: put this into vtable?! */
 uint32_t uca_cam_alloc(struct uca_camera *cam, uint32_t n_buffers);
+
 
 /**
  * Retrieve current state of the camera.
@@ -55,6 +57,15 @@ uint32_t uca_cam_alloc(struct uca_camera *cam, uint32_t n_buffers);
  */
 enum uca_cam_state uca_cam_get_state(struct uca_camera *cam);
 
+/**
+ * Allocates memory for a new uca_camera structure and initializes all fields to
+ * sane values.
+ *
+ * \return Pointer to block of memory for a uca_camera structure
+ *
+ * \note This is is a utility function used internally by drivers
+ */
+struct uca_camera *uca_cam_new(void);
 
 /*
  * --- virtual methods --------------------------------------------------------

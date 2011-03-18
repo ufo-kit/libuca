@@ -119,7 +119,7 @@ uint32_t uca_ipe_init(struct uca_camera **cam, struct uca_grabber *grabber)
     pcilib_set_error_handler(&uca_ipe_handle_error, &uca_ipe_handle_error);
     model = pcilib_get_model(handle);
 
-    struct uca_camera *uca = (struct uca_camera *) malloc(sizeof(struct uca_camera));
+    struct uca_camera *uca = uca_cam_new();
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_ipe_destroy;
@@ -130,9 +130,6 @@ uint32_t uca_ipe_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->grab = &uca_ipe_grab;
     uca->register_callback = &uca_ipe_register_callback;
 
-    uca->callback = NULL;
-    uca_>callback_user = NULL;
-    uca->state = UCA_CAM_CONFIGURABLE;
     uca->user = handle;
     *cam = uca;
 
