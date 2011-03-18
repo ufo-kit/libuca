@@ -3,6 +3,7 @@
 #define __USE_BSD
 #include <unistd.h>
 #undef __USE_BSD
+#include <sys/time.h>
 #include <assert.h>
 
 #include "config.h"
@@ -120,6 +121,11 @@ static void uca_dummy_memcpy(struct uca_camera *cam, char *buffer)
     }
 }
 
+static __suseconds_t uca_dummy_time_diff(struct timeval *start, struct timeval *stop)
+{
+    return (stop->tv_sec - start->tv_sec)*1000000 + (stop->tv_usec - start->tv_usec);
+}
+
 static void *uca_dummy_grab_thread(void *arg)
 {
     struct uca_camera *cam = ((struct uca_camera *) arg);
@@ -127,12 +133,22 @@ static void *uca_dummy_grab_thread(void *arg)
 
     assert(dc->frame_rate > 0);
     const __useconds_t sleep_time = (unsigned int) 1000000.0f / dc->frame_rate;
+    __suseconds_t call_time;
+    struct timeval start, stop;
 
     while (dc->thread_running) {
         uca_dummy_memcpy(cam, dc->buffer);
+        gettimeofday(&start, NULL);
         cam->callback(cam->current_frame, dc->buffer, cam->user_callback);
-        cam->current_frame++;
-        usleep(sleep_time);
+        gettimeofday(&stop, NULL);
+
+        call_time = uca_dummy_time_diff(&start, &stop);
+        if (call_time < sleep_time) {
+            cam->current_frame++;
+            usleep(sleep_time - call_time);
+        }
+        else
+            cam->current_frame += call_time / sleep_time;
     }
     return NULL;
 }
