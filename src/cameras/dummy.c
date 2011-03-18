@@ -241,9 +241,11 @@ uint32_t uca_dummy_start_recording(struct uca_camera *cam)
 
 uint32_t uca_dummy_stop_recording(struct uca_camera *cam)
 {
+    struct dummy_cam *dc = GET_DUMMY(cam);
     if (cam->callback != NULL) {
-        GET_DUMMY(cam)->thread_running = false;
-        free(GET_DUMMY(cam)->buffer);
+        dc->thread_running = false;
+        free(dc->buffer);
+        dc->buffer = NULL;
     }
     cam->state = UCA_CAM_ARMED;
     return UCA_NO_ERROR;
@@ -273,7 +275,9 @@ uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 
 static uint32_t uca_dummy_destroy(struct uca_camera *cam)
 {
-    free(GET_DUMMY(cam));
+    struct dummy_cam *dc = GET_DUMMY(cam);
+    free(dc->buffer);
+    free(dc);
     return UCA_NO_ERROR;
 }
 
