@@ -5,7 +5,7 @@
 #include "uca.h"
 #include "uca-cam.h"
 
-void grab_callback(uint32_t image_number, void *buffer)
+void grab_callback(uint32_t image_number, void *buffer, void *user)
 {
     printf("got picture number %i\n", image_number);
 }
@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
 
     uca_cam_alloc(cam, 10);
 
-    cam->register_callback(cam, &grab_callback);
+    cam->register_callback(cam, &grab_callback, NULL);
     cam->start_recording(cam);
-    printf("waiting for 10 seconds\n");
-    sleep(10);
+    printf("waiting for 5 seconds\n");
+    sleep(5);
     cam->stop_recording(cam);
 
     uca_destroy(u);

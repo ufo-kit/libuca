@@ -130,7 +130,7 @@ static void *uca_dummy_grab_thread(void *arg)
 
     while (dc->thread_running) {
         uca_dummy_memcpy(cam, dc->buffer);
-        cam->callback(cam->current_frame, dc->buffer);
+        cam->callback(cam->current_frame, dc->buffer, cam->user_callback);
         cam->current_frame++;
         usleep(sleep_time);
     }
@@ -233,10 +233,12 @@ uint32_t uca_dummy_stop_recording(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callback cb)
+uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callback cb, void *user)
 {
-    if (cam->callback == NULL)
+    if (cam->callback == NULL) {
         cam->callback = cb;
+        cam->user_callback = user;
+    }
     else
         return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
 
@@ -277,6 +279,7 @@ uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->current_frame = 0;
     uca->grabber = NULL;
     uca->callback = NULL;
+    uca->user_callback = NULL;
 
     struct dummy_cam *dummy_cam = (struct dummy_cam *) malloc(sizeof(struct dummy_cam));
     dummy_cam->bitdepth = 8;

@@ -137,8 +137,10 @@ typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera *cam);
  * \param[in] image_number Current frame number
  *
  * \param[in] buffer Image data
+ *
+ * \param[in] user User data registered in uca_cam_register_callback()
  */
-typedef void (*uca_cam_grab_callback) (uint32_t image_number, void *buffer);
+typedef void (*uca_cam_grab_callback) (uint32_t image_number, void *buffer, void *user);
 
 /**
  * Register callback for given frame grabber. To actually start receiving
@@ -147,8 +149,10 @@ typedef void (*uca_cam_grab_callback) (uint32_t image_number, void *buffer);
  * \param[in] grabber The grabber for which the callback should be installed
  *
  * \param[in] cb Callback function for when a frame arrived
+ *
+ * \param[in] user User data that is passed to the callback function
  */
-typedef uint32_t (*uca_cam_register_callback) (struct uca_camera *cam, uca_cam_grab_callback cb);
+typedef uint32_t (*uca_cam_register_callback) (struct uca_camera *cam, uca_cam_grab_callback cb, void *user);
 
 /**
  * \brief Grab one image from the camera
@@ -224,7 +228,9 @@ typedef struct uca_camera {
     uint32_t                frame_width;    /**< current frame width */
     uint32_t                frame_height;   /**< current frame height */
     uint32_t                current_frame;  /**< last grabbed frame number */
+
     uca_cam_grab_callback   callback;
+    void *user_callback;                    /**< user data for callback */
 
     void *user; /**< private user data to be used by the camera driver */
 } uca_camera_t;
