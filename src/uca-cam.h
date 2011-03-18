@@ -138,9 +138,14 @@ typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera *cam);
  *
  * \param[in] buffer Image data
  *
+ * \param[in] meta_data Meta data provided by the camera specifying per-frame
+ *   data.
+ *
  * \param[in] user User data registered in uca_cam_register_callback()
+ *
+ * \note The meta data parameter is not yet specified but just a place holder.
  */
-typedef void (*uca_cam_grab_callback) (uint32_t image_number, void *buffer, void *user);
+typedef void (*uca_cam_grab_callback) (uint32_t image_number, void *buffer, void *meta_data, void *user);
 
 /**
  * Register callback for given frame grabber. To actually start receiving
@@ -148,11 +153,11 @@ typedef void (*uca_cam_grab_callback) (uint32_t image_number, void *buffer, void
  *
  * \param[in] grabber The grabber for which the callback should be installed
  *
- * \param[in] cb Callback function for when a frame arrived
+ * \param[in] callback Callback function for when a frame arrived
  *
  * \param[in] user User data that is passed to the callback function
  */
-typedef uint32_t (*uca_cam_register_callback) (struct uca_camera *cam, uca_cam_grab_callback cb, void *user);
+typedef uint32_t (*uca_cam_register_callback) (struct uca_camera *cam, uca_cam_grab_callback callback, void *user);
 
 /**
  * \brief Grab one image from the camera
@@ -162,8 +167,13 @@ typedef uint32_t (*uca_cam_register_callback) (struct uca_camera *cam, uca_cam_g
  *
  * \param[in] buffer Destination buffer
  *
+ * \param[in] meta_data Meta data provided by the camera specifying per-frame
+ *   data.
+ *
+ * \note The meta data parameter is not yet specified but just a place holder.
+ *
  */
-typedef uint32_t (*uca_cam_grab) (struct uca_camera *cam, char *buffer);
+typedef uint32_t (*uca_cam_grab) (struct uca_camera *cam, char *buffer, void *meta_data);
 
 
 /**
@@ -230,9 +240,9 @@ typedef struct uca_camera {
     uint32_t                current_frame;  /**< last grabbed frame number */
 
     uca_cam_grab_callback   callback;
-    void *user_callback;                    /**< user data for callback */
+    void                    *callback_user; /**< user data for callback */
 
-    void *user; /**< private user data to be used by the camera driver */
+    void                    *user;          /**< private user data to be used by the camera driver */
 } uca_camera_t;
 
 

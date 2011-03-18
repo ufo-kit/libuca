@@ -96,7 +96,7 @@ void *grab_thread(void *args)
     struct uca_camera *cam = data->cam;
 
     while (data->running) {
-        cam->grab(cam, (char *) data->buffer);
+        cam->grab(cam, (char *) data->buffer, NULL);
         if (data->pixel_size == 1)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
         else if (data->pixel_size == 2)

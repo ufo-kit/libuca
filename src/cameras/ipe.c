@@ -88,9 +88,19 @@ static uint32_t uca_ipe_stop_recording(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_grab(struct uca_camera *cam, char *buffer)
+static uint32_t uca_ipe_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     return UCA_NO_ERROR;
+}
+
+static uint32_t uca_ipe_register_callback(struct uca_camera *cam, uca_cam_grab_callback cb, void *user)
+{
+    if (cam->callback == NULL) {
+        cam->callback = cb;
+        cam->callback_user = user;
+        return UCA_NO_ERROR;
+    }
+    return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
 }
 
 static uint32_t uca_ipe_destroy(struct uca_camera *cam)
@@ -118,7 +128,10 @@ uint32_t uca_ipe_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->start_recording = &uca_ipe_start_recording;
     uca->stop_recording = &uca_ipe_stop_recording;
     uca->grab = &uca_ipe_grab;
+    uca->register_callback = &uca_ipe_register_callback;
 
+    uca->callback = NULL;
+    uca_>callback_user = NULL;
     uca->state = UCA_CAM_CONFIGURABLE;
     uca->user = handle;
     *cam = uca;

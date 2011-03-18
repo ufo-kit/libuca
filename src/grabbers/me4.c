@@ -9,9 +9,13 @@
 #include "uca-grabber.h"
 
 struct fg_apc_data {
-    Fg_Struct   *fg;
-    dma_mem     *mem;
-    uca_grabber_grab_callback cb;
+    Fg_Struct               *fg;
+    dma_mem                 *mem;
+
+    /* End-user related callback variables */
+    uca_cam_grab_callback   callback;
+    void                    *meta_data;
+    void                    *user;
 };
 
 struct uca_sisofg_map_t {
@@ -149,15 +153,19 @@ uint32_t uca_me4_grab(struct uca_grabber *grabber, void **buffer, uint32_t *fram
 
 static int uca_me4_callback(frameindex_t frame, struct fg_apc_data *apc)
 {
-    apc->cb(frame, Fg_getImagePtr(apc->fg, frame, PORT_A));
+    apc->callback(frame, Fg_getImagePtr(apc->fg, frame, PORT_A), apc->meta_data, apc->user);
     return 0;
 }
 
-uint32_t uca_me4_register_callback(struct uca_grabber *grabber, uca_grabber_grab_callback cb)
+uint32_t uca_me4_register_callback(struct uca_grabber *grabber, uca_cam_grab_callback callback, void *meta_data, void *user)
 {
     if (grabber->callback == NULL) {
-        grabber->callback = cb;
-        ((struct fg_apc_data *) grabber->user)->cb = cb;
+        grabber->callback = callback;
+
+        struct fg_apc_data *apc_data = (struct fg_apc_data *) grabber->user;
+        apc_data->callback = callback;
+        apc_data->meta_data = meta_data;
+        apc_data->user = user;
 
         struct FgApcControl ctrl;
         ctrl.version = 0;
@@ -186,7 +194,9 @@ uint32_t uca_me4_init(struct uca_grabber **grabber)
 
     me4->fg  = fg;
     me4->mem = NULL;
-    me4->cb  = NULL;
+    me4->callback  = NULL;
+    me4->meta_data = NULL;
+    me4->user = NULL;
 
     uca->user = me4;
     uca->destroy = &uca_me4_destroy;

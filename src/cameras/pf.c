@@ -171,7 +171,7 @@ uint32_t uca_pf_stop_recording(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer)
+uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata)
 {
     uint16_t *frame;
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
@@ -180,6 +180,17 @@ uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer)
     /* FIXME: choose according to data format */
     memcpy(buffer, frame, cam->frame_width*cam->frame_height);
     return UCA_NO_ERROR;
+}
+
+uint32_t uca_pf_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user)
+{
+    if (cam->callback == NULL) {
+        cam->callback = callback;
+        cam->callback_user = user;
+        cam->grabber->register_callback(cam->grabber, callback, NULL, user);
+        return UCA_NO_ERROR;
+    }
+    return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
 }
 
 static uint32_t uca_pf_destroy(struct uca_camera *cam)

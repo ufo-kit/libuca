@@ -2,6 +2,7 @@
 #define __UNIFIED_CAMERA_ACCESS_GRABBER_H
 
 #include <stdbool.h>
+#include "uca-cam.h"
 
 /**
  * \file uca-grabber.h
@@ -31,6 +32,7 @@ enum uca_grabber_constants {
 
     UCA_TRIGGER_FREERUN
 };
+
 
 /*
  * --- virtual methods --------------------------------------------------------
@@ -99,17 +101,6 @@ typedef uint32_t (*uca_grabber_stop_acquire) (struct uca_grabber *grabber);
  */
 typedef uint32_t (*uca_grabber_grab) (struct uca_grabber *grabber, void **buffer, uint32_t *frame_number);
 
-/**
- * Function pointer to a grab callback.
- * 
- * Register such a callback function with uca_grabber_register_callback() to
- * receive data as soon as it is delivered.
- *
- * \param[in] image_number Current frame number
- *
- * \param[in] buffer Image data
- */
-typedef void (*uca_grabber_grab_callback) (uint32_t image_number, void *buffer);
 
 /**
  * Register callback for given frame grabber. To actually start receiving
@@ -119,7 +110,7 @@ typedef void (*uca_grabber_grab_callback) (uint32_t image_number, void *buffer);
  *
  * \param[in] cb Callback function for when a frame arrived
  */
-typedef uint32_t (*uca_grabber_register_callback) (struct uca_grabber *grabber, uca_grabber_grab_callback cb);
+typedef uint32_t (*uca_grabber_register_callback) (struct uca_grabber *grabber, uca_cam_grab_callback cb, void *meta_data, void *user);
 
 
 /**
@@ -144,7 +135,7 @@ typedef struct uca_grabber {
     uca_grabber_register_callback register_callback;
 
     /* Private */
-    uca_grabber_grab_callback callback;
+    uca_cam_grab_callback   callback;
     bool asynchronous;
     void *user;
 } uca_grabber_t;

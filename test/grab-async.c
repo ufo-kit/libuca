@@ -5,7 +5,7 @@
 #include "uca.h"
 #include "uca-cam.h"
 
-void grab_callback(uint32_t image_number, void *buffer, void *user)
+void grab_callback(uint32_t image_number, void *buffer, void *meta_data, void *user)
 {
     printf("got picture number %i\n", image_number);
 }

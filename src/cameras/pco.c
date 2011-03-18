@@ -212,7 +212,7 @@ uint32_t uca_pco_stop_recording(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer)
+uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     uint16_t *frame;
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
@@ -222,6 +222,17 @@ uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer)
     //pco_reorder_image_5x16((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
     memcpy(buffer, frame, cam->frame_width*cam->frame_height*2);
     return UCA_NO_ERROR;
+}
+
+uint32_t uca_pco_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user)
+{
+    if (cam->callback == NULL) {
+        cam->callback = callback;
+        cam->callback_user = user;
+        cam->grabber->register_callback(cam->grabber, callback, NULL, user);
+        return UCA_NO_ERROR;
+    }
+    return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
 }
 
 uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)

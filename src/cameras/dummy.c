@@ -139,7 +139,7 @@ static void *uca_dummy_grab_thread(void *arg)
     while (dc->thread_running) {
         uca_dummy_memcpy(cam, dc->buffer);
         gettimeofday(&start, NULL);
-        cam->callback(cam->current_frame, dc->buffer, cam->user_callback);
+        cam->callback(cam->current_frame, dc->buffer, NULL, cam->callback_user);
         gettimeofday(&stop, NULL);
 
         call_time = uca_dummy_time_diff(&start, &stop);
@@ -253,7 +253,7 @@ uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callba
 {
     if (cam->callback == NULL) {
         cam->callback = cb;
-        cam->user_callback = user;
+        cam->callback_user = user;
     }
     else
         return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
@@ -261,7 +261,7 @@ uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callba
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer)
+uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     if (cam->callback != NULL)
         return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
@@ -295,7 +295,7 @@ uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->current_frame = 0;
     uca->grabber = NULL;
     uca->callback = NULL;
-    uca->user_callback = NULL;
+    uca->callback_user = NULL;
 
     struct dummy_cam *dummy_cam = (struct dummy_cam *) malloc(sizeof(struct dummy_cam));
     dummy_cam->bitdepth = 8;
