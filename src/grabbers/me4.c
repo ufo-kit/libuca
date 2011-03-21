@@ -75,8 +75,9 @@ uint32_t uca_me4_set_property(struct uca_grabber *grabber, enum uca_grabber_cons
         return UCA_ERR_PROP_INVALID;
 
     if (fg_prop->interpret_data) {
-        /* Data is not a value but a constant that we need to translate to
-         * Silicon Software speak. Therefore, we try to find it in the map also. */
+        /* Data is not a value but a SiSo specific constant that we need to
+         * translate to Silicon Software speak. Therefore, we try to find it in
+         * the map. */
         struct uca_sisofg_map_t *constant = uca_me4_find_property(*((uint32_t *) data));
         if (constant != NULL)
             return Fg_setParameter(GET_FG(grabber), fg_prop->fg_id, &constant->fg_id, PORT_A) == FG_OK ? UCA_NO_ERROR : UCA_ERR_PROP_INVALID;
@@ -103,8 +104,8 @@ uint32_t uca_me4_alloc(struct uca_grabber *grabber, uint32_t pixel_size, uint32_
         return UCA_ERR_PROP_GENERAL;
 
     uint32_t width, height;
-    uca_me4_get_property(grabber, FG_WIDTH, &width);
-    uca_me4_get_property(grabber, FG_HEIGHT, &height);
+    uca_me4_get_property(grabber, UCA_GRABBER_WIDTH, &width);
+    uca_me4_get_property(grabber, UCA_GRABBER_HEIGHT, &height);
 
     dma_mem *mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*pixel_size, n_buffers);
     if (mem != NULL) {
@@ -206,6 +207,7 @@ uint32_t uca_me4_init(struct uca_grabber **grabber)
     uca->acquire = &uca_me4_acquire;
     uca->stop_acquire = &uca_me4_stop_acquire;
     uca->grab = &uca_me4_grab;
+    uca->register_callback = &uca_me4_register_callback;
     uca->callback = NULL;
     
     *grabber = uca;

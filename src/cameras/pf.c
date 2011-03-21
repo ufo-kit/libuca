@@ -168,7 +168,7 @@ uint32_t uca_pf_start_recording(struct uca_camera *cam)
 
 uint32_t uca_pf_stop_recording(struct uca_camera *cam)
 {
-    return UCA_NO_ERROR;
+    return cam->grabber->stop_acquire(cam->grabber);
 }
 
 uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata)
@@ -219,6 +219,7 @@ uint32_t uca_pf_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->start_recording = &uca_pf_start_recording;
     uca->stop_recording = &uca_pf_stop_recording;
     uca->grab = &uca_pf_grab;
+    uca->register_callback = &uca_pf_register_callback;
 
     /* Prepare frame grabber for recording */
     int val = UCA_CL_8BIT_FULL_8;
