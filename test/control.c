@@ -336,8 +336,10 @@ int main(int argc, char *argv[])
 
     /* start grabbing and thread */
     int pixel_size = bits_per_sample == 8 ? 1 : 2;
+    if (uca_cam_alloc(cam, 20) != UCA_NO_ERROR)
+        g_print("Couldn't allocate buffer for 20 frames\n");
+
     ThreadData td;
-    uca_cam_alloc(cam, 20);
     td.image  = image;
     td.pixbuf = pixbuf;
     td.buffer = (guchar *) g_malloc(pixel_size * width * height);

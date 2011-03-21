@@ -39,21 +39,31 @@ static struct uca_pf_map uca_to_pf[] = {
     { -1, NULL }
 };
 
+static int uca_pf_set_uint32_property(TOKEN token, void *data, uint32_t *update_var)
+{
+    PFValue value;
+    value.type = PF_INT;
+    value.value.i = *((uint32_t *) data);
+    if (update_var != NULL)
+        *update_var = value.value.i;
+    return pfDevice_SetProperty(0, token, &value);
+}
+
 static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
 {
     struct uca_grabber *grabber = cam->grabber;
-    TOKEN t = INVALID_TOKEN;
+    TOKEN token = INVALID_TOKEN;
     int i = 0;
 
     /* Find a valid pf token for the property */
     while (uca_to_pf[i].uca_prop != -1) {
         if (uca_to_pf[i].uca_prop == property) {
-            t = pfProperty_ParseName(0, uca_to_pf[i].pf_prop);
+            token = pfProperty_ParseName(0, uca_to_pf[i].pf_prop);
             break;
         }
         i++;
     }
-    if (t == INVALID_TOKEN)
+    if (token == INVALID_TOKEN)
         return UCA_ERR_PROP_INVALID;
 
     PFValue value;
@@ -62,23 +72,15 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
         case UCA_PROP_WIDTH:
             if (grabber->set_property(grabber, UCA_GRABBER_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
-
-            value.value.i = *((uint32_t *) data);
-            if (pfDevice_SetProperty(0, t, &value) < 0)
+            if (uca_pf_set_uint32_property(token, data, &cam->frame_width) < 0)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
-
-            cam->frame_width = value.value.i;
             break;
 
         case UCA_PROP_HEIGHT:
             if (grabber->set_property(grabber, UCA_GRABBER_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
-
-            value.value.i = *((uint32_t *) data);
-            if (pfDevice_SetProperty(0, t, &value) < 0)
+            if (uca_pf_set_uint32_property(token, data, &cam->frame_height) < 0)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
-
-            cam->frame_height = value.value.i;
             break;
 
         case UCA_PROP_X_OFFSET:
@@ -96,7 +98,7 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
              * seconds. We also by-pass the frame grabber... */
             value.type = PF_FLOAT;
             value.value.f = (float) *((uint32_t *) data) / 1000.0;
-            if (pfDevice_SetProperty(0, t, &value) < 0)
+            if (pfDevice_SetProperty(0, token, &value) < 0)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
