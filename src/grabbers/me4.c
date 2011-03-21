@@ -154,7 +154,7 @@ uint32_t uca_me4_grab(struct uca_grabber *grabber, void **buffer, uint32_t *fram
 
 static int uca_me4_callback(frameindex_t frame, struct fg_apc_data *apc)
 {
-    apc->callback(frame, Fg_getImagePtr(apc->fg, frame, PORT_A), apc->meta_data, apc->user);
+    apc->callback(frame, Fg_getImagePtrEx(apc->fg, frame, PORT_A, apc->mem), apc->meta_data, apc->user);
     return 0;
 }
 
