@@ -191,13 +191,11 @@ uint32_t uca_me4_init(struct uca_grabber **grabber)
         return UCA_ERR_GRABBER_NOT_FOUND;
 
     struct uca_grabber *uca = (struct uca_grabber *) malloc(sizeof(struct uca_grabber));
-    struct fg_apc_data *me4 = (struct fg_apc_data *) malloc(sizeof(struct fg_apc_data));
+    memset(uca, 0, sizeof(struct uca_grabber));
 
+    struct fg_apc_data *me4 = (struct fg_apc_data *) malloc(sizeof(struct fg_apc_data));
+    memset(me4, 0, sizeof(struct fg_apc_data));
     me4->fg  = fg;
-    me4->mem = NULL;
-    me4->callback  = NULL;
-    me4->meta_data = NULL;
-    me4->user = NULL;
 
     uca->user = me4;
     uca->destroy = &uca_me4_destroy;
@@ -208,7 +206,6 @@ uint32_t uca_me4_init(struct uca_grabber **grabber)
     uca->stop_acquire = &uca_me4_stop_acquire;
     uca->grab = &uca_me4_grab;
     uca->register_callback = &uca_me4_register_callback;
-    uca->callback = NULL;
     
     *grabber = uca;
     return UCA_NO_ERROR;

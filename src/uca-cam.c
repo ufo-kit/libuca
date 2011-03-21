@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <string.h>
 #include "uca.h"
 #include "uca-cam.h"
 #include "uca-grabber.h"
@@ -23,27 +24,11 @@ struct uca_camera *uca_cam_new(void)
 {
     struct uca_camera *cam = (struct uca_camera *) malloc(sizeof(struct uca_camera));
 
-    cam->next = NULL;
-
     /* Set all function pointers to NULL so we know early on, if something has
      * not been implemented. */
-    cam->set_property = NULL;
-    cam->get_property = NULL;
-    cam->start_recording = NULL;
-    cam->stop_recording = NULL;
-    cam->grab = NULL;
-    cam->register_callback = NULL;
-    cam->destroy = NULL;
+    memset(cam, 0, sizeof(struct uca_camera));
 
-    cam->user = NULL;
-
-    cam->grabber = NULL;
     cam->state = UCA_CAM_CONFIGURABLE;
     cam->current_frame = 0;
-
-    /* No callbacks and user data associated yet */
-    cam->callback = NULL;
-    cam->callback_user = NULL;
-
     return cam;
 }
