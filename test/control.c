@@ -75,6 +75,9 @@ void reallocate_buffers(ThreadData *td, int width, int height)
     td->pixels = gdk_pixbuf_get_pixels(td->pixbuf);
     gtk_image_set_from_pixbuf(GTK_IMAGE(td->image), td->pixbuf);
     memset(td->buffer, 0, num_bytes);
+
+    if (uca_cam_alloc(td->cam, 20) != UCA_NO_ERROR)
+        g_print("Couldn't allocate buffer for 20 frames\n");
 }
 
 static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)

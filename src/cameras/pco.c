@@ -7,7 +7,7 @@
 #include "uca-grabber.h"
 #include "pco.h"
 
-#define GET_PCO(uca) ((struct pco_edge_t *)(uca->user))
+#define GET_PCO(uca) ((struct pco_edge *)(uca->user))
 
 #define set_void(p, type, value) { *((type *) p) = (type) value; }
 
@@ -84,7 +84,7 @@ static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_i
 
 static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num)
 {
-    struct pco_edge_t *pco = GET_PCO(cam);
+    struct pco_edge *pco = GET_PCO(cam);
     struct uca_grabber *grabber = cam->grabber;
 
     switch (property) {
@@ -197,7 +197,7 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
 
 uint32_t uca_pco_start_recording(struct uca_camera *cam)
 {
-    struct pco_edge_t *pco = GET_PCO(cam);
+    struct pco_edge *pco = GET_PCO(cam);
     if (pco_arm_camera(pco) != PCO_NOERROR)
         return UCA_ERR_CAM_ARM;
     if (pco_set_rec_state(pco, 1) != PCO_NOERROR)
@@ -218,9 +218,8 @@ uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer, void *meta_data)
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
     if (err != UCA_NO_ERROR)
         return err;
-    /* FIXME: choose according to data format */
-    //pco_reorder_image_5x16((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
-    memcpy(buffer, frame, cam->frame_width*cam->frame_height*2);
+
+    GET_PCO(cam)->reorder_image((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
     return UCA_NO_ERROR;
 }
 
@@ -240,10 +239,9 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     if (grabber == NULL)
         return UCA_ERR_CAM_NOT_FOUND;
 
-    struct pco_edge_t *pco = pco_init();
-    if (pco == NULL) {
+    struct pco_edge *pco = pco_init();
+    if (pco == NULL)
         return UCA_ERR_CAM_NOT_FOUND;
-    }
 
     if ((pco->serial_ref == NULL) || !pco_is_active(pco)) {
         pco_destroy(pco);
@@ -274,7 +272,7 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     int val = UCA_CL_8BIT_FULL_10;
     grabber->set_property(grabber, UCA_GRABBER_CAMERALINK_TYPE, &val);
 
-    val = UCA_FORMAT_GRAY8;
+    val = UCA_FORMAT_GRAY8;;
     grabber->set_property(grabber, UCA_GRABBER_FORMAT, &val);
 
     val = UCA_TRIGGER_FREERUN;

@@ -99,15 +99,17 @@ uint32_t uca_me4_get_property(struct uca_grabber *grabber, enum uca_grabber_cons
 
 uint32_t uca_me4_alloc(struct uca_grabber *grabber, uint32_t pixel_size, uint32_t n_buffers)
 {
-    if (GET_MEM(grabber) != NULL)
-        /* FIXME: invent better error code */
-        return UCA_ERR_PROP_GENERAL;
+    dma_mem *mem = GET_MEM(grabber);
+    /* If buffers are already allocated, we are freeing every buffer and start
+     * again. */
+    if (mem != NULL) 
+        Fg_FreeMemEx(GET_FG(grabber), mem);
 
     uint32_t width, height;
     uca_me4_get_property(grabber, UCA_GRABBER_WIDTH, &width);
     uca_me4_get_property(grabber, UCA_GRABBER_HEIGHT, &height);
 
-    dma_mem *mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*pixel_size, n_buffers);
+    mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*pixel_size, n_buffers);
     if (mem != NULL) {
         ((struct fg_apc_data *) grabber->user)->mem = mem;
         return UCA_NO_ERROR;

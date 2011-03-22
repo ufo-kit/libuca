@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     /* take first camera */
     struct uca_camera *cam = u->cameras;
 
-    uint32_t val = 2000;
+    uint32_t val = 5000;
     handle_error(cam->set_property(cam, UCA_PROP_EXPOSURE, &val));
     val = 0;
     handle_error(cam->set_property(cam, UCA_PROP_DELAY, &val));
