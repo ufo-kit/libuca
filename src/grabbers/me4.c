@@ -138,11 +138,11 @@ uint32_t uca_me4_stop_acquire(struct uca_grabber *grabber)
 
 uint32_t uca_me4_grab(struct uca_grabber *grabber, void **buffer, uint32_t *frame_number)
 {
-    int32_t last_frame;
+    static int32_t last_frame = 0;
     if (grabber->asynchronous)
         last_frame = Fg_getLastPicNumberEx(GET_FG(grabber), PORT_A, GET_MEM(grabber));
     else 
-        last_frame = Fg_getLastPicNumberBlockingEx(GET_FG(grabber), 1, PORT_A, 10, GET_MEM(grabber));
+        last_frame = Fg_getLastPicNumberBlockingEx(GET_FG(grabber), last_frame+1, PORT_A, 10, GET_MEM(grabber));
 
     if (last_frame <= 0)
         return UCA_ERR_PROP_GENERAL;
