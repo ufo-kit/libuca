@@ -272,7 +272,7 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     int val = UCA_CL_8BIT_FULL_10;
     grabber->set_property(grabber, UCA_GRABBER_CAMERALINK_TYPE, &val);
 
-    val = UCA_FORMAT_GRAY8;;
+    val = UCA_FORMAT_GRAY8;
     grabber->set_property(grabber, UCA_GRABBER_FORMAT, &val);
 
     val = UCA_TRIGGER_FREERUN;
