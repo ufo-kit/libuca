@@ -33,83 +33,60 @@ find_package(Threads)
 
 
 # --- Build options -----------------------------------------------------------
-option(HAVE_DUMMY_CAMERA "Build a dummy camera model" OFF)
+option(HAVE_DUMMY_CAMERA "Camera: Dummy" OFF)
 
 
 # --- Add sources if camera/framegrabber access sources are available ---------
 if (PF_FOUND)
-    set(HAVE_PHOTON_FOCUS TRUE)
+    option(HAVE_PHOTON_FOCUS "Camera: Photon Focus MV2-D1280-640-CL-8" ON)
 
-    set(uca_SRCS
-        ${uca_SRCS}
-        cameras/pf.c
-        )
+    if (HAVE_PHOTON_FOCUS)
+        set(uca_SRCS ${uca_SRCS} cameras/pf.c)
+        set(uca_LIBS ${uca_LIBS} ${PF_LIBRARIES})
 
-    set(uca_LIBS
-        ${uca_LIBS}
-        ${PF_LIBRARIES}
-        )
-
-    include_directories(${PF_INCLUDE_DIRS})
+        include_directories(${PF_INCLUDE_DIRS})
+    endif()
 endif()
 
 if (PCO_FOUND)
-    set(HAVE_PCO_EDGE TRUE)
+    option(HAVE_PCO_EDGE "Camera: pco.edge" ON)
 
-    set(uca_SRCS 
-        ${uca_SRCS}
-        cameras/pco.c
-        )
+    if (HAVE_PCO_EDGE)
+        set(uca_SRCS ${uca_SRCS} cameras/pco.c)
+        set(uca_LIBS ${uca_LIBS} ${PCO_LIBRARIES})
 
-    set(uca_LIBS 
-        ${uca_LIBS}
-        ${PCO_LIBRARIES}
-        )
-
-    include_directories(${PCO_INCLUDE_DIRS})
+        include_directories(${PCO_INCLUDE_DIRS})
+    endif()
 endif()
 
 if (IPE_FOUND)
-    set(HAVE_IPE_CAMERA TRUE)
+    option(HAVE_IPE_CAMERA "Camera: Custom IPE based on Xilinx FPGA" ON)
 
-    set(uca_SRCS
-        ${uca_SRCS}
-        cameras/ipe.c
-        )
+    if (HAVE_IPE_CAMERA)
+        set(uca_SRC ${uca_SRCS} cameras/ipe.c)
+        set(uca_LIB ${uca_LIBS} ${IPE_LIBRARIES})
 
-    set(uca_LIBS
-        ${uca_LIBS}
-        ${IPE_LIBRARIES}
-        )
-
-    include_directories(${IPE_INCLUDE_DIRS})
+        include_directories(${IPE_INCLUDE_DIRS})
+    endif()
 endif()
 
 if (CLSERME4_FOUND AND FGLIB5_FOUND)
-    set(HAVE_ME4 TRUE)
+    option(HAVE_ME4 "Grabber: Silicon Software microEnable IV" ON)
 
-    set(uca_SRCS 
-        ${uca_SRCS}
-        grabbers/me4.c
-        )
+    if (HAVE_ME4)
+        set(uca_SRCS ${uca_SRCS} grabbers/me4.c)
+        set(uca_LIBS ${uca_LIBS}
+            ${CLSERME4_LIBRARY}
+            ${FGLIB5_LIBRARY})
 
-    set(uca_LIBS 
-        ${uca_LIBS}
-        ${CLSERME4_LIBRARY}
-        ${FGLIB5_LIBRARY}
-        )
-
-    include_directories(
-        ${CLSERME4_INCLUDE_DIR}
-        ${FGLIB5_INCLUDE_DIR}
-        )
+        include_directories(
+            ${CLSERME4_INCLUDE_DIR}
+            ${FGLIB5_INCLUDE_DIR})
+    endif()
 endif()
 
 if (HAVE_DUMMY_CAMERA)
-    set(uca_SRCS
-        ${uca_SRCS}
-        cameras/dummy.c
-        )
+    set(uca_SRCS ${uca_SRCS} cameras/dummy.c)
 endif()
 
 if (Threads_FOUND)
