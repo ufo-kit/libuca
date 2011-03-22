@@ -90,7 +90,6 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
     switch (property) {
         case UCA_PROP_NAME: 
             {
-                /* FIXME: how to ensure, that buffer is large enough? */
                 SC2_Camera_Name_Response name;
 
                 /* FIXME: This is _not_ a mistake. For some reason (which I
