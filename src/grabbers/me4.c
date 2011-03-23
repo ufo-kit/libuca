@@ -11,6 +11,7 @@
 struct fg_apc_data {
     Fg_Struct               *fg;
     dma_mem                 *mem;
+    uint32_t                timeout;
 
     /* End-user related callback variables */
     uca_cam_grab_callback   callback;
@@ -31,6 +32,7 @@ static struct uca_sisofg_map_t uca_to_fg[] = {
     { UCA_GRABBER_OFFSET_X,         FG_XOFFSET,             false },
     { UCA_GRABBER_OFFSET_Y,         FG_YOFFSET,             false },
     { UCA_GRABBER_EXPOSURE,         FG_EXPOSURE,            false },
+    { UCA_GRABBER_TIMEOUT,          FG_TIMEOUT,             false },
     { UCA_GRABBER_TRIGGER_MODE,     FG_TRIGGERMODE,         true},
     { UCA_GRABBER_FORMAT,           FG_FORMAT,              true},
     { UCA_GRABBER_CAMERALINK_TYPE,  FG_CAMERA_LINK_CAMTYP,  true },
@@ -73,6 +75,15 @@ uint32_t uca_me4_set_property(struct uca_grabber *grabber, enum uca_grabber_cons
     struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
     if (fg_prop == NULL)
         return UCA_ERR_PROP_INVALID;
+
+    switch (property) {
+        case UCA_GRABBER_TIMEOUT:
+            ((struct fg_apc_data *) grabber->user)->timeout = *((uint32_t *) data);
+            break;
+
+        default:
+            break;
+    }
 
     if (fg_prop->interpret_data) {
         /* Data is not a value but a SiSo specific constant that we need to
@@ -141,17 +152,18 @@ uint32_t uca_me4_stop_acquire(struct uca_grabber *grabber)
 uint32_t uca_me4_grab(struct uca_grabber *grabber, void **buffer, uint64_t *frame_number)
 {
     static frameindex_t last_frame = 0;
+    struct fg_apc_data *me4 = (struct fg_apc_data *) grabber->user;
 
     if (grabber->asynchronous)
-        last_frame = Fg_getLastPicNumberEx(GET_FG(grabber), PORT_A, GET_MEM(grabber));
+        last_frame = Fg_getLastPicNumberEx(me4->fg, PORT_A, me4->mem);
     else 
-        last_frame = Fg_getLastPicNumberBlockingEx(GET_FG(grabber), last_frame+1, PORT_A, 10, GET_MEM(grabber));
+        last_frame = Fg_getLastPicNumberBlockingEx(me4->fg, last_frame+1, PORT_A, me4->timeout, me4->mem);
 
     if (last_frame <= 0)
         return UCA_ERR_PROP_GENERAL;
 
     *frame_number = (uint64_t) last_frame;
-    *buffer = Fg_getImagePtrEx(GET_FG(grabber), last_frame, PORT_A, GET_MEM(grabber));
+    *buffer = Fg_getImagePtrEx(me4->fg, last_frame, PORT_A, me4->mem);
     return UCA_NO_ERROR;
 }
 
@@ -199,6 +211,8 @@ uint32_t uca_me4_init(struct uca_grabber **grabber)
     struct fg_apc_data *me4 = (struct fg_apc_data *) malloc(sizeof(struct fg_apc_data));
     memset(me4, 0, sizeof(struct fg_apc_data));
     me4->fg  = fg;
+
+    Fg_getParameter(fg, FG_TIMEOUT, &me4->timeout, PORT_A);
 
     uca->user = me4;
     uca->destroy = &uca_me4_destroy;

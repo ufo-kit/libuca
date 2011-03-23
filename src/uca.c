@@ -77,6 +77,7 @@ static struct uca_property property_map[UCA_PROP_LAST+1] = {
     { "Gain.ADC.Min",           uca_na,     uca_uint32t, uca_read },
     { "Gain.ADC.Max",           uca_na,     uca_uint32t, uca_read },
     { "Gain.ADC.Step",          uca_na,     uca_uint32t, uca_read },
+    { "Grabber.Timeout",        uca_s,      uca_uint32t, uca_readwrite },
     { "Mode.Timestamp",         uca_na,     uca_uint32t, uca_readwrite }, 
     { "Mode.Scan",              uca_na,     uca_uint32t, uca_readwrite }, 
     { "Interlace.Samplerate",   uca_na,     uca_uint32t, uca_readwrite }, 

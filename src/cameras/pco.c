@@ -75,6 +75,11 @@ static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_i
         case UCA_PROP_TIMESTAMP_MODE:
             return pco_set_timestamp_mode(GET_PCO(cam), *((uint16_t *) data));
 
+        case UCA_PROP_GRAB_TIMEOUT:
+            if (grabber->set_property(grabber, UCA_GRABBER_TIMEOUT, data) != UCA_NO_ERROR)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+            break;
+
         default:
             return UCA_ERR_PROP_INVALID;
     }
@@ -186,6 +191,14 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
 
         case UCA_PROP_BITDEPTH:
             set_void(data, uint32_t, 16);
+            break;
+
+        case UCA_PROP_GRAB_TIMEOUT:
+            {
+                uint32_t timeout;
+                cam->grabber->get_property(cam->grabber, UCA_GRABBER_TIMEOUT, &timeout);
+                set_void(data, uint32_t, timeout);
+            }
             break;
 
         default:

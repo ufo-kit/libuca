@@ -11,6 +11,7 @@
 
 enum uca_grabber_constants {
     UCA_GRABBER_INVALID = -1,
+
     /* properties */
     UCA_GRABBER_WIDTH = 0,
     UCA_GRABBER_HEIGHT,
@@ -19,6 +20,7 @@ enum uca_grabber_constants {
     UCA_GRABBER_OFFSET_X,
     UCA_GRABBER_OFFSET_Y,
     UCA_GRABBER_EXPOSURE,
+    UCA_GRABBER_TIMEOUT,
     UCA_GRABBER_FORMAT,
     UCA_GRABBER_TRIGGER_MODE,
     UCA_GRABBER_CAMERALINK_TYPE,

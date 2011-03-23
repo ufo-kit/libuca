@@ -101,6 +101,9 @@ enum uca_property_ids {
     UCA_PROP_ADC_GAIN_MAX,
     UCA_PROP_ADC_GAIN_STEPS,
 
+    /* grabber specific */
+    UCA_PROP_GRAB_TIMEOUT,
+
     /* pco.edge specific */
     UCA_PROP_TIMESTAMP_MODE,
     UCA_PROP_SCAN_MODE,

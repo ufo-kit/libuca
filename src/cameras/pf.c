@@ -70,26 +70,26 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
 
     switch (property) {
         case UCA_PROP_WIDTH:
-            if (grabber->set_property(grabber, UCA_GRABBER_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
+            if (grabber->set_property(grabber, UCA_GRABBER_WIDTH, data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             if (uca_pf_set_uint32_property(token, data, &cam->frame_width) < 0)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_HEIGHT:
-            if (grabber->set_property(grabber, UCA_GRABBER_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
+            if (grabber->set_property(grabber, UCA_GRABBER_HEIGHT, data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             if (uca_pf_set_uint32_property(token, data, &cam->frame_height) < 0)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_X_OFFSET:
-            if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_X, (uint32_t *) data) != UCA_NO_ERROR)
+            if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_X, data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_Y_OFFSET:
-            if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_Y, (uint32_t *) data) != UCA_NO_ERROR)
+            if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_Y, data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
@@ -99,6 +99,11 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
             value.type = PF_FLOAT;
             value.value.f = (float) *((uint32_t *) data) / 1000.0;
             if (pfDevice_SetProperty(0, token, &value) < 0)
+                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+            break;
+
+        case UCA_PROP_GRAB_TIMEOUT:
+            if (grabber->set_property(grabber, UCA_GRABBER_TIMEOUT, data) != UCA_NO_ERROR)
                 return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
             break;
 
@@ -155,6 +160,14 @@ static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_id
     switch (property) {
         case UCA_PROP_BITDEPTH:
             set_void(data, uint32_t, 8);
+            break;
+
+        case UCA_PROP_GRAB_TIMEOUT:
+            {
+                uint32_t timeout;
+                cam->grabber->get_property(cam->grabber, UCA_GRABBER_TIMEOUT, &timeout);
+                set_void(data, uint32_t, timeout);
+            }
             break;
 
         default:
