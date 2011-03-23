@@ -27,12 +27,13 @@ struct uca_sisofg_map_t {
 
 static struct uca_sisofg_map_t uca_to_fg[] = {
     /* properties */
-    { UCA_GRABBER_WIDTH,            FG_WIDTH,               false },
-    { UCA_GRABBER_HEIGHT,           FG_HEIGHT,              false },
-    { UCA_GRABBER_OFFSET_X,         FG_XOFFSET,             false },
-    { UCA_GRABBER_OFFSET_Y,         FG_YOFFSET,             false },
-    { UCA_GRABBER_EXPOSURE,         FG_EXPOSURE,            false },
-    { UCA_GRABBER_TIMEOUT,          FG_TIMEOUT,             false },
+    { UCA_PROP_WIDTH,            FG_WIDTH,               false },
+    { UCA_PROP_HEIGHT,           FG_HEIGHT,              false },
+    { UCA_PROP_X_OFFSET,         FG_XOFFSET,             false },
+    { UCA_PROP_Y_OFFSET,         FG_YOFFSET,             false },
+    { UCA_PROP_EXPOSURE,         FG_EXPOSURE,            false },
+    { UCA_PROP_GRAB_TIMEOUT,     FG_TIMEOUT,             false },
+
     { UCA_GRABBER_TRIGGER_MODE,     FG_TRIGGERMODE,         true},
     { UCA_GRABBER_FORMAT,           FG_FORMAT,              true},
     { UCA_GRABBER_CAMERALINK_TYPE,  FG_CAMERA_LINK_CAMTYP,  true },
@@ -70,7 +71,7 @@ static struct uca_sisofg_map_t *uca_me4_find_property(enum uca_grabber_constants
     return NULL;
 }
 
-uint32_t uca_me4_set_property(struct uca_grabber *grabber, enum uca_grabber_constants property, void *data)
+uint32_t uca_me4_set_property(struct uca_grabber *grabber, int32_t property, void *data)
 {
     uint32_t err = UCA_ERR_GRABBER | UCA_ERR_PROP;
     struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
@@ -78,7 +79,7 @@ uint32_t uca_me4_set_property(struct uca_grabber *grabber, enum uca_grabber_cons
         return err | UCA_ERR_INVALID;
 
     switch (property) {
-        case UCA_GRABBER_TIMEOUT:
+        case UCA_PROP_GRAB_TIMEOUT:
             ((struct fg_apc_data *) grabber->user)->timeout = *((uint32_t *) data);
             break;
 
@@ -122,8 +123,8 @@ uint32_t uca_me4_alloc(struct uca_grabber *grabber, uint32_t pixel_size, uint32_
         Fg_FreeMemEx(GET_FG(grabber), mem);
 
     uint32_t width, height;
-    uca_me4_get_property(grabber, UCA_GRABBER_WIDTH, &width);
-    uca_me4_get_property(grabber, UCA_GRABBER_HEIGHT, &height);
+    uca_me4_get_property(grabber, UCA_PROP_WIDTH, &width);
+    uca_me4_get_property(grabber, UCA_PROP_HEIGHT, &height);
 
     mem = Fg_AllocMemEx(GET_FG(grabber), n_buffers*width*height*pixel_size, n_buffers);
     if (mem != NULL) {

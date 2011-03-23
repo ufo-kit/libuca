@@ -46,27 +46,21 @@ static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_i
     struct uca_grabber *grabber = cam->grabber;
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
 
+    /* We try to set the property on the grabber. If it returns "invalid", we
+     * also try it via the libpco. Else, there was a more serious error. */
+    err = grabber->set_property(grabber, property, data);
+    if (((err & UCA_ERR_MASK_CODE) == UCA_ERR_INVALID) || (err == UCA_NO_ERROR))
+        err = UCA_ERR_CAMERA | UCA_ERR_PROP;
+    else
+        return err;
+
     switch (property) {
         case UCA_PROP_WIDTH:
-            if (grabber->set_property(grabber, UCA_GRABBER_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
-                return err | UCA_ERR_OUT_OF_RANGE;
             cam->frame_width = *((uint32_t *) data);
             break;
 
         case UCA_PROP_HEIGHT:
-            if (grabber->set_property(grabber, UCA_GRABBER_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
-                return err | UCA_ERR_OUT_OF_RANGE;
             cam->frame_height = *((uint32_t *) data);
-            break;
-
-        case UCA_PROP_X_OFFSET:
-            if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_X, (uint32_t *) data) != UCA_NO_ERROR)
-                return err | UCA_ERR_OUT_OF_RANGE;
-            break;
-
-        case UCA_PROP_Y_OFFSET:
-            if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_Y, (uint32_t *) data) != UCA_NO_ERROR)
-                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_EXPOSURE:
@@ -77,11 +71,6 @@ static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_i
 
         case UCA_PROP_TIMESTAMP_MODE:
             return pco_set_timestamp_mode(GET_PCO(cam), *((uint16_t *) data));
-
-        case UCA_PROP_GRAB_TIMEOUT:
-            if (grabber->set_property(grabber, UCA_GRABBER_TIMEOUT, data) != UCA_NO_ERROR)
-                return err | UCA_ERR_OUT_OF_RANGE;
-            break;
 
         default:
             return err | UCA_ERR_INVALID;
@@ -151,10 +140,10 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
             break;
 
         case UCA_PROP_X_OFFSET:
-            return grabber->get_property(grabber, UCA_GRABBER_OFFSET_X, (uint32_t *) data);
+            return grabber->get_property(grabber, UCA_PROP_X_OFFSET, (uint32_t *) data);
 
         case UCA_PROP_Y_OFFSET:
-            return grabber->get_property(grabber, UCA_GRABBER_OFFSET_Y, (uint32_t *) data);
+            return grabber->get_property(grabber, UCA_PROP_Y_OFFSET, (uint32_t *) data);
 
         case UCA_PROP_DELAY:
             {
@@ -193,7 +182,7 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
         case UCA_PROP_GRAB_TIMEOUT:
             {
                 uint32_t timeout;
-                uint32_t err = cam->grabber->get_property(cam->grabber, UCA_GRABBER_TIMEOUT, &timeout);
+                uint32_t err = cam->grabber->get_property(cam->grabber, UCA_PROP_GRAB_TIMEOUT, &timeout);
                 if (err != UCA_NO_ERROR)
                     return err;
                 set_void(data, uint32_t, timeout);
@@ -298,8 +287,8 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     /* Yes, we really have to take an image twice as large because we set the
      * CameraLink interface to 8-bit 10 Taps, but are actually using 5x16 bits. */
     width *= 2;
-    grabber->set_property(grabber, UCA_GRABBER_WIDTH, &width);
-    grabber->set_property(grabber, UCA_GRABBER_HEIGHT, &height);
+    grabber->set_property(grabber, UCA_PROP_WIDTH, &width);
+    grabber->set_property(grabber, UCA_PROP_HEIGHT, &height);
 
     uca->state = UCA_CAM_CONFIGURABLE;
     *cam = uca;

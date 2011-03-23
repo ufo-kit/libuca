@@ -2,6 +2,7 @@
 #define __UNIFIED_CAMERA_ACCESS_GRABBER_H
 
 #include <stdbool.h>
+#include "uca.h"
 #include "uca-cam.h"
 
 /**
@@ -13,15 +14,7 @@ enum uca_grabber_constants {
     UCA_GRABBER_INVALID = -1,
 
     /* properties */
-    UCA_GRABBER_WIDTH = 0,
-    UCA_GRABBER_HEIGHT,
-    UCA_GRABBER_WIDTH_MAX,
-    UCA_GRABBER_WIDTH_MIN,
-    UCA_GRABBER_OFFSET_X,
-    UCA_GRABBER_OFFSET_Y,
-    UCA_GRABBER_EXPOSURE,
-    UCA_GRABBER_TIMEOUT,
-    UCA_GRABBER_FORMAT,
+    UCA_GRABBER_FORMAT = UCA_PROP_LAST + 1,
     UCA_GRABBER_TRIGGER_MODE,
     UCA_GRABBER_CAMERALINK_TYPE,
 
