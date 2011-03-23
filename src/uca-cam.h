@@ -156,7 +156,7 @@ typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera *cam);
  *
  * \note The meta data parameter is not yet specified but just a place holder.
  */
-typedef void (*uca_cam_grab_callback) (uint32_t image_number, void *buffer, void *meta_data, void *user);
+typedef void (*uca_cam_grab_callback) (uint64_t image_number, void *buffer, void *meta_data, void *user);
 
 /**
  * Register callback for given frame grabber. To actually start receiving
@@ -248,7 +248,7 @@ typedef struct uca_camera {
     enum uca_cam_state      state;          /**< camera state */
     uint32_t                frame_width;    /**< current frame width */
     uint32_t                frame_height;   /**< current frame height */
-    uint32_t                current_frame;  /**< last grabbed frame number */
+    uint64_t                current_frame;  /**< last grabbed frame number */
 
     uca_cam_grab_callback   callback;
     void                    *callback_user; /**< user data for callback */

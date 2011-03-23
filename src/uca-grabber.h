@@ -99,7 +99,7 @@ typedef uint32_t (*uca_grabber_stop_acquire) (struct uca_grabber *grabber);
  *
  * \param[out] frame_number Number of the grabbed frame
  */
-typedef uint32_t (*uca_grabber_grab) (struct uca_grabber *grabber, void **buffer, uint32_t *frame_number);
+typedef uint32_t (*uca_grabber_grab) (struct uca_grabber *grabber, void **buffer, uint64_t *frame_number);
 
 
 /**

@@ -11,18 +11,18 @@ struct image_props {
     uint32_t bits;
 };
 
-void grab_callback(uint32_t image_number, void *buffer, void *meta_data, void *user)
+void grab_callback(uint64_t image_number, void *buffer, void *meta_data, void *user)
 {
     struct image_props *props = (struct image_props *) user;
     const int pixel_size = props->bits == 8 ? 1 : 2;
     char filename[256];
 
-    sprintf(filename, "out-%04i.raw", image_number);
+    sprintf(filename, "out-%04lu.raw", image_number);
     FILE *fp = fopen(filename, "wb");
     fwrite(buffer, props->width * props->height, pixel_size, fp);
     fclose(fp);
 
-    printf("grabbed picture %i at %p (%ix%i @ %i bits)\n", image_number, buffer, props->width, props->height, props->bits);
+    printf("grabbed picture %lu at %p (%ix%i @ %i bits)\n", image_number, buffer, props->width, props->height, props->bits);
 }
 
 int main(int argc, char *argv[])
