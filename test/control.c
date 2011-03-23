@@ -262,7 +262,7 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera *cam)
         get_first_level_root(tree_store, &iter, tokens[0]);
         find_recursively(tree_store, &iter, &child, tokens, 1);
 
-        if (result == UCA_ERR_PROP_INVALID)
+        if (result != UCA_NO_ERROR)
             g_sprintf(value_string, "n/a");
 
         int count = 0;

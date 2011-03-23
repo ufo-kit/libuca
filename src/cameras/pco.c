@@ -14,21 +14,23 @@
 
 static uint32_t uca_pco_set_exposure(struct uca_camera *cam, uint32_t *exposure)
 {
+    uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
     uint32_t e, d;
     if (pco_get_delay_exposure(GET_PCO(cam), &d, &e) != PCO_NOERROR)
-        return UCA_ERR_PROP_GENERAL;
+        return err | UCA_ERR_INVALID;
     if (pco_set_delay_exposure(GET_PCO(cam), d, *exposure) != PCO_NOERROR)
-        return UCA_ERR_PROP_GENERAL;
+        return err | UCA_ERR_INVALID;
     return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_set_delay(struct uca_camera *cam, uint32_t *delay)
 {
+    uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
     uint32_t e, d;
     if (pco_get_delay_exposure(GET_PCO(cam), &d, &e) != PCO_NOERROR)
-        return UCA_ERR_PROP_GENERAL;
+        return err | UCA_ERR_INVALID;
     if (pco_set_delay_exposure(GET_PCO(cam), *delay, e) != PCO_NOERROR)
-        return UCA_ERR_PROP_GENERAL;
+        return err | UCA_ERR_INVALID;
     return UCA_NO_ERROR;
 }
 
@@ -42,28 +44,29 @@ static uint32_t uca_pco_destroy(struct uca_camera *cam)
 static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
 {
     struct uca_grabber *grabber = cam->grabber;
+    uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
 
     switch (property) {
         case UCA_PROP_WIDTH:
             if (grabber->set_property(grabber, UCA_GRABBER_WIDTH, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             cam->frame_width = *((uint32_t *) data);
             break;
 
         case UCA_PROP_HEIGHT:
             if (grabber->set_property(grabber, UCA_GRABBER_HEIGHT, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             cam->frame_height = *((uint32_t *) data);
             break;
 
         case UCA_PROP_X_OFFSET:
             if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_X, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_Y_OFFSET:
             if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_Y, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_EXPOSURE:
@@ -77,11 +80,11 @@ static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_i
 
         case UCA_PROP_GRAB_TIMEOUT:
             if (grabber->set_property(grabber, UCA_GRABBER_TIMEOUT, data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         default:
-            return UCA_ERR_PROP_INVALID;
+            return err | UCA_ERR_INVALID;
     }
     return UCA_NO_ERROR;
 }
@@ -148,20 +151,15 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
             break;
 
         case UCA_PROP_X_OFFSET:
-            if (grabber->get_property(grabber, UCA_GRABBER_OFFSET_X, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_GENERAL;
-            break;
+            return grabber->get_property(grabber, UCA_GRABBER_OFFSET_X, (uint32_t *) data);
 
         case UCA_PROP_Y_OFFSET:
-            if (grabber->get_property(grabber, UCA_GRABBER_OFFSET_Y, (uint32_t *) data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_GENERAL;
-            break;
+            return grabber->get_property(grabber, UCA_GRABBER_OFFSET_Y, (uint32_t *) data);
 
         case UCA_PROP_DELAY:
             {
                 uint32_t exposure;
-                if (pco_get_delay_exposure(pco, (uint32_t *) data, &exposure) != PCO_NOERROR)
-                    return UCA_ERR_PROP_INVALID;
+                return pco_get_delay_exposure(pco, (uint32_t *) data, &exposure);
             }
             break;
 
@@ -176,8 +174,7 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
         case UCA_PROP_EXPOSURE:
             {
                 uint32_t delay;
-                if (pco_get_delay_exposure(pco, &delay, (uint32_t *) data) != PCO_NOERROR)
-                    return UCA_ERR_PROP_INVALID;
+                return pco_get_delay_exposure(pco, &delay, (uint32_t *) data);
             }
             break;
 
@@ -196,31 +193,34 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
         case UCA_PROP_GRAB_TIMEOUT:
             {
                 uint32_t timeout;
-                cam->grabber->get_property(cam->grabber, UCA_GRABBER_TIMEOUT, &timeout);
+                uint32_t err = cam->grabber->get_property(cam->grabber, UCA_GRABBER_TIMEOUT, &timeout);
+                if (err != UCA_NO_ERROR)
+                    return err;
                 set_void(data, uint32_t, timeout);
             }
             break;
 
         default:
-            return UCA_ERR_PROP_INVALID;
+            return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
     }
     return UCA_NO_ERROR;
 }
 
 uint32_t uca_pco_start_recording(struct uca_camera *cam)
 {
+    uint32_t err = UCA_ERR_CAMERA | UCA_ERR_INIT;
     struct pco_edge *pco = GET_PCO(cam);
     if (pco_arm_camera(pco) != PCO_NOERROR)
-        return UCA_ERR_CAM_ARM;
+        return err | UCA_ERR_UNCLASSIFIED;
     if (pco_set_rec_state(pco, 1) != PCO_NOERROR)
-        return UCA_ERR_CAM_RECORD;
+        return err | UCA_ERR_UNCLASSIFIED;
     return cam->grabber->acquire(cam->grabber, -1);
 }
 
 uint32_t uca_pco_stop_recording(struct uca_camera *cam)
 {
     if (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR)
-        return UCA_ERR_PROP_GENERAL;
+        return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_UNCLASSIFIED;
     return UCA_NO_ERROR;
 }
 
@@ -240,24 +240,24 @@ uint32_t uca_pco_register_callback(struct uca_camera *cam, uca_cam_grab_callback
     if (cam->callback == NULL) {
         cam->callback = callback;
         cam->callback_user = user;
-        cam->grabber->register_callback(cam->grabber, callback, NULL, user);
-        return UCA_NO_ERROR;
+        return cam->grabber->register_callback(cam->grabber, callback, NULL, user);
     }
-    return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
+    return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
 }
 
 uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
 {
+    uint32_t err = UCA_ERR_CAMERA | UCA_ERR_INIT;
     if (grabber == NULL)
-        return UCA_ERR_CAM_NOT_FOUND;
+        return err | UCA_ERR_NOT_FOUND;
 
     struct pco_edge *pco = pco_init();
     if (pco == NULL)
-        return UCA_ERR_CAM_NOT_FOUND;
+        return err | UCA_ERR_NOT_FOUND;
 
     if ((pco->serial_ref == NULL) || !pco_is_active(pco)) {
         pco_destroy(pco);
-        return UCA_ERR_CAM_NOT_FOUND;
+        return err | UCA_ERR_NOT_FOUND;
     }
 
     struct uca_camera *uca = uca_cam_new();

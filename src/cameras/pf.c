@@ -54,6 +54,7 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
     struct uca_grabber *grabber = cam->grabber;
     TOKEN token = INVALID_TOKEN;
     int i = 0;
+    int err = UCA_ERR_CAMERA | UCA_ERR_PROP;
 
     /* Find a valid pf token for the property */
     while (uca_to_pf[i].uca_prop != -1) {
@@ -64,33 +65,33 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
         i++;
     }
     if (token == INVALID_TOKEN)
-        return UCA_ERR_PROP_INVALID;
+        return err | UCA_ERR_INVALID;
 
     PFValue value;
 
     switch (property) {
         case UCA_PROP_WIDTH:
             if (grabber->set_property(grabber, UCA_GRABBER_WIDTH, data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             if (uca_pf_set_uint32_property(token, data, &cam->frame_width) < 0)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_HEIGHT:
             if (grabber->set_property(grabber, UCA_GRABBER_HEIGHT, data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             if (uca_pf_set_uint32_property(token, data, &cam->frame_height) < 0)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_X_OFFSET:
             if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_X, data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_Y_OFFSET:
             if (grabber->set_property(grabber, UCA_GRABBER_OFFSET_Y, data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_EXPOSURE:
@@ -99,16 +100,16 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
             value.type = PF_FLOAT;
             value.value.f = (float) *((uint32_t *) data) / 1000.0;
             if (pfDevice_SetProperty(0, token, &value) < 0)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_GRAB_TIMEOUT:
             if (grabber->set_property(grabber, UCA_GRABBER_TIMEOUT, data) != UCA_NO_ERROR)
-                return UCA_ERR_PROP_VALUE_OUT_OF_RANGE;
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         default:
-            return UCA_ERR_PROP_INVALID;
+            return err | UCA_ERR_INVALID;
     }
     return UCA_NO_ERROR;
 }
@@ -124,7 +125,7 @@ static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_id
         if (uca_to_pf[i].uca_prop == property) {
             t = pfProperty_ParseName(0, uca_to_pf[i].pf_prop);
             if (t == INVALID_TOKEN || (pfDevice_GetProperty(0, t, &value) < 0))
-                return UCA_ERR_PROP_INVALID;
+                return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
 
             switch (value.type) {
                 case PF_INT:
@@ -171,7 +172,7 @@ static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_id
             break;
 
         default:
-            return UCA_ERR_PROP_INVALID;
+            return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
     }
     return UCA_NO_ERROR;
 }
@@ -192,7 +193,7 @@ uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata)
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
     if (err != UCA_NO_ERROR)
         return err;
-    /* FIXME: choose according to data format */
+
     memcpy(buffer, frame, cam->frame_width*cam->frame_height);
     return UCA_NO_ERROR;
 }
@@ -202,10 +203,9 @@ uint32_t uca_pf_register_callback(struct uca_camera *cam, uca_cam_grab_callback 
     if (cam->callback == NULL) {
         cam->callback = callback;
         cam->callback_user = user;
-        cam->grabber->register_callback(cam->grabber, callback, NULL, user);
-        return UCA_NO_ERROR;
+        return cam->grabber->register_callback(cam->grabber, callback, NULL, user);
     }
-    return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
+    return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
 }
 
 static uint32_t uca_pf_destroy(struct uca_camera *cam)
@@ -218,7 +218,7 @@ uint32_t uca_pf_init(struct uca_camera **cam, struct uca_grabber *grabber)
 {
     int num_ports;
     if ((grabber == NULL) || (pfPortInit(&num_ports) < 0) || (pfDeviceOpen(0) < 0))
-        return UCA_ERR_CAM_NOT_FOUND;
+        return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_NOT_FOUND;
 
     /* We could check if a higher baud rate is supported, but... forget about
      * it. We don't need high speed configuration. */

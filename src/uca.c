@@ -138,7 +138,7 @@ struct uca *uca_init(const char *config_filename)
     while (grabber_inits[i] != NULL) {
         uca_grabber_init init = grabber_inits[i];
         /* FIXME: we don't only want to take the first one */
-        if (init(&grabber) != UCA_ERR_GRABBER_NOT_FOUND)
+        if (init(&grabber) == UCA_NO_ERROR)
             break;
         i++;
     }
@@ -159,7 +159,7 @@ struct uca *uca_init(const char *config_filename)
     while (cam_inits[i] != NULL) {
         struct uca_camera *cam = NULL;
         uca_cam_init init = cam_inits[i];
-        if (init(&cam, grabber) != UCA_ERR_CAM_NOT_FOUND) {
+        if (init(&cam, grabber) == UCA_NO_ERROR) {
             if (current == NULL) 
                 g_uca->cameras = current = cam;
             else {
@@ -214,7 +214,7 @@ enum uca_property_ids uca_get_property_id(const char *property_name)
             return i;
         i++;
     }
-    return UCA_ERR_PROP_INVALID;
+    return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
 }
 
 struct uca_property *uca_get_full_property(enum uca_property_ids property_id)

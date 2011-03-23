@@ -199,23 +199,42 @@ typedef struct uca_property {
 
 extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding strings */
 
-enum uca_errors {
-    UCA_NO_ERROR = 0,
-    UCA_ERR_GRABBER_NOT_FOUND,
-    UCA_ERR_CAM_NOT_FOUND,              /**< camera probing or initialization failed */
-    UCA_ERR_PROP_INVALID,               /**< the requested property is not supported by the camera */
-    UCA_ERR_PROP_GENERAL,               /**< error occured reading/writing the property */
-    UCA_ERR_PROP_VALUE_OUT_OF_RANGE,    /**< error occured writing the property */
-    UCA_ERR_PROP_CAMERA_RECORDING,      /**< cannot set/get property because camera is recording */
 
-    UCA_ERR_CAM_ARM,                    /**< camera is not armed */
-    UCA_ERR_CAM_RECORD,                 /**< could not record */
+/*
+ * 16 bits error code
+ * 4 bits error source
+ * 4 bits error class
+ * 4 bits reserved
+ * 4 bits error level
+ */
 
-    UCA_ERR_GRABBER_ACQUIRE,            /**< grabber couldn't acquire a frame */
-    UCA_ERR_GRABBER_NOMEM,               /**< no memory was allocated using uca_grabber->alloc() */
-    UCA_ERR_GRABBER_CALLBACK_REGISTRATION_FAILED,
-    UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED
-};
+#define UCA_NO_ERROR            0x00000000
+
+#define UCA_ERR_MASK_CODE       0x0000FFFF
+#define UCA_ERR_MASK_SOURCE     0x000F0000
+#define UCA_ERR_MASK_TYPE       0x00F00000
+#define UCA_ERR_MASK_RESRV      0x0F000000
+#define UCA_ERR_MASK_LEVEL      0xF0000000
+
+#define UCA_ERR_GRABBER         0x00010000
+#define UCA_ERR_CAMERA          0x00020000
+
+#define UCA_ERR_INIT            0x00100000  /**< error during initialization */
+#define UCA_ERR_PROP            0x00200000  /**< error while setting/getting property */
+#define UCA_ERR_CALLBACK        0x00300000  /**< callback-related errors */
+
+#define UCA_ERR_FAILURE         0x10000000
+#define UCA_ERR_WARNING         0x20000000
+
+#define UCA_ERR_UNCLASSIFIED    0x10000001
+#define UCA_ERR_NOT_FOUND       0x10000002
+#define UCA_ERR_INVALID         0x10000003
+#define UCA_ERR_NO_MEMORY       0x10000004
+#define UCA_ERR_OUT_OF_RANGE    0x10000005
+#define UCA_ERR_ACQUIRE         0x10000006
+#define UCA_ERR_IS_RECORDING    0x10000007 /**< error because device is recording */
+#define UCA_ERR_FRAME_TRANSFER  0x10000008
+#define UCA_ERR_ALREADY_REGISTERED 0x10000009
 
 /**
  * Keeps a list of cameras and grabbers.

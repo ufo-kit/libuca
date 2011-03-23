@@ -42,21 +42,21 @@ int main(int argc, char *argv[])
             printf("%s = ", prop->name);
             switch (prop->type) {
                 case uca_string:
-                    if (cam->get_property(cam, i, string_value, num_bytes) != UCA_ERR_PROP_INVALID) {
+                    if (cam->get_property(cam, i, string_value, num_bytes) == UCA_NO_ERROR) {
                         printf("%s ", string_value);
                     }
                     else
                         printf("n/a");
                     break;
                 case uca_uint32t:
-                    if (cam->get_property(cam, i, &uint32_value, 0) != UCA_ERR_PROP_INVALID) {
+                    if (cam->get_property(cam, i, &uint32_value, 0) == UCA_NO_ERROR) {
                         printf("%i %s", uint32_value, uca_unit_map[prop->unit]);
                     }
                     else
                         printf("n/a");
                     break;
                 case uca_uint8t:
-                    if (cam->get_property(cam, i, &uint8_value, 0) != UCA_ERR_PROP_INVALID) {
+                    if (cam->get_property(cam, i, &uint8_value, 0) == UCA_NO_ERROR) {
                         printf("%i %s", uint8_value, uca_unit_map[prop->unit]);
                     }
                     else

@@ -159,8 +159,9 @@ static void *uca_dummy_grab_thread(void *arg)
  */
 static uint32_t uca_dummy_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
 {
+    uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
     if (cam->state == UCA_CAM_RECORDING)
-        return UCA_ERR_PROP_CAMERA_RECORDING;
+        return err | UCA_ERR_IS_RECORDING;
 
     switch (property) {
         case UCA_PROP_WIDTH:
@@ -176,7 +177,7 @@ static uint32_t uca_dummy_set_property(struct uca_camera *cam, enum uca_property
             break;
 
         default:
-            return UCA_ERR_PROP_INVALID;
+            return err | UCA_ERR_INVALID;
     }
 
     return UCA_NO_ERROR;
@@ -218,7 +219,7 @@ static uint32_t uca_dummy_get_property(struct uca_camera *cam, enum uca_property
             break;
 
         default:
-            return UCA_ERR_PROP_INVALID;
+            return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
     }
     return UCA_NO_ERROR;
 }
@@ -258,7 +259,7 @@ uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callba
         cam->callback_user = user;
     }
     else
-        return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
+        return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
 
     return UCA_NO_ERROR;
 }
@@ -266,7 +267,7 @@ uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callba
 uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     if (cam->callback != NULL)
-        return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
+        return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
 
     uca_dummy_memcpy(cam, buffer);
     cam->current_frame++;
