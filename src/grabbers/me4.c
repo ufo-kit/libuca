@@ -59,12 +59,24 @@ uint32_t uca_me4_destroy(struct uca_grabber *grabber)
     return UCA_NO_ERROR;
 }
 
-static struct uca_sisofg_map_t *uca_me4_find_property(enum uca_grabber_constants property)
+static struct uca_sisofg_map_t *uca_me4_find_fg_property(enum uca_grabber_constants property)
 {
     int i = 0;
     /* Find a valid frame grabber id for the property */
     while (uca_to_fg[i].uca_prop != UCA_GRABBER_INVALID) {
         if (uca_to_fg[i].uca_prop == property)
+            return &uca_to_fg[i];
+        i++;
+    }
+    return NULL;
+}
+
+static struct uca_sisofg_map_t *uca_me4_find_uca_property(int fg_id)
+{
+    int i = 0;
+    /* Find a valid frame grabber id for the property */
+    while (uca_to_fg[i].fg_id != 0) {
+        if (uca_to_fg[i].fg_id == fg_id)
             return &uca_to_fg[i];
         i++;
     }
@@ -90,7 +102,7 @@ uint32_t uca_me4_set_property(struct uca_grabber *grabber, int32_t property, voi
 
     /* Try to find a matching me4 property */
     uint32_t err = UCA_ERR_GRABBER | UCA_ERR_PROP;
-    struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
+    struct uca_sisofg_map_t *fg_prop = uca_me4_find_fg_property(property);
     if (fg_prop == NULL)
         return err | UCA_ERR_INVALID;
 
@@ -98,7 +110,7 @@ uint32_t uca_me4_set_property(struct uca_grabber *grabber, int32_t property, voi
         /* Data is not a value but a SiSo specific constant that we need to
          * translate to Silicon Software speak. Therefore, we try to find it in
          * the map. */
-        struct uca_sisofg_map_t *constant = uca_me4_find_property(*((uint32_t *) data));
+        struct uca_sisofg_map_t *constant = uca_me4_find_fg_property(*((uint32_t *) data));
         if (constant != NULL)
             return Fg_setParameter(GET_FG(grabber), fg_prop->fg_id, &constant->fg_id, PORT_A) == FG_OK ? \
                 UCA_NO_ERROR : err | UCA_ERR_INVALID;
@@ -121,11 +133,24 @@ uint32_t uca_me4_get_property(struct uca_grabber *grabber, int32_t property, voi
     }
 
     uint32_t err = UCA_ERR_GRABBER | UCA_ERR_PROP;
-    struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
+    struct uca_sisofg_map_t *fg_prop = uca_me4_find_fg_property(property);
     if (fg_prop == NULL)
         return err | UCA_ERR_INVALID;
 
-    /* FIXME: translate data back to UCA_ normalized constants */
+    if (fg_prop->interpret_data) {
+        int constant;
+        if (Fg_getParameter(GET_FG(grabber), fg_prop->fg_id, &constant, PORT_A) != FG_OK)
+            return err | UCA_ERR_INVALID;
+
+        /* Try to find the constant value */
+        struct uca_sisofg_map_t *uca_prop = uca_me4_find_uca_property(constant);
+        if (uca_prop == NULL)
+            return err | UCA_ERR_INVALID;
+
+        *((uint32_t *) data) = uca_prop->uca_prop;
+        return UCA_NO_ERROR;
+    }
+
     return Fg_getParameter(GET_FG(grabber), fg_prop->fg_id, data, PORT_A) == FG_OK ? \
         UCA_NO_ERROR : err | UCA_ERR_INVALID;
 }
