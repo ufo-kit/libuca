@@ -231,7 +231,7 @@ extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding 
 
 #define UCA_NO_ERROR            0x00000000
 
-#define UCA_ERR_MASK_CODE       0x0000FFFF
+#define UCA_ERR_MASK_CODE       0xF000FFFF
 #define UCA_ERR_MASK_SOURCE     0x000F0000
 #define UCA_ERR_MASK_TYPE       0x00F00000
 #define UCA_ERR_MASK_RESRV      0x0F000000

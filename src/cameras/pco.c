@@ -7,7 +7,13 @@
 #include "uca-grabber.h"
 #include "pco.h"
 
-#define GET_PCO(uca) ((struct pco_edge *)(uca->user))
+typedef struct pco_desc {
+    struct pco_edge *pco;
+    uint16_t roi[4];
+} pco_desc_t;
+
+#define GET_PCO_DESC(cam) ((struct pco_desc *) cam->user)
+#define GET_PCO(cam) (((struct pco_desc *)(cam->user))->pco)
 
 #define set_void(p, type, value) { *((type *) p) = (type) value; }
 
@@ -38,12 +44,14 @@ static uint32_t uca_pco_destroy(struct uca_camera *cam)
 {
     pco_set_rec_state(GET_PCO(cam), 0);
     pco_destroy(GET_PCO(cam));
+    free(GET_PCO_DESC(cam));
     return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
 {
     struct uca_grabber *grabber = cam->grabber;
+    struct pco_desc *pco_d = GET_PCO_DESC(cam);
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
 
     /* We try to set the property on the grabber. If it returns "invalid", we
@@ -57,10 +65,19 @@ static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_i
     switch (property) {
         case UCA_PROP_WIDTH:
             cam->frame_width = *((uint32_t *) data);
+            pco_d->roi[2] = cam->frame_width;
+            if (pco_set_roi(pco_d->pco, pco_d->roi) != PCO_NOERROR)
+                return err | UCA_ERR_OUT_OF_RANGE;
+
+            uint32_t w = cam->frame_width * 2;
+            grabber->set_property(grabber, UCA_PROP_WIDTH, &w);
             break;
 
         case UCA_PROP_HEIGHT:
             cam->frame_height = *((uint32_t *) data);
+            pco_d->roi[3] = cam->frame_height;
+            if (pco_set_roi(pco_d->pco, pco_d->roi) == PCO_NOERROR)
+                return err | UCA_ERR_OUT_OF_RANGE;
             break;
 
         case UCA_PROP_EXPOSURE:
@@ -250,7 +267,6 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     }
 
     struct uca_camera *uca = uca_cam_new();
-    uca->user = pco;
     uca->grabber = grabber;
     uca->grabber->synchronous = false;
 
@@ -283,6 +299,13 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     pco_get_actual_size(pco, &width, &height);
     uca->frame_width = width;
     uca->frame_height = height;
+
+    struct pco_desc *pco_d = (struct pco_desc *) malloc(sizeof(struct pco_desc));
+    uca->user = pco_d;
+    pco_d->pco = pco;
+    pco_d->roi[0] = pco_d->roi[1] = 1;
+    pco_d->roi[2] = width;
+    pco_d->roi[3] = height;
 
     /* Yes, we really have to take an image twice as large because we set the
      * CameraLink interface to 8-bit 10 Taps, but are actually using 5x16 bits. */
