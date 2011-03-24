@@ -73,19 +73,26 @@ static struct uca_sisofg_map_t *uca_me4_find_property(enum uca_grabber_constants
 
 uint32_t uca_me4_set_property(struct uca_grabber *grabber, int32_t property, void *data)
 {
-    uint32_t err = UCA_ERR_GRABBER | UCA_ERR_PROP;
-    struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
-    if (fg_prop == NULL)
-        return err | UCA_ERR_INVALID;
-
+    /* Handle all properties not related specifically to the me4 */
+    union uca_value *v = (union uca_value *) data;
     switch (property) {
         case UCA_PROP_GRAB_TIMEOUT:
-            ((struct fg_apc_data *) grabber->user)->timeout = *((uint32_t *) data);
+            ((struct fg_apc_data *) grabber->user)->timeout = v->u32;
             break;
+
+        case UCA_PROP_GRAB_SYNCHRONOUS:
+            grabber->synchronous = v->u32 != 0;
+            return UCA_NO_ERROR;
 
         default:
             break;
     }
+
+    /* Try to find a matching me4 property */
+    uint32_t err = UCA_ERR_GRABBER | UCA_ERR_PROP;
+    struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
+    if (fg_prop == NULL)
+        return err | UCA_ERR_INVALID;
 
     if (fg_prop->interpret_data) {
         /* Data is not a value but a SiSo specific constant that we need to
@@ -102,8 +109,17 @@ uint32_t uca_me4_set_property(struct uca_grabber *grabber, int32_t property, voi
             UCA_NO_ERROR : err | UCA_ERR_INVALID;
 }
 
-uint32_t uca_me4_get_property(struct uca_grabber *grabber, enum uca_grabber_constants property, void *data)
+uint32_t uca_me4_get_property(struct uca_grabber *grabber, int32_t property, void *data)
 {
+    switch (property) {
+        case UCA_PROP_GRAB_SYNCHRONOUS:
+            *((uint32_t *) data) = grabber->synchronous ? 1 : 0;
+            return UCA_NO_ERROR;
+
+        default:
+            break;
+    }
+
     uint32_t err = UCA_ERR_GRABBER | UCA_ERR_PROP;
     struct uca_sisofg_map_t *fg_prop = uca_me4_find_property(property);
     if (fg_prop == NULL)
@@ -139,9 +155,8 @@ uint32_t uca_me4_acquire(struct uca_grabber *grabber, int32_t n_frames)
     if (GET_MEM(grabber) == NULL)
         return UCA_ERR_GRABBER | UCA_ERR_NO_MEMORY;
 
-    int flag = grabber->asynchronous ? ACQ_STANDARD : ACQ_BLOCK;
     n_frames = n_frames < 0 ? GRAB_INFINITE : n_frames;
-    if (Fg_AcquireEx(GET_FG(grabber), 0, n_frames, flag, GET_MEM(grabber)) == FG_OK)
+    if (Fg_AcquireEx(GET_FG(grabber), 0, n_frames, ACQ_STANDARD, GET_MEM(grabber)) == FG_OK)
         return UCA_NO_ERROR;
 
     return UCA_ERR_GRABBER | UCA_ERR_ACQUIRE;
@@ -160,10 +175,10 @@ uint32_t uca_me4_grab(struct uca_grabber *grabber, void **buffer, uint64_t *fram
     static frameindex_t last_frame = 0;
     struct fg_apc_data *me4 = (struct fg_apc_data *) grabber->user;
 
-    if (grabber->asynchronous)
-        last_frame = Fg_getLastPicNumberEx(me4->fg, PORT_A, me4->mem);
-    else 
+    if (grabber->synchronous)
         last_frame = Fg_getLastPicNumberBlockingEx(me4->fg, last_frame+1, PORT_A, me4->timeout, me4->mem);
+    else 
+        last_frame = Fg_getLastPicNumberEx(me4->fg, PORT_A, me4->mem);
 
     if (last_frame <= 0)
         return UCA_ERR_GRABBER | UCA_ERR_FRAME_TRANSFER;

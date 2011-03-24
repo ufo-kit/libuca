@@ -40,6 +40,7 @@ const char *uca_unit_map[] = {
     "rows",
     "fps",
     "°C",
+    "[0/1]",
     "" 
 };
 
@@ -78,6 +79,7 @@ static struct uca_property property_map[UCA_PROP_LAST+1] = {
     { "Gain.ADC.Max",           uca_na,     uca_uint32t, uca_read },
     { "Gain.ADC.Step",          uca_na,     uca_uint32t, uca_read },
     { "Grabber.Timeout",        uca_s,      uca_uint32t, uca_readwrite },
+    { "Grabber.Synchronous",    uca_bool,   uca_uint32t, uca_readwrite },
     { "Mode.Timestamp",         uca_na,     uca_uint32t, uca_readwrite }, 
     { "Mode.Scan",              uca_na,     uca_uint32t, uca_readwrite }, 
     { "Interlace.Samplerate",   uca_na,     uca_uint32t, uca_readwrite }, 

@@ -252,7 +252,7 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     struct uca_camera *uca = uca_cam_new();
     uca->user = pco;
     uca->grabber = grabber;
-    uca->grabber->asynchronous = true;
+    uca->grabber->synchronous = false;
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_pco_destroy;

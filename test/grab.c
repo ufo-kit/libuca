@@ -24,6 +24,9 @@ int main(int argc, char *argv[])
     val = 0;
     handle_error(cam->set_property(cam, UCA_PROP_DELAY, &val));
 
+    val = 1;
+    handle_error(cam->set_property(cam, UCA_PROP_GRAB_SYNCHRONOUS, &val));
+
     uint32_t width, height, bits;
     handle_error(cam->get_property(cam, UCA_PROP_WIDTH, &width, 0));
     handle_error(cam->get_property(cam, UCA_PROP_HEIGHT, &height, 0));

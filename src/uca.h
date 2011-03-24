@@ -1,6 +1,8 @@
 #ifndef __UNIFIED_CAMERA_ACCESS_H
 #define __UNIFIED_CAMERA_ACCESS_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -103,6 +105,7 @@ enum uca_property_ids {
 
     /* grabber specific */
     UCA_PROP_GRAB_TIMEOUT,
+    UCA_PROP_GRAB_SYNCHRONOUS,
 
     /* pco.edge specific */
     UCA_PROP_TIMESTAMP_MODE,
@@ -170,6 +173,7 @@ typedef struct uca_property {
         uca_rows,   /**< number of rows */
         uca_fps,    /**< frames per second */
         uca_dc,     /**< degree celsius */
+        uca_bool,   /**< 1 or 0 for true and false */
         uca_na      /**< no unit available (for example modes) */
     } unit;
 
@@ -197,15 +201,32 @@ typedef struct uca_property {
     } access;
 } uca_property_t;
 
+union uca_value {
+    uint32_t u32;
+    uint8_t u8;
+    char *string;
+};
+
 extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding strings */
 
 
-/*
- * 16 bits error code
- * 4 bits error source
- * 4 bits error class
- * 4 bits reserved
- * 4 bits error level
+/**
+ * An error code is a 32 bit integer with the following format (x:y means x bits
+ * for purpose y):
+ *
+ *    [ 31 (MSB) ...                     ... 0 (LSB) ]
+ *    [ 4:lvl | 4:rsv | 4:class | 4:source | 16:code ]
+ *
+ * where
+ *
+ *  - lvl describes severity such as warning or failure,
+ *  - rsv is reserved,
+ *  - class describes the general class of the error,
+ *  - source describes where the error occured and
+ *  - code is the actual error condition
+ *
+ * UCA_ERR_MASK_*s can be used to mask the desired field of the error code.
+ * 
  */
 
 #define UCA_NO_ERROR            0x00000000

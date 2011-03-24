@@ -57,7 +57,10 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
     int err = UCA_NO_ERROR;
 
     /* We try to set the property on the grabber. If it returns "invalid", we
-     * also try it via the PF SDK. Else, there was a more serious error. */
+     * also try it via the PF SDK. Else, there was a more serious error.
+     *
+     * FIXME: This is actually not that good for cases where only the grabber
+     * should set a certain property and the camera itself is not able to do so. */
     err = grabber->set_property(grabber, property, data);
     if (((err & UCA_ERR_MASK_CODE) == UCA_ERR_INVALID) || (err == UCA_NO_ERROR))
         err = UCA_ERR_CAMERA | UCA_ERR_PROP;
@@ -208,7 +211,7 @@ uint32_t uca_pf_init(struct uca_camera **cam, struct uca_grabber *grabber)
 
     struct uca_camera *uca = uca_cam_new();
     uca->grabber = grabber;
-    uca->grabber->asynchronous = true;
+    uca->grabber->synchronous = false;
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_pf_destroy;
