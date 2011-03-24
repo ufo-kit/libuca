@@ -196,6 +196,9 @@ static int uca_me4_callback(frameindex_t frame, struct fg_apc_data *apc)
 
 uint32_t uca_me4_register_callback(struct uca_grabber *grabber, uca_cam_grab_callback callback, void *meta_data, void *user)
 {
+    if (GET_MEM(grabber) == NULL)
+        return UCA_ERR_GRABBER | UCA_ERR_CALLBACK | UCA_ERR_NO_MEMORY;
+
     if (grabber->callback == NULL) {
         grabber->callback = callback;
 
