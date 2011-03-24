@@ -115,7 +115,7 @@ target_link_libraries(uca ${uca_LIBS})
 
 # --- Install target ----------------------------------------------------------
 install(TARGETS uca 
-    LIBRARY DESTINATION lib{LIB_SUFFIX})
+    LIBRARY DESTINATION lib${LIB_SUFFIX})
 
 install(FILES ${uca_HDRS} 
     DESTINATION include/libuca)
