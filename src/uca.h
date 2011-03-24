@@ -302,8 +302,7 @@ const char* uca_get_property_name(enum uca_property_ids property_id);
  */
 uca_property_t *uca_get_full_property(enum uca_property_ids property_id);
 
-
-
+#define uca_set_void(p, type, value) { *((type *) p) = (type) value; }
 
 #ifdef __cplusplus
 }

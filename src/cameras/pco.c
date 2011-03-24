@@ -15,7 +15,7 @@ typedef struct pco_desc {
 #define GET_PCO_DESC(cam) ((struct pco_desc *) cam->user)
 #define GET_PCO(cam) (((struct pco_desc *)(cam->user))->pco)
 
-#define set_void(p, type, value) { *((type *) p) = (type) value; }
+#define uca_set_void(p, type, value) { *((type *) p) = (type) value; }
 
 
 static uint32_t uca_pco_set_exposure(struct uca_camera *cam, uint32_t *exposure)
@@ -120,7 +120,7 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
             {
                 SC2_Temperature_Response temperature;
                 if (pco_read_property(pco, GET_TEMPERATURE, &temperature, sizeof(temperature)) == PCO_NOERROR)
-                    set_void(data, uint32_t, temperature.sCCDtemp / 10);
+                    uca_set_void(data, uint32_t, temperature.sCCDtemp / 10);
             }
             break;
 
@@ -128,32 +128,32 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
             {
                 SC2_Temperature_Response temperature;
                 if (pco_read_property(pco, GET_TEMPERATURE, &temperature, sizeof(temperature)) == PCO_NOERROR)
-                    set_void(data, uint32_t, temperature.sCamtemp);
+                    uca_set_void(data, uint32_t, temperature.sCamtemp);
             }
             break;
 
         case UCA_PROP_WIDTH:
-            set_void(data, uint32_t, cam->frame_width);
+            uca_set_void(data, uint32_t, cam->frame_width);
             break;
 
         case UCA_PROP_WIDTH_MIN:
-            set_void(data, uint32_t, 1);
+            uca_set_void(data, uint32_t, 1);
             break;
 
         case UCA_PROP_WIDTH_MAX:
-            set_void(data, uint32_t, pco->description.wMaxHorzResStdDESC);
+            uca_set_void(data, uint32_t, pco->description.wMaxHorzResStdDESC);
             break;
 
         case UCA_PROP_HEIGHT:
-            set_void(data, uint32_t, cam->frame_height);
+            uca_set_void(data, uint32_t, cam->frame_height);
             break;
 
         case UCA_PROP_HEIGHT_MIN:
-            set_void(data, uint32_t, 1);
+            uca_set_void(data, uint32_t, 1);
             break;
 
         case UCA_PROP_HEIGHT_MAX:
-            set_void(data, uint32_t, pco->description.wMaxVertResStdDESC);
+            uca_set_void(data, uint32_t, pco->description.wMaxVertResStdDESC);
             break;
 
         case UCA_PROP_X_OFFSET:
@@ -170,11 +170,11 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
             break;
 
         case UCA_PROP_DELAY_MIN:
-            set_void(data, uint32_t, pco->description.dwMinDelayDESC);
+            uca_set_void(data, uint32_t, pco->description.dwMinDelayDESC);
             break;
 
         case UCA_PROP_DELAY_MAX:
-            set_void(data, uint32_t, pco->description.dwMaxDelayDESC);
+            uca_set_void(data, uint32_t, pco->description.dwMaxDelayDESC);
             break;
 
         case UCA_PROP_EXPOSURE:
@@ -185,15 +185,15 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
             break;
 
         case UCA_PROP_EXPOSURE_MIN:
-            set_void(data, uint32_t, pco->description.dwMinExposureDESC);
+            uca_set_void(data, uint32_t, pco->description.dwMinExposureDESC);
             break;
 
         case UCA_PROP_EXPOSURE_MAX:
-            set_void(data, uint32_t, pco->description.dwMaxExposureDESC);
+            uca_set_void(data, uint32_t, pco->description.dwMaxExposureDESC);
             break;
 
         case UCA_PROP_BITDEPTH:
-            set_void(data, uint32_t, 16);
+            uca_set_void(data, uint32_t, 16);
             break;
 
         case UCA_PROP_GRAB_TIMEOUT:
@@ -202,7 +202,7 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
                 uint32_t err = cam->grabber->get_property(cam->grabber, UCA_PROP_GRAB_TIMEOUT, &timeout);
                 if (err != UCA_NO_ERROR)
                     return err;
-                set_void(data, uint32_t, timeout);
+                uca_set_void(data, uint32_t, timeout);
             }
             break;
 
@@ -212,7 +212,7 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_start_recording(struct uca_camera *cam)
+static uint32_t uca_pco_start_recording(struct uca_camera *cam)
 {
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_INIT;
     struct pco_edge *pco = GET_PCO(cam);
@@ -223,14 +223,14 @@ uint32_t uca_pco_start_recording(struct uca_camera *cam)
     return cam->grabber->acquire(cam->grabber, -1);
 }
 
-uint32_t uca_pco_stop_recording(struct uca_camera *cam)
+static uint32_t uca_pco_stop_recording(struct uca_camera *cam)
 {
     if (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR)
         return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_UNCLASSIFIED;
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer, void *meta_data)
+static uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     uint16_t *frame;
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
@@ -241,7 +241,7 @@ uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer, void *meta_data)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pco_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user)
+static uint32_t uca_pco_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user)
 {
     if (cam->callback == NULL) {
         cam->callback = callback;
@@ -277,6 +277,7 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->start_recording = &uca_pco_start_recording;
     uca->stop_recording = &uca_pco_stop_recording;
     uca->grab = &uca_pco_grab;
+    uca->register_callback = &uca_pco_register_callback;
 
     /* Prepare camera for recording */
     pco_set_scan_mode(pco, PCO_SCANMODE_SLOW);

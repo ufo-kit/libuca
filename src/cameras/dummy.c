@@ -29,7 +29,7 @@ typedef struct dummy_cam {
 } dummy_cam_t;
 
 
-static const char digits[10][20] = {
+static const char g_digits[10][20] = {
     /* 0 */
     { 0x00, 0xff, 0xff, 0x00,
       0xff, 0x00, 0x00, 0xff,
@@ -96,13 +96,12 @@ const int DIGIT_WIDTH = 4;
 const int DIGIT_HEIGHT = 5;
 
 #define GET_DUMMY(uca) ((struct dummy_cam *)(uca->user))
-#define set_void(p, type, value) { *((type *) p) = value; }
 
 static void uca_dummy_print_number(char *buffer, int number, int x, int y, int width)
 {
     for (int i = 0; i < DIGIT_WIDTH; i++) {
         for (int j = 0; j < DIGIT_HEIGHT; j++) {
-            buffer[(y+j)*width + (x+i)] = digits[number][j*DIGIT_WIDTH+i];
+            buffer[(y+j)*width + (x+i)] = g_digits[number][j*DIGIT_WIDTH+i];
         }
     }
 }
@@ -191,31 +190,31 @@ static uint32_t uca_dummy_get_property(struct uca_camera *cam, enum uca_property
             break;
 
         case UCA_PROP_WIDTH:
-            set_void(data, uint32_t, cam->frame_width);
+            uca_set_void(data, uint32_t, cam->frame_width);
             break;
 
         case UCA_PROP_WIDTH_MIN:
-            set_void(data, uint32_t, 1);
+            uca_set_void(data, uint32_t, 1);
             break;
 
         case UCA_PROP_WIDTH_MAX:
-            set_void(data, uint32_t, 4096);
+            uca_set_void(data, uint32_t, 4096);
             break;
 
         case UCA_PROP_HEIGHT:
-            set_void(data, uint32_t, cam->frame_height);
+            uca_set_void(data, uint32_t, cam->frame_height);
             break;
 
         case UCA_PROP_HEIGHT_MIN:
-            set_void(data, uint32_t, 1);
+            uca_set_void(data, uint32_t, 1);
             break;
 
         case UCA_PROP_HEIGHT_MAX:
-            set_void(data, uint32_t, 4096);
+            uca_set_void(data, uint32_t, 4096);
             break;
 
         case UCA_PROP_BITDEPTH:
-            set_void(data, uint32_t, 8);
+            uca_set_void(data, uint32_t, 8);
             break;
 
         default:
@@ -224,7 +223,7 @@ static uint32_t uca_dummy_get_property(struct uca_camera *cam, enum uca_property
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_dummy_start_recording(struct uca_camera *cam)
+static uint32_t uca_dummy_start_recording(struct uca_camera *cam)
 {
     if (cam->callback != NULL) {
 #ifdef HAVE_PTHREADS
@@ -240,7 +239,7 @@ uint32_t uca_dummy_start_recording(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_dummy_stop_recording(struct uca_camera *cam)
+static uint32_t uca_dummy_stop_recording(struct uca_camera *cam)
 {
     struct dummy_cam *dc = GET_DUMMY(cam);
     if (cam->callback != NULL) {
@@ -252,7 +251,7 @@ uint32_t uca_dummy_stop_recording(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callback cb, void *user)
+static uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callback cb, void *user)
 {
     if (cam->callback == NULL) {
         cam->callback = cb;
@@ -264,7 +263,7 @@ uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callba
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer, void *meta_data)
+static uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     if (cam->callback != NULL)
         return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;

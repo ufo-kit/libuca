@@ -7,8 +7,6 @@
 #include "uca-cam.h"
 #include "uca-grabber.h"
 
-#define set_void(p, type, value) { *((type *) p) = value; }
-
 struct uca_pf_map {
     enum uca_property_ids uca_prop;
     const char *pf_prop;
@@ -115,7 +113,7 @@ static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_id
     /* Handle all special cases */
     switch (property) {
         case UCA_PROP_BITDEPTH:
-            set_void(data, uint32_t, 8);
+            uca_set_void(data, uint32_t, 8);
             return UCA_NO_ERROR;
 
         default:
@@ -131,16 +129,16 @@ static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_id
 
             switch (value.type) {
                 case PF_INT:
-                    set_void(data, uint32_t, value.value.i);
+                    uca_set_void(data, uint32_t, value.value.i);
                     break;
 
                 case PF_FLOAT:
-                    set_void(data, uint32_t, (uint32_t) floor((value.value.f * 1000.0)+0.5));
+                    uca_set_void(data, uint32_t, (uint32_t) floor((value.value.f * 1000.0)+0.5));
                     break;
 
                 case PF_STRING:
                     if (property == UCA_PROP_FRAMERATE) {
-                        set_void(data, uint32_t, (uint32_t) floor(atof(value.value.p)+0.5));
+                        uca_set_void(data, uint32_t, (uint32_t) floor(atof(value.value.p)+0.5));
                     }
                     else {
                         strncpy((char *) data, value.value.p, num);
@@ -148,7 +146,7 @@ static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_id
                     break;
 
                 case PF_MODE:
-                    set_void(data, uint32_t, (uint32_t) value.value.i);
+                    uca_set_void(data, uint32_t, (uint32_t) value.value.i);
                     break;
 
                 default:
@@ -163,17 +161,17 @@ static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_id
     return cam->grabber->get_property(cam->grabber, property, data);
 }
 
-uint32_t uca_pf_start_recording(struct uca_camera *cam)
+static uint32_t uca_pf_start_recording(struct uca_camera *cam)
 {
     return cam->grabber->acquire(cam->grabber, -1);
 }
 
-uint32_t uca_pf_stop_recording(struct uca_camera *cam)
+static uint32_t uca_pf_stop_recording(struct uca_camera *cam)
 {
     return cam->grabber->stop_acquire(cam->grabber);
 }
 
-uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata)
+static uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata)
 {
     uint16_t *frame;
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
@@ -184,7 +182,7 @@ uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata)
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pf_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user)
+static uint32_t uca_pf_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user)
 {
     if (cam->callback == NULL) {
         cam->callback = callback;

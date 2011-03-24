@@ -131,7 +131,7 @@ typedef struct uca_grabber {
 
     /* Private */
     uca_cam_grab_callback   callback;
-    bool synchronous;
+    bool synchronous;   /**< if true uca_grabber_grab() blocks until image is transferred */
     void *user;
 } uca_grabber_t;
 
