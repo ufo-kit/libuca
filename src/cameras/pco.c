@@ -165,31 +165,43 @@ static uint32_t uca_pco_get_property(struct uca_camera *cam, enum uca_property_i
         case UCA_PROP_DELAY:
             {
                 uint32_t exposure;
-                return pco_get_delay_exposure(pco, (uint32_t *) data, &exposure);
+                pco_get_delay_exposure(pco, (uint32_t *) data, &exposure);
             }
             break;
 
         case UCA_PROP_DELAY_MIN:
-            uca_set_void(data, uint32_t, pco->description.dwMinDelayDESC);
+            {
+                uint32_t delay = pco->description.dwMinDelayDESC / 1000;
+                uca_set_void(data, uint32_t, delay);
+            }
             break;
 
         case UCA_PROP_DELAY_MAX:
-            uca_set_void(data, uint32_t, pco->description.dwMaxDelayDESC);
+            {
+                uint32_t delay = pco->description.dwMaxDelayDESC * 1000;
+                uca_set_void(data, uint32_t, delay);
+            }
             break;
 
         case UCA_PROP_EXPOSURE:
             {
                 uint32_t delay;
-                return pco_get_delay_exposure(pco, &delay, (uint32_t *) data);
+                pco_get_delay_exposure(pco, &delay, (uint32_t *) data);
             }
             break;
 
         case UCA_PROP_EXPOSURE_MIN:
-            uca_set_void(data, uint32_t, pco->description.dwMinExposureDESC);
+            {
+                uint32_t exposure = pco->description.dwMinExposureDESC / 1000;
+                uca_set_void(data, uint32_t, exposure);
+            }
             break;
 
         case UCA_PROP_EXPOSURE_MAX:
-            uca_set_void(data, uint32_t, pco->description.dwMaxExposureDESC);
+            {
+                uint32_t exposure = pco->description.dwMaxExposureDESC * 1000;
+                uca_set_void(data, uint32_t, exposure);
+            }
             break;
 
         case UCA_PROP_BITDEPTH:
