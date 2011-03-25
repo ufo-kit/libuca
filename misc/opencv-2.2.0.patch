@@ -123,8 +123,8 @@
 
 === added file 'modules/highgui/src/cap_uca.cpp'
 --- modules/highgui/src/cap_uca.cpp	1970-01-01 00:00:00 +0000
-+++ modules/highgui/src/cap_uca.cpp	2011-03-25 10:26:29 +0000
-@@ -0,0 +1,232 @@
++++ modules/highgui/src/cap_uca.cpp	2011-03-25 11:31:07 +0000
+@@ -0,0 +1,234 @@
 +/*M///////////////////////////////////////////////////////////////////////////////////////
 +//
 +//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -266,7 +266,7 @@
 +    device->get_property(device, UCA_PROP_BITDEPTH, &bits, 0);
 +    bit_depth = (bits == 8) ? IPL_DEPTH_8U : IPL_DEPTH_16U;
 +
-+    int pixel_size = (bits == 8) ? 1 : 2;
++    pixel_size = (bits == 8) ? 1 : 2;
 +    buffer = new char[width*height*pixel_size];
 +    uca_cam_alloc(device, 10);
 +
@@ -278,8 +278,10 @@
 +
 +void CvCapture_UCA::close()
 +{
-+    device->stop_recording(device);
-+    uca_destroy(uca_handle);
++    if (device)
++        device->stop_recording(device);
++    if (uca_handle);
++        uca_destroy(uca_handle);
 +    delete[] buffer;
 +}
 +
