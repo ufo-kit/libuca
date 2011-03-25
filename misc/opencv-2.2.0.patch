@@ -1,0 +1,372 @@
+=== modified file 'CMakeLists.txt'
+--- CMakeLists.txt	2011-03-24 16:43:57 +0000
++++ CMakeLists.txt	2011-03-25 08:34:03 +0000
+@@ -289,6 +289,7 @@
+         set(WITH_GSTREAMER ON CACHE BOOL "Include Gstreamer support")
+         set(WITH_V4L ON CACHE BOOL "Include Video 4 Linux support")
+         set(WITH_XINE OFF CACHE BOOL "Include Xine support (GPL)")
++        set(WITH_UCA OFF CACHE BOOL "Include Unified Camera Access support")
+     endif()
+     set(WITH_PVAPI ON CACHE BOOL "Include Prosilica GigE support")
+     set(WITH_1394 ON CACHE BOOL "Include IEEE1394 support")
+@@ -437,6 +438,13 @@
+             set(HAVE_CAMV4L2 FALSE)
+         endif()
+ 
++        if(WITH_UCA)
++            CHECK_MODULE(uca HAVE_UCA)
++            CHECK_INCLUDE_FILE(uca.h HAVE_UCA)
++        else()
++            set(HAVE_UCA FALSE)
++        endif()
++
+         if(NOT OPENCV_BUILD_3RDPARTY_LIBS)
+             if(WITH_PNG)
+                 include(FindPNG)
+@@ -1367,6 +1375,7 @@
+ message(STATUS "    V4L/V4L2:                  ${HAVE_CAMV4L}/${HAVE_CAMV4L2}")
+ endif()
+ message(STATUS "    Xine:                      ${HAVE_XINE}")
++message(STATUS "    Unified Camera Access:     ${HAVE_UCA}")
+ endif()
+ 
+ if(APPLE)
+
+=== modified file 'cvconfig.h.cmake'
+--- cvconfig.h.cmake	2011-03-24 16:43:57 +0000
++++ cvconfig.h.cmake	2011-03-25 10:41:09 +0000
+@@ -31,6 +31,9 @@
+ /* IEEE1394 capturing support - libdc1394 v2.x */
+ #cmakedefine HAVE_DC1394_2
+ 
++/* Unified Camera Access - libuca 0.4.0 */
++#cmakedefine HAVE_UCA
++
+ /* ffmpeg in Gentoo */
+ #cmakedefine HAVE_GENTOO_FFMPEG
+ 
+
+=== modified file 'modules/highgui/CMakeLists.txt'
+--- modules/highgui/CMakeLists.txt	2011-03-24 16:43:57 +0000
++++ modules/highgui/CMakeLists.txt	2011-03-25 09:33:17 +0000
+@@ -118,6 +118,10 @@
+         set(highgui_srcs ${highgui_srcs} src/cap_dc1394.cpp)
+     endif()
+ 
++    if(HAVE_UCA)
++        set(highgui_srcs ${highgui_srcs} src/cap_uca.cpp)
++    endif()
++
+     if(HAVE_FFMPEG)
+         set(highgui_srcs ${highgui_srcs} src/cap_ffmpeg.cpp)
+         if(BZIP2_LIBRARIES)
+
+=== modified file 'modules/highgui/include/opencv2/highgui/highgui_c.h'
+--- modules/highgui/include/opencv2/highgui/highgui_c.h	2011-03-24 16:43:57 +0000
++++ modules/highgui/include/opencv2/highgui/highgui_c.h	2011-03-25 08:55:31 +0000
+@@ -288,7 +288,9 @@
+ 
+ 	CV_CAP_DSHOW    =700,   // DirectShow (via videoInput)
+ 
+-	CV_CAP_PVAPI    =800   // PvAPI, Prosilica GigE SDK
++	CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
++
++    CV_CAP_UCA      =900    // Unified Camera Access for CameraLink and IPE camera
+ };
+ 
+ /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
+
+=== modified file 'modules/highgui/src/cap.cpp'
+--- modules/highgui/src/cap.cpp	2011-03-24 16:43:57 +0000
++++ modules/highgui/src/cap.cpp	2011-03-25 10:39:36 +0000
+@@ -123,6 +123,7 @@
+         CV_CAP_MIL,
+         CV_CAP_QT,
+         CV_CAP_UNICAP,
++        CV_CAP_UCA,
+         -1
+     };
+ 
+@@ -142,7 +143,7 @@
+         defined(HAVE_CAMV4L) || defined (HAVE_CAMV4L2) || defined(HAVE_GSTREAMER) || \
+         defined(HAVE_DC1394_2) || defined(HAVE_DC1394) || defined(HAVE_CMU1394) || \
+         defined(HAVE_GSTREAMER) || defined(HAVE_MIL) || defined(HAVE_QUICKTIME) || \
+-        defined(HAVE_UNICAP) || defined(HAVE_PVAPI)
++        defined(HAVE_UNICAP) || defined(HAVE_PVAPI) || defined(HAVE_UCA)
+         // local variable to memorize the captured device
+         CvCapture *capture;
+         #endif
+@@ -168,7 +169,7 @@
+         case CV_CAP_VFW:
+         #ifdef HAVE_VFW
+             capture = cvCreateCameraCapture_VFW (index);
+-            if (capture)
++            if (capture) 
+                 return capture;
+         #endif
+         #if defined (HAVE_CAMV4L) || defined (HAVE_CAMV4L2)
+@@ -241,6 +242,14 @@
+             return capture;
+         break;
+         #endif
++
++        #ifdef HAVE_UCA
++        case CV_CAP_UCA:
++        capture = cvCreateCameraCapture_UCA (index);
++        if (capture)
++            return capture;
++        break;
++        #endif
+         
+         }
+     }
+
+=== added file 'modules/highgui/src/cap_uca.cpp'
+--- modules/highgui/src/cap_uca.cpp	1970-01-01 00:00:00 +0000
++++ modules/highgui/src/cap_uca.cpp	2011-03-25 10:26:29 +0000
+@@ -0,0 +1,232 @@
++/*M///////////////////////////////////////////////////////////////////////////////////////
++//
++//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
++//
++//  By downloading, copying, installing or using the software you agree to this license.
++//  If you do not agree to this license, do not download, install,
++//  copy or use the software.
++//
++//
++//                        Intel License Agreement
++//                For Open Source Computer Vision Library
++//
++// Copyright (C) 2008, Nils Hasler, all rights reserved.
++// Third party copyrights are property of their respective owners.
++//
++// Redistribution and use in source and binary forms, with or without modification,
++// are permitted provided that the following conditions are met:
++//
++//   * Redistribution's of source code must retain the above copyright notice,
++//     this list of conditions and the following disclaimer.
++//
++//   * Redistribution's in binary form must reproduce the above copyright notice,
++//     this list of conditions and the following disclaimer in the documentation
++//     and/or other materials provided with the distribution.
++//
++//   * The name of Intel Corporation may not be used to endorse or promote products
++//     derived from this software without specific prior written permission.
++//
++// This software is provided by the copyright holders and contributors "as is" and
++// any express or implied warranties, including, but not limited to, the implied
++// warranties of merchantability and fitness for a particular purpose are disclaimed.
++// In no event shall the Intel Corporation or contributors be liable for any direct,
++// indirect, incidental, special, exemplary, or consequential damages
++// (including, but not limited to, procurement of substitute goods or services;
++// loss of use, data, or profits; or business interruption) however caused
++// and on any theory of liability, whether in contract, strict liability,
++// or tort (including negligence or otherwise) arising in any way out of
++// the use of this software, even if advised of the possibility of such damage.
++//
++//M*/
++
++// Author: Matthias Vogelgesang <matthias.vogelgesang@kit.edu>
++//
++//         Karlsruhe Institute of Technology (KIT)
++//         Institute for Data Processing and Electronics
++//
++
++
++#include "precomp.hpp"
++#include <unistd.h>
++#include <string.h>
++#include <uca/uca.h>
++#include <uca/uca-cam.h>
++
++#ifdef NDEBUG
++#define CV_WARN(message)
++#else
++#define CV_WARN(message) fprintf(stderr, "warning: %s (%s:%d)\n", message, __FILE__, __LINE__)
++#endif
++
++static bool is_initialized = false;
++
++class CvCapture_UCA : public CvCapture
++{
++    public:
++        CvCapture_UCA() { init(); }
++        virtual ~CvCapture_UCA() { close(); }
++
++        virtual bool open(int);
++        virtual void close();
++
++        virtual double getProperty(int);
++        virtual bool setProperty(int, double);
++        virtual bool grabFrame();
++        virtual IplImage* retrieveFrame(int);
++
++    protected:   
++        void init();
++        char *buffer;
++        IplImage	       *frame;
++
++    private:
++        struct uca *uca_handle;
++        struct uca_camera *device;
++        int width;
++        int height;
++        int bit_depth;  // in terms of IplImage structure
++        int pixel_size;
++};
++
++void CvCapture_UCA::init()
++{
++    buffer = NULL;
++    frame = NULL;
++    width = 0;
++    height = 0;
++    bit_depth = 0;
++    pixel_size = 0;
++}
++
++bool CvCapture_UCA::grabFrame()
++{
++    if (!buffer)
++        return false;
++
++    device->grab(device, buffer, NULL);
++    return true;
++}
++
++IplImage * CvCapture_UCA::retrieveFrame(int)
++{
++    if (!frame)
++        frame = cvCreateImage(cvSize(width, height), bit_depth, 1);
++
++    memcpy (frame->imageData, buffer, width*height*pixel_size);
++    return frame;
++}
++
++bool CvCapture_UCA::open(int index)
++{
++    //CV_FUNCNAME("cvCaptureFromCAM_UCA");
++
++    __BEGIN__;
++
++    if (!is_initialized) {
++        is_initialized = true;
++    }
++
++    uca_handle = uca_init(NULL);
++    if (uca_handle == NULL)
++        return false;
++
++    device = uca_handle->cameras;
++
++    device->get_property(device, UCA_PROP_WIDTH, &width, 0);
++    device->get_property(device, UCA_PROP_HEIGHT, &height, 0);
++
++    int bits = 0;
++    device->get_property(device, UCA_PROP_BITDEPTH, &bits, 0);
++    bit_depth = (bits == 8) ? IPL_DEPTH_8U : IPL_DEPTH_16U;
++
++    int pixel_size = (bits == 8) ? 1 : 2;
++    buffer = new char[width*height*pixel_size];
++    uca_cam_alloc(device, 10);
++
++    device->start_recording(device);
++
++    __END__;
++    return true;
++}
++
++void CvCapture_UCA::close()
++{
++    device->stop_recording(device);
++    uca_destroy(uca_handle);
++    delete[] buffer;
++}
++
++double CvCapture_UCA::getProperty( int propId )
++{
++    switch(propId) {
++        case CV_CAP_PROP_POS_MSEC:
++        case CV_CAP_PROP_POS_FRAMES:
++        case CV_CAP_PROP_POS_AVI_RATIO:
++            break;
++        case CV_CAP_PROP_FRAME_WIDTH:
++            return (double) width;
++        case CV_CAP_PROP_FRAME_HEIGHT:
++            return (double) height;
++        case CV_CAP_PROP_FPS:
++        case CV_CAP_PROP_FOURCC:
++            break;
++        case CV_CAP_PROP_FRAME_COUNT:
++            return (double) device->current_frame;
++        case CV_CAP_PROP_FORMAT:
++        case CV_CAP_PROP_MODE:
++        case CV_CAP_PROP_BRIGHTNESS:
++        case CV_CAP_PROP_CONTRAST:
++        case CV_CAP_PROP_SATURATION:
++        case CV_CAP_PROP_HUE:
++        case CV_CAP_PROP_GAIN:
++        case CV_CAP_PROP_CONVERT_RGB:
++            break;
++        default:
++            CV_WARN("UCA: unhandled property");
++            break;
++    }
++    return false;
++}
++
++bool CvCapture_UCA::setProperty( int propId, double value )
++{
++    switch(propId) {
++        case CV_CAP_PROP_POS_MSEC:
++            break;
++        case CV_CAP_PROP_POS_FRAMES:
++            break;
++        case CV_CAP_PROP_POS_AVI_RATIO:
++            break;
++        case CV_CAP_PROP_FRAME_WIDTH:
++            break;
++        case CV_CAP_PROP_FRAME_HEIGHT:
++            break;
++        case CV_CAP_PROP_FPS:
++            break;
++        case CV_CAP_PROP_FOURCC:
++        case CV_CAP_PROP_FRAME_COUNT:
++        case CV_CAP_PROP_FORMAT:
++        case CV_CAP_PROP_MODE:
++        case CV_CAP_PROP_BRIGHTNESS:
++        case CV_CAP_PROP_CONTRAST:
++        case CV_CAP_PROP_SATURATION:
++        case CV_CAP_PROP_HUE:
++        case CV_CAP_PROP_GAIN:
++        case CV_CAP_PROP_CONVERT_RGB:
++            break;
++        default:
++            CV_WARN("UCA: unhandled property");
++    }
++    return false;
++}
++
++CvCapture *cvCreateCameraCapture_UCA(int index)
++{
++    CvCapture_UCA* capture = new CvCapture_UCA;
++
++    if (capture->open(index))
++        return capture;
++
++    delete capture;
++    return false;
++}
+
+=== modified file 'modules/highgui/src/precomp.hpp'
+--- modules/highgui/src/precomp.hpp	2011-03-24 16:43:57 +0000
++++ modules/highgui/src/precomp.hpp	2011-03-25 09:29:34 +0000
+@@ -113,6 +113,7 @@
+ CvCapture * cvCreateCameraCapture_DC1394_2( int index );
+ CvCapture* cvCreateCameraCapture_MIL( int index );
+ CvCapture * cvCreateCameraCapture_CMU( int index );
++CvCapture * cvCreateCameraCapture_UCA( int index );
+ CV_IMPL CvCapture * cvCreateCameraCapture_TYZX( int index );
+ CvCapture* cvCreateFileCapture_Win32( const char* filename );
+ CvCapture* cvCreateCameraCapture_VFW( int index );
+
