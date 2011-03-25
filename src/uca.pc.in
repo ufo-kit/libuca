@@ -1,0 +1,13 @@
+# Package Information for pkg-config
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir_old=@includedir@/uca
+includedir_new=@includedir@
+
+Name: libuca
+Description: Unified Camera Access
+Version: @VERSION@
+Libs: -L${libdir} -luca
+Cflags: -I${includedir_old} -I${includedir_new}

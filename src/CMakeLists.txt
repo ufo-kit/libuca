@@ -118,7 +118,19 @@ install(TARGETS uca
     LIBRARY DESTINATION lib${LIB_SUFFIX})
 
 install(FILES ${uca_HDRS} 
-    DESTINATION include/libuca)
+    DESTINATION include/uca)
+
+# --- install pkg-config file
+set(prefix      ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix "\${prefix}")
+set(libdir      "\${exec_prefix}/lib")
+set(includedir  "\${prefix}/include")
+set(VERSION     ${UCA_VERSION_STRING})
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uca.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/uca.pc" @ONLY IMMEDIATE)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc DESTINATION lib/pkgconfig)
+
 
 set(CPACK_PACKAGE_DESCRIPTION "Unified Camera Access library")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Abstract interface for different camera classes and frame grabber devices")
@@ -133,9 +145,9 @@ set(CPACK_PACKAGE_VENDOR "Karlsruhe Institute of Technology/IPE")
 set(CPACK_PACKAGE_VERSION_MAJOR ${UCA_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${UCA_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${UCA_VERSION_PATCH})
-set(VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+set(VERSION ${UCA_VERSION_STRING})
 
 set(CPACK_GENERATOR "DEB;RPM;")
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${CMAKE_SYSTEM_PROCESSOR}")
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${UCA_VERSION_STRING}-${CMAKE_SYSTEM_PROCESSOR}")
 
 include(CPack)
