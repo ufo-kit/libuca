@@ -24,6 +24,6 @@ Patches
 
 We only supply patches for stable releases of OpenCV. Apply them using
 
-    ``patch -r0 < opencv-x.y.z.patch``
+    ``patch -p0 < opencv-x.y.z.patch``
 
-inside the top-level directory of the source directory.
+inside the top-level directory of the source directory of OpenCV x.y.z.
