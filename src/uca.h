@@ -139,6 +139,49 @@ enum uca_property_ids {
 #define UCA_CORRECT_HOTPIXEL    0x02
 #define UCA_CORRECT_GAIN        0x04
 
+/**
+ * The physical unit of this property.
+ *
+ * This is important in order to let the camera drivers know, how to convert
+ * the values into their respective target value. It is also used for human
+ * interfaces.
+ */
+enum uca_unit {
+    uca_pixel,  /**< number of pixels */
+    uca_bits,   /**< number of bits */
+    uca_ns,     /**< nanoseconds */
+    uca_us,     /**< microseconds */
+    uca_ms,     /**< milliseconds */
+    uca_s,      /**< seconds */
+    uca_rows,   /**< number of rows */
+    uca_fps,    /**< frames per second */
+    uca_dc,     /**< degree celsius */
+    uca_bool,   /**< 1 or 0 for true and false */
+    uca_na      /**< no unit available (for example modes) */
+};
+
+/**
+ * The data type of this property.
+ *
+ * When using uca_cam_set_property() and uca_cam_get_property() this field
+ * must be respected and correct data transfered, as the values are
+ * interpreted like defined here.
+ */
+enum uca_types {
+    uca_uint32t,
+    uca_uint8t,
+    uca_string
+};
+
+/**
+ * Access rights determine if uca_cam_get_property() and/or
+ * uca_cam_set_property() can be used with this property.
+ */
+enum uca_access_rights {
+    uca_read = 0x01,                /**< property can be read */
+    uca_write = 0x02,               /**< property can be written */
+    uca_readwrite = 0x01 | 0x02     /**< property can be read and written */
+};
 
 /**
  * A uca_property_t describes a vendor-independent property used by cameras and
@@ -156,49 +199,10 @@ typedef struct uca_property {
      */
     const char *name;
 
-    /**
-     * The physical unit of this property.
-     *
-     * This is important in order to let the camera drivers know, how to convert
-     * the values into their respective target value. It is also used for human
-     * interfaces.
-     */
-    enum uca_unit {
-        uca_pixel,  /**< number of pixels */
-        uca_bits,   /**< number of bits */
-        uca_ns,     /**< nanoseconds */
-        uca_us,     /**< microseconds */
-        uca_ms,     /**< milliseconds */
-        uca_s,      /**< seconds */
-        uca_rows,   /**< number of rows */
-        uca_fps,    /**< frames per second */
-        uca_dc,     /**< degree celsius */
-        uca_bool,   /**< 1 or 0 for true and false */
-        uca_na      /**< no unit available (for example modes) */
-    } unit;
+    enum uca_unit unit;
+    enum uca_access_rights access;
+    enum uca_types type;
 
-    /**
-     * The data type of this property.
-     *
-     * When using uca_cam_set_property() and uca_cam_get_property() this field
-     * must be respected and correct data transfered, as the values are
-     * interpreted like defined here.
-     */
-    enum uca_types {
-        uca_uint32t,
-        uca_uint8t,
-        uca_string
-    } type;
-
-    /**
-     * Access rights determine if uca_cam_get_property() and/or
-     * uca_cam_set_property() can be used with this property.
-     */
-    enum uca_access_rights {
-        uca_read = 0x01,                /**< property can be read */
-        uca_write = 0x02,               /**< property can be written */
-        uca_readwrite = 0x01 | 0x02     /**< property can be read and written */
-    } access;
 } uca_property_t;
 
 union uca_value {
@@ -290,7 +294,7 @@ void uca_destroy(struct uca *u);
 /**
  * Convert a property string to the corresponding ID
  */
-enum uca_property_ids uca_get_property_id(const char *property_name);
+uint32_t uca_get_property_id(const char *property_name, enum uca_property_ids *prop_id);
 
 /**
  * Convert a property ID to the corresponding string 

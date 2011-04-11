@@ -208,12 +208,14 @@ void uca_destroy(struct uca *u)
     uca_unlock();
 }
 
-enum uca_property_ids uca_get_property_id(const char *property_name)
+uint32_t uca_get_property_id(const char *property_name, enum uca_property_ids *prop_id)
 {
     int i = 0;
     while (property_map[i].name != NULL) {
-        if (!strcmp(property_map[i].name, property_name))
-            return i;
+        if (!strcmp(property_map[i].name, property_name)) {
+            *prop_id = (enum uca_property_ids) i;
+            return UCA_NO_ERROR;
+        }
         i++;
     }
     return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
