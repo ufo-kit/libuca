@@ -63,8 +63,8 @@ if (IPE_FOUND)
     option(HAVE_IPE_CAMERA "Camera: Custom IPE based on Xilinx FPGA" ON)
 
     if (HAVE_IPE_CAMERA)
-        set(uca_SRC ${uca_SRCS} cameras/ipe.c)
-        set(uca_LIB ${uca_LIBS} ${IPE_LIBRARIES})
+        set(uca_SRCS ${uca_SRCS} cameras/ipe.c)
+        set(uca_LIBS ${uca_LIBS} ${IPE_LIBRARIES})
 
         include_directories(${IPE_INCLUDE_DIRS})
     endif()

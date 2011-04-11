@@ -73,7 +73,7 @@ static uint32_t uca_ipe_get_property(struct uca_camera *cam, enum uca_property_i
             break;
 
         default:
-            return UCA_ERR_PROP_INVALID;
+            return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
     }
     return UCA_NO_ERROR;
 }
@@ -100,7 +100,7 @@ static uint32_t uca_ipe_register_callback(struct uca_camera *cam, uca_cam_grab_c
         cam->callback_user = user;
         return UCA_NO_ERROR;
     }
-    return UCA_ERR_GRABBER_CALLBACK_ALREADY_REGISTERED;
+    return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
 }
 
 static uint32_t uca_ipe_destroy(struct uca_camera *cam)
@@ -114,7 +114,7 @@ uint32_t uca_ipe_init(struct uca_camera **cam, struct uca_grabber *grabber)
     pcilib_model_t model = PCILIB_MODEL_DETECT;
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
     if (handle < 0)
-        return UCA_ERR_CAM_NOT_FOUND;
+        return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_NOT_FOUND;
 
     pcilib_set_error_handler(&uca_ipe_handle_error, &uca_ipe_handle_error);
     model = pcilib_get_model(handle);
