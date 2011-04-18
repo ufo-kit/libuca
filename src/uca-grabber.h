@@ -23,9 +23,7 @@ enum uca_grabber_constants {
     UCA_FORMAT_GRAY16,
 
     UCA_CL_8BIT_FULL_8,
-    UCA_CL_8BIT_FULL_10,
-
-    UCA_TRIGGER_FREERUN
+    UCA_CL_8BIT_FULL_10
 };
 
 
@@ -86,6 +84,11 @@ typedef uint32_t (*uca_grabber_acquire) (struct uca_grabber *grabber, int32_t n_
 typedef uint32_t (*uca_grabber_stop_acquire) (struct uca_grabber *grabber);
 
 /**
+ * Issue a software trigger signal.
+ */
+typedef uint32_t (*uca_grabber_trigger) (struct uca_grabber *grabber);
+
+/**
  * Grab a frame.
  *
  * This method is usually called through the camera interface and not directly.
@@ -126,6 +129,7 @@ typedef struct uca_grabber {
     uca_grabber_alloc        alloc;
     uca_grabber_acquire      acquire;
     uca_grabber_stop_acquire stop_acquire;
+    uca_grabber_trigger      trigger;
     uca_grabber_grab         grab;
     uca_grabber_register_callback register_callback;
 

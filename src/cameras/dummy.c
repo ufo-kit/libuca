@@ -281,6 +281,11 @@ static uint32_t uca_dummy_destroy(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
+static uint32_t uca_dummy_ignore(struct uca_camera *cam)
+{
+    return UCA_NO_ERROR;
+}
+
 uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
 {
     struct uca_camera *uca = uca_cam_new();
@@ -290,6 +295,7 @@ uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->get_property = &uca_dummy_get_property;
     uca->start_recording = &uca_dummy_start_recording;
     uca->stop_recording = &uca_dummy_stop_recording;
+    uca->trigger = &uca_dummy_ignore;
     uca->grab = &uca_dummy_grab;
     uca->register_callback = &uca_dummy_register_callback;
 

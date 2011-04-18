@@ -34,8 +34,8 @@ static struct uca_sisofg_map_t uca_to_fg[] = {
     { UCA_PROP_EXPOSURE,         FG_EXPOSURE,            false },
     { UCA_PROP_GRAB_TIMEOUT,     FG_TIMEOUT,             false },
 
-    { UCA_GRABBER_TRIGGER_MODE,     FG_TRIGGERMODE,         true},
-    { UCA_GRABBER_FORMAT,           FG_FORMAT,              true},
+    { UCA_GRABBER_TRIGGER_MODE,     FG_TRIGGERMODE,         true },
+    { UCA_GRABBER_FORMAT,           FG_FORMAT,              true },
     { UCA_GRABBER_CAMERALINK_TYPE,  FG_CAMERA_LINK_CAMTYP,  true },
 
     /* values */
@@ -43,7 +43,9 @@ static struct uca_sisofg_map_t uca_to_fg[] = {
     { UCA_FORMAT_GRAY16,            FG_GRAY16,              false },
     { UCA_CL_8BIT_FULL_8,           FG_CL_8BIT_FULL_8,      false },
     { UCA_CL_8BIT_FULL_10,          FG_CL_8BIT_FULL_10,     false },
-    { UCA_TRIGGER_FREERUN,          FREE_RUN,               false },
+    { UCA_TRIGGER_AUTO,             FREE_RUN,               false },
+    { UCA_TRIGGER_SOFTWARE,         ASYNC_SOFTWARE_TRIGGER, false },
+    { UCA_TRIGGER_EXTERNAL,         ASYNC_TRIGGER,          false },
     { UCA_GRABBER_INVALID,          0,                      false }
 };
 
@@ -195,6 +197,13 @@ static uint32_t uca_me4_stop_acquire(struct uca_grabber *grabber)
     return UCA_NO_ERROR;
 }
 
+static uint32_t uca_me4_trigger(struct uca_grabber *grabber)
+{
+    if (Fg_sendSoftwareTrigger(GET_FG(grabber), PORT_A) != FG_OK)
+        return UCA_ERR_GRABBER | UCA_ERR_TRIGGER;
+    return UCA_NO_ERROR;
+}
+
 static uint32_t uca_me4_grab(struct uca_grabber *grabber, void **buffer, uint64_t *frame_number)
 {
     static frameindex_t last_frame = 0;
@@ -270,6 +279,7 @@ uint32_t uca_me4_init(struct uca_grabber **grabber)
     uca->alloc = &uca_me4_alloc;
     uca->acquire = &uca_me4_acquire;
     uca->stop_acquire = &uca_me4_stop_acquire;
+    uca->trigger = &uca_me4_trigger;
     uca->grab = &uca_me4_grab;
     uca->register_callback = &uca_me4_register_callback;
     

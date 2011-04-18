@@ -140,6 +140,14 @@ typedef uint32_t (*uca_cam_start_recording) (struct uca_camera *cam);
 typedef uint32_t (*uca_cam_stop_recording) (struct uca_camera *cam);
 
 /**
+ * Send a software trigger signal to start a sensor read-out.
+ *
+ * This method is only useful when UCA_PROP_TRIGGER_MODE is set to
+ * UCA_TRIGGER_SOFTWARE.
+ */
+typedef uint32_t (*uca_cam_trigger) (struct uca_camera *cam);
+
+/**
  * Function pointer to a grab callback.
  * 
  * Register such a callback function with uca_cam_register_callback() to
@@ -187,6 +195,7 @@ typedef uint32_t (*uca_cam_register_callback) (struct uca_camera *cam, uca_cam_g
 typedef uint32_t (*uca_cam_grab) (struct uca_camera *cam, char *buffer, void *meta_data);
 
 
+
 /**
  * Represents a camera abstraction, that concrete cameras must implement.
  */
@@ -222,6 +231,12 @@ typedef struct uca_camera {
      * \see uca_cam_stop_recording
      */
     uca_cam_stop_recording  stop_recording;
+
+    /**
+     * Method to issue a software trigger signal.
+     * \see uca_cam_trigger
+     */
+    uca_cam_trigger trigger;
 
     /**
      * Method to grab a frame.

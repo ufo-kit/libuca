@@ -69,6 +69,7 @@ static uint32_t uca_pco_set_property(struct uca_camera *cam, enum uca_property_i
             if (pco_set_roi(pco_d->pco, pco_d->roi) != PCO_NOERROR)
                 return err | UCA_ERR_OUT_OF_RANGE;
 
+            /* Twice the width because of 16 bits per pixel */
             uint32_t w = cam->frame_width * 2;
             grabber->set_property(grabber, UCA_PROP_WIDTH, &w);
             break;
@@ -232,6 +233,7 @@ static uint32_t uca_pco_start_recording(struct uca_camera *cam)
         return err | UCA_ERR_UNCLASSIFIED;
     if (pco_set_rec_state(pco, 1) != PCO_NOERROR)
         return err | UCA_ERR_UNCLASSIFIED;
+    cam->state = UCA_CAM_RECORDING;
     return cam->grabber->acquire(cam->grabber, -1);
 }
 
@@ -239,7 +241,16 @@ static uint32_t uca_pco_stop_recording(struct uca_camera *cam)
 {
     if (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR)
         return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_UNCLASSIFIED;
+    cam->state = UCA_CAM_ARMED;
     return UCA_NO_ERROR;
+}
+
+static uint32_t uca_pco_trigger(struct uca_camera *cam)
+{
+    if (cam->state != UCA_CAM_RECORDING)
+        return UCA_ERR_CAMERA | UCA_ERR_TRIGGER | UCA_ERR_NOT_RECORDING;
+
+    return cam->grabber->trigger(cam->grabber);
 }
 
 static uint32_t uca_pco_grab(struct uca_camera *cam, char *buffer, void *meta_data)
@@ -288,13 +299,14 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->get_property = &uca_pco_get_property;
     uca->start_recording = &uca_pco_start_recording;
     uca->stop_recording = &uca_pco_stop_recording;
+    uca->trigger = &uca_pco_trigger;
     uca->grab = &uca_pco_grab;
     uca->register_callback = &uca_pco_register_callback;
 
     /* Prepare camera for recording */
     pco_set_scan_mode(pco, PCO_SCANMODE_SLOW);
     pco_set_rec_state(pco, 0);
-    pco_set_timestamp_mode(pco, 2);
+    pco_set_timestamp_mode(pco, UCA_TIMESTAMP_ASCII);
     pco_set_timebase(pco, 1, 1); 
     pco_arm_camera(pco);
 
@@ -305,7 +317,7 @@ uint32_t uca_pco_init(struct uca_camera **cam, struct uca_grabber *grabber)
     val = UCA_FORMAT_GRAY8;
     grabber->set_property(grabber, UCA_GRABBER_FORMAT, &val);
 
-    val = UCA_TRIGGER_FREERUN;
+    val = UCA_TRIGGER_AUTO;
     grabber->set_property(grabber, UCA_GRABBER_TRIGGER_MODE, &val);
 
     uint32_t width, height;

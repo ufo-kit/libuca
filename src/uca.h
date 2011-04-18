@@ -123,13 +123,14 @@ enum uca_property_ids {
 };
 
 /* Possible timestamp modes for UCA_PROP_TIMESTAMP_MODE */
+#define UCA_TIMESTAMP_NONE      0x00
 #define UCA_TIMESTAMP_ASCII     0x01
 #define UCA_TIMESTAMP_BINARY    0x02
 
 /* Trigger mode for UCA_PROP_TRIGGER_MODE */
 #define UCA_TRIGGER_AUTO        1   /**< free-run mode */
-#define UCA_TRIGGER_SOFTWARE    2
-#define UCA_TRIGGER_EXTERNAL    3
+#define UCA_TRIGGER_SOFTWARE    2   /**< software trigger via uca_cam_trigger() */
+#define UCA_TRIGGER_EXTERNAL    3   /**< external hardware trigger */
 
 #define UCA_TRIGGER_EXP_CAMERA  1   /**< camera-controlled exposure time */
 #define UCA_TRIGGER_EXP_LEVEL   2   /**< level-controlled (trigger signal) exposure time */
@@ -200,8 +201,8 @@ typedef struct uca_property {
     const char *name;
 
     enum uca_unit unit;
-    enum uca_access_rights access;
     enum uca_types type;
+    enum uca_access_rights access;
 
 } uca_property_t;
 
@@ -247,6 +248,7 @@ extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding 
 #define UCA_ERR_INIT            0x00100000  /**< error during initialization */
 #define UCA_ERR_PROP            0x00200000  /**< error while setting/getting property */
 #define UCA_ERR_CALLBACK        0x00300000  /**< callback-related errors */
+#define UCA_ERR_TRIGGER         0x00400000  /**< errors concerning trigger */
 
 #define UCA_ERR_FAILURE         0x10000000
 #define UCA_ERR_WARNING         0x20000000
@@ -258,8 +260,9 @@ extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding 
 #define UCA_ERR_OUT_OF_RANGE    0x10000005
 #define UCA_ERR_ACQUIRE         0x10000006
 #define UCA_ERR_IS_RECORDING    0x10000007 /**< error because device is recording */
-#define UCA_ERR_FRAME_TRANSFER  0x10000008
-#define UCA_ERR_ALREADY_REGISTERED 0x10000009
+#define UCA_ERR_NOT_RECORDING   0x10000008
+#define UCA_ERR_FRAME_TRANSFER  0x10000009
+#define UCA_ERR_ALREADY_REGISTERED 0x1000000A
 
 /**
  * Keeps a list of cameras and grabbers.

@@ -171,6 +171,11 @@ static uint32_t uca_pf_stop_recording(struct uca_camera *cam)
     return cam->grabber->stop_acquire(cam->grabber);
 }
 
+static uint32_t uca_pf_trigger(struct uca_camera *cam)
+{
+    return cam->grabber->trigger(cam->grabber);
+}
+
 static uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata)
 {
     uint16_t *frame;
@@ -217,6 +222,7 @@ uint32_t uca_pf_init(struct uca_camera **cam, struct uca_grabber *grabber)
     uca->get_property = &uca_pf_get_property;
     uca->start_recording = &uca_pf_start_recording;
     uca->stop_recording = &uca_pf_stop_recording;
+    uca->trigger = &uca_pf_trigger;
     uca->grab = &uca_pf_grab;
     uca->register_callback = &uca_pf_register_callback;
 
