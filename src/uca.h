@@ -212,6 +212,22 @@ union uca_value {
     char *string;
 };
 
+/**
+ * Grab callback.
+ * 
+ * Register such a callback function with uca_cam_register_callback() to
+ * receive data as soon as it is delivered.
+ *
+ * \param[in] image_number Current frame number
+ * \param[in] buffer Image data
+ * \param[in] meta_data Meta data provided by the camera specifying per-frame
+ *   data.
+ * \param[in] user User data registered in uca_cam_register_callback()
+ *
+ * \note The meta data parameter is not yet specified but just a place holder.
+ */
+typedef void (*uca_cam_grab_callback) (uint64_t image_number, void *buffer, void *meta_data, void *user);
+
 extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding strings */
 
 
@@ -264,13 +280,27 @@ extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding 
 #define UCA_ERR_FRAME_TRANSFER  0x10000009
 #define UCA_ERR_ALREADY_REGISTERED 0x1000000A
 
+struct uca_camera_priv;
+/**
+ * uca_camera is an opaque structure that is only accessed with the uca_cam_*
+ * methods.
+ */
+struct uca_camera {
+    struct uca_camera *next;
+    struct uca_camera_priv* priv;
+};
+
+struct uca_grabber_priv;
+struct uca_grabber {
+    struct uca_grabber *next;
+    struct uca_grabber_priv* priv;
+};
+
 /**
  * Keeps a list of cameras and grabbers.
  */
 typedef struct uca {
     struct uca_camera *cameras;
-
-    /* private */
     struct uca_grabber *grabbers;
 } uca_t;
 
@@ -308,6 +338,113 @@ const char* uca_get_property_name(enum uca_property_ids property_id);
  * Return the full property structure for a given ID
  */
 uca_property_t *uca_get_full_property(enum uca_property_ids property_id);
+
+/**
+ * Allocates buffer memory for the internal frame grabber.
+ *
+ * The allocation is just a hint to the underlying camera driver. It might
+ * ignore this or pass this information on to a related frame grabber.
+ *
+ * \param[in] cam A uca_camera object
+ * \param[in] n_buffers Number of sub-buffers with size frame_width*frame_height.
+ * \return Error code
+ */
+uint32_t uca_cam_alloc(struct uca_camera *cam, uint32_t n_buffers);
+
+/**
+ * Retrieve current state of the camera.
+ *
+ * \param[in] cam A uca_camera object
+ * \return A value from the uca_cam_state enum representing the current state of
+ *   the camera.
+ */
+enum uca_cam_state uca_cam_get_state(struct uca_camera *cam);
+
+
+/**
+ * Set a camera property.
+ *
+ * \param[in] cam The camera whose properties are to be set.
+ * \param[in] cam A uca_camera object
+ * \param[in] property ID of the property as defined in XXX
+ * \param[out] data Where to read the property's value from
+ *
+ * \return UCA_ERR_PROP_INVALID if property is not supported on the camera or
+ *   UCA_ERR_PROP_VALUE_OUT_OF_RANGE if value cannot be set.
+ */
+uint32_t uca_cam_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data);
+
+/**
+ * Get a property.
+ *
+ * \param[in] cam A uca_camera object
+ * \param[in] property ID of the property as defined in XXX
+ * \param[out] data Where to store the property's value
+ * \param[in] num Number of bytes of string storage. Ignored for uca_uint8t
+ *   and uca_uint32t properties.
+ *
+ * \return UCA_ERR_PROP_INVALID if property is not supported on the camera
+ */
+uint32_t uca_cam_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num);
+
+/**
+ * Begin recording.
+ *
+ * Usually this also involves the frame acquisition of the frame grabber but is
+ * hidden by this function.
+ *
+ * \param[in] cam A uca_camera object
+ * \return Error code
+ */
+uint32_t uca_cam_start_recording(struct uca_camera *cam);
+
+/**
+ * Stop recording.
+ *
+ * \param[in] cam A uca_camera object
+ * \return Error code
+ */
+uint32_t uca_cam_stop_recording(struct uca_camera *cam);
+
+/**
+ * Send a software trigger signal to start a sensor read-out.
+ *
+ * This method is only useful when UCA_PROP_TRIGGER_MODE is set to
+ * UCA_TRIGGER_SOFTWARE.
+ *
+ * \param[in] cam A uca_camera object
+ * \return Error code
+ */
+uint32_t uca_cam_trigger(struct uca_camera *cam);
+
+
+/**
+ * Register callback for given frame grabber. To actually start receiving
+ * frames, call uca_grabber_acquire().
+ *
+ * \param[in] cam A uca_camera object
+ * \param[in] callback Callback function for when a frame arrived
+ * \param[in] user User data that is passed to the callback function
+ * \return Error code
+ */
+uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user);
+
+/**
+ * \brief Grab one image from the camera
+ * 
+ * The grabbing involves a memory copy because we might have to decode the image
+ * coming from the camera, which the frame grabber is not able to do.
+ *
+ * \param[in] cam A uca_camera object
+ * \param[in] buffer Destination buffer
+ * \param[in] meta_data Meta data provided by the camera specifying per-frame
+ *   data.
+ * \return Error code
+ *
+ * \note The meta data parameter is not yet specified but just a place holder.
+ *
+ */
+uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data);
 
 #define uca_set_void(p, type, value) { *((type *) p) = (type) value; }
 

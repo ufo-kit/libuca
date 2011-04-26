@@ -23,35 +23,35 @@ void grab_callback_raw(uint32_t image_number, void *buffer, void *meta_data, voi
 void benchmark_cam(struct uca_camera *cam)
 {
     char name[256];
-    cam->get_property(cam, UCA_PROP_NAME, name, 256);
+    uca_cam_get_property(cam, UCA_PROP_NAME, name, 256);
     
     uint32_t val = 5000;
-    cam->set_property(cam, UCA_PROP_EXPOSURE, &val);
+    uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val);
     val = 0;
-    cam->set_property(cam, UCA_PROP_DELAY, &val);
+    uca_cam_set_property(cam, UCA_PROP_DELAY, &val);
 
     uint32_t width, height, bits;
-    cam->get_property(cam, UCA_PROP_WIDTH, &width, 0);
-    cam->get_property(cam, UCA_PROP_HEIGHT, &height, 0);
-    cam->get_property(cam, UCA_PROP_BITDEPTH, &bits, 0);
+    uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0);
+    uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, 0);
+    uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &bits, 0);
     int pixel_size = bits == 8 ? 1 : 2;
 
     struct timeval start, stop;
 
     for (int i = 0; i < 2; i++) {
         char *buffer = (char *) malloc(width*height*pixel_size);
-        cam->set_property(cam, UCA_PROP_HEIGHT, &height);
+        uca_cam_set_property(cam, UCA_PROP_HEIGHT, &height);
         uca_cam_alloc(cam, 20);
 
         /*
          * Experiment 1: Grab n frames manually
          */
         gettimeofday(&start, NULL);
-        cam->start_recording(cam);
+        uca_cam_start_recording(cam);
         for (int i = 0; i < 1000; i++)
-            cam->grab(cam, (char *) buffer, NULL);
+            uca_cam_grab(cam, (char *) buffer, NULL);
             
-        cam->stop_recording(cam);
+        uca_cam_stop_recording(cam);
         gettimeofday(&stop, NULL);
 
         float seconds = time_diff(&start, &stop) / 1000000.0;

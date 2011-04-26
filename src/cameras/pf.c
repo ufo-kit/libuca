@@ -47,9 +47,9 @@ static int uca_pf_set_uint32_property(TOKEN token, void *data, uint32_t *update_
     return pfDevice_SetProperty(0, token, &value);
 }
 
-static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_pf_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
 {
-    struct uca_grabber *grabber = cam->grabber;
+    struct uca_grabber_priv *grabber = cam->grabber;
     TOKEN token = INVALID_TOKEN;
     int i = 0;
     int err = UCA_NO_ERROR;
@@ -105,7 +105,7 @@ static uint32_t uca_pf_set_property(struct uca_camera *cam, enum uca_property_id
 }
 
 
-static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_pf_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
 {
     TOKEN t;    /* You gotta love developers who name types capitalized... */
     PFValue value;
@@ -161,22 +161,22 @@ static uint32_t uca_pf_get_property(struct uca_camera *cam, enum uca_property_id
     return cam->grabber->get_property(cam->grabber, property, data);
 }
 
-static uint32_t uca_pf_start_recording(struct uca_camera *cam)
+static uint32_t uca_pf_start_recording(struct uca_camera_priv *cam)
 {
     return cam->grabber->acquire(cam->grabber, -1);
 }
 
-static uint32_t uca_pf_stop_recording(struct uca_camera *cam)
+static uint32_t uca_pf_stop_recording(struct uca_camera_priv *cam)
 {
     return cam->grabber->stop_acquire(cam->grabber);
 }
 
-static uint32_t uca_pf_trigger(struct uca_camera *cam)
+static uint32_t uca_pf_trigger(struct uca_camera_priv *cam)
 {
     return cam->grabber->trigger(cam->grabber);
 }
 
-static uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata)
+static uint32_t uca_pf_grab(struct uca_camera_priv *cam, char *buffer, void *metadata)
 {
     uint16_t *frame;
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
@@ -187,7 +187,7 @@ static uint32_t uca_pf_grab(struct uca_camera *cam, char *buffer, void *metadata
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pf_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user)
+static uint32_t uca_pf_register_callback(struct uca_camera_priv *cam, uca_cam_grab_callback callback, void *user)
 {
     if (cam->callback == NULL) {
         cam->callback = callback;
@@ -197,13 +197,13 @@ static uint32_t uca_pf_register_callback(struct uca_camera *cam, uca_cam_grab_ca
     return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
 }
 
-static uint32_t uca_pf_destroy(struct uca_camera *cam)
+static uint32_t uca_pf_destroy(struct uca_camera_priv *cam)
 {
     pfDeviceClose(0);
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_pf_init(struct uca_camera **cam, struct uca_grabber *grabber)
+uint32_t uca_pf_init(struct uca_camera_priv **cam, struct uca_grabber_priv *grabber)
 {
     int num_ports;
     if ((grabber == NULL) || (pfPortInit(&num_ports) < 0) || (pfDeviceOpen(0) < 0))
@@ -212,7 +212,7 @@ uint32_t uca_pf_init(struct uca_camera **cam, struct uca_grabber *grabber)
     /* We could check if a higher baud rate is supported, but... forget about
      * it. We don't need high speed configuration. */
 
-    struct uca_camera *uca = uca_cam_new();
+    struct uca_camera_priv *uca = uca_cam_new();
     uca->grabber = grabber;
     uca->grabber->synchronous = false;
 

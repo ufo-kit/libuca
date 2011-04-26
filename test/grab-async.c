@@ -37,22 +37,22 @@ int main(int argc, char *argv[])
     struct uca_camera *cam = u->cameras;
 
     uint32_t val = 5000;
-    cam->set_property(cam, UCA_PROP_EXPOSURE, &val);
+    uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val);
     val = 0;
-    cam->set_property(cam, UCA_PROP_DELAY, &val);
+    uca_cam_set_property(cam, UCA_PROP_DELAY, &val);
 
     struct image_props props;
-    cam->get_property(cam, UCA_PROP_WIDTH, &props.width, 0);
-    cam->get_property(cam, UCA_PROP_HEIGHT, &props.height, 0);
-    cam->get_property(cam, UCA_PROP_BITDEPTH, &props.bits, 0);
+    uca_cam_get_property(cam, UCA_PROP_WIDTH, &props.width, 0);
+    uca_cam_get_property(cam, UCA_PROP_HEIGHT, &props.height, 0);
+    uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &props.bits, 0);
 
     uca_cam_alloc(cam, 10);
 
-    cam->register_callback(cam, &grab_callback, &props);
-    cam->start_recording(cam);
+    uca_cam_register_callback(cam, &grab_callback, &props);
+    uca_cam_start_recording(cam);
     printf("grabbing for 2 seconds\n");
     sleep(2);
-    cam->stop_recording(cam);
+    uca_cam_stop_recording(cam);
     printf("done\n");
     fflush(stdout);
 

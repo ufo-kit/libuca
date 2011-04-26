@@ -14,12 +14,12 @@ static void uca_ipe_handle_error(const char *format, ...)
     /* Do nothing, we just check errno. */
 }
 
-static uint32_t uca_ipe_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_ipe_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_ipe_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
 {
     pcilib_t *handle = GET_HANDLE(cam);
     pcilib_register_value_t value = 0;
@@ -78,22 +78,22 @@ static uint32_t uca_ipe_get_property(struct uca_camera *cam, enum uca_property_i
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_start_recording(struct uca_camera *cam)
+static uint32_t uca_ipe_start_recording(struct uca_camera_priv *cam)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_stop_recording(struct uca_camera *cam)
+static uint32_t uca_ipe_stop_recording(struct uca_camera_priv *cam)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_grab(struct uca_camera *cam, char *buffer, void *meta_data)
+static uint32_t uca_ipe_grab(struct uca_camera_priv *cam, char *buffer, void *meta_data)
 {
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_register_callback(struct uca_camera *cam, uca_cam_grab_callback cb, void *user)
+static uint32_t uca_ipe_register_callback(struct uca_camera_priv *cam, uca_cam_grab_callback cb, void *user)
 {
     if (cam->callback == NULL) {
         cam->callback = cb;
@@ -103,13 +103,13 @@ static uint32_t uca_ipe_register_callback(struct uca_camera *cam, uca_cam_grab_c
     return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
 }
 
-static uint32_t uca_ipe_destroy(struct uca_camera *cam)
+static uint32_t uca_ipe_destroy(struct uca_camera_priv *cam)
 {
     pcilib_close(GET_HANDLE(cam));
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_ipe_init(struct uca_camera **cam, struct uca_grabber *grabber)
+uint32_t uca_ipe_init(struct uca_camera_priv **cam, struct uca_grabber_priv *grabber)
 {
     pcilib_model_t model = PCILIB_MODEL_DETECT;
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
@@ -119,7 +119,7 @@ uint32_t uca_ipe_init(struct uca_camera **cam, struct uca_grabber *grabber)
     pcilib_set_error_handler(&uca_ipe_handle_error, &uca_ipe_handle_error);
     model = pcilib_get_model(handle);
 
-    struct uca_camera *uca = uca_cam_new();
+    struct uca_camera_priv *uca = uca_cam_new();
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_ipe_destroy;

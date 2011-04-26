@@ -99,7 +99,7 @@ void *grab_thread(void *args)
     struct uca_camera *cam = data->cam;
 
     while (data->running) {
-        cam->grab(cam, (char *) data->buffer, NULL);
+        uca_cam_grab(cam, (char *) data->buffer, NULL);
         if (data->pixel_size == 1)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
         else if (data->pixel_size == 2)
@@ -120,7 +120,7 @@ static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
     ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
     data->running = TRUE;
-    data->cam->start_recording(data->cam);
+    uca_cam_start_recording(data->cam);
     if (!g_thread_create(grab_thread, data, FALSE, &error)) {
         g_printerr("Failed to create thread: %s\n", error->message);
         uca_destroy(data->u);
@@ -131,7 +131,7 @@ static void on_toolbutton_stop_clicked(GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
     data->running = FALSE;
-    data->cam->stop_recording(data->cam);
+    uca_cam_stop_recording(data->cam);
 }
 
 static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gchar *new_text, gpointer data)
@@ -152,9 +152,13 @@ static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gcha
 
         /* TODO: extensive value checking */
         uint32_t val = (uint32_t) g_ascii_strtoull(new_text, NULL, 10);
-        cam->set_property(cam, prop_id, &val);
-        if ((prop_id == UCA_PROP_WIDTH) || (prop_id == UCA_PROP_HEIGHT))
-            reallocate_buffers(value_data->thread_data, cam->frame_width, cam->frame_height);
+        uca_cam_set_property(cam, prop_id, &val);
+        if ((prop_id == UCA_PROP_WIDTH) || (prop_id == UCA_PROP_HEIGHT)) {
+            uint32_t width, height;
+            uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0);
+            uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, 0);
+            reallocate_buffers(value_data->thread_data, width, height);
+        }
 
         gtk_tree_store_set(value_data->tree_store, &iter, COLUMN_VALUE, new_text, -1);
     }
@@ -243,16 +247,16 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera *cam)
         uint32_t result = UCA_NO_ERROR;
         switch (property->type) {
             case uca_string:
-                result = cam->get_property(cam, prop_id, value_string, num_bytes);
+                result = uca_cam_get_property(cam, prop_id, value_string, num_bytes);
                 break;
 
             case uca_uint8t:
-                result = cam->get_property(cam, prop_id, &value_8, 0);
+                result = uca_cam_get_property(cam, prop_id, &value_8, 0);
                 g_sprintf(value_string, "%d", value_8);
                 break;
 
             case uca_uint32t:
-                result = cam->get_property(cam, prop_id, &value_32, 0);
+                result = uca_cam_get_property(cam, prop_id, &value_32, 0);
                 g_sprintf(value_string, "%d", value_32);
                 break;
         }
@@ -309,9 +313,9 @@ int main(int argc, char *argv[])
 
     int width, height, bits_per_sample;
     struct uca_camera *cam = u->cameras;
-    cam->get_property(cam, UCA_PROP_WIDTH, &width, 0);
-    cam->get_property(cam, UCA_PROP_HEIGHT, &height, 0);
-    cam->get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample, 0);
+    uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0);
+    uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, 0);
+    uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample, 0);
 
     g_thread_init(NULL);
     gdk_threads_init();

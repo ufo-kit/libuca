@@ -20,26 +20,26 @@ int main(int argc, char *argv[])
     struct uca_camera *cam = u->cameras;
 
     uint32_t val = 5000;
-    handle_error(cam->set_property(cam, UCA_PROP_EXPOSURE, &val));
+    handle_error(uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val));
     val = 0;
-    handle_error(cam->set_property(cam, UCA_PROP_DELAY, &val));
+    handle_error(uca_cam_set_property(cam, UCA_PROP_DELAY, &val));
 
     val = 1;
-    handle_error(cam->set_property(cam, UCA_PROP_GRAB_SYNCHRONOUS, &val));
+    handle_error(uca_cam_set_property(cam, UCA_PROP_GRAB_SYNCHRONOUS, &val));
 
     uint32_t width, height, bits;
-    handle_error(cam->get_property(cam, UCA_PROP_WIDTH, &width, 0));
-    handle_error(cam->get_property(cam, UCA_PROP_HEIGHT, &height, 0));
-    handle_error(cam->get_property(cam, UCA_PROP_BITDEPTH, &bits, 0));
+    handle_error(uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0));
+    handle_error(uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, 0));
+    handle_error(uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &bits, 0));
 
     handle_error(uca_cam_alloc(cam, 10));
 
     const int pixel_size = bits == 8 ? 1 : 2;
     uint16_t *buffer = (uint16_t *) malloc(width * height * pixel_size);
 
-    handle_error(cam->start_recording(cam));
-    handle_error(cam->grab(cam, (char *) buffer, NULL));
-    handle_error(cam->stop_recording(cam));
+    handle_error(uca_cam_start_recording(cam));
+    handle_error(uca_cam_grab(cam, (char *) buffer, NULL));
+    handle_error(uca_cam_stop_recording(cam));
     uca_destroy(u);
 
     FILE *fp = fopen("out.raw", "wb");

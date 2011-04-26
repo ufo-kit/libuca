@@ -106,7 +106,7 @@ static void uca_dummy_print_number(char *buffer, int number, int x, int y, int w
     }
 }
 
-static void uca_dummy_memcpy(struct uca_camera *cam, char *buffer)
+static void uca_dummy_memcpy(struct uca_camera_priv *cam, char *buffer)
 {
     /* print current frame number */
     unsigned int number = cam->current_frame;
@@ -127,7 +127,7 @@ static __suseconds_t uca_dummy_time_diff(struct timeval *start, struct timeval *
 
 static void *uca_dummy_grab_thread(void *arg)
 {
-    struct uca_camera *cam = ((struct uca_camera *) arg);
+    struct uca_camera_priv *cam = ((struct uca_camera_priv *) arg);
     struct dummy_cam *dc = GET_DUMMY(cam);
 
     assert(dc->frame_rate > 0);
@@ -156,7 +156,7 @@ static void *uca_dummy_grab_thread(void *arg)
 /*
  * --- interface implementations ----------------------------------------------
  */
-static uint32_t uca_dummy_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_dummy_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
 {
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
     if (cam->state == UCA_CAM_RECORDING)
@@ -182,7 +182,7 @@ static uint32_t uca_dummy_set_property(struct uca_camera *cam, enum uca_property
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_dummy_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
 {
     switch (property) {
         case UCA_PROP_NAME:
@@ -223,7 +223,7 @@ static uint32_t uca_dummy_get_property(struct uca_camera *cam, enum uca_property
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_start_recording(struct uca_camera *cam)
+static uint32_t uca_dummy_start_recording(struct uca_camera_priv *cam)
 {
     if (cam->callback != NULL) {
 #ifdef HAVE_PTHREADS
@@ -239,7 +239,7 @@ static uint32_t uca_dummy_start_recording(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_stop_recording(struct uca_camera *cam)
+static uint32_t uca_dummy_stop_recording(struct uca_camera_priv *cam)
 {
     struct dummy_cam *dc = GET_DUMMY(cam);
     if (cam->callback != NULL) {
@@ -251,7 +251,7 @@ static uint32_t uca_dummy_stop_recording(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab_callback cb, void *user)
+static uint32_t uca_dummy_register_callback(struct uca_camera_priv *cam, uca_cam_grab_callback cb, void *user)
 {
     if (cam->callback == NULL) {
         cam->callback = cb;
@@ -263,7 +263,7 @@ static uint32_t uca_dummy_register_callback(struct uca_camera *cam, uca_cam_grab
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer, void *meta_data)
+static uint32_t uca_dummy_grab(struct uca_camera_priv *cam, char *buffer, void *meta_data)
 {
     if (cam->callback != NULL)
         return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
@@ -273,7 +273,7 @@ static uint32_t uca_dummy_grab(struct uca_camera *cam, char *buffer, void *meta_
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_destroy(struct uca_camera *cam)
+static uint32_t uca_dummy_destroy(struct uca_camera_priv *cam)
 {
     struct dummy_cam *dc = GET_DUMMY(cam);
     free(dc->buffer);
@@ -281,14 +281,14 @@ static uint32_t uca_dummy_destroy(struct uca_camera *cam)
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_ignore(struct uca_camera *cam)
+static uint32_t uca_dummy_ignore(struct uca_camera_priv *cam)
 {
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_dummy_init(struct uca_camera **cam, struct uca_grabber *grabber)
+uint32_t uca_dummy_init(struct uca_camera_priv **cam, struct uca_grabber_priv *grabber)
 {
-    struct uca_camera *uca = uca_cam_new();
+    struct uca_camera_priv *uca = uca_cam_new();
 
     uca->destroy = &uca_dummy_destroy;
     uca->set_property = &uca_dummy_set_property;
