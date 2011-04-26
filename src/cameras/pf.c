@@ -233,7 +233,7 @@ uint32_t uca_pf_init(struct uca_camera **cam, struct uca_grabber *grabber)
     val = UCA_FORMAT_GRAY8;
     grabber->set_property(grabber, UCA_GRABBER_FORMAT, &val);
 
-    val = UCA_TRIGGER_FREERUN;
+    val = UCA_TRIGGER_AUTO;
     grabber->set_property(grabber, UCA_GRABBER_TRIGGER_MODE, &val);
 
     uca_pf_get_property(uca, UCA_PROP_WIDTH, &uca->frame_width, 0);

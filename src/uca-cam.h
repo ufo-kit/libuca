@@ -23,7 +23,6 @@ enum uca_property_ids;
  * Describes the current state of the camera.
  */
 enum uca_cam_state {
-    UCA_CAM_ERROR,          /**< Camera is not working correctly */
     UCA_CAM_CONFIGURABLE,   /**< Camera can be configured and is not recording */
     UCA_CAM_ARMED,          /**< Camera is ready for recording */
     UCA_CAM_RECORDING,      /**< Camera is currently recording */
