@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "uca.h"
-#include "uca-cam.h"
 
 
 typedef struct {

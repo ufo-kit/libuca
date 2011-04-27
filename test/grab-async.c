@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "uca.h"
-#include "uca-cam.h"
 
 struct image_props {
     uint32_t width;

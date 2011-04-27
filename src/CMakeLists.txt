@@ -117,7 +117,7 @@ target_link_libraries(uca ${uca_LIBS})
 install(TARGETS uca 
     LIBRARY DESTINATION lib${LIB_SUFFIX})
 
-install(FILES ${uca_HDRS} 
+install(FILES uca.h
     DESTINATION include/uca)
 
 # --- install pkg-config file

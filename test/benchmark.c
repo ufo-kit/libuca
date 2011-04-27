@@ -5,9 +5,8 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "uca.h"
-#include "uca-cam.h"
 
+#include "uca.h"
 
 static __suseconds_t time_diff(struct timeval *start, struct timeval *stop)
 {

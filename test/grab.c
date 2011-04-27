@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "uca.h"
-#include "uca-cam.h"
 
 #define handle_error(errno) {if ((errno) != UCA_NO_ERROR) printf("error at <%s:%i>\n", \
     __FILE__, __LINE__);}
