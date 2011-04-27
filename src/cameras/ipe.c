@@ -112,8 +112,11 @@ static uint32_t uca_ipe_destroy(struct uca_camera_priv *cam)
 uint32_t uca_ipe_init(struct uca_camera_priv **cam, struct uca_grabber_priv *grabber)
 {
     pcilib_model_t model = PCILIB_MODEL_DETECT;
+    pcilib_set_error_handler(uca_ipe_handle_error, uca_ipe_handle_error);
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
-    if (handle < 0)
+    /* XXX: This is not working because pcilib is still returning a valid
+     * structure although things like "failing ioctl's" can happen. */
+    if (handle == NULL)
         return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_NOT_FOUND;
 
     pcilib_set_error_handler(&uca_ipe_handle_error, &uca_ipe_handle_error);
