@@ -47,13 +47,7 @@ struct uca_camera_priv *uca_cam_new(void);
  * Represents a camera abstraction, that concrete cameras must implement.
  */
 typedef struct uca_camera_priv {
-    /**
-     * Points to the next available camera in a linked-list fashion.
-     *
-     * End of list is specified with next == NULL.
-     */
-    struct uca_camera_priv     *next;
-
+    /* virtual methods to be overridden by concrete cameras */
     uint32_t (*destroy) (struct uca_camera_priv *cam);
     uint32_t (*set_property) (struct uca_camera_priv *cam, enum uca_property_ids property, void *data);
     uint32_t (*get_property) (struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num);
@@ -64,7 +58,7 @@ typedef struct uca_camera_priv {
     uint32_t (*grab) (struct uca_camera_priv *cam, char *buffer, void *meta_data);
 
     struct uca_grabber_priv *grabber;       /**< grabber associated with this camera */
-    enum uca_cam_state      state;          /**< camera state */
+    enum uca_cam_state      state;          /**< camera state handled in uca.c */
     uint32_t                frame_width;    /**< current frame width */
     uint32_t                frame_height;   /**< current frame height */
     uint64_t                current_frame;  /**< last grabbed frame number */

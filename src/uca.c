@@ -278,18 +278,32 @@ uint32_t uca_cam_get_property(struct uca_camera *cam, enum uca_property_ids prop
 uint32_t uca_cam_start_recording(struct uca_camera *cam)
 {
     struct uca_camera_priv *priv = cam->priv;
-    return priv->start_recording(priv);
+    if (priv->state == UCA_CAM_RECORDING)
+        return UCA_ERR_CAMERA | UCA_ERR_CONFIGURATION | UCA_ERR_IS_RECORDING;
+
+    uint32_t err = priv->start_recording(priv);
+    if (err == UCA_NO_ERROR)
+        priv->state = UCA_CAM_RECORDING;
+    return err;
 }
 
 uint32_t uca_cam_stop_recording(struct uca_camera *cam)
 {
     struct uca_camera_priv *priv = cam->priv;
-    return priv->stop_recording(priv);
+    if (priv->state != UCA_CAM_RECORDING)
+        return UCA_ERR_CAMERA | UCA_ERR_CONFIGURATION | UCA_ERR_NOT_RECORDING;
+
+    uint32_t err = priv->stop_recording(priv);
+    if (err == UCA_NO_ERROR)
+        priv->state = UCA_CAM_CONFIGURABLE;
+    return err;
 }
 
 uint32_t uca_cam_trigger(struct uca_camera *cam)
 {
     struct uca_camera_priv *priv = cam->priv;
+    if (priv->state != UCA_CAM_RECORDING)
+        return UCA_ERR_CAMERA | UCA_ERR_TRIGGER | UCA_ERR_NOT_RECORDING;
     return priv->trigger(priv);
 }
 
@@ -302,6 +316,8 @@ uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback
 uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     struct uca_camera_priv *priv = cam->priv;
+    if (priv->state != UCA_CAM_RECORDING)
+        return UCA_ERR_CAMERA | UCA_ERR_NOT_RECORDING;
     return priv->grab(priv, buffer, meta_data);
 }
 

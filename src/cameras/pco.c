@@ -228,8 +228,6 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_prope
 static uint32_t uca_pco_start_recording(struct uca_camera_priv *cam)
 {
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_INIT;
-    if (cam->state == UCA_CAM_RECORDING)
-        return err | UCA_ERR_IS_RECORDING;
 
     struct pco_edge *pco = GET_PCO(cam);
     if (pco_arm_camera(pco) != PCO_NOERROR)
@@ -237,32 +235,23 @@ static uint32_t uca_pco_start_recording(struct uca_camera_priv *cam)
     if (pco_set_rec_state(pco, 1) != PCO_NOERROR)
         return err | UCA_ERR_UNCLASSIFIED;
 
-    cam->state = UCA_CAM_RECORDING;
     return cam->grabber->acquire(cam->grabber, -1);
 }
 
 static uint32_t uca_pco_stop_recording(struct uca_camera_priv *cam)
 {
-    if ((cam->state == UCA_CAM_RECORDING) && (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR))
+    if (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR)
         return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_UNCLASSIFIED;
-            
-    cam->state = UCA_CAM_CONFIGURABLE;
     return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_trigger(struct uca_camera_priv *cam)
 {
-    if (cam->state != UCA_CAM_RECORDING)
-        return UCA_ERR_CAMERA | UCA_ERR_TRIGGER | UCA_ERR_NOT_RECORDING;
-
     return cam->grabber->trigger(cam->grabber);
 }
 
 static uint32_t uca_pco_grab(struct uca_camera_priv *cam, char *buffer, void *meta_data)
 {
-    if (cam->state != UCA_CAM_RECORDING)
-        return UCA_ERR_CAMERA | UCA_ERR_NOT_RECORDING;
-
     uint16_t *frame;
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
     if (err != UCA_NO_ERROR)

@@ -265,6 +265,7 @@ extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding 
 #define UCA_ERR_PROP            0x00200000  /**< error while setting/getting property */
 #define UCA_ERR_CALLBACK        0x00300000  /**< callback-related errors */
 #define UCA_ERR_TRIGGER         0x00400000  /**< errors concerning trigger */
+#define UCA_ERR_CONFIGURATION   0x00500000  /**< errors related to configuration steps */
 
 #define UCA_ERR_FAILURE         0x10000000
 #define UCA_ERR_WARNING         0x20000000

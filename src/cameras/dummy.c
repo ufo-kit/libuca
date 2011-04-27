@@ -159,8 +159,6 @@ static void *uca_dummy_grab_thread(void *arg)
 static uint32_t uca_dummy_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
 {
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
-    if (cam->state == UCA_CAM_RECORDING)
-        return err | UCA_ERR_IS_RECORDING;
 
     switch (property) {
         case UCA_PROP_WIDTH:
@@ -235,7 +233,6 @@ static uint32_t uca_dummy_start_recording(struct uca_camera_priv *cam)
 #endif
     }
     cam->current_frame = 0;
-    cam->state = UCA_CAM_RECORDING;
     return UCA_NO_ERROR;
 }
 
@@ -247,7 +244,6 @@ static uint32_t uca_dummy_stop_recording(struct uca_camera_priv *cam)
         free(dc->buffer);
         dc->buffer = NULL;
     }
-    cam->state = UCA_CAM_ARMED;
     return UCA_NO_ERROR;
 }
 
