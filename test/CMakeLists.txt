@@ -6,6 +6,7 @@ add_definitions("--std=c99 -Wall")
 find_package(PkgConfig)
 
 pkg_check_modules(GTK2 gtk+-2.0)
+pkg_check_modules(GTHREAD2 gthread-2.0)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
@@ -29,6 +30,7 @@ if (GTK2_FOUND)
     target_link_libraries(control
         uca
         ${GTK2_LIBRARIES}
+	${GTHREAD2_LIBRARIES}
         )
 endif()
 
