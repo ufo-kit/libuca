@@ -58,6 +58,8 @@ static struct uca_property property_map[UCA_PROP_LAST+1] = {
     { "Image.Offset.y",         uca_pixel,  uca_uint32t, uca_readwrite }, 
     { "Image.Offset.y.Min",     uca_pixel,  uca_uint32t, uca_read }, 
     { "Image.Offset.y.Max",     uca_pixel,  uca_uint32t, uca_read }, 
+    { "Image.Binning.x",        uca_pixel,  uca_uint32t, uca_readwrite },
+    { "Image.Binning.y",        uca_pixel,  uca_uint32t, uca_readwrite },
     { "Image.Bitdepth",         uca_bits,   uca_uint32t, uca_read}, 
     { "Time.Exposure",          uca_us,     uca_uint32t, uca_readwrite }, 
     { "Time.Exposure.Min",      uca_us,     uca_uint32t, uca_read }, 

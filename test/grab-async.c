@@ -16,12 +16,14 @@ void grab_callback(uint64_t image_number, void *buffer, void *meta_data, void *u
     const int pixel_size = props->bits == 8 ? 1 : 2;
     char filename[256];
 
-    sprintf(filename, "out-%04llu.raw", image_number);
+    sprintf(filename, "out-%04i.raw", (int) image_number);
     FILE *fp = fopen(filename, "wb");
     fwrite(buffer, props->width * props->height, pixel_size, fp);
     fclose(fp);
 
-    printf("grabbed picture %llu at %p (%ix%i @ %i bits)\n", image_number, buffer, props->width, props->height, props->bits);
+    printf("grabbed picture %i at %p (%ix%i @ %i bits)\n", 
+            (int) image_number, buffer, 
+            props->width, props->height, props->bits);
 }
 
 int main(int argc, char *argv[])
