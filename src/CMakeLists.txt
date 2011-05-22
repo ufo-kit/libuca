@@ -114,8 +114,10 @@ add_library(uca SHARED ${uca_SRCS})
 target_link_libraries(uca ${uca_LIBS})
 
 # --- Install target ----------------------------------------------------------
+set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
+
 install(TARGETS uca 
-    LIBRARY DESTINATION lib${LIB_SUFFIX})
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
 install(FILES uca.h
     DESTINATION include/uca)
@@ -123,13 +125,13 @@ install(FILES uca.h
 # --- install pkg-config file
 set(prefix      ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix "\${prefix}")
-set(libdir      "\${exec_prefix}/lib")
+set(libdir      "${LIB_INSTALL_DIR}")
 set(includedir  "\${prefix}/include")
 set(VERSION     ${UCA_VERSION_STRING})
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uca.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/uca.pc" @ONLY IMMEDIATE)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc DESTINATION lib/pkgconfig)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
 
 set(CPACK_PACKAGE_DESCRIPTION "Unified Camera Access library")
