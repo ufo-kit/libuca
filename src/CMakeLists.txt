@@ -131,7 +131,7 @@ set(VERSION     ${UCA_VERSION_STRING})
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uca.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/uca.pc" @ONLY IMMEDIATE)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc DESTINATION lib/pkgconfig)
 
 
 set(CPACK_PACKAGE_DESCRIPTION "Unified Camera Access library")

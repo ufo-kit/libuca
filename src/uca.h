@@ -187,6 +187,16 @@ enum uca_access_rights {
 };
 
 /**
+ * Describes the current state of the camera.
+ */
+enum uca_cam_state {
+    UCA_CAM_CONFIGURABLE,   /**< Camera can be configured and is not recording */
+    UCA_CAM_ARMED,          /**< Camera is ready for recording */
+    UCA_CAM_RECORDING,      /**< Camera is currently recording */
+};
+
+
+/**
  * A uca_property_t describes a vendor-independent property used by cameras and
  * frame grabbers. It basically consists of a human-readable name, a physical
  * unit, a type and some access rights.
