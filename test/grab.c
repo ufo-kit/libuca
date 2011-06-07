@@ -25,6 +25,8 @@ int main(int argc, char *argv[])
 
     val = 1;
     handle_error(uca_cam_set_property(cam, UCA_PROP_GRAB_SYNCHRONOUS, &val));
+    val = 0;
+    handle_error(uca_cam_set_property(cam, UCA_PROP_HOTPIXEL_CORRECTION, &val));
 
     uint32_t width, height, bits;
     handle_error(uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0));

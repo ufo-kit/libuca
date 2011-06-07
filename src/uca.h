@@ -112,6 +112,7 @@ enum uca_property_ids {
     /* pco.edge specific */
     UCA_PROP_TIMESTAMP_MODE,
     UCA_PROP_SCAN_MODE,
+    UCA_PROP_HOTPIXEL_CORRECTION,
 
     /* IPE camera specific */
     UCA_PROP_INTERLACE_SAMPLE_RATE,
@@ -223,6 +224,16 @@ union uca_value {
     uint8_t u8;
     char *string;
 };
+
+/**
+ * Describes the current state of the camera.
+ */
+enum uca_cam_state {
+    UCA_CAM_CONFIGURABLE,   /**< Camera can be configured and is not recording */
+    UCA_CAM_ARMED,          /**< Camera is ready for recording */
+    UCA_CAM_RECORDING,      /**< Camera is currently recording */
+};
+
 
 /**
  * Grab callback.

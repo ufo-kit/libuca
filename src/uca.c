@@ -84,6 +84,7 @@ static struct uca_property property_map[UCA_PROP_LAST+1] = {
     { "Grabber.Synchronous",    uca_bool,   uca_uint32t, uca_readwrite },
     { "Mode.Timestamp",         uca_na,     uca_uint32t, uca_readwrite }, 
     { "Mode.Scan",              uca_na,     uca_uint32t, uca_readwrite }, 
+    { "Mode.Hotpixel",          uca_na,     uca_uint32t, uca_readwrite }, 
     { "Interlace.Samplerate",   uca_na,     uca_uint32t, uca_readwrite }, 
     { "Interlace.Threshold.Pixel", uca_na,  uca_uint32t, uca_readwrite }, 
     { "Interlace.Threshold.Row", uca_na,    uca_uint32t, uca_readwrite },

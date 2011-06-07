@@ -90,6 +90,9 @@ static uint32_t uca_pco_set_property(struct uca_camera_priv *cam, enum uca_prope
         case UCA_PROP_TIMESTAMP_MODE:
             return pco_set_timestamp_mode(GET_PCO(cam), *((uint16_t *) data));
 
+        case UCA_PROP_HOTPIXEL_CORRECTION:
+            return pco_set_hotpixel_correction(GET_PCO(cam), *(uint32_t *) data);
+
         default:
             return err | UCA_ERR_INVALID;
     }
@@ -216,6 +219,14 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_prope
                 if (err != UCA_NO_ERROR)
                     return err;
                 uca_set_void(data, uint32_t, timeout);
+            }
+            break;
+
+        case UCA_PROP_HOTPIXEL_CORRECTION:
+            {
+                SC2_Hot_Pixel_Correction_Mode_Response response;
+                if (pco_read_property(pco, GET_HOT_PIXEL_CORRECTION_MODE, &response, sizeof(response)) == PCO_NOERROR)
+                    uca_set_void(data, uint32_t, response.wMode);
             }
             break;
 
