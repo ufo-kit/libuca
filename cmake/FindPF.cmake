@@ -10,10 +10,16 @@ find_package(PackageHandleStandardArgs)
 
 find_path(PF_INCLUDE_DIRS libpf/pfcam.h)
 find_library(PF_LIBRARY_COMDLL NAMES comdll)
+find_library(PF_LIBRARY_COMDLL_FG NAMES comdll_fg)
 find_library(PF_LIBRARY_MV2 NAMES mv2_d1280_640)
 find_library(PF_LIBRARY_PFCAM NAMES pfcam)
 
-set(PF_LIBRARIES ${PF_LIBRARY_MV2} ${PF_LIBRARY_PFCAM} ${PF_LIBRARY_COMDLL})
+set(PF_LIBRARIES 
+    ${PF_LIBRARY_MV2} 
+    ${PF_LIBRARY_PFCAM}
+    ${PF_LIBRARY_COMDLL}
+    ${PF_LIBRARY_COMDLL_FG}
+    )
 
 find_package_handle_standard_args(PF DEFAULT_MSG PF_LIBRARIES PF_INCLUDE_DIRS)
 
