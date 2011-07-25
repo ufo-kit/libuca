@@ -30,6 +30,10 @@
 #include "cameras/ipe.h"
 #endif
 
+#ifdef HAVE_SIMPLE_CAMERA
+#include "cameras/simple.h"
+#endif
+
 const char *uca_unit_map[] = {
     "px",
     "bits",
@@ -133,6 +137,9 @@ struct uca *uca_init(const char *config_filename)
 #endif
 #ifdef HAVE_DUMMY_CAMERA
         uca_dummy_init,
+#endif
+#ifdef HAVE_SIMPLE_CAMERA
+        uca_simple_init,
 #endif
         NULL
     };

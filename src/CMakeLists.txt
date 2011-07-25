@@ -72,7 +72,6 @@ endif()
 
 if (CLSERME4_FOUND AND FGLIB5_FOUND)
     option(HAVE_ME4 "Grabber: Silicon Software microEnable IV" ON)
-
     if (HAVE_ME4)
         set(uca_SRCS ${uca_SRCS} grabbers/me4.c)
         set(uca_LIBS ${uca_LIBS}
@@ -82,6 +81,11 @@ if (CLSERME4_FOUND AND FGLIB5_FOUND)
         include_directories(
             ${CLSERME4_INCLUDE_DIR}
             ${FGLIB5_INCLUDE_DIR})
+    endif()
+
+    option(HAVE_SIMPLE_CAMERA "Camera: Just grabber based" ON)
+    if (HAVE_SIMPLE_CAMERA)
+        set(uca_SRCS ${uca_SRCS} cameras/simple.c)
     endif()
 endif()
 

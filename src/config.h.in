@@ -7,5 +7,6 @@
 #cmakedefine HAVE_IPE_CAMERA
 
 #cmakedefine HAVE_DUMMY_CAMERA
+#cmakedefine HAVE_SIMPLE_CAMERA
 
 #cmakedefine HAVE_PTHREADS
