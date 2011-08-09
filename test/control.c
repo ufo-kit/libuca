@@ -36,27 +36,21 @@ enum {
 
 void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
 {
-    for (int x = 0; x < width; x++) {
-        for (int y = 0; y < height; y++) {
-            const int off = y*width + x;
-            output[off*3] = input[off];
-            output[off*3+1] = input[off];
-            output[off*3+2] = input[off];
-        }
+    for (int i = 0, j = 0; i < width*height; i++) {
+        output[j++] = input[i];
+        output[j++] = input[i]; 
+        output[j++] = input[i];
     }
 }
 
 void convert_16bit_to_rgb(guchar *output, guchar *input, int width, int height)
 {
     uint16_t *in = (uint16_t *) input;
-    for (int x = 0; x < width; x++) {
-        for (int y = 0; y < height; y++) {
-            const int off = y*width + x;
-            guchar val = (uint8_t) ((in[off]/65536.0f)*256.0f);
-            output[off*3] = val;
-            output[off*3+1] = val;
-            output[off*3+2] = val;
-        }
+    for (int i = 0, j = 0; i < width*height; i++) {
+        guchar val = (uint8_t) ((in[i]/65536.0f)*256.0f);
+        output[j++] = val;
+        output[j++] = val;
+        output[j++] = val;
     }
 }
 
@@ -77,19 +71,6 @@ void reallocate_buffers(ThreadData *td, int width, int height)
 
     if (uca_cam_alloc(td->cam, 20) != UCA_NO_ERROR)
         g_print("Couldn't allocate buffer for 20 frames\n");
-}
-
-static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
-{
-    return FALSE;
-}
-
-static void destroy(GtkWidget *widget, gpointer data)
-{
-    ThreadData *td = (ThreadData *) data;
-    td->running = FALSE;
-    uca_destroy(td->u);
-    gtk_main_quit();
 }
 
 void *grab_thread(void *args)
@@ -114,7 +95,20 @@ void *grab_thread(void *args)
     return NULL;
 }
 
-static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
+gboolean on_delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
+{
+    return FALSE;
+}
+
+void on_destroy(GtkWidget *widget, gpointer data)
+{
+    ThreadData *td = (ThreadData *) data;
+    td->running = FALSE;
+    uca_destroy(td->u);
+    gtk_main_quit();
+}
+
+void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
@@ -126,14 +120,14 @@ static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
     }
 }
 
-static void on_toolbutton_stop_clicked(GtkWidget *widget, gpointer args)
+void on_toolbutton_stop_clicked(GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
     data->running = FALSE;
     uca_cam_stop_recording(data->cam);
 }
 
-static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gchar *new_text, gpointer data)
+void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gchar *new_text, gpointer data)
 {
     ValueCellData *value_data = (ValueCellData *) data;
 
@@ -163,7 +157,7 @@ static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gcha
     }
 }
 
-void get_first_level_root(GtkTreeStore *store, GtkTreeIter *iter, gchar *group)
+static void get_first_level_root(GtkTreeStore *store, GtkTreeIter *iter, gchar *group)
 {
     GtkTreeIter root;
     if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store), &root)) {
@@ -193,7 +187,7 @@ void get_first_level_root(GtkTreeStore *store, GtkTreeIter *iter, gchar *group)
     gtk_tree_store_set(store, iter, 0, group, -1);
 }
 
-void find_recursively(GtkTreeStore *store, GtkTreeIter *root, GtkTreeIter *result, gchar **tokens, int depth)
+static void find_recursively(GtkTreeStore *store, GtkTreeIter *root, GtkTreeIter *result, gchar **tokens, int depth)
 {
     GtkTreeIter iter;
     gchar *str;
@@ -232,7 +226,7 @@ void find_recursively(GtkTreeStore *store, GtkTreeIter *root, GtkTreeIter *resul
     find_recursively(store, &iter, result, tokens, depth+1);
 }
 
-void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera *cam)
+static void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera *cam)
 {
     GtkTreeIter iter, child;
     struct uca_property *property;
@@ -284,7 +278,7 @@ void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera *cam)
     g_free(value_string);
 }
 
-void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
+static void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 {
     uint32_t prop_id;
 
@@ -357,17 +351,7 @@ int main(int argc, char *argv[])
     td.running = FALSE;
     td.pixel_size = pixel_size;
 
-    g_signal_connect(window, "delete-event",
-        G_CALLBACK (delete_event), NULL);
-    
-    g_signal_connect(window, "destroy",
-        G_CALLBACK (destroy), &td);
-
-    g_signal_connect(GTK_WIDGET(gtk_builder_get_object(builder, "toolbutton_run")), "clicked",
-        G_CALLBACK(on_toolbutton_run_clicked), &td);
-
-    g_signal_connect(GTK_WIDGET(gtk_builder_get_object(builder, "toolbutton_stop")), "clicked",
-        G_CALLBACK(on_toolbutton_stop_clicked), &td);
+    gtk_builder_connect_signals(builder, &td);
 
     ValueCellData value_cell_data;
     value_cell_data.thread_data = &td;
