@@ -90,6 +90,12 @@ static uint32_t uca_ipe_stop_recording(struct uca_camera_priv *cam)
 
 static uint32_t uca_ipe_grab(struct uca_camera_priv *cam, char *buffer, void *meta_data)
 {
+    pcilib_t *handle = cam->user;
+    size_t size = 0;
+    void *data = NULL;
+    if (pcilib_grab(handle, PCILIB_EVENTS_ALL, &size, &data, PCILIB_TIMEOUT_TRIGGER))
+        return UCA_ERR_CAMERA;
+    memcpy(buffer, data, size);
     return UCA_NO_ERROR;
 }
 
