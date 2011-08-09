@@ -29,6 +29,10 @@ static uint32_t uca_ipe_get_property(struct uca_camera_priv *cam, enum uca_prope
             strncpy((char *) data, "IPE PCIe based on CMOSIS CMV2000", num);
             break;
 
+        case UCA_PROP_BITDEPTH:
+            set_void(data, uint32_t, 16);
+            break;
+
         case UCA_PROP_WIDTH:
             set_void(data, uint32_t, 2048);
             break;
@@ -91,11 +95,12 @@ static uint32_t uca_ipe_stop_recording(struct uca_camera_priv *cam)
 static uint32_t uca_ipe_grab(struct uca_camera_priv *cam, char *buffer, void *meta_data)
 {
     pcilib_t *handle = cam->user;
-    size_t size = 0;
+    size_t size = cam->frame_width * cam->frame_height * sizeof(uint16_t);
     void *data = NULL;
     if (pcilib_grab(handle, PCILIB_EVENTS_ALL, &size, &data, PCILIB_TIMEOUT_TRIGGER))
         return UCA_ERR_CAMERA;
     memcpy(buffer, data, size);
+    free(data);
     return UCA_NO_ERROR;
 }
 
@@ -139,6 +144,8 @@ uint32_t uca_ipe_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     uca->grab = &uca_ipe_grab;
     uca->register_callback = &uca_ipe_register_callback;
 
+    uca->frame_width = 2048;
+    uca->frame_height = 1088;
     uca->user = handle;
     *cam = uca;
 
