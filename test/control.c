@@ -16,6 +16,7 @@ typedef struct {
     int pixel_size;
     struct uca_camera *cam;
     struct uca *u;
+    float scale;
 } ThreadData;
 
 
@@ -43,11 +44,11 @@ void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
     }
 }
 
-void convert_16bit_to_rgb(guchar *output, guchar *input, int width, int height)
+void convert_16bit_to_rgb(guchar *output, guchar *input, int width, int height, float scale)
 {
     uint16_t *in = (uint16_t *) input;
     for (int i = 0, j = 0; i < width*height; i++) {
-        guchar val = (uint8_t) ((in[i]/65536.0f)*256.0f);
+        guchar val = (uint8_t) ((in[i]/scale)*256.0f);
         output[j++] = val;
         output[j++] = val;
         output[j++] = val;
@@ -83,7 +84,7 @@ void *grab_thread(void *args)
         if (data->pixel_size == 1)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
         else if (data->pixel_size == 2)
-            convert_16bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
+            convert_16bit_to_rgb(data->pixels, data->buffer, data->width, data->height, data->scale);
 
         gdk_threads_enter();
         gdk_flush();
@@ -106,6 +107,12 @@ void on_destroy(GtkWidget *widget, gpointer data)
     td->running = FALSE;
     uca_destroy(td->u);
     gtk_main_quit();
+}
+
+void on_adjustment_scale_value_changed(GtkAdjustment* adjustment, gpointer user_data)
+{
+    ThreadData *data = (ThreadData *) user_data;
+    data->scale = gtk_adjustment_get_value(adjustment);
 }
 
 void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
@@ -350,15 +357,23 @@ int main(int argc, char *argv[])
     td.u      = u;
     td.running = FALSE;
     td.pixel_size = pixel_size;
+    td.scale = 65535.0f;
 
     gtk_builder_connect_signals(builder, &td);
 
+    /* Configure value cell */
     ValueCellData value_cell_data;
     value_cell_data.thread_data = &td;
     value_cell_data.tree_store = tree_store;
 
     g_signal_connect(gtk_builder_get_object(builder, "valuecell"), "edited",
         G_CALLBACK(on_valuecell_edited), &value_cell_data);
+
+    /* Configure scale adjustment */
+    GtkAdjustment *adjustment = (GtkAdjustment *) gtk_builder_get_object(builder, "adjustment_scale");
+    gtk_adjustment_configure(adjustment, 65535.0, 1.0, 65535.0, 0.5, 10.0, 0.0);
+    g_signal_connect(adjustment, "value-changed",
+        G_CALLBACK(on_adjustment_scale_value_changed), &td);
     
     gtk_widget_show(image);
     gtk_widget_show(window);
