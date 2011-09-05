@@ -23,28 +23,32 @@ int main(int argc, char *argv[])
     val = 0;
     handle_error(uca_cam_set_property(cam, UCA_PROP_DELAY, &val));
 
-    val = 1;
-    handle_error(uca_cam_set_property(cam, UCA_PROP_GRAB_SYNCHRONOUS, &val));
-
     uint32_t width, height, bits;
     handle_error(uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0));
     handle_error(uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, 0));
     handle_error(uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &bits, 0));
 
-    handle_error(uca_cam_alloc(cam, 10));
+    handle_error(uca_cam_alloc(cam, 20));
 
     const int pixel_size = bits == 8 ? 1 : 2;
     uint16_t *buffer = (uint16_t *) malloc(width * height * pixel_size);
 
     handle_error(uca_cam_start_recording(cam));
-    handle_error(uca_cam_grab(cam, (char *) buffer, NULL));
+
+    uint32_t error = UCA_NO_ERROR;
+    char filename[FILENAME_MAX];
+    int counter = 0;
+
+    while (error == UCA_NO_ERROR) {
+        error = uca_cam_grab(cam, (char *) buffer, NULL);
+        snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
+        FILE *fp = fopen(filename, "wb");
+        fwrite(buffer, width*height, pixel_size, fp);
+        fclose(fp);
+    }
+
     handle_error(uca_cam_stop_recording(cam));
     uca_destroy(u);
-
-    FILE *fp = fopen("out.raw", "wb");
-    fwrite(buffer, width*height, pixel_size, fp);
-    fclose(fp);
-
     free(buffer);
     return 0;
 }
