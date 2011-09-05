@@ -50,5 +50,6 @@ int main(int argc, char *argv[])
     handle_error(uca_cam_stop_recording(cam));
     uca_destroy(u);
     free(buffer);
-    return 0;
+
+    return error != UCA_NO_ERROR ? 1 : 0;
 }
