@@ -11,6 +11,7 @@ pkg_check_modules(GTHREAD2 gthread-2.0)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/control.glade ${CMAKE_CURRENT_BINARY_DIR})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_CURRENT_BINARY_DIR})
 
 # --- Build targets -----------------------------------------------------------
 add_executable(enum enum.c)
