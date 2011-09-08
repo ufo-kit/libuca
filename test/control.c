@@ -2,15 +2,24 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "uca.h"
 
 
 typedef struct {
-    guchar *buffer, *pixels;
     gboolean running;
-    GtkWidget *image;
+    gboolean store;
+    
+    guchar *buffer, *pixels;
     GdkPixbuf *pixbuf;
+    GtkWidget *image;
+
+    GtkStatusbar *statusbar;
+    guint statusbar_context_id;
+
+    int timestamp;
     int width;
     int height;
     int pixel_size;
@@ -78,9 +87,18 @@ void *grab_thread(void *args)
 {
     ThreadData *data = (ThreadData *) args;
     struct uca_camera *cam = data->cam;
+    char filename[FILENAME_MAX] = {0,};
+    int counter = 0;
 
     while (data->running) {
         uca_cam_grab(cam, (char *) data->buffer, NULL);
+        if (data->store) {
+            snprintf(filename, FILENAME_MAX, "frame-%i-%08i.raw", data->timestamp, counter++);
+            FILE *fp = fopen(filename, "wb");
+            fwrite(data->buffer, data->width*data->height, data->pixel_size, fp);
+            fclose(fp);
+        }
+
         if (data->pixel_size == 1)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
         else if (data->pixel_size == 2)
@@ -118,6 +136,9 @@ void on_adjustment_scale_value_changed(GtkAdjustment* adjustment, gpointer user_
 void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
+    if (data->running)
+        return;
+    
     GError *error = NULL;
     data->running = TRUE;
     uca_cam_start_recording(data->cam);
@@ -131,7 +152,27 @@ void on_toolbutton_stop_clicked(GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
     data->running = FALSE;
+    data->store = FALSE;
     uca_cam_stop_recording(data->cam);
+}
+
+void on_toolbutton_record_clicked(GtkWidget *widget, gpointer args)
+{
+    ThreadData *data = (ThreadData *) args;
+    data->timestamp = (int) time(0);
+    data->store = TRUE;
+    GError *error = NULL;
+    
+    gtk_statusbar_push(data->statusbar, data->statusbar_context_id, "Recording...");
+    
+    if (data->running != TRUE) {
+        data->running = TRUE;
+        uca_cam_start_recording(data->cam);
+        if (!g_thread_create(grab_thread, data, FALSE, &error)) {
+            g_printerr("Failed to create thread: %s\n", error->message);
+            uca_destroy(data->u);
+        }
+    }
 }
 
 void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gchar *new_text, gpointer data)
@@ -358,6 +399,8 @@ int main(int argc, char *argv[])
     td.running = FALSE;
     td.pixel_size = pixel_size;
     td.scale = 65535.0f;
+    td.statusbar = GTK_STATUSBAR(gtk_builder_get_object(builder, "statusbar"));
+    td.statusbar_context_id = gtk_statusbar_get_context_id(td.statusbar, "Recording Information");
 
     gtk_builder_connect_signals(builder, &td);
 

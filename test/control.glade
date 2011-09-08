@@ -132,6 +132,7 @@
                 <property name="label" translatable="yes">Record</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-media-record</property>
+                <signal name="clicked" handler="on_toolbutton_record_clicked"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -291,7 +292,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkStatusbar" id="statusbar1">
+          <object class="GtkStatusbar" id="statusbar">
             <property name="visible">True</property>
             <property name="spacing">2</property>
           </object>
