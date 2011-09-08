@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(uca)
+project(uca C)
 
 set(UCA_VERSION_MAJOR "0")
 set(UCA_VERSION_MINOR "4")
