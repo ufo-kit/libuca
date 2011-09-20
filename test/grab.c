@@ -1,15 +1,27 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include "uca.h"
 
 #define handle_error(errno) {if ((errno) != UCA_NO_ERROR) printf("error at <%s:%i>\n", \
     __FILE__, __LINE__);}
 
+static struct uca *u = NULL;
+
+void sigint_handler(int signal)
+{
+    printf("Closing down libuca\n");
+    handle_error(uca_cam_stop_recording(u->cameras));
+    uca_destroy(u);
+    exit(signal);
+}
 
 int main(int argc, char *argv[])
 {
-    struct uca *u = uca_init(NULL);
+    (void) signal(SIGINT, sigint_handler);
+
+    u = uca_init(NULL);
     if (u == NULL) {
         printf("Couldn't find a camera\n");
         return 1;
