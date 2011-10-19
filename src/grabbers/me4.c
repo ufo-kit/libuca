@@ -41,6 +41,7 @@ static struct uca_sisofg_map_t uca_to_fg[] = {
     /* values */
     { UCA_FORMAT_GRAY8,             FG_GRAY,                false },
     { UCA_FORMAT_GRAY16,            FG_GRAY16,              false },
+    { UCA_CL_SINGLE_TAP_8,          FG_CL_SINGLETAP_8_BIT,  false },
     { UCA_CL_8BIT_FULL_8,           FG_CL_8BIT_FULL_8,      false },
     { UCA_CL_8BIT_FULL_10,          FG_CL_8BIT_FULL_10,     false },
     { UCA_TRIGGER_AUTO,             FREE_RUN,               false },
@@ -259,7 +260,8 @@ static uint32_t uca_me4_register_callback(struct uca_grabber_priv *grabber, uca_
 
 uint32_t uca_me4_init(struct uca_grabber_priv **grabber)
 {
-    Fg_Struct *fg = Fg_Init("libFullAreaGray8.so", 0);
+    /* Fg_Struct *fg = Fg_Init("libFullAreaGray8.so", 0); */
+    Fg_Struct *fg = Fg_Init("libDualAreaGray16.so", 0);
     if (fg == NULL)
         return UCA_ERR_GRABBER | UCA_ERR_NOT_FOUND;
 

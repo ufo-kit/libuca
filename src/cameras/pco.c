@@ -2,13 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libpco/libpco.h>
+#include <libpco/sc2_defs.h>
 #include "uca.h"
 #include "uca-cam.h"
 #include "uca-grabber.h"
 #include "pco.h"
 
 typedef struct pco_desc {
-    struct pco_edge *pco;
+    pco_handle pco;
+    uint16_t type, subtype;
     uint16_t roi[4];
 } pco_desc_t;
 
@@ -102,37 +104,36 @@ static uint32_t uca_pco_set_property(struct uca_camera_priv *cam, enum uca_prope
 
 static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
 {
-    struct pco_edge *pco = GET_PCO(cam);
+    pco_handle pco = GET_PCO(cam);
     struct uca_grabber_priv *grabber = cam->grabber;
 
     switch (property) {
         case UCA_PROP_NAME: 
             {
-                SC2_Camera_Name_Response name;
-
                 /* FIXME: This is _not_ a mistake. For some reason (which I
                  * still have to figure out), it is sometimes not possible to
                  * read the camera name... unless the same call precedes that
                  * one.*/
-                pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name));
-                pco_read_property(pco, GET_CAMERA_NAME, &name, sizeof(name));
-                strncpy((char *) data, name.szName, num);
+                char *name = NULL;
+                pco_get_name(pco, &name);
+                strncpy((char *) data, name, num);
+                free(name);
             }
             break;
 
         case UCA_PROP_TEMPERATURE_SENSOR:
             {
-                SC2_Temperature_Response temperature;
-                if (pco_read_property(pco, GET_TEMPERATURE, &temperature, sizeof(temperature)) == PCO_NOERROR)
-                    uca_set_void(data, uint32_t, temperature.sCCDtemp / 10);
+                uint32_t t1, t2, t3;
+                if (pco_get_temperature(pco, &t1, &t2, &t3) == PCO_NOERROR)
+                    uca_set_void(data, uint32_t, t1 / 10);
             }
             break;
 
         case UCA_PROP_TEMPERATURE_CAMERA:
             {
-                SC2_Temperature_Response temperature;
-                if (pco_read_property(pco, GET_TEMPERATURE, &temperature, sizeof(temperature)) == PCO_NOERROR)
-                    uca_set_void(data, uint32_t, temperature.sCamtemp);
+                uint32_t t1, t2, t3;
+                if (pco_get_temperature(pco, &t1, &t2, &t3) == PCO_NOERROR)
+                    uca_set_void(data, uint32_t, t2);
             }
             break;
 
@@ -144,20 +145,12 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_prope
             uca_set_void(data, uint32_t, 1);
             break;
 
-        case UCA_PROP_WIDTH_MAX:
-            uca_set_void(data, uint32_t, pco->description.wMaxHorzResStdDESC);
-            break;
-
         case UCA_PROP_HEIGHT:
             uca_set_void(data, uint32_t, cam->frame_height);
             break;
 
         case UCA_PROP_HEIGHT_MIN:
             uca_set_void(data, uint32_t, 1);
-            break;
-
-        case UCA_PROP_HEIGHT_MAX:
-            uca_set_void(data, uint32_t, pco->description.wMaxVertResStdDESC);
             break;
 
         case UCA_PROP_X_OFFSET:
@@ -175,14 +168,14 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_prope
 
         case UCA_PROP_DELAY_MIN:
             {
-                uint32_t delay = pco->description.dwMinDelayDESC / 1000;
+                uint32_t delay = 12341234;
                 uca_set_void(data, uint32_t, delay);
             }
             break;
 
         case UCA_PROP_DELAY_MAX:
             {
-                uint32_t delay = pco->description.dwMaxDelayDESC * 1000;
+                uint32_t delay = 12341234;
                 uca_set_void(data, uint32_t, delay);
             }
             break;
@@ -196,14 +189,14 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_prope
 
         case UCA_PROP_EXPOSURE_MIN:
             {
-                uint32_t exposure = pco->description.dwMinExposureDESC / 1000;
+                uint32_t exposure = 12341234;
                 uca_set_void(data, uint32_t, exposure);
             }
             break;
 
         case UCA_PROP_EXPOSURE_MAX:
             {
-                uint32_t exposure = pco->description.dwMaxExposureDESC * 1000;
+                uint32_t exposure = 12341234;
                 uca_set_void(data, uint32_t, exposure);
             }
             break;
@@ -222,14 +215,6 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_prope
             }
             break;
 
-        case UCA_PROP_HOTPIXEL_CORRECTION:
-            {
-                SC2_Hot_Pixel_Correction_Mode_Response response;
-                if (pco_read_property(pco, GET_HOT_PIXEL_CORRECTION_MODE, &response, sizeof(response)) == PCO_NOERROR)
-                    uca_set_void(data, uint32_t, response.wMode);
-            }
-            break;
-
         default:
             return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
     }
@@ -240,7 +225,7 @@ static uint32_t uca_pco_start_recording(struct uca_camera_priv *cam)
 {
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_INIT;
 
-    struct pco_edge *pco = GET_PCO(cam);
+    pco_handle pco = GET_PCO(cam);
     if (pco_arm_camera(pco) != PCO_NOERROR)
         return err | UCA_ERR_UNCLASSIFIED;
     if (pco_set_rec_state(pco, 1) != PCO_NOERROR)
@@ -258,17 +243,27 @@ static uint32_t uca_pco_stop_recording(struct uca_camera_priv *cam)
 
 static uint32_t uca_pco_trigger(struct uca_camera_priv *cam)
 {
+    /* TODO: is this correct? */
+    uint32_t success = 0;
+    pco_force_trigger(GET_PCO(cam), &success);
     return cam->grabber->trigger(cam->grabber);
 }
 
 static uint32_t uca_pco_grab(struct uca_camera_priv *cam, char *buffer, void *meta_data)
 {
     uint16_t *frame;
+
+    pco_request_image(GET_PCO(cam));
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
     if (err != UCA_NO_ERROR)
         return err;
 
-    GET_PCO(cam)->reorder_image((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
+    if (GET_PCO_DESC(cam)->type == CAMERATYPE_PCO_EDGE)
+        /* GET_PCO(cam)->reorder_image((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height); */
+        ;
+    else
+        memcpy(buffer, (char *) frame, cam->frame_width * cam->frame_height * 2);
+
     return UCA_NO_ERROR;
 }
 
@@ -288,18 +283,25 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     if (grabber == NULL)
         return err | UCA_ERR_NOT_FOUND;
 
-    struct pco_edge *pco = pco_init();
+    pco_handle pco = pco_init();
     if (pco == NULL)
         return err | UCA_ERR_NOT_FOUND;
 
-    if ((pco->serial_ref == NULL) || !pco_is_active(pco)) {
+    if (!pco_is_active(pco)) {
         pco_destroy(pco);
         return err | UCA_ERR_NOT_FOUND;
     }
 
     struct uca_camera_priv *uca = uca_cam_new();
+
+    /* Prepare user data */
+    struct pco_desc *pco_d = (struct pco_desc *) malloc(sizeof(struct pco_desc));
+    uca->user = pco_d;
+    pco_d->pco = pco;
+    pco_get_camera_type(pco, &pco_d->type, &pco_d->subtype);
+
     uca->grabber = grabber;
-    uca->grabber->synchronous = false;
+    uca->grabber->synchronous = true;
 
     /* Camera found, set function pointers... */
     uca->destroy = &uca_pco_destroy;
@@ -312,17 +314,28 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     uca->register_callback = &uca_pco_register_callback;
 
     /* Prepare camera for recording */
-    pco_set_scan_mode(pco, PCO_SCANMODE_SLOW);
+    if (pco_d->type == CAMERATYPE_PCO_EDGE)
+        pco_set_scan_mode(pco, PCO_SCANMODE_SLOW);
+
     pco_set_rec_state(pco, 0);
     pco_set_timestamp_mode(pco, UCA_TIMESTAMP_ASCII);
     pco_set_timebase(pco, 1, 1); 
     pco_arm_camera(pco);
 
     /* Prepare frame grabber for recording */
-    int val = UCA_CL_8BIT_FULL_10;
+    int val = 0;
+    
+    if (pco_d->type == CAMERATYPE_PCO_EDGE)
+        val = UCA_CL_8BIT_FULL_10;
+    else if (pco_d->type == CAMERATYPE_PCO_DIMAX_STD)
+        val = UCA_CL_SINGLE_TAP_8;
     grabber->set_property(grabber, UCA_GRABBER_CAMERALINK_TYPE, &val);
 
-    val = UCA_FORMAT_GRAY8;
+    val = 0;
+    if (pco_d->type == CAMERATYPE_PCO_EDGE)
+        val = UCA_FORMAT_GRAY8;
+    else if (pco_d->type == CAMERATYPE_PCO_DIMAX_STD)
+        val = UCA_FORMAT_GRAY16;
     grabber->set_property(grabber, UCA_GRABBER_FORMAT, &val);
 
     val = UCA_TRIGGER_AUTO;
@@ -332,17 +345,14 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     pco_get_actual_size(pco, &width, &height);
     uca->frame_width = width;
     uca->frame_height = height;
-
-    struct pco_desc *pco_d = (struct pco_desc *) malloc(sizeof(struct pco_desc));
-    uca->user = pco_d;
-    pco_d->pco = pco;
     pco_d->roi[0] = pco_d->roi[1] = 1;
     pco_d->roi[2] = width;
     pco_d->roi[3] = height;
 
     /* Yes, we really have to take an image twice as large because we set the
      * CameraLink interface to 8-bit 10 Taps, but are actually using 5x16 bits. */
-    width *= 2;
+    if (pco_d->type == CAMERATYPE_PCO_EDGE)
+        width *= 2;
     grabber->set_property(grabber, UCA_PROP_WIDTH, &width);
     grabber->set_property(grabber, UCA_PROP_HEIGHT, &height);
 

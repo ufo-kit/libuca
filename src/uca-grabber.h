@@ -22,6 +22,7 @@ enum uca_grabber_constants {
     UCA_FORMAT_GRAY8,
     UCA_FORMAT_GRAY16,
 
+    UCA_CL_SINGLE_TAP_8,
     UCA_CL_8BIT_FULL_8,
     UCA_CL_8BIT_FULL_10
 };

@@ -22,6 +22,8 @@ int main(int argc, char *argv[])
     handle_error(uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val));
     val = 0;
     handle_error(uca_cam_set_property(cam, UCA_PROP_DELAY, &val));
+    val = UCA_TIMESTAMP_ASCII | UCA_TIMESTAMP_BINARY;
+    handle_error(uca_cam_set_property(cam, UCA_PROP_TIMESTAMP_MODE, &val));
 
     uint32_t width, height, bits;
     handle_error(uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0));
@@ -39,8 +41,9 @@ int main(int argc, char *argv[])
     char filename[FILENAME_MAX];
     int counter = 0;
 
-    while (error == UCA_NO_ERROR) {
+    while ((error == UCA_NO_ERROR) && (counter < 20)) {
         error = uca_cam_grab(cam, (char *) buffer, NULL);
+        printf("error = 0x%x\n", error);
         snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
         FILE *fp = fopen(filename, "wb");
         fwrite(buffer, width*height, pixel_size, fp);
