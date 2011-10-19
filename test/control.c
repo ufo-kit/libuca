@@ -358,6 +358,9 @@ int main(int argc, char *argv[])
     uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, 0);
     uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample, 0);
 
+    uint32_t mode = UCA_TIMESTAMP_ASCII | UCA_TIMESTAMP_BINARY;
+    uca_cam_set_property(cam, UCA_PROP_TIMESTAMP_MODE, &mode);
+
     g_thread_init(NULL);
     gdk_threads_init();
     gtk_init (&argc, &argv);

@@ -90,7 +90,21 @@ static uint32_t uca_pco_set_property(struct uca_camera_priv *cam, enum uca_prope
             return uca_pco_set_delay(cam, (uint32_t *) data);
 
         case UCA_PROP_TIMESTAMP_MODE:
-            return pco_set_timestamp_mode(GET_PCO(cam), *((uint16_t *) data));
+            {
+                uint32_t mode = *((uint32_t *) data);
+                if (mode & UCA_TIMESTAMP_ASCII) {
+                    if (mode & UCA_TIMESTAMP_BINARY)
+                        return pco_set_timestamp_mode(GET_PCO(cam), TIMESTAMP_MODE_BINARYANDASCII);
+                    else {
+                        printf("hello\n");
+                        return pco_set_timestamp_mode(GET_PCO(cam), TIMESTAMP_MODE_ASCII);
+                    }
+                } 
+                else if (mode & UCA_TIMESTAMP_BINARY)
+                    return pco_set_timestamp_mode(GET_PCO(cam), TIMESTAMP_MODE_BINARY);
+                else
+                    return pco_set_timestamp_mode(GET_PCO(cam), TIMESTAMP_MODE_OFF);
+            }
 
         case UCA_PROP_HOTPIXEL_CORRECTION:
             return pco_set_hotpixel_correction(GET_PCO(cam), *(uint32_t *) data);
@@ -318,9 +332,9 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
         pco_set_scan_mode(pco, PCO_SCANMODE_SLOW);
 
     pco_set_rec_state(pco, 0);
-    pco_set_timestamp_mode(pco, UCA_TIMESTAMP_ASCII);
+    pco_set_timestamp_mode(pco, TIMESTAMP_MODE_ASCII);
     pco_set_timebase(pco, 1, 1); 
-    pco_arm_camera(pco);
+    /* pco_arm_camera(pco); */
 
     /* Prepare frame grabber for recording */
     int val = 0;

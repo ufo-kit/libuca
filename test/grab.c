@@ -54,8 +54,7 @@ int main(int argc, char *argv[])
     int counter = 0;
 
     while ((error == UCA_NO_ERROR) && (counter < 20)) {
-        error = uca_cam_grab(cam, (char *) buffer, NULL);
-        printf("error = 0x%x\n", error);
+        handle_error(uca_cam_grab(cam, (char *) buffer, NULL));
         snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
         FILE *fp = fopen(filename, "wb");
         fwrite(buffer, width*height, pixel_size, fp);
