@@ -16,6 +16,17 @@ static void uca_ipe_handle_error(const char *format, ...)
 
 static uint32_t uca_ipe_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
 {
+    pcilib_t *handle = GET_HANDLE(cam);
+    pcilib_register_value_t value = *((pcilib_register_value_t *) data);
+
+    switch (property) {
+        case UCA_PROP_EXPOSURE:
+            pcilib_write_register(handle, NULL, "exp_time", value);
+            break;
+            
+        default:
+            return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
+    }
     return UCA_NO_ERROR;
 }
 
