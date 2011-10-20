@@ -108,6 +108,7 @@ enum uca_property_ids {
     /* grabber specific */
     UCA_PROP_GRAB_TIMEOUT,
     UCA_PROP_GRAB_SYNCHRONOUS,
+    UCA_PROP_GRAB_AUTO,
 
     /* pco.edge specific */
     UCA_PROP_TIMESTAMP_MODE,
@@ -295,6 +296,7 @@ extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding 
 #define UCA_ERR_NOT_RECORDING   0x10000008
 #define UCA_ERR_FRAME_TRANSFER  0x10000009
 #define UCA_ERR_ALREADY_REGISTERED 0x1000000A
+#define UCA_ERR_NOT_IMPLEMENTED 0x1000000B
 
 struct uca_camera_priv;
 /**
@@ -461,6 +463,19 @@ uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback
  *
  */
 uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data);
+
+/**
+ * \brief Initiate read out for recording based cameras like pco.dimax or
+ * Photron SAx
+ *
+ * This function merely starts read out and requires that recording has stopped
+ * with uca_cam_stop_recording. To retrieve the image data, you have still have
+ * to use uca_cam_grab.
+ *
+ * \param[in] cam A uca_camera object
+ * \return Error code
+ */
+uint32_t uca_cam_readout(struct uca_camera *cam);
 
 #define uca_set_void(p, type, value) { *((type *) p) = (type) value; }
 

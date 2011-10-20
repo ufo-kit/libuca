@@ -90,6 +90,9 @@ static uint32_t uca_pco_set_property(struct uca_camera_priv *cam, enum uca_prope
         case UCA_PROP_DELAY:
             return uca_pco_set_delay(cam, (uint32_t *) data);
 
+        case UCA_PROP_GRAB_AUTO:
+            return pco_set_auto_transfer(GET_PCO(cam), *(uint32_t *) data);
+
         case UCA_PROP_TRIGGER_MODE:
             /* XXX: We have a 1:1 mapping between UCA_TRIGGER_* and
              * TRIGGER_MODE_*
@@ -224,6 +227,16 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_prope
             uca_set_void(data, uint32_t, 16);
             break;
 
+        case UCA_PROP_GRAB_AUTO:
+            {
+                int value = 0;
+                uint32_t err = pco_get_auto_transfer(pco, &value);
+                if (err != PCO_NOERROR)
+                    return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
+                uca_set_void(data, uint32_t, value);
+            }
+            break;
+
         case UCA_PROP_GRAB_TIMEOUT:
             {
                 uint32_t timeout;
@@ -278,11 +291,23 @@ static uint32_t uca_pco_grab(struct uca_camera_priv *cam, char *buffer, void *me
         return err;
 
     if (GET_PCO_DESC(cam)->type == CAMERATYPE_PCO_EDGE)
-        /* GET_PCO(cam)->reorder_image((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height); */
-        ;
+        pco_get_reorder_func(GET_PCO(cam))((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
     else
         memcpy(buffer, (char *) frame, cam->frame_width * cam->frame_height * 2);
 
+    return UCA_NO_ERROR;
+}
+
+static uint32_t uca_pco_readout(struct uca_camera_priv *cam)
+{
+    uint16_t active_segment;
+    uint32_t num_images = 0; 
+    pco_handle pco = GET_PCO(cam);
+
+    /* TODO: error handling */
+    pco_get_active_segment(pco, &active_segment);
+    pco_get_num_images(pco, active_segment, &num_images);
+    pco_read_images(pco, active_segment, 1, num_images);
     return UCA_NO_ERROR;
 }
 
@@ -330,6 +355,7 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     uca->stop_recording = &uca_pco_stop_recording;
     uca->trigger = &uca_pco_trigger;
     uca->grab = &uca_pco_grab;
+    uca->readout = &uca_pco_readout;
     uca->register_callback = &uca_pco_register_callback;
 
     /* Prepare camera for recording */

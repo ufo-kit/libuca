@@ -86,6 +86,7 @@ static struct uca_property property_map[UCA_PROP_LAST+1] = {
     { "Gain.ADC.Step",          uca_na,     uca_uint32t, uca_read },
     { "Grabber.Timeout",        uca_s,      uca_uint32t, uca_readwrite },
     { "Grabber.Synchronous",    uca_bool,   uca_uint32t, uca_readwrite },
+    { "Grabber.Auto",           uca_bool,   uca_uint32t, uca_readwrite },
     { "Mode.Timestamp",         uca_na,     uca_uint32t, uca_readwrite }, 
     { "Mode.Scan",              uca_na,     uca_uint32t, uca_readwrite }, 
     { "Mode.Hotpixel",          uca_na,     uca_uint32t, uca_readwrite }, 
@@ -329,5 +330,15 @@ uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data)
     if (priv->state != UCA_CAM_RECORDING)
         return UCA_ERR_CAMERA | UCA_ERR_NOT_RECORDING;
     return priv->grab(priv, buffer, meta_data);
+}
+
+uint32_t uca_cam_readout(struct uca_camera *cam)
+{
+    struct uca_camera_priv *priv = cam->priv;
+    if (priv->state == UCA_CAM_RECORDING)
+        return UCA_ERR_CAMERA | UCA_ERR_IS_RECORDING;
+    if (priv->readout == NULL)
+        return UCA_ERR_CAMERA | UCA_ERR_NOT_IMPLEMENTED;
+    return priv->readout(priv);
 }
 

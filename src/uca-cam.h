@@ -47,6 +47,7 @@ typedef struct uca_camera_priv {
     uint32_t (*trigger) (struct uca_camera_priv *cam);
     uint32_t (*register_callback) (struct uca_camera_priv *cam, uca_cam_grab_callback callback, void *user);
     uint32_t (*grab) (struct uca_camera_priv *cam, char *buffer, void *meta_data);
+    uint32_t (*readout) (struct uca_camera_priv *cam);
 
     struct uca_grabber_priv *grabber;       /**< grabber associated with this camera */
     enum uca_cam_state      state;          /**< camera state handled in uca.c */
