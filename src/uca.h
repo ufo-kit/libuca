@@ -131,9 +131,10 @@ enum uca_property_ids {
 #define UCA_TIMESTAMP_BINARY    0x02
 
 /* Trigger mode for UCA_PROP_TRIGGER_MODE */
-#define UCA_TRIGGER_AUTO        1   /**< free-run mode */
-#define UCA_TRIGGER_SOFTWARE    2   /**< software trigger via uca_cam_trigger() */
-#define UCA_TRIGGER_EXTERNAL    3   /**< external hardware trigger */
+#define UCA_TRIGGER_AUTO        0   /**< free-run mode */
+#define UCA_TRIGGER_SOFTWARE    1   /**< software trigger via uca_cam_trigger() */
+#define UCA_TRIGGER_EXTERNAL    2   /**< external hardware trigger */
+#define UCA_TRIGGER_EXTERNAL_EXPOSURE 3     /**< hardware trigger controlling exposure */
 
 #define UCA_TRIGGER_EXP_CAMERA  1   /**< camera-controlled exposure time */
 #define UCA_TRIGGER_EXP_LEVEL   2   /**< level-controlled (trigger signal) exposure time */

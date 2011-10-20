@@ -44,6 +44,7 @@ static uint32_t uca_pco_set_delay(struct uca_camera_priv *cam, uint32_t *delay)
 
 static uint32_t uca_pco_destroy(struct uca_camera_priv *cam)
 {
+    cam->grabber->stop_acquire(cam->grabber);
     pco_set_rec_state(GET_PCO(cam), 0);
     pco_destroy(GET_PCO(cam));
     free(GET_PCO_DESC(cam));
@@ -89,16 +90,20 @@ static uint32_t uca_pco_set_property(struct uca_camera_priv *cam, enum uca_prope
         case UCA_PROP_DELAY:
             return uca_pco_set_delay(cam, (uint32_t *) data);
 
+        case UCA_PROP_TRIGGER_MODE:
+            /* XXX: We have a 1:1 mapping between UCA_TRIGGER_* and
+             * TRIGGER_MODE_*
+             */
+            return pco_set_trigger_mode(GET_PCO(cam), (uint16_t) *(uint32_t *) data);
+
         case UCA_PROP_TIMESTAMP_MODE:
             {
                 uint32_t mode = *((uint32_t *) data);
                 if (mode & UCA_TIMESTAMP_ASCII) {
                     if (mode & UCA_TIMESTAMP_BINARY)
                         return pco_set_timestamp_mode(GET_PCO(cam), TIMESTAMP_MODE_BINARYANDASCII);
-                    else {
-                        printf("hello\n");
+                    else
                         return pco_set_timestamp_mode(GET_PCO(cam), TIMESTAMP_MODE_ASCII);
-                    }
                 } 
                 else if (mode & UCA_TIMESTAMP_BINARY)
                     return pco_set_timestamp_mode(GET_PCO(cam), TIMESTAMP_MODE_BINARY);
