@@ -36,6 +36,8 @@ int main(int argc, char *argv[])
     handle_error(uca_cam_set_property(cam, UCA_PROP_DELAY, &val));
     val = UCA_TIMESTAMP_ASCII | UCA_TIMESTAMP_BINARY;
     handle_error(uca_cam_set_property(cam, UCA_PROP_TIMESTAMP_MODE, &val));
+    val = 1;
+    handle_error(uca_cam_set_property(cam, UCA_PROP_GRAB_AUTO, &val));
 
     uint32_t width, height, bits;
     handle_error(uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0));

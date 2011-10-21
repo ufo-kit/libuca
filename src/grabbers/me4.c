@@ -215,8 +215,10 @@ static uint32_t uca_me4_grab(struct uca_grabber_priv *grabber, void **buffer, ui
     else 
         last_frame = Fg_getLastPicNumberEx(me4->fg, PORT_A, me4->mem);
 
-    if (last_frame <= 0)
+    if (last_frame <= 0) {
+        *buffer = NULL;
         return UCA_ERR_GRABBER | UCA_ERR_FRAME_TRANSFER;
+    }
 
     *frame_number = (uint64_t) last_frame;
     *buffer = Fg_getImagePtrEx(me4->fg, last_frame, PORT_A, me4->mem);
@@ -274,6 +276,7 @@ uint32_t uca_me4_init(struct uca_grabber_priv **grabber)
 
     Fg_getParameter(fg, FG_TIMEOUT, &me4->timeout, PORT_A);
 
+    me4->timeout = 1;
     uca->user = me4;
     uca->destroy = &uca_me4_destroy;
     uca->set_property = &uca_me4_set_property;

@@ -196,6 +196,7 @@ enum uca_cam_state {
     UCA_CAM_CONFIGURABLE,   /**< Camera can be configured and is not recording */
     UCA_CAM_ARMED,          /**< Camera is ready for recording */
     UCA_CAM_RECORDING,      /**< Camera is currently recording */
+    UCA_CAM_READOUT         /**< Camera recorded and is currently in readout mode */
 };
 
 

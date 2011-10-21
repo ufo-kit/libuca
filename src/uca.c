@@ -327,7 +327,7 @@ uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback
 uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     struct uca_camera_priv *priv = cam->priv;
-    if (priv->state != UCA_CAM_RECORDING)
+    if ((priv->state != UCA_CAM_RECORDING) && (priv->state != UCA_CAM_READOUT))
         return UCA_ERR_CAMERA | UCA_ERR_NOT_RECORDING;
     return priv->grab(priv, buffer, meta_data);
 }
@@ -339,6 +339,7 @@ uint32_t uca_cam_readout(struct uca_camera *cam)
         return UCA_ERR_CAMERA | UCA_ERR_IS_RECORDING;
     if (priv->readout == NULL)
         return UCA_ERR_CAMERA | UCA_ERR_NOT_IMPLEMENTED;
+    priv->state = UCA_CAM_READOUT;
     return priv->readout(priv);
 }
 

@@ -51,11 +51,11 @@ int main(int argc, char *argv[])
 
     uca_cam_register_callback(cam, &grab_callback, &props);
     uca_cam_start_recording(cam);
-    printf("grabbing for 2 seconds\n");
-    sleep(2);
+    printf("grabbing for 1 second ... ");
+    fflush(stdout);
+    sleep(1);
     uca_cam_stop_recording(cam);
     printf("done\n");
-    fflush(stdout);
 
     uca_destroy(u);
     return 0;
