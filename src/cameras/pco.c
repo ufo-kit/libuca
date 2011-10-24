@@ -12,6 +12,10 @@ typedef struct pco_desc {
     pco_handle pco;
     uint16_t type, subtype;
     uint16_t roi[4];
+    
+    uint16_t active_segment;
+    uint32_t current_image;
+    uint32_t num_recorded_images;
 } pco_desc_t;
 
 #define GET_PCO_DESC(cam) ((struct pco_desc *) cam->user)
@@ -256,10 +260,14 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_prope
 static uint32_t uca_pco_start_recording(struct uca_camera_priv *cam)
 {
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_INIT;
-
     pco_handle pco = GET_PCO(cam);
+
+    if (GET_PCO_DESC(cam)->type == CAMERATYPE_PCO_DIMAX_STD)
+        pco_clear_active_segment(pco);
+
     if (pco_arm_camera(pco) != PCO_NOERROR)
         return err | UCA_ERR_UNCLASSIFIED;
+
     if (pco_set_rec_state(pco, 1) != PCO_NOERROR)
         return err | UCA_ERR_UNCLASSIFIED;
 
@@ -284,13 +292,26 @@ static uint32_t uca_pco_trigger(struct uca_camera_priv *cam)
 static uint32_t uca_pco_grab(struct uca_camera_priv *cam, char *buffer, void *meta_data)
 {
     uint16_t *frame;
+    pco_desc_t *pco_d = GET_PCO_DESC(cam);
+    pco_handle pco = pco_d->pco;
+
+    if (cam->state == UCA_CAM_READOUT && pco_d->type == CAMERATYPE_PCO_DIMAX_STD) {
+        if (pco_d->current_image == pco_d->num_recorded_images)
+            return UCA_ERR_NO_MORE_IMAGES;
+        
+        /* Ok, this is pco's way of requesting multiple frames... you have to do
+         * it one by one :/ */
+        pco_read_images(pco, pco_d->active_segment, pco_d->current_image, pco_d->current_image);
+        pco_d->current_image++;
+    }
 
     pco_request_image(GET_PCO(cam));
     uint32_t err = cam->grabber->grab(cam->grabber, (void **) &frame, &cam->current_frame);
     if (err != UCA_NO_ERROR)
         return err;
 
-    if (GET_PCO_DESC(cam)->type == CAMERATYPE_PCO_EDGE)
+    /* Copy data into user buffer */
+    if (pco_d->type == CAMERATYPE_PCO_EDGE)
         pco_get_reorder_func(GET_PCO(cam))((uint16_t *) buffer, frame, cam->frame_width, cam->frame_height);
     else
         memcpy(buffer, (char *) frame, cam->frame_width * cam->frame_height * 2);
@@ -300,14 +321,12 @@ static uint32_t uca_pco_grab(struct uca_camera_priv *cam, char *buffer, void *me
 
 static uint32_t uca_pco_readout(struct uca_camera_priv *cam)
 {
-    uint16_t active_segment;
-    uint32_t num_images = 0; 
-    pco_handle pco = GET_PCO(cam);
-
+    pco_desc_t *pco_d = GET_PCO_DESC(cam);
     /* TODO: error handling */
-    pco_get_active_segment(pco, &active_segment);
-    pco_get_num_images(pco, active_segment, &num_images);
-    pco_read_images(pco, active_segment, 1, num_images);
+    pco_handle pco = GET_PCO(cam);
+    pco_get_active_segment(pco, &pco_d->active_segment);
+    pco_get_num_images(pco, pco_d->active_segment, &pco_d->num_recorded_images);
+    pco_d->current_image = 1;
     return UCA_NO_ERROR;
 }
 

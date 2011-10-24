@@ -298,6 +298,7 @@ extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding 
 #define UCA_ERR_FRAME_TRANSFER  0x10000009
 #define UCA_ERR_ALREADY_REGISTERED 0x1000000A
 #define UCA_ERR_NOT_IMPLEMENTED 0x1000000B
+#define UCA_ERR_NO_MORE_IMAGES  0x1000000C
 
 struct uca_camera_priv;
 /**
