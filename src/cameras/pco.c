@@ -295,7 +295,7 @@ static uint32_t uca_pco_grab(struct uca_camera_priv *cam, char *buffer, void *me
     pco_desc_t *pco_d = GET_PCO_DESC(cam);
     pco_handle pco = pco_d->pco;
 
-    if (cam->state == UCA_CAM_READOUT && pco_d->type == CAMERATYPE_PCO_DIMAX_STD) {
+    if (cam->state == UCA_CAM_READOUT) {
         if (pco_d->current_image == pco_d->num_recorded_images)
             return UCA_ERR_NO_MORE_IMAGES;
         
@@ -389,17 +389,33 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     /* Prepare frame grabber for recording */
     int val = 0;
     
-    if (pco_d->type == CAMERATYPE_PCO_EDGE)
-        val = UCA_CL_8BIT_FULL_10;
-    else if (pco_d->type == CAMERATYPE_PCO_DIMAX_STD)
-        val = UCA_CL_SINGLE_TAP_8;
+    switch (pco_d->type) {
+        case CAMERATYPE_PCO_EDGE:
+            val = UCA_CL_8BIT_FULL_10;
+            break;
+        case CAMERATYPE_PCO_DIMAX_STD:
+            val = UCA_CL_SINGLE_TAP_8;
+            break;
+        case CAMERATYPE_PCO4000:
+            val = UCA_CL_SINGLE_TAP_16;
+            break;
+        default:
+            break;
+    }
     grabber->set_property(grabber, UCA_GRABBER_CAMERALINK_TYPE, &val);
 
     val = 0;
-    if (pco_d->type == CAMERATYPE_PCO_EDGE)
-        val = UCA_FORMAT_GRAY8;
-    else if (pco_d->type == CAMERATYPE_PCO_DIMAX_STD)
-        val = UCA_FORMAT_GRAY16;
+    switch (pco_d->type) {
+        case CAMERATYPE_PCO_EDGE:
+            val = UCA_FORMAT_GRAY8;
+            break;
+        case CAMERATYPE_PCO_DIMAX_STD:
+        case CAMERATYPE_PCO4000:
+            val = UCA_FORMAT_GRAY16;
+            break;
+        default:
+            break;
+    }
     grabber->set_property(grabber, UCA_GRABBER_FORMAT, &val);
 
     val = UCA_TRIGGER_AUTO;

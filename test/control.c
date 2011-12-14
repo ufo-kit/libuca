@@ -91,7 +91,11 @@ void *grab_thread(void *args)
     int counter = 0;
 
     while (data->running) {
-        uca_cam_grab(cam, (char *) data->buffer, NULL);
+        if (uca_cam_grab(cam, (char *) data->buffer, NULL) != UCA_NO_ERROR) {
+            sleep(1);
+            continue;
+        }
+
         if (data->store) {
             snprintf(filename, FILENAME_MAX, "frame-%i-%08i.raw", data->timestamp, counter++);
             FILE *fp = fopen(filename, "wb");
@@ -99,6 +103,8 @@ void *grab_thread(void *args)
             fclose(fp);
         }
 
+        /* FIXME: We should actually check if this is really a new frame and
+         * just do nothing if it is an already displayed one. */
         if (data->pixel_size == 1)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
         else if (data->pixel_size == 2)
@@ -360,6 +366,10 @@ int main(int argc, char *argv[])
 
     uint32_t mode = UCA_TIMESTAMP_ASCII | UCA_TIMESTAMP_BINARY;
     uca_cam_set_property(cam, UCA_PROP_TIMESTAMP_MODE, &mode);
+    uint32_t val = 1;
+    uca_cam_set_property(cam, UCA_PROP_GRAB_AUTO, &val);
+    val = 0;
+    uca_cam_set_property(cam, UCA_PROP_GRAB_SYNCHRONOUS, &val);
 
     g_thread_init(NULL);
     gdk_threads_init();
@@ -404,6 +414,7 @@ int main(int argc, char *argv[])
     td.scale = 65535.0f;
     td.statusbar = GTK_STATUSBAR(gtk_builder_get_object(builder, "statusbar"));
     td.statusbar_context_id = gtk_statusbar_get_context_id(td.statusbar, "Recording Information");
+    td.store = FALSE;
 
     gtk_builder_connect_signals(builder, &td);
 

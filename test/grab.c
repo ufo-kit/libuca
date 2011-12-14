@@ -50,6 +50,7 @@ int main(int argc, char *argv[])
     uint16_t *buffer = (uint16_t *) malloc(width * height * pixel_size);
 
     handle_error(uca_cam_start_recording(cam));
+    sleep(3);
 
     uint32_t error = UCA_NO_ERROR;
     char filename[FILENAME_MAX];
@@ -62,8 +63,8 @@ int main(int argc, char *argv[])
         fwrite(buffer, width*height, pixel_size, fp);
         fclose(fp);
     }
-
     handle_error(uca_cam_stop_recording(cam));
+
     uca_destroy(u);
     free(buffer);
 

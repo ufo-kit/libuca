@@ -42,6 +42,7 @@ static struct uca_sisofg_map_t uca_to_fg[] = {
     { UCA_FORMAT_GRAY8,             FG_GRAY,                false },
     { UCA_FORMAT_GRAY16,            FG_GRAY16,              false },
     { UCA_CL_SINGLE_TAP_8,          FG_CL_SINGLETAP_8_BIT,  false },
+    { UCA_CL_SINGLE_TAP_16,         FG_CL_SINGLETAP_16_BIT, false },
     { UCA_CL_8BIT_FULL_8,           FG_CL_8BIT_FULL_8,      false },
     { UCA_CL_8BIT_FULL_10,          FG_CL_8BIT_FULL_10,     false },
     { UCA_TRIGGER_AUTO,             FREE_RUN,               false },
