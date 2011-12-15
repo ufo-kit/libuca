@@ -49,9 +49,9 @@ if (PF_FOUND)
 endif()
 
 if (PCO_FOUND)
-    option(HAVE_PCO_EDGE "Camera: pco.edge" ON)
+    option(HAVE_PCO_CL "Camera: CameraLink-based pco" ON)
 
-    if (HAVE_PCO_EDGE)
+    if (HAVE_PCO_CL)
         set(uca_SRCS ${uca_SRCS} cameras/pco.c)
         set(uca_LIBS ${uca_LIBS} ${PCO_LIBRARIES})
 

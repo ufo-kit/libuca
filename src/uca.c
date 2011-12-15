@@ -18,7 +18,7 @@
 #include "grabbers/me4.h"
 #endif
 
-#ifdef HAVE_PCO_EDGE
+#ifdef HAVE_PCO_CL
 #include "cameras/pco.h"
 #endif
 
@@ -127,7 +127,7 @@ struct uca *uca_init(const char *config_filename)
     };
 
     uca_cam_init cam_inits[] = {
-#ifdef HAVE_PCO_EDGE
+#ifdef HAVE_PCO_CL
         uca_pco_init,
 #endif
 #ifdef HAVE_PHOTON_FOCUS

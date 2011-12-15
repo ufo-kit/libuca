@@ -1,7 +1,7 @@
 
 #cmakedefine HAVE_ME4
 
-#cmakedefine HAVE_PCO_EDGE
+#cmakedefine HAVE_PCO_CL
 #cmakedefine HAVE_PHOTON_FOCUS
 #cmakedefine HAVE_PHOTRON_FASTCAM
 #cmakedefine HAVE_IPE_CAMERA

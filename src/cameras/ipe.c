@@ -95,11 +95,15 @@ static uint32_t uca_ipe_get_property(struct uca_camera_priv *cam, enum uca_prope
 
 static uint32_t uca_ipe_start_recording(struct uca_camera_priv *cam)
 {
+    pcilib_t *handle = cam->user;
+    pcilib_start(handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
     return UCA_NO_ERROR;
 }
 
 static uint32_t uca_ipe_stop_recording(struct uca_camera_priv *cam)
 {
+    pcilib_t *handle = cam->user;
+    pcilib_stop(handle, PCILIB_EVENT_FLAGS_DEFAULT);
     return UCA_NO_ERROR;
 }
 
@@ -108,7 +112,7 @@ static uint32_t uca_ipe_grab(struct uca_camera_priv *cam, char *buffer, void *me
     pcilib_t *handle = cam->user;
     size_t size = cam->frame_width * cam->frame_height * sizeof(uint16_t);
     void *data = NULL;
-    if (pcilib_grab(handle, PCILIB_EVENTS_ALL, &size, &data, PCILIB_TIMEOUT_TRIGGER))
+    if (pcilib_grab(handle, PCILIB_EVENTS_ALL, &size, &data, PCILIB_TIMEOUT_INFINITE))
         return UCA_ERR_CAMERA;
     memcpy(buffer, data, size);
     free(data);
