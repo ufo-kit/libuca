@@ -115,6 +115,10 @@ include_directories(
 add_definitions("-std=c99 -Wall")
 add_library(uca SHARED ${uca_SRCS})
 
+set_target_properties(uca PROPERTIES
+      VERSION ${UCA_ABI_VERSION}
+      SOVERSION ${UCA_ABI_MAJOR_VERSION})
+
 target_link_libraries(uca ${uca_LIBS})
 
 # --- Install target ----------------------------------------------------------
