@@ -1,3 +1,19 @@
+/* Copyright (C) 2011, 2012 Matthias Vogelgesang <matthias.vogelgesang@kit.edu>
+   (Karlsruhe Institute of Technology)
+
+   This library is free software; you can redistribute it and/or modify it
+   under the terms of the GNU Lesser General Public License as published by the
+   Free Software Foundation; either version 2.1 of the License, or (at your
+   option) any later version.
+
+   This library is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+   FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+   details.
+
+   You should have received a copy of the GNU Lesser General Public License along
+   with this library; if not, write to the Free Software Foundation, Inc., 51
+   Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #define __USE_BSD
 #include <unistd.h>
@@ -54,7 +70,9 @@ void benchmark_cam(struct uca_camera *cam)
         gettimeofday(&stop, NULL);
 
         float seconds = time_diff(&start, &stop) / 1000000.0;
-        printf("%f,%s;%i;%i;1;%.2f;%.2f\n", seconds,name, width, height, 1000.0 / seconds, width*height*pixel_size*1000.0/ (1024*1024*seconds));
+        printf("%f,%s;%i;%i;1;%.2f;%.2f\n", seconds,
+                name, width, height, 1000.0 / seconds, 
+                width*height*pixel_size*1000.0/ (1024*1024*seconds));
 
         height /= 2;
         free(buffer);
