@@ -16,7 +16,10 @@
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include <pcilib.h>
 #include "uca.h"
 #include "uca-cam.h"
@@ -27,7 +30,6 @@
 
 static void uca_ipe_handle_error(const char *format, ...)
 {
-    /* Do nothing, we just check errno. */
 }
 
 static uint32_t uca_ipe_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
@@ -128,10 +130,25 @@ static uint32_t uca_ipe_grab(struct uca_camera_priv *cam, char *buffer, void *me
     pcilib_t *handle = cam->user;
     size_t size = cam->frame_width * cam->frame_height * sizeof(uint16_t);
     void *data = NULL;
-    if (pcilib_grab(handle, PCILIB_EVENTS_ALL, &size, &data, PCILIB_TIMEOUT_INFINITE))
+    pcilib_event_id_t event_id;
+    pcilib_event_info_t event_info;
+
+    if (pcilib_trigger(handle, PCILIB_EVENT0, 0, NULL))
         return UCA_ERR_CAMERA;
+
+    if (pcilib_get_next_event(handle, PCILIB_TIMEOUT_INFINITE, &event_id, sizeof(pcilib_event_info_t), &event_info))
+        return UCA_ERR_CAMERA;
+
+    size_t err = 0;
+    data = pcilib_get_data(handle, event_id, PCILIB_EVENT_DATA, &err);
+
+    if (data == NULL)
+        return UCA_ERR_CAMERA;
+
+    assert(err == size);
+
     memcpy(buffer, data, size);
-    free(data);
+    pcilib_return_data(handle, event_id, PCILIB_EVENT_DATA, data);
     return UCA_NO_ERROR;
 }
 
@@ -162,7 +179,7 @@ uint32_t uca_ipe_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
         return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_NOT_FOUND;
 
     pcilib_set_error_handler(&uca_ipe_handle_error, &uca_ipe_handle_error);
-    model = pcilib_get_model(handle);
+    pcilib_reset(handle);
 
     struct uca_camera_priv *uca = uca_cam_new();
 
