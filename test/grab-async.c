@@ -32,10 +32,10 @@ enum uca_buffer_status grab_callback(uint64_t image_number, void *buffer, void *
     const int pixel_size = props->bits == 8 ? 1 : 2;
     char filename[256];
 
-    sprintf(filename, "out-%04i.raw", (int) image_number);
-    FILE *fp = fopen(filename, "wb");
-    fwrite(buffer, props->width * props->height, pixel_size, fp);
-    fclose(fp);
+    /* sprintf(filename, "out-%04i.raw", (int) image_number); */
+    /* FILE *fp = fopen(filename, "wb"); */
+    /* fwrite(buffer, props->width * props->height, pixel_size, fp); */
+    /* fclose(fp); */
 
     printf("grabbed picture %i at %p (%ix%i @ %i bits)\n", 
             (int) image_number, buffer, 
@@ -65,10 +65,11 @@ int main(int argc, char *argv[])
     uca_cam_get_property(cam, UCA_PROP_HEIGHT, &props.height, 0);
     uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &props.bits, 0);
 
+    printf("width=%i, height=%i, bits=%i\n", props.width, props.height, props.bits);
     uca_cam_alloc(cam, 10);
 
-    uca_cam_register_callback(cam, &grab_callback, &props);
     uca_cam_start_recording(cam);
+    uca_cam_register_callback(cam, &grab_callback, &props);
     printf("grabbing for 1 second ... ");
     fflush(stdout);
     sleep(1);
