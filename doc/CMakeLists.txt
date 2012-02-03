@@ -7,10 +7,11 @@ if(DOXYGEN_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/publish.sh.in ${CMAKE_CURRENT_BINARY_DIR}/publish.sh)
 
-    # add 'ALL after 'doc' to create documentation, whenever you type make
-    add_custom_target(doc
-        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/html/index.html
+        COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../src/uca.h
         COMMENT "Generating API documentation with Doxygen" VERBATIM
         )
+    add_custom_target(docs ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html/index.html)
 endif(DOXYGEN_FOUND)

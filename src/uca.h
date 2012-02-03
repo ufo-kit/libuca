@@ -208,6 +208,8 @@ enum uca_access_rights {
 
 /**
  * Describes the current state of the camera.
+ *
+ * \see uca_cam_get_state()
  */
 enum uca_cam_state {
     UCA_CAM_CONFIGURABLE,   /**< Camera can be configured and is not recording */
@@ -220,16 +222,19 @@ enum uca_cam_state {
  * Specify if the callback function keeps the buffer and will call
  * ufo_cam_release_buffer() at later time or if after returning the buffer can
  * be released automatically.
+ *
+ * \since 0.5
  */
 enum uca_buffer_status {
-    UCA_BUFFER_KEEP,
-    UCA_BUFFER_RELEASE
+    UCA_BUFFER_KEEP,        /**< Keep the buffer and call ufo_cam_release_buffer() manually */
+    UCA_BUFFER_RELEASE      /**< Buffer is released upon return */
 };
 
 /**
  * A uca_property_t describes a vendor-independent property used by cameras and
  * frame grabbers. It basically consists of a human-readable name, a physical
  * unit, a type and some access rights.
+ * \see uca_get_full_property()
  */
 typedef struct uca_property {
     /**
@@ -266,6 +271,9 @@ union uca_value {
  * \param[in] meta_data Meta data provided by the camera specifying per-frame
  *   data.
  * \param[in] user User data registered in uca_cam_register_callback()
+ * \return Value from uca_buffer_status. If #UCA_BUFFER_KEEP is returned, the
+ * callee must make sure to call uca_cam_release_buffer(). On the other hand, if
+ * #UCA_BUFFER_RELEASE is returned this is done by the caller.
  *
  * \note The meta data parameter is not yet specified but just a place holder.
  */
@@ -357,7 +365,7 @@ typedef struct uca {
  *   relying on external calibration data. It is ignored when no JSON parser can
  *   be found at compile time or config_filename is NULL.
  *
- * \return Pointer to a uca structure
+ * \return Pointer to a #uca structure
  *
  * \note uca_init() is thread-safe if a Pthread-implementation is available.
  */
