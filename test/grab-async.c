@@ -67,8 +67,8 @@ int main(int argc, char *argv[])
 
     uca_cam_alloc(cam, 10);
 
-    uca_cam_register_callback(cam, &grab_callback, &props);
     uca_cam_start_recording(cam);
+    uca_cam_register_callback(cam, &grab_callback, &props);
     printf("grabbing for 1 second ... ");
     fflush(stdout);
     sleep(1);

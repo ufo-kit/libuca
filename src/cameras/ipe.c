@@ -164,17 +164,21 @@ static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info,
     struct uca_camera_priv *cam = (struct uca_camera_priv *) user;
     pcilib_t *handle = GET_HANDLE(cam);
     size_t error = 0;
+
     void *buffer = pcilib_get_data(handle, event_id, PCILIB_EVENT_DATA, &error);
 
-    if (buffer == NULL)
-        return UCA_ERR_CAMERA | UCA_ERR_CALLBACK;
+    if (buffer == NULL) {
+        pcilib_trigger(handle, PCILIB_EVENT0, 0, NULL);
+        return PCILIB_STREAMING_CONTINUE;
+    }
 
-    enum uca_buffer_status status = cam->callback(info->seqnum, buffer, NULL, cam->user);
+    enum uca_buffer_status status = cam->callback(info->seqnum, buffer, NULL, cam->callback_user);
 
     if (status == UCA_BUFFER_RELEASE)
         pcilib_return_data(handle, event_id, PCILIB_EVENT_DATA, buffer);
 
-    return UCA_NO_ERROR;
+    pcilib_trigger(handle, PCILIB_EVENT0, 0, NULL);
+    return PCILIB_STREAMING_CONTINUE;
 }
 
 static uint32_t uca_ipe_register_callback(struct uca_camera_priv *cam, uca_cam_grab_callback cb, void *user)
@@ -182,6 +186,7 @@ static uint32_t uca_ipe_register_callback(struct uca_camera_priv *cam, uca_cam_g
     if (cam->callback == NULL) {
         cam->callback = cb;
         cam->callback_user = user;
+        pcilib_trigger(GET_HANDLE(cam), PCILIB_EVENT0, 0, NULL);
         pcilib_stream(GET_HANDLE(cam), &event_callback, cam);
         return UCA_NO_ERROR;
     }
