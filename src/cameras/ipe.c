@@ -30,6 +30,13 @@
 
 static void uca_ipe_handle_error(const char *format, ...)
 {
+    if (format) {
+        va_list ap;
+        va_start(ap, format);
+        vprintf(format, ap);
+        printf("\n");
+        va_end(ap);
+    }
 }
 
 static uint32_t uca_ipe_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
@@ -127,7 +134,7 @@ static uint32_t uca_ipe_stop_recording(struct uca_camera_priv *cam)
 
 static uint32_t uca_ipe_grab(struct uca_camera_priv *cam, char *buffer, void *meta_data)
 {
-    pcilib_t *handle = cam->user;
+    pcilib_t *handle = GET_HANDLE(cam);
     size_t size = cam->frame_width * cam->frame_height * sizeof(uint16_t);
     void *data = NULL;
     pcilib_event_id_t event_id;
@@ -152,14 +159,41 @@ static uint32_t uca_ipe_grab(struct uca_camera_priv *cam, char *buffer, void *me
     return UCA_NO_ERROR;
 }
 
+static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info, void *user)
+{
+    struct uca_camera_priv *cam = (struct uca_camera_priv *) user;
+    pcilib_t *handle = GET_HANDLE(cam);
+    size_t error = 0;
+    void *buffer = pcilib_get_data(handle, event_id, PCILIB_EVENT_DATA, &error);
+
+    if (buffer == NULL)
+        return UCA_ERR_CAMERA | UCA_ERR_CALLBACK;
+
+    enum uca_buffer_status status = cam->callback(info->seqnum, buffer, NULL, cam->user);
+
+    if (status == UCA_BUFFER_RELEASE)
+        pcilib_return_data(handle, event_id, PCILIB_EVENT_DATA, buffer);
+
+    return UCA_NO_ERROR;
+}
+
 static uint32_t uca_ipe_register_callback(struct uca_camera_priv *cam, uca_cam_grab_callback cb, void *user)
 {
     if (cam->callback == NULL) {
         cam->callback = cb;
         cam->callback_user = user;
+        pcilib_stream(GET_HANDLE(cam), &event_callback, cam);
         return UCA_NO_ERROR;
     }
     return UCA_ERR_CAMERA | UCA_ERR_CALLBACK | UCA_ERR_ALREADY_REGISTERED;
+}
+
+static uint32_t uca_ipe_release_buffer(struct uca_camera_priv *cam, void *buffer)
+{
+    /* FIXME: call return_data */
+    /* pcilib_t *handle = GET_HANDLE(cam); */
+    /* pcilib_return_data(handle, event_id, PCILIB_EVENT_DATA, buffer); */
+    return UCA_NO_ERROR;
 }
 
 static uint32_t uca_ipe_destroy(struct uca_camera_priv *cam)
@@ -173,8 +207,7 @@ uint32_t uca_ipe_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     pcilib_model_t model = PCILIB_MODEL_DETECT;
     pcilib_set_error_handler(uca_ipe_handle_error, uca_ipe_handle_error);
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
-    /* XXX: This is not working because pcilib is still returning a valid
-     * structure although things like "failing ioctl's" can happen. */
+
     if (handle == NULL)
         return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_NOT_FOUND;
 
@@ -191,6 +224,7 @@ uint32_t uca_ipe_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     uca->stop_recording = &uca_ipe_stop_recording;
     uca->grab = &uca_ipe_grab;
     uca->register_callback = &uca_ipe_register_callback;
+    uca->release_buffer = &uca_ipe_release_buffer;
 
     uca->frame_width = 2048;
     uca->frame_height = 1088;
