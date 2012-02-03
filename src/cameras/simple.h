@@ -15,8 +15,8 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
-#ifndef __UNIFIED_CAMERA_ACCESS_PHOTON_H
-#define __UNIFIED_CAMERA_ACCESS_PHOTON_H
+#ifndef __UNIFIED_CAMERA_ACCESS_SIMPLE_H
+#define __UNIFIED_CAMERA_ACCESS_SIMPLE_H
 
 uint32_t uca_simple_init(struct uca_camera_priv **uca, struct uca_grabber_priv *grabber);
 
