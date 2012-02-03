@@ -40,8 +40,8 @@ typedef struct {
     int width;
     int height;
     int pixel_size;
-    struct uca_camera *cam;
-    struct uca *u;
+    uca_camera *cam;
+    uca *u;
     float scale;
 } ThreadData;
 
@@ -103,7 +103,7 @@ void reallocate_buffers(ThreadData *td, int width, int height)
 void *grab_thread(void *args)
 {
     ThreadData *data = (ThreadData *) args;
-    struct uca_camera *cam = data->cam;
+    uca_camera *cam = data->cam;
     char filename[FILENAME_MAX] = {0,};
     int counter = 0;
 
@@ -210,7 +210,7 @@ void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gchar *new_
     GtkTreeIter iter;
 
     if (gtk_tree_model_get_iter(tree_model, &iter, tree_path)) {
-        struct uca_camera *cam = value_data->thread_data->cam;
+        uca_camera *cam = value_data->thread_data->cam;
         uint32_t prop_id;
         gtk_tree_model_get(tree_model, &iter, COLUMN_UCA_ID, &prop_id, -1);
 
@@ -297,10 +297,10 @@ static void find_recursively(GtkTreeStore *store, GtkTreeIter *root, GtkTreeIter
     find_recursively(store, &iter, result, tokens, depth+1);
 }
 
-static void fill_tree_store(GtkTreeStore *tree_store, struct uca_camera *cam)
+static void fill_tree_store(GtkTreeStore *tree_store, uca_camera *cam)
 {
     GtkTreeIter iter, child;
-    struct uca_property *property;
+    uca_property *property;
     const size_t num_bytes = 256;
     gchar *value_string = g_malloc(num_bytes);
     guint8 value_8;
@@ -354,7 +354,7 @@ static void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cel
     uint32_t prop_id;
 
     gtk_tree_model_get(model, iter, COLUMN_UCA_ID, &prop_id, -1);
-    struct uca_property *property = uca_get_full_property(prop_id);
+    uca_property *property = uca_get_full_property(prop_id);
     if (property->access & uca_write) {
         g_object_set(cell, "mode", GTK_CELL_RENDERER_MODE_EDITABLE, NULL);
         g_object_set(GTK_CELL_RENDERER_TEXT(cell), "editable", TRUE, NULL);
@@ -369,14 +369,14 @@ static void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cel
 
 int main(int argc, char *argv[])
 {
-    struct uca *u = uca_init(NULL);
+    uca *u = uca_init(NULL);
     if (u == NULL) {
         g_print("Couldn't initialize frame grabber and/or cameras\n");
         return 1;
     }
 
     int width, height, bits_per_sample;
-    struct uca_camera *cam = u->cameras;
+    uca_camera *cam = u->cameras;
     uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0);
     uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, 0);
     uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &bits_per_sample, 0);

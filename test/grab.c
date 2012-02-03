@@ -24,7 +24,7 @@
 #define handle_error(errno) {if ((errno) != UCA_NO_ERROR) printf("error at <%s:%i>\n", \
     __FILE__, __LINE__);}
 
-static struct uca *u = NULL;
+uca *u = NULL;
 
 void sigint_handler(int signal)
 {
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     }
 
     /* take first camera */
-    struct uca_camera *cam = u->cameras;
+    uca_camera *cam = u->cameras;
 
     uint32_t val = 5000;
     handle_error(uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val));

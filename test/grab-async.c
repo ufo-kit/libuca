@@ -26,7 +26,7 @@ struct image_props {
     uint32_t bits;
 };
 
-enum uca_buffer_status grab_callback(uint64_t image_number, void *buffer, void *meta_data, void *user)
+uca_buffer_status grab_callback(uint64_t image_number, void *buffer, void *meta_data, void *user)
 {
     struct image_props *props = (struct image_props *) user;
     const int pixel_size = props->bits == 8 ? 1 : 2;
@@ -46,14 +46,14 @@ enum uca_buffer_status grab_callback(uint64_t image_number, void *buffer, void *
 
 int main(int argc, char *argv[])
 {
-    struct uca *u = uca_init(NULL);
+    uca *u = uca_init(NULL);
     if (u == NULL) {
         printf("Couldn't find a camera\n");
         return 1;
     }
 
     /* take first camera */
-    struct uca_camera *cam = u->cameras;
+    uca_camera *cam = u->cameras;
 
     uint32_t val = 5000;
     uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val);

@@ -9,6 +9,7 @@ Changes in libuca 0.5.0
 - API changes
     - new enum type uca_buffer_status
     - uca_cam_grab_callback()s have to return uca_buffer_status
+    - typedef all types
 
 - New symbols:
     - uca_cam_release_buffer()

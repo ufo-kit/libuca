@@ -35,7 +35,7 @@ void grab_callback_raw(uint32_t image_number, void *buffer, void *meta_data, voi
     *count = image_number;
 }
 
-void benchmark_cam(struct uca_camera *cam)
+void benchmark_cam(uca_camera *cam)
 {
     char name[256];
     uca_cam_get_property(cam, UCA_PROP_NAME, name, 256);
@@ -81,7 +81,7 @@ void benchmark_cam(struct uca_camera *cam)
 
 int main(int argc, char *argv[])
 {
-    struct uca *u = uca_init(NULL);
+    uca *u = uca_init(NULL);
     if (u == NULL) {
         printf("Couldn't find a camera\n");
         return 1;
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     printf("# camera;width;height;experiment;frames-per-second;throughput in MB/s\n");
 
     /* take first camera */
-    struct uca_camera *cam = u->cameras;
+    uca_camera *cam = u->cameras;
     while (cam != NULL) {
         benchmark_cam(cam);
         cam = cam->next;

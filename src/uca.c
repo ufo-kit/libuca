@@ -65,7 +65,7 @@ const char *uca_unit_map[] = {
     "" 
 };
 
-static struct uca_property property_map[UCA_PROP_LAST+1] = {
+static uca_property property_map[UCA_PROP_LAST+1] = {
     { "General.Name",           uca_na,     uca_string,  uca_read }, 
     { "Image.Width",            uca_pixel,  uca_uint32t, uca_readwrite }, 
     { "Image.Width.Min",        uca_pixel,  uca_uint32t, uca_read }, 
@@ -124,16 +124,16 @@ static pthread_mutex_t g_uca_init_lock = PTHREAD_MUTEX_INITIALIZER;
 #define uca_unlock(lock) 
 #endif
 
-struct uca *g_uca = NULL;
+uca *g_uca = NULL;
 
-struct uca *uca_init(const char *config_filename)
+uca *uca_init(const char *config_filename)
 {
     uca_lock();
     if (g_uca != NULL) {
         uca_unlock();
         return g_uca;
     }
-    g_uca = (struct uca *) malloc(sizeof(struct uca));
+    g_uca = (uca *) malloc(sizeof(uca));
     g_uca->cameras = NULL;
 
     uca_grabber_init grabber_inits[] = {
@@ -179,13 +179,13 @@ struct uca *uca_init(const char *config_filename)
      * each camera must make sure to check for such a situation. */
 
     if (grabber != NULL) {
-        g_uca->grabbers = (struct uca_grabber *) malloc(sizeof(struct uca_grabber));
+        g_uca->grabbers = (uca_grabber *) malloc(sizeof(uca_grabber));
         g_uca->grabbers->priv = grabber;
         g_uca->grabbers->next = NULL;
     }
 
     i = 0;
-    struct uca_camera *current = NULL;
+    uca_camera *current = NULL;
     /* Probe each camera that is configured and append a found camera to the
      * linked list. */
     while (cam_inits[i] != NULL) {
@@ -193,13 +193,13 @@ struct uca *uca_init(const char *config_filename)
         uca_cam_init init = cam_inits[i];
         if (init(&cam, grabber) == UCA_NO_ERROR) {
             if (current == NULL) {
-                g_uca->cameras = (struct uca_camera *) malloc(sizeof(struct uca_camera));
+                g_uca->cameras = (uca_camera *) malloc(sizeof(uca_camera));
                 g_uca->cameras->priv = cam;
                 g_uca->cameras->next = NULL;
                 current = g_uca->cameras;
             }
             else {
-                current->next = (struct uca_camera *) malloc(sizeof(struct uca_camera));
+                current->next = (uca_camera *) malloc(sizeof(uca_camera));
                 current->next->priv = cam;
                 current = current->next;
             }
@@ -218,11 +218,11 @@ struct uca *uca_init(const char *config_filename)
     return g_uca;
 }
 
-void uca_destroy(struct uca *u)
+void uca_destroy(uca *u)
 {
     uca_lock();
     if (u != NULL) {
-        struct uca_camera *cam = u->cameras, *tmp;
+        uca_camera *cam = u->cameras, *tmp;
         struct uca_camera_priv *cam_priv;
         while (cam != NULL) {
             tmp = cam;
@@ -232,7 +232,7 @@ void uca_destroy(struct uca *u)
             free(tmp);
         }
 
-        struct uca_grabber *grabber = u->grabbers, *tmpg;
+        uca_grabber *grabber = u->grabbers, *tmpg;
         struct uca_grabber_priv *grabber_priv;
         while (grabber != NULL) {
             tmpg = grabber;
@@ -247,12 +247,12 @@ void uca_destroy(struct uca *u)
     uca_unlock();
 }
 
-uint32_t uca_get_property_id(const char *property_name, enum uca_property_ids *prop_id)
+uint32_t uca_get_property_id(const char *property_name, uca_property_ids *prop_id)
 {
     int i = 0;
     while (property_map[i].name != NULL) {
         if (!strcmp(property_map[i].name, property_name)) {
-            *prop_id = (enum uca_property_ids) i;
+            *prop_id = (uca_property_ids) i;
             return UCA_NO_ERROR;
         }
         i++;
@@ -260,21 +260,21 @@ uint32_t uca_get_property_id(const char *property_name, enum uca_property_ids *p
     return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
 }
 
-struct uca_property *uca_get_full_property(enum uca_property_ids property_id)
+uca_property *uca_get_full_property(uca_property_ids property_id)
 {
     if ((property_id >= 0) && (property_id < UCA_PROP_LAST))
         return &property_map[property_id];
     return NULL;
 }
 
-const char* uca_get_property_name(enum uca_property_ids property_id)
+const char* uca_get_property_name(uca_property_ids property_id)
 {
     if ((property_id >= 0) && (property_id < UCA_PROP_LAST))
         return property_map[property_id].name;
     return UCA_NO_ERROR;
 }
 
-uint32_t uca_cam_alloc(struct uca_camera *cam, uint32_t n_buffers)
+uint32_t uca_cam_alloc(uca_camera *cam, uint32_t n_buffers)
 {
     uint32_t bitdepth;
     struct uca_camera_priv *priv = cam->priv;
@@ -285,25 +285,25 @@ uint32_t uca_cam_alloc(struct uca_camera *cam, uint32_t n_buffers)
     return UCA_NO_ERROR;
 }
 
-enum uca_cam_state uca_cam_get_state(struct uca_camera *cam)
+uca_cam_state uca_cam_get_state(uca_camera *cam)
 {
     struct uca_camera_priv *priv = cam->priv;
     return priv->state;
 }
 
-uint32_t uca_cam_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data)
+uint32_t uca_cam_set_property(uca_camera *cam, uca_property_ids property, void *data)
 {
     struct uca_camera_priv *priv = cam->priv;
     return priv->set_property(priv, property, data);
 }
 
-uint32_t uca_cam_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num)
+uint32_t uca_cam_get_property(uca_camera *cam, uca_property_ids property, void *data, size_t num)
 {
     struct uca_camera_priv *priv = cam->priv;
     return priv->get_property(priv, property, data, num);
 }
 
-uint32_t uca_cam_start_recording(struct uca_camera *cam)
+uint32_t uca_cam_start_recording(uca_camera *cam)
 {
     struct uca_camera_priv *priv = cam->priv;
     if (priv->state == UCA_CAM_RECORDING)
@@ -315,7 +315,7 @@ uint32_t uca_cam_start_recording(struct uca_camera *cam)
     return err;
 }
 
-uint32_t uca_cam_stop_recording(struct uca_camera *cam)
+uint32_t uca_cam_stop_recording(uca_camera *cam)
 {
     struct uca_camera_priv *priv = cam->priv;
     if (priv->state != UCA_CAM_RECORDING)
@@ -327,7 +327,7 @@ uint32_t uca_cam_stop_recording(struct uca_camera *cam)
     return err;
 }
 
-uint32_t uca_cam_trigger(struct uca_camera *cam)
+uint32_t uca_cam_trigger(uca_camera *cam)
 {
     struct uca_camera_priv *priv = cam->priv;
     if (priv->state != UCA_CAM_RECORDING)
@@ -335,13 +335,13 @@ uint32_t uca_cam_trigger(struct uca_camera *cam)
     return priv->trigger(priv);
 }
 
-uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user)
+uint32_t uca_cam_register_callback(uca_camera *cam, uca_cam_grab_callback callback, void *user)
 {
     struct uca_camera_priv *priv = cam->priv;
     return priv->register_callback(priv, callback, user);
 }
 
-uint32_t uca_cam_release_buffer(struct uca_camera *cam, void *buffer)
+uint32_t uca_cam_release_buffer(uca_camera *cam, void *buffer)
 {
     struct uca_camera_priv *priv = cam->priv;
     if (priv->release_buffer != NULL)
@@ -349,7 +349,7 @@ uint32_t uca_cam_release_buffer(struct uca_camera *cam, void *buffer)
     return UCA_ERR_NOT_IMPLEMENTED;
 }
 
-uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data)
+uint32_t uca_cam_grab(uca_camera *cam, char *buffer, void *meta_data)
 {
     struct uca_camera_priv *priv = cam->priv;
     if ((priv->state != UCA_CAM_RECORDING) && (priv->state != UCA_CAM_READOUT))
@@ -357,7 +357,7 @@ uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data)
     return priv->grab(priv, buffer, meta_data);
 }
 
-uint32_t uca_cam_readout(struct uca_camera *cam)
+uint32_t uca_cam_readout(uca_camera *cam)
 {
     struct uca_camera_priv *priv = cam->priv;
     if (priv->state == UCA_CAM_RECORDING)

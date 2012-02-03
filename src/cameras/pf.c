@@ -24,7 +24,7 @@
 #include "uca-grabber.h"
 
 struct uca_pf_map {
-    enum uca_property_ids uca_prop;
+    uca_property_ids uca_prop;
     const char *pf_prop;
 };
 
@@ -63,7 +63,7 @@ static int uca_pf_set_uint32_property(TOKEN token, void *data, uint32_t *update_
     return pfDevice_SetProperty(0, token, &value);
 }
 
-static uint32_t uca_pf_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_pf_set_property(struct uca_camera_priv *cam, uca_property_ids property, void *data)
 {
     struct uca_grabber_priv *grabber = cam->grabber;
     TOKEN token = INVALID_TOKEN;
@@ -121,7 +121,7 @@ static uint32_t uca_pf_set_property(struct uca_camera_priv *cam, enum uca_proper
 }
 
 
-static uint32_t uca_pf_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_pf_get_property(struct uca_camera_priv *cam, uca_property_ids property, void *data, size_t num)
 {
     TOKEN t;    /* You gotta love developers who name types capitalized... */
     PFValue value;

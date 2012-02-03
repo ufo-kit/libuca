@@ -71,7 +71,7 @@ static uint32_t uca_pco_destroy(struct uca_camera_priv *cam)
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_pco_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_pco_set_property(struct uca_camera_priv *cam, uca_property_ids property, void *data)
 {
     struct uca_grabber_priv *grabber = cam->grabber;
     struct pco_desc *pco_d = GET_PCO_DESC(cam);
@@ -144,7 +144,7 @@ static uint32_t uca_pco_set_property(struct uca_camera_priv *cam, enum uca_prope
 }
 
 
-static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, uca_property_ids property, void *data, size_t num)
 {
     pco_handle pco = GET_PCO(cam);
     struct uca_grabber_priv *grabber = cam->grabber;

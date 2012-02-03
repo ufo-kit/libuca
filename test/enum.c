@@ -36,14 +36,14 @@ void print_level(int depth)
 
 int main(int argc, char *argv[])
 {
-    struct uca *u = uca_init(NULL);
+    uca *u = uca_init(NULL);
     if (u == NULL) {
         printf("Couldn't find a camera\n");
         return 1;
     }
 
     /* take first camera */
-    struct uca_camera *cam = u->cameras;
+    uca_camera *cam = u->cameras;
 
     const size_t num_bytes = 256;
     char string_value[num_bytes];
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 
     while (cam != NULL) {
         for (int i = 0; i < UCA_PROP_LAST; i++) {
-            struct uca_property *prop = uca_get_full_property(i);
+            uca_property *prop = uca_get_full_property(i);
             print_level(count_dots(prop->name));
             printf("%s = ", prop->name);
             switch (prop->type) {

@@ -127,7 +127,7 @@ typedef uint32_t (*uca_grabber_grab) (struct uca_grabber_priv *grabber, void **b
  *
  * \param[in] cb Callback function for when a frame arrived
  */
-typedef uint32_t (*uca_grabber_register_callback) (struct uca_grabber_priv *grabber, uca_cam_grab_callback cb, void *meta_data, void *user);
+typedef uca_buffer_status (*uca_grabber_register_callback) (struct uca_grabber_priv *grabber, uca_cam_grab_callback cb, void *meta_data, void *user);
 
 
 /**

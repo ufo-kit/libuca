@@ -84,7 +84,7 @@ extern "C" {
 
 /* The property IDs must start with 0 and must be continuous. Whenever this
  * library is released, the IDs must not change to guarantee binary compatibility! */
-enum uca_property_ids {
+typedef enum {
     UCA_PROP_NAME = 0,
     UCA_PROP_WIDTH,
     UCA_PROP_WIDTH_MIN,
@@ -141,7 +141,7 @@ enum uca_property_ids {
     UCA_PROP_CORRECTION_MODE,
 
     UCA_PROP_LAST
-};
+} uca_property_ids;
 
 /* Possible timestamp modes for UCA_PROP_TIMESTAMP_MODE */
 #define UCA_TIMESTAMP_NONE      0x00
@@ -169,7 +169,7 @@ enum uca_property_ids {
  * the values into their respective target value. It is also used for human
  * interfaces.
  */
-enum uca_unit {
+typedef enum {
     uca_pixel,  /**< number of pixels */
     uca_bits,   /**< number of bits */
     uca_ns,     /**< nanoseconds */
@@ -181,7 +181,7 @@ enum uca_unit {
     uca_dc,     /**< degree celsius */
     uca_bool,   /**< 1 or 0 for true and false */
     uca_na      /**< no unit available (for example modes) */
-};
+} uca_unit;
 
 /**
  * The data type of this property.
@@ -190,33 +190,33 @@ enum uca_unit {
  * must be respected and correct data transfered, as the values are
  * interpreted like defined here.
  */
-enum uca_types {
+typedef enum {
     uca_uint32t,
     uca_uint8t,
     uca_string
-};
+} uca_types;
 
 /**
  * Access rights determine if uca_cam_get_property() and/or
  * uca_cam_set_property() can be used with this property.
  */
-enum uca_access_rights {
+typedef enum {
     uca_read = 0x01,                /**< property can be read */
     uca_write = 0x02,               /**< property can be written */
     uca_readwrite = 0x01 | 0x02     /**< property can be read and written */
-};
+} uca_access_rights;
 
 /**
  * Describes the current state of the camera.
  *
  * \see uca_cam_get_state()
  */
-enum uca_cam_state {
+typedef enum {
     UCA_CAM_CONFIGURABLE,   /**< Camera can be configured and is not recording */
     UCA_CAM_ARMED,          /**< Camera is ready for recording */
     UCA_CAM_RECORDING,      /**< Camera is currently recording */
     UCA_CAM_READOUT         /**< Camera recorded and is currently in readout mode */
-};
+} uca_cam_state;
 
 /**
  * Specify if the callback function keeps the buffer and will call
@@ -225,10 +225,10 @@ enum uca_cam_state {
  *
  * \since 0.5
  */
-enum uca_buffer_status {
+typedef enum {
     UCA_BUFFER_KEEP,        /**< Keep the buffer and call ufo_cam_release_buffer() manually */
     UCA_BUFFER_RELEASE      /**< Buffer is released upon return */
-};
+} uca_buffer_status;
 
 /**
  * A uca_property_t describes a vendor-independent property used by cameras and
@@ -236,7 +236,7 @@ enum uca_buffer_status {
  * unit, a type and some access rights.
  * \see uca_get_full_property()
  */
-typedef struct uca_property {
+typedef struct {
     /**
      * A human-readable string for this property.
      *
@@ -247,11 +247,11 @@ typedef struct uca_property {
      */
     const char *name;
 
-    enum uca_unit unit;
-    enum uca_types type;
-    enum uca_access_rights access;
+    uca_unit unit;
+    uca_types type;
+    uca_access_rights access;
 
-} uca_property_t;
+} uca_property;
 
 union uca_value {
     uint32_t u32;
@@ -277,7 +277,7 @@ union uca_value {
  *
  * \note The meta data parameter is not yet specified but just a place holder.
  */
-typedef enum uca_buffer_status (*uca_cam_grab_callback) (uint64_t image_number, void *buffer, void *meta_data, void *user);
+typedef uca_buffer_status (*uca_cam_grab_callback) (uint64_t image_number, void *buffer, void *meta_data, void *user);
 
 extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding strings */
 
@@ -339,24 +339,24 @@ struct uca_camera_priv;
  * uca_camera is an opaque structure that is only accessed with the uca_cam_*
  * methods.
  */
-struct uca_camera {
+typedef struct uca_camera {
     struct uca_camera *next;
     struct uca_camera_priv* priv;
-};
+} uca_camera;
 
 struct uca_grabber_priv;
-struct uca_grabber {
+typedef struct uca_grabber {
     struct uca_grabber *next;
     struct uca_grabber_priv* priv;
-};
+} uca_grabber;
 
 /**
  * Keeps a list of cameras and grabbers.
  */
-typedef struct uca {
-    struct uca_camera *cameras;
-    struct uca_grabber *grabbers;
-} uca_t;
+typedef struct {
+    uca_camera *cameras;
+    uca_grabber *grabbers;
+} uca;
 
 /**
  * Initialize the unified camera access interface.
@@ -369,29 +369,29 @@ typedef struct uca {
  *
  * \note uca_init() is thread-safe if a Pthread-implementation is available.
  */
-struct uca *uca_init(const char *config_filename);
+uca *uca_init(const char *config_filename);
 
 /**
  * Free resources of the unified camera access interface
  *
  * \note uca_destroy() is thread-safe if a Pthread-implementation is available.
  */
-void uca_destroy(struct uca *u);
+void uca_destroy(uca *u);
 
 /**
  * Convert a property string to the corresponding ID
  */
-uint32_t uca_get_property_id(const char *property_name, enum uca_property_ids *prop_id);
+uint32_t uca_get_property_id(const char *property_name, uca_property_ids *prop_id);
 
 /**
  * Convert a property ID to the corresponding string 
  */
-const char* uca_get_property_name(enum uca_property_ids property_id);
+const char* uca_get_property_name(uca_property_ids property_id);
 
 /**
  * Return the full property structure for a given ID
  */
-uca_property_t *uca_get_full_property(enum uca_property_ids property_id);
+uca_property *uca_get_full_property(uca_property_ids property_id);
 
 /**
  * Allocates buffer memory for the internal frame grabber.
@@ -403,7 +403,7 @@ uca_property_t *uca_get_full_property(enum uca_property_ids property_id);
  * \param[in] n_buffers Number of sub-buffers with size frame_width*frame_height.
  * \return Error code
  */
-uint32_t uca_cam_alloc(struct uca_camera *cam, uint32_t n_buffers);
+uint32_t uca_cam_alloc(uca_camera *cam, uint32_t n_buffers);
 
 /**
  * Retrieve current state of the camera.
@@ -412,7 +412,7 @@ uint32_t uca_cam_alloc(struct uca_camera *cam, uint32_t n_buffers);
  * \return A value from the uca_cam_state enum representing the current state of
  *   the camera.
  */
-enum uca_cam_state uca_cam_get_state(struct uca_camera *cam);
+uca_cam_state uca_cam_get_state(uca_camera *cam);
 
 
 /**
@@ -426,7 +426,7 @@ enum uca_cam_state uca_cam_get_state(struct uca_camera *cam);
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera or
  *   UCA_ERR_PROP_VALUE_OUT_OF_RANGE if value cannot be set.
  */
-uint32_t uca_cam_set_property(struct uca_camera *cam, enum uca_property_ids property, void *data);
+uint32_t uca_cam_set_property(uca_camera *cam, uca_property_ids property, void *data);
 
 /**
  * Get a property.
@@ -439,7 +439,7 @@ uint32_t uca_cam_set_property(struct uca_camera *cam, enum uca_property_ids prop
  *
  * \return UCA_ERR_PROP_INVALID if property is not supported on the camera
  */
-uint32_t uca_cam_get_property(struct uca_camera *cam, enum uca_property_ids property, void *data, size_t num);
+uint32_t uca_cam_get_property(uca_camera *cam, uca_property_ids property, void *data, size_t num);
 
 /**
  * Begin recording.
@@ -450,7 +450,7 @@ uint32_t uca_cam_get_property(struct uca_camera *cam, enum uca_property_ids prop
  * \param[in] cam A uca_camera object
  * \return Error code
  */
-uint32_t uca_cam_start_recording(struct uca_camera *cam);
+uint32_t uca_cam_start_recording(uca_camera *cam);
 
 /**
  * Stop recording.
@@ -458,18 +458,18 @@ uint32_t uca_cam_start_recording(struct uca_camera *cam);
  * \param[in] cam A uca_camera object
  * \return Error code
  */
-uint32_t uca_cam_stop_recording(struct uca_camera *cam);
+uint32_t uca_cam_stop_recording(uca_camera *cam);
 
 /**
  * Send a software trigger signal to start a sensor read-out.
  *
- * This method is only useful when UCA_PROP_TRIGGER_MODE is set to
- * UCA_TRIGGER_SOFTWARE.
+ * This method is only useful when #UCA_PROP_TRIGGER_MODE is set to
+ * #UCA_TRIGGER_SOFTWARE.
  *
  * \param[in] cam A uca_camera object
  * \return Error code
  */
-uint32_t uca_cam_trigger(struct uca_camera *cam);
+uint32_t uca_cam_trigger(uca_camera *cam);
 
 /**
  * Register callback for given frame grabber. To actually start receiving
@@ -480,7 +480,7 @@ uint32_t uca_cam_trigger(struct uca_camera *cam);
  * \param[in] user User data that is passed to the callback function
  * \return Error code
  */
-uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user);
+uint32_t uca_cam_register_callback(uca_camera *cam, uca_cam_grab_callback callback, void *user);
 
 /**
  * Release the buffer that was given in the grab callback.
@@ -491,7 +491,7 @@ uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback
  * \see uca_cam_register_callback(), uca_cam_grab_callback
  * \since 0.5
  */
-uint32_t uca_cam_release_buffer(struct uca_camera *cam, void *buffer);
+uint32_t uca_cam_release_buffer(uca_camera *cam, void *buffer);
 
 /**
  * \brief Grab one image from the camera
@@ -508,7 +508,7 @@ uint32_t uca_cam_release_buffer(struct uca_camera *cam, void *buffer);
  * \note The meta data parameter is not yet specified but just a place holder.
  *
  */
-uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data);
+uint32_t uca_cam_grab(uca_camera *cam, char *buffer, void *meta_data);
 
 /**
  * \brief Initiate read out for recording based cameras like pco.dimax or
@@ -521,7 +521,7 @@ uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data);
  * \param[in] cam A uca_camera object
  * \return Error code
  */
-uint32_t uca_cam_readout(struct uca_camera *cam);
+uint32_t uca_cam_readout(uca_camera *cam);
 
 #define uca_set_void(p, type, value) { *((type *) p) = (type) value; }
 

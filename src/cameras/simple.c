@@ -23,7 +23,7 @@
 #include "uca-grabber.h"
 
 
-static uint32_t uca_simple_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_simple_set_property(struct uca_camera_priv *cam, uca_property_ids property, void *data)
 {
     struct uca_grabber_priv *grabber = cam->grabber;
     int err = UCA_NO_ERROR;
@@ -43,7 +43,7 @@ static uint32_t uca_simple_set_property(struct uca_camera_priv *cam, enum uca_pr
 }
 
 
-static uint32_t uca_simple_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_simple_get_property(struct uca_camera_priv *cam, uca_property_ids property, void *data, size_t num)
 {
     struct uca_grabber_priv *grabber = cam->grabber;
     uint32_t value32 = 0;
