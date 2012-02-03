@@ -341,6 +341,13 @@ uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback
     return priv->register_callback(priv, callback, user);
 }
 
+uint32_t uca_cam_release_buffer(struct uca_camera *cam, void *buffer)
+{
+    struct uca_camera_priv *priv = cam->priv;
+    if (priv->release_buffer != NULL)
+        return priv->release_buffer(priv, buffer);
+}
+
 uint32_t uca_cam_grab(struct uca_camera *cam, char *buffer, void *meta_data)
 {
     struct uca_camera_priv *priv = cam->priv;

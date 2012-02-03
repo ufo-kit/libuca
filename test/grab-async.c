@@ -26,7 +26,7 @@ struct image_props {
     uint32_t bits;
 };
 
-void grab_callback(uint64_t image_number, void *buffer, void *meta_data, void *user)
+enum uca_buffer_status grab_callback(uint64_t image_number, void *buffer, void *meta_data, void *user)
 {
     struct image_props *props = (struct image_props *) user;
     const int pixel_size = props->bits == 8 ? 1 : 2;
@@ -40,6 +40,8 @@ void grab_callback(uint64_t image_number, void *buffer, void *meta_data, void *u
     printf("grabbed picture %i at %p (%ix%i @ %i bits)\n", 
             (int) image_number, buffer, 
             props->width, props->height, props->bits);
+
+    return UCA_BUFFER_RELEASE;
 }
 
 int main(int argc, char *argv[])

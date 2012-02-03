@@ -216,6 +216,15 @@ enum uca_cam_state {
     UCA_CAM_READOUT         /**< Camera recorded and is currently in readout mode */
 };
 
+/**
+ * Specify if the callback function keeps the buffer and will call
+ * ufo_cam_release_buffer() at later time or if after returning the buffer can
+ * be released automatically.
+ */
+enum uca_buffer_status {
+    UCA_BUFFER_KEEP,
+    UCA_BUFFER_RELEASE
+};
 
 /**
  * A uca_property_t describes a vendor-independent property used by cameras and
@@ -253,14 +262,14 @@ union uca_value {
  * receive data as soon as it is delivered.
  *
  * \param[in] image_number Current frame number
- * \param[in] buffer Image data
+ * \param[in] buffer Image data.
  * \param[in] meta_data Meta data provided by the camera specifying per-frame
  *   data.
  * \param[in] user User data registered in uca_cam_register_callback()
  *
  * \note The meta data parameter is not yet specified but just a place holder.
  */
-typedef void (*uca_cam_grab_callback) (uint64_t image_number, void *buffer, void *meta_data, void *user);
+typedef enum uca_buffer_status (*uca_cam_grab_callback) (uint64_t image_number, void *buffer, void *meta_data, void *user);
 
 extern const char *uca_unit_map[];      /**< maps unit numbers to corresponding strings */
 
@@ -454,7 +463,6 @@ uint32_t uca_cam_stop_recording(struct uca_camera *cam);
  */
 uint32_t uca_cam_trigger(struct uca_camera *cam);
 
-
 /**
  * Register callback for given frame grabber. To actually start receiving
  * frames, call uca_grabber_acquire().
@@ -465,6 +473,17 @@ uint32_t uca_cam_trigger(struct uca_camera *cam);
  * \return Error code
  */
 uint32_t uca_cam_register_callback(struct uca_camera *cam, uca_cam_grab_callback callback, void *user);
+
+/**
+ * Release the buffer that was given in the grab callback.
+ *
+ * \param[in] cam A uca_camera object
+ * \param[in] buffer The buffer that was passed to the callback
+ *
+ * \see uca_cam_register_callback(), uca_cam_grab_callback
+ * \since 0.5
+ */
+uint32_t uca_cam_release_buffer(struct uca_camera *cam, void *buffer);
 
 /**
  * \brief Grab one image from the camera
