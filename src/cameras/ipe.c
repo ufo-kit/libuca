@@ -39,7 +39,7 @@ static void uca_ipe_handle_error(const char *format, ...)
     }
 }
 
-static uint32_t uca_ipe_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_ipe_set_property(struct uca_camera_priv *cam, uca_property_ids property, void *data)
 {
     pcilib_t *handle = GET_HANDLE(cam);
     pcilib_register_value_t value = *((pcilib_register_value_t *) data);
@@ -55,7 +55,7 @@ static uint32_t uca_ipe_set_property(struct uca_camera_priv *cam, enum uca_prope
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_ipe_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_ipe_get_property(struct uca_camera_priv *cam, uca_property_ids property, void *data, size_t num)
 {
     pcilib_t *handle = GET_HANDLE(cam);
     pcilib_register_value_t value = 0;
@@ -172,7 +172,7 @@ static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info,
         return PCILIB_STREAMING_CONTINUE;
     }
 
-    enum uca_buffer_status status = cam->callback(info->seqnum, buffer, NULL, cam->callback_user);
+    uca_buffer_status status = cam->callback(info->seqnum, buffer, NULL, cam->callback_user);
 
     if (status == UCA_BUFFER_RELEASE)
         pcilib_return_data(handle, event_id, PCILIB_EVENT_DATA, buffer);
