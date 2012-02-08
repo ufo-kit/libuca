@@ -40,50 +40,100 @@ extern "C" {
  * \section intro_sec Introduction
  *
  * libuca is a thin wrapper to make different cameras and their access
- * interfaces (via CameraLink, PCIe, Thunderbolt …) accessible in an easy way.
+ * interfaces (via CameraLink, PCIe …) accessible in an easy way.
  * It builds support for cameras, when it can find the necessary dependencies,
  * so there is no need to have camera SDKs installed when you don't own a
  * camera. 
  *
+ * \section intro_installation Installation from source
+ *
+ * Check out the code from vogelgesang/libuca or untar the tarball. Make sure to
+ * install CMake and any third party drivers and SDKs that you want to have
+ * accessed by libuca. Now go into some empty build directory and issue
+ *
+ * \verbatim
+$ cmake PATH_TO_LIBUCA_SOURCE
+$ make
+$ make install
+   \endverbatim
+ *
  * \section intro_quickstart Quick Start
  *
- * First you would create a new uca_t structure
+ * First of all you have to create a new uca handle to initialize the individual
+ * subsystems
  *
- * \code struct uca_t *uca = uca_init() \endcode
+ * \code uca *u = uca_init(); \endcode
  *
- * and see if it is not NULL. If it is NULL, no camera or frame grabber was
- * found. If you build with HAVE_DUMMY_CAMERA, there will always be at least the
- * dummy camera available.
+ * and see if uca_init() did not return NULL. If this is the case, no camera or
+ * frame grabber was found. If you build with HAVE_DUMMY_CAMERA, there will
+ * always be at least the dummy camera available.
  *
  * You can then iterate through all available cameras using
  * 
  * \code
- * struct uca_camera_t *i = uca->cameras;
+ * uca_camera *i = uca->cameras;
  * while (i != NULL) {
  *     // do something with i
  *     i = i->next;
  * }
  * \endcode
  *
- * With such a uca_camera_t structure, you can set properties, retrieve
- * properties or start grabbing frames. Be aware, to check bit depth and frame 
- * dimensions in order to allocate enough memory.
+ * The uca_camera handle is used to set and retrieve properties: 
+ *
+ * \code
+ * uca_camera *cam = uca->cameras;
+ * uint32_t val = 5000;
+ * uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val);
+ * 
+ * uint32_t width, height;
+ * uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, NULL);
+ * uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, NULL);
+ * \endcode
+ *
+ * \section properties Property system
+ *
+ * Each property has a unique id listed in the #uca_property_ids enum.
+ * Information about each property is given in a uca_property structure that is
+ * mapped with uca_get_full_property(). The description lists the unit, type and
+ * access rights.
+ * 
+ * \section intro_recording Recording
+ *
+ * To record in synchronous fashion use uca_cam_grab() like
+ *
+ * \code
+ * void *buffer = (void *) malloc(width * height * bytes_per_pixel);
+ * uca_cam_start_recording(cam);
+ * uca_cam_grab(cam, (char *) buffer, NULL);
+ * uca_cam_stop_recording(cam);
+ * \endcode
+ *
+ * Eventually you will have to cleanup the system by calling 
+ *
+ * \code uca_destroy(u); \endcode
  *
  * \section intro_usage Adding new cameras
  *
- * Up to now, new cameras have to be integrated into libuca directly. Later on,
- * we might provide a plugin mechanism. To add a new camera, add
- * cameras/new-cam.c and cameras/new-cam.h to the source tree and change
- * CMakeLists.txt to include these files. Furthermore, if this camera relies on
- * external dependencies, these have to be found first via the CMake system.
+ * To add a new camera, add cameras/new-cam.c and cameras/new-cam.h to the
+ * source tree and change CMakeLists.txt to include these files.
+ * Furthermore, if this camera relies on external dependencies, these have
+ * to be found first via the CMake system.
  *
  * The new camera must export exactly one function: uca_new_camera_init() which
  * checks if (given the grabber) the camera is available and sets the function
  * pointers to access the camera accordingly.
+ *
+ * \section api_reference API reference
+ *
+ * All function definitions can be found in uca.h.
+ *
  */
 
 /* The property IDs must start with 0 and must be continuous. Whenever this
  * library is released, the IDs must not change to guarantee binary compatibility! */
+/**
+ * ID of all supported properties
+ */
 typedef enum {
     UCA_PROP_NAME = 0,
     UCA_PROP_WIDTH,
@@ -247,9 +297,9 @@ typedef struct {
      */
     const char *name;
 
-    uca_unit unit;
-    uca_types type;
-    uca_access_rights access;
+    uca_unit unit;  /**< Physical unit of this property */
+    uca_types type; /**< Type of this property */
+    uca_access_rights access; /**< Access rights of this property */
 
 } uca_property;
 
@@ -354,8 +404,8 @@ typedef struct uca_grabber {
  * Keeps a list of cameras and grabbers.
  */
 typedef struct {
-    uca_camera *cameras;
-    uca_grabber *grabbers;
+    uca_camera *cameras;    /**< Root of detected camera list */
+    uca_grabber *grabbers;  /**< Root of detected grabber list */
 } uca;
 
 /**
@@ -380,16 +430,26 @@ void uca_destroy(uca *u);
 
 /**
  * Convert a property string to the corresponding ID
+ *
+ * \param[in] property_name Name of the property
+ * \param[out] prop_id Resulting property ID
+ * \return Error code
  */
 uint32_t uca_get_property_id(const char *property_name, uca_property_ids *prop_id);
 
 /**
  * Convert a property ID to the corresponding string 
+ *
+ * \param property_id ID of a property 
+ * \return If property is found name of the property else NULL
  */
 const char* uca_get_property_name(uca_property_ids property_id);
 
 /**
  * Return the full property structure for a given ID
+ *
+ * \param property_id ID of a property
+ * \return Property description or NULL if property is not found
  */
 uca_property *uca_get_full_property(uca_property_ids property_id);
 

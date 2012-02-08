@@ -55,16 +55,54 @@ struct uca_camera_priv *uca_cam_new(void);
  * Represents a camera abstraction, that concrete cameras must implement.
  */
 typedef struct uca_camera_priv {
-    /* virtual methods to be overridden by concrete cameras */
+    /**
+     * \see ufo_destroy()
+     */
     uint32_t (*destroy) (struct uca_camera_priv *cam);
+
+    /**
+     * \see ufo_cam_set_property()
+     */
     uint32_t (*set_property) (struct uca_camera_priv *cam, uca_property_ids property, void *data);
+
+    /**
+     * \see ufo_cam_get_property()
+     */
     uint32_t (*get_property) (struct uca_camera_priv *cam, uca_property_ids property, void *data, size_t num);
+
+    /**
+     * \see ufo_cam_start_recording()
+     */
     uint32_t (*start_recording) (struct uca_camera_priv *cam);
+
+    /**
+     * \see ufo_cam_stop_recording()
+     */
     uint32_t (*stop_recording) (struct uca_camera_priv *cam);
+
+    /**
+     * \see ufo_cam_trigger()
+     */
     uint32_t (*trigger) (struct uca_camera_priv *cam);
+
+    /**
+     * \see ufo_cam_register_callback()
+     */
     uint32_t (*register_callback) (struct uca_camera_priv *cam, uca_cam_grab_callback callback, void *user);
+
+    /**
+     * \see ufo_cam_release_buffer()
+     */
     uint32_t (*release_buffer) (struct uca_camera_priv *cam, void *buffer);
+
+    /**
+     * \see ufo_cam_grab()
+     */
     uint32_t (*grab) (struct uca_camera_priv *cam, char *buffer, void *meta_data);
+
+    /**
+     * \see ufo_cam_readout()
+     */
     uint32_t (*readout) (struct uca_camera_priv *cam);
 
     struct uca_grabber_priv *grabber;       /**< grabber associated with this camera */
