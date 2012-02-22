@@ -7,7 +7,7 @@ includedir_old=@includedir@/uca
 includedir_new=@includedir@
 
 Name: libuca
-Description: Unified Camera Access
+Description: @UCA_DESCRIPTION@
 Version: @VERSION@
 Libs: -L${libdir} -luca
 Cflags: -I${includedir_old} -I${includedir_new}
