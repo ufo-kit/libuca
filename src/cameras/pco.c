@@ -399,7 +399,7 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
 
     pco_set_rec_state(pco, 0);
     pco_set_timestamp_mode(pco, TIMESTAMP_MODE_ASCII);
-    pco_set_timebase(pco, 1, 1); 
+    /* pco_set_timebase(pco, 1, 1); */ 
     /* pco_arm_camera(pco); */
 
     /* Prepare frame grabber for recording */
@@ -437,8 +437,10 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     val = UCA_TRIGGER_AUTO;
     grabber->set_property(grabber, UCA_GRABBER_TRIGGER_MODE, &val);
 
-    uint32_t width, height;
-    pco_get_actual_size(pco, &width, &height);
+    uint16_t width_std, height_std, width_ex, height_ex;
+    pco_get_resolution(pco, &width_std, &height_std, &width_ex, &height_ex);
+
+    uint32_t width = width_std, height = height_std;
     uca->frame_width = width;
     uca->frame_height = height;
     pco_d->roi[0] = pco_d->roi[1] = 1;
