@@ -67,16 +67,18 @@ int main(int argc, char *argv[])
     uint16_t *buffer = (uint16_t *) malloc(width * height * pixel_size);
 
     handle_error(uca_cam_start_recording(cam));
-    sleep(3);
+    /* sleep(3); */
 
     uint32_t error = UCA_NO_ERROR;
     char filename[FILENAME_MAX];
     int counter = 0;
 
     while ((error == UCA_NO_ERROR) && (counter < 20)) {
+        printf(" grab frame ... ");
         error = uca_cam_grab(cam, (char *) buffer, NULL);
         if (error != UCA_NO_ERROR)
             break;
+        printf("done\n");
 
         snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
         FILE *fp = fopen(filename, "wb");

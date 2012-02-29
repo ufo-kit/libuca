@@ -42,30 +42,22 @@ typedef struct pco_desc {
 
 static uint32_t uca_pco_set_exposure(struct uca_camera_priv *cam, uint32_t *exposure)
 {
-    uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
-    uint32_t e, d;
-    if (pco_get_delay_exposure(GET_PCO(cam), &d, &e) != PCO_NOERROR)
-        return err | UCA_ERR_INVALID;
-    if (pco_set_delay_exposure(GET_PCO(cam), d, *exposure) != PCO_NOERROR)
-        return err | UCA_ERR_INVALID;
+    if (pco_set_exposure_time(GET_PCO(cam), *exposure) != PCO_NOERROR)
+        return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
     return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_set_delay(struct uca_camera_priv *cam, uint32_t *delay)
 {
-    uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
-    uint32_t e, d;
-    if (pco_get_delay_exposure(GET_PCO(cam), &d, &e) != PCO_NOERROR)
-        return err | UCA_ERR_INVALID;
-    if (pco_set_delay_exposure(GET_PCO(cam), *delay, e) != PCO_NOERROR)
-        return err | UCA_ERR_INVALID;
+    if (pco_set_delay_time(GET_PCO(cam), *delay) != PCO_NOERROR)
+        return UCA_ERR_CAMERA | UCA_ERR_PROP | UCA_ERR_INVALID;
     return UCA_NO_ERROR;
 }
 
 static uint32_t uca_pco_destroy(struct uca_camera_priv *cam)
 {
     cam->grabber->stop_acquire(cam->grabber);
-    pco_set_rec_state(GET_PCO(cam), 0);
+    pco_stop_recording(GET_PCO(cam));
     pco_destroy(GET_PCO(cam));
     free(GET_PCO_DESC(cam));
     return UCA_NO_ERROR;
@@ -152,10 +144,6 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, uca_property_i
     switch (property) {
         case UCA_PROP_NAME: 
             {
-                /* FIXME: This is _not_ a mistake. For some reason (which I
-                 * still have to figure out), it is sometimes not possible to
-                 * read the camera name... unless the same call precedes that
-                 * one.*/
                 char *name = NULL;
                 pco_get_name(pco, &name);
                 strncpy((char *) data, name, num);
@@ -166,8 +154,9 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, uca_property_i
         case UCA_PROP_TEMPERATURE_SENSOR:
             {
                 uint32_t t1, t2, t3;
-                if (pco_get_temperature(pco, &t1, &t2, &t3) == PCO_NOERROR)
-                    uca_set_void(data, uint32_t, t1 / 10);
+                if (pco_get_temperature(pco, &t1, &t2, &t3) == PCO_NOERROR) {
+                    uca_set_void(data, uint32_t, (t1 / 10));
+                }
             }
             break;
 
@@ -195,6 +184,22 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, uca_property_i
             uca_set_void(data, uint32_t, 1);
             break;
 
+        case UCA_PROP_BINNING_X:
+            {
+                uint16_t hb, vb;
+                if (pco_get_binning(pco, &hb, &vb) == PCO_NOERROR)
+                    uca_set_void(data, uint32_t, hb);
+            }
+            break;
+
+        case UCA_PROP_BINNING_Y:
+            {
+                uint16_t hb, vb;
+                if (pco_get_binning(pco, &hb, &vb) == PCO_NOERROR)
+                    uca_set_void(data, uint32_t, vb);
+            }
+            break;
+
         case UCA_PROP_X_OFFSET:
             return grabber->get_property(grabber, UCA_PROP_X_OFFSET, (uint32_t *) data);
 
@@ -202,44 +207,38 @@ static uint32_t uca_pco_get_property(struct uca_camera_priv *cam, uca_property_i
             return grabber->get_property(grabber, UCA_PROP_Y_OFFSET, (uint32_t *) data);
 
         case UCA_PROP_DELAY:
-            {
-                uint32_t exposure;
-                pco_get_delay_exposure(pco, (uint32_t *) data, &exposure);
-            }
+            pco_get_delay_time(pco, (uint32_t *) data);
             break;
 
         case UCA_PROP_DELAY_MIN:
             {
-                uint32_t delay = 12341234;
-                uca_set_void(data, uint32_t, delay);
+                uint32_t dummy1, dummy2;
+                pco_get_delay_range(pco, (uint32_t *) data, &dummy1, &dummy2);
             }
             break;
 
         case UCA_PROP_DELAY_MAX:
             {
-                uint32_t delay = 12341234;
-                uca_set_void(data, uint32_t, delay);
+                uint32_t dummy1, dummy2;
+                pco_get_delay_range(pco, &dummy1, (uint32_t *) data, &dummy2);
             }
             break;
 
         case UCA_PROP_EXPOSURE:
-            {
-                uint32_t delay;
-                pco_get_delay_exposure(pco, &delay, (uint32_t *) data);
-            }
+            pco_get_exposure_time(pco, (uint32_t *) data);
             break;
 
         case UCA_PROP_EXPOSURE_MIN:
             {
-                uint32_t exposure = 12341234;
-                uca_set_void(data, uint32_t, exposure);
+                uint32_t dummy1, dummy2;
+                pco_get_exposure_range(pco, (uint32_t *) data, &dummy1, &dummy2);
             }
             break;
 
         case UCA_PROP_EXPOSURE_MAX:
             {
-                uint32_t exposure = 12341234;
-                uca_set_void(data, uint32_t, exposure);
+                uint32_t dummy1, dummy2;
+                pco_get_exposure_range(pco, &dummy1, (uint32_t *) data, &dummy2);
             }
             break;
 
@@ -284,7 +283,7 @@ static uint32_t uca_pco_start_recording(struct uca_camera_priv *cam)
     if (pco_arm_camera(pco) != PCO_NOERROR)
         return err | UCA_ERR_UNCLASSIFIED;
 
-    if (pco_set_rec_state(pco, 1) != PCO_NOERROR)
+    if (pco_start_recording(pco) != PCO_NOERROR)
         return err | UCA_ERR_UNCLASSIFIED;
 
     return cam->grabber->acquire(cam->grabber, -1);
@@ -292,7 +291,7 @@ static uint32_t uca_pco_start_recording(struct uca_camera_priv *cam)
 
 static uint32_t uca_pco_stop_recording(struct uca_camera_priv *cam)
 {
-    if (pco_set_rec_state(GET_PCO(cam), 0) != PCO_NOERROR)
+    if (pco_stop_recording(GET_PCO(cam)) != PCO_NOERROR)
         return UCA_ERR_CAMERA | UCA_ERR_INIT | UCA_ERR_UNCLASSIFIED;
     return UCA_NO_ERROR;
 }
@@ -397,7 +396,7 @@ uint32_t uca_pco_init(struct uca_camera_priv **cam, struct uca_grabber_priv *gra
     if (pco_d->type == CAMERATYPE_PCO_EDGE)
         pco_set_scan_mode(pco, PCO_SCANMODE_SLOW);
 
-    pco_set_rec_state(pco, 0);
+    pco_stop_recording(pco);
     pco_set_timestamp_mode(pco, TIMESTAMP_MODE_ASCII);
     /* pco_set_timebase(pco, 1, 1); */ 
     /* pco_arm_camera(pco); */

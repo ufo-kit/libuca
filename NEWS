@@ -6,6 +6,8 @@ Changes in libuca 0.5.0
 
 - Adapt cameras/ipe.c to support the current driver API
 
+- Adapt cameras/pco.c to support libpco 0.3
+
 - API changes
     - new enum type uca_buffer_status
     - uca_cam_grab_callback()s have to return uca_buffer_status

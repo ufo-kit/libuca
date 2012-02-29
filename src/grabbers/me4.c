@@ -277,7 +277,7 @@ uint32_t uca_me4_init(struct uca_grabber_priv **grabber)
 
     Fg_getParameter(fg, FG_TIMEOUT, &me4->timeout, PORT_A);
 
-    me4->timeout = 1;
+    me4->timeout = 4;
     uca->user = me4;
     uca->destroy = &uca_me4_destroy;
     uca->set_property = &uca_me4_set_property;

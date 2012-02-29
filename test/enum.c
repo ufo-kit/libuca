@@ -65,14 +65,14 @@ int main(int argc, char *argv[])
                     break;
                 case uca_uint32t:
                     if (uca_cam_get_property(cam, i, &uint32_value, 0) == UCA_NO_ERROR) {
-                        printf("%i %s", uint32_value, uca_unit_map[prop->unit]);
+                        printf("%u %s", uint32_value, uca_unit_map[prop->unit]);
                     }
                     else
                         printf("n/a");
                     break;
                 case uca_uint8t:
                     if (uca_cam_get_property(cam, i, &uint8_value, 0) == UCA_NO_ERROR) {
-                        printf("%i %s", uint8_value, uca_unit_map[prop->unit]);
+                        printf("%u %s", uint8_value, uca_unit_map[prop->unit]);
                     }
                     else
                         printf("n/a");
