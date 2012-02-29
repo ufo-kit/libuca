@@ -173,7 +173,7 @@ static void *uca_dummy_grab_thread(void *arg)
 /*
  * --- interface implementations ----------------------------------------------
  */
-static uint32_t uca_dummy_set_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data)
+static uint32_t uca_dummy_set_property(struct uca_camera_priv *cam, uca_property_ids property, void *data)
 {
     uint32_t err = UCA_ERR_CAMERA | UCA_ERR_PROP;
 
@@ -197,7 +197,7 @@ static uint32_t uca_dummy_set_property(struct uca_camera_priv *cam, enum uca_pro
     return UCA_NO_ERROR;
 }
 
-static uint32_t uca_dummy_get_property(struct uca_camera_priv *cam, enum uca_property_ids property, void *data, size_t num)
+static uint32_t uca_dummy_get_property(struct uca_camera_priv *cam, uca_property_ids property, void *data, size_t num)
 {
     switch (property) {
         case UCA_PROP_NAME:
