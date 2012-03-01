@@ -37,14 +37,14 @@ struct _UcaCameraInterface {
     /*< private >*/
     GTypeInterface parent;
 
-    void (*start_recording) (UcaCamera *camera);
-    void (*stop_recording) (UcaCamera *camera);
-    void (*grab) (UcaCamera *camera, gchar *data);
+    void (*start_recording) (UcaCamera *camera, GError **error);
+    void (*stop_recording) (UcaCamera *camera, GError **error);
+    void (*grab) (UcaCamera *camera, gchar *data, GError **error);
 };
 
-void uca_camera_start_recording(UcaCamera *camera);
-void uca_camera_stop_recording(UcaCamera *camera);
-void uca_camera_grab(UcaCamera *camera, gchar *data);
+void uca_camera_start_recording(UcaCamera *camera, GError **error);
+void uca_camera_stop_recording(UcaCamera *camera, GError **error);
+void uca_camera_grab(UcaCamera *camera, gchar *data, GError **error);
 
 GType uca_camera_get_type(void);
 

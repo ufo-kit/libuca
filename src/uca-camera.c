@@ -77,7 +77,7 @@ static void uca_camera_default_init(UcaCameraInterface *klass)
         g_object_interface_install_property(klass, uca_camera_properties[i]);
 }
 
-void uca_camera_start_recording(UcaCamera *camera)
+void uca_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_CAMERA(camera));
 
@@ -86,10 +86,10 @@ void uca_camera_start_recording(UcaCamera *camera)
     g_return_if_fail(iface != NULL);
     g_return_if_fail(iface->start_recording != NULL);
 
-    (*iface->start_recording)(camera);
+    (*iface->start_recording)(camera, error);
 }
 
-void uca_camera_stop_recording(UcaCamera *camera)
+void uca_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_CAMERA(camera));
 
@@ -98,10 +98,10 @@ void uca_camera_stop_recording(UcaCamera *camera)
     g_return_if_fail(iface != NULL);
     g_return_if_fail(iface->start_recording != NULL);
 
-    (*iface->stop_recording)(camera);
+    (*iface->stop_recording)(camera, error);
 }
 
-void uca_camera_grab(UcaCamera *camera, gchar *data)
+void uca_camera_grab(UcaCamera *camera, gchar *data, GError **error)
 {
     g_return_if_fail(UCA_IS_CAMERA(camera));
 
@@ -110,6 +110,6 @@ void uca_camera_grab(UcaCamera *camera, gchar *data)
     g_return_if_fail(iface != NULL);
     g_return_if_fail(iface->start_recording != NULL);
 
-    (*iface->grab)(camera, data);
+    (*iface->grab)(camera, data, error);
 }
 

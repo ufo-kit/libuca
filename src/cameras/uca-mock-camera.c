@@ -30,6 +30,8 @@ enum {
     PROP_0,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
+    N_INTERFACE_PROPERTIES,
+
     N_PROPERTIES
 };
 
@@ -44,19 +46,19 @@ struct _UcaMockCameraPrivate {
     guint16 *dummy_data;
 };
 
-static void uca_mock_camera_start_recording(UcaCamera *camera)
+static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
     g_print("start recording\n");
 }
 
-static void uca_mock_camera_stop_recording(UcaCamera *camera)
+static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
     g_print("stop recording\n");
 }
 
-static void uca_mock_camera_grab(UcaCamera *camera, gchar *data)
+static void uca_mock_camera_grab(UcaCamera *camera, gchar *data, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
     /* g_memmove(data, camera->priv->dummy_data, camera->priv->width * camera->priv->height * 2); */
@@ -110,8 +112,8 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
     gobject_class->get_property = uca_mock_camera_get_property;
     gobject_class->finalize = uca_mock_camera_finalize;
 
-    for (guint property_id = PROP_0+1; property_id < N_PROPERTIES; property_id++)
-        g_object_class_override_property(gobject_class, property_id, mock_overrideables[property_id-1]);
+    for (guint id = PROP_0 + 1; id < N_INTERFACE_PROPERTIES; id++)
+        g_object_class_override_property(gobject_class, id, mock_overrideables[id-1]);
 
     g_type_class_add_private(klass, sizeof(UcaMockCameraPrivate));
 }

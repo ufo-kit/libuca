@@ -27,6 +27,14 @@
 #define UCA_IS_PCO_CAMERA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), UCA_TYPE_PCO_CAMERA))
 #define UCA_PCO_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCameraClass))
 
+#define UCA_PCO_CAMERA_ERROR uca_pco_camera_error_quark()
+typedef enum {
+    UCA_PCO_CAMERA_ERROR_LIBPCO_INIT,
+    UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
+    UCA_PCO_CAMERA_ERROR_FG_INIT,
+    UCA_PCO_CAMERA_ERROR_FG_ERROR
+} UcaPcoCameraError;
+
 typedef struct _UcaPcoCamera           UcaPcoCamera;
 typedef struct _UcaPcoCameraClass      UcaPcoCameraClass;
 typedef struct _UcaPcoCameraPrivate    UcaPcoCameraPrivate;
