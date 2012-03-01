@@ -121,6 +121,24 @@ set_target_properties(uca PROPERTIES
 
 target_link_libraries(uca ${uca_LIBS})
 
+
+# >>>> TEMPORARY BUILD TARGET <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
+pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
+
+include_directories(
+    ${GLIB2_INCLUDE_DIRS}
+    ${GOBJECT2_INCLUDE_DIRS}
+    ${PCO_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/cameras
+    )
+
+add_library(uca-gobject SHARED uca-camera.c cameras/uca-pco-camera.c cameras/uca-mock-camera.c)
+
+target_link_libraries(uca-gobject ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES}
+    ${PCO_LIBRARIES})
+
+
 # --- Install target ----------------------------------------------------------
 set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
 

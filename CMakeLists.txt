@@ -3,7 +3,7 @@ project(uca C)
 
 set(TARNAME "libuca")
 set(UCA_VERSION_MAJOR "0")
-set(UCA_VERSION_MINOR "5")
+set(UCA_VERSION_MINOR "6")
 set(UCA_VERSION_PATCH "0")
 set(UCA_DESCRIPTION "Unified Camera Access")
 

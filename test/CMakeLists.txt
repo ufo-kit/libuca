@@ -34,3 +34,17 @@ if (GTK2_FOUND)
         )
 endif()
 
+# >>> TEMPORARY TEST EXECUTABLE <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
+pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
+
+include_directories(
+    ${GLIB2_INCLUDE_DIRS}
+    ${GOBJECT2_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/cameras
+    )
+
+add_executable(test-gobject test-gobject.c)
+target_link_libraries(test-gobject uca-gobject ${GLIB2_LIBRARIES}
+    ${GOBJECT2_LIBRARIES})
