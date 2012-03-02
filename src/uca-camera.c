@@ -33,6 +33,11 @@ GQuark uca_camera_error_quark()
 }
 
 enum {
+    PROPERTY_CHANGED,
+    LAST_SIGNAL
+};
+
+enum {
     PROP_0 = 0,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
@@ -50,10 +55,13 @@ struct _UcaCameraPrivate {
     gboolean recording;
 };
 
-static GParamSpec *uca_camera_properties[N_PROPERTIES] = { NULL, };
+static GParamSpec *camera_properties[N_PROPERTIES] = { NULL, };
+
+static guint camera_signals[LAST_SIGNAL] = { 0 };
 
 static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
+
     G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
 }
 
@@ -72,35 +80,35 @@ static void uca_camera_class_init(UcaCameraClass *klass)
     klass->stop_recording = NULL;
     klass->grab = NULL;
 
-    uca_camera_properties[PROP_SENSOR_WIDTH] = 
+    camera_properties[PROP_SENSOR_WIDTH] = 
         g_param_spec_uint("sensor-width",
             "Width of sensor",
             "Width of the sensor in pixels",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
-    uca_camera_properties[PROP_SENSOR_HEIGHT] = 
+    camera_properties[PROP_SENSOR_HEIGHT] = 
         g_param_spec_uint("sensor-height",
             "Height of sensor",
             "Height of the sensor in pixels",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
-    uca_camera_properties[PROP_SENSOR_BITDEPTH] = 
+    camera_properties[PROP_SENSOR_BITDEPTH] = 
         g_param_spec_uint("sensor-bitdepth",
             "Number of bits per pixel",
             "Number of bits per pixel",
             1, 32, 1,
             G_PARAM_READABLE);
 
-    uca_camera_properties[PROP_SENSOR_HORIZONTAL_BINNING] = 
+    camera_properties[PROP_SENSOR_HORIZONTAL_BINNING] = 
         g_param_spec_uint("sensor-horizontal-binning",
             "Horizontal binning",
             "Number of sensor ADCs that are combined to one pixel in horizontal direction",
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
 
-    uca_camera_properties[PROP_SENSOR_HORIZONTAL_BINNINGS] = 
+    camera_properties[PROP_SENSOR_HORIZONTAL_BINNINGS] = 
         g_param_spec_value_array("sensor-horizontal-binnings",
             "Array of possible binnings",
             "Array of possible binnings in horizontal direction",
@@ -111,14 +119,14 @@ static void uca_camera_class_init(UcaCameraClass *klass)
                 1, G_MAXUINT, 1,
                 G_PARAM_READABLE), G_PARAM_READABLE);
 
-    uca_camera_properties[PROP_SENSOR_VERTICAL_BINNING] = 
+    camera_properties[PROP_SENSOR_VERTICAL_BINNING] = 
         g_param_spec_uint("sensor-vertical-binning",
             "Vertical binning",
             "Number of sensor ADCs that are combined to one pixel in vertical direction",
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
 
-    uca_camera_properties[PROP_SENSOR_VERTICAL_BINNINGS] = 
+    camera_properties[PROP_SENSOR_VERTICAL_BINNINGS] = 
         g_param_spec_value_array("sensor-vertical-binnings",
             "Array of possible binnings",
             "Array of possible binnings in vertical direction",
@@ -129,20 +137,29 @@ static void uca_camera_class_init(UcaCameraClass *klass)
                 1, G_MAXUINT, 1,
                 G_PARAM_READABLE), G_PARAM_READABLE);
 
-    uca_camera_properties[PROP_HAS_STREAMING] = 
+    camera_properties[PROP_HAS_STREAMING] = 
         g_param_spec_boolean("has-streaming",
             "Streaming capability",
             "Is the camera able to stream the data",
             TRUE, G_PARAM_READABLE);
 
-    uca_camera_properties[PROP_HAS_CAMRAM_RECORDING] = 
+    camera_properties[PROP_HAS_CAMRAM_RECORDING] = 
         g_param_spec_boolean("has-camram-recording",
             "Cam-RAM capability",
             "Is the camera able to record the data in-camera",
             FALSE, G_PARAM_READABLE);
 
     for (guint id = PROP_0 + 1; id < N_PROPERTIES; id++)
-        g_object_class_install_property(gobject_class, id, uca_camera_properties[id]);
+        g_object_class_install_property(gobject_class, id, camera_properties[id]);
+
+    camera_signals[PROPERTY_CHANGED] = 
+        g_signal_new("property-changed",
+                G_OBJECT_CLASS_TYPE(gobject_class),
+                G_SIGNAL_RUN_FIRST,
+                G_STRUCT_OFFSET(UcaCameraClass, property_changed),
+                NULL, NULL,
+                g_cclosure_marshal_VOID__STRING,
+                G_TYPE_NONE, 0);
 
     g_type_class_add_private(klass, sizeof(UcaCameraPrivate));
 }
