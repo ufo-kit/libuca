@@ -27,21 +27,39 @@ enum {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
+    PROP_SENSOR_HORIZONTAL_BINNING,
+    PROP_SENSOR_HORIZONTAL_BINNINGS,
+    PROP_SENSOR_VERTICAL_BINNING,
+    PROP_SENSOR_VERTICAL_BINNINGS,
+    PROP_HAS_STREAMING,
+    PROP_HAS_CAMRAM_RECORDING,
     N_INTERFACE_PROPERTIES,
 
+    PROP_FRAMERATE,
     N_PROPERTIES
 };
 
 static const gchar *mock_overrideables[N_PROPERTIES] = {
     "sensor-width",
     "sensor-height",
-    "sensor-bitdepth"
+    "sensor-bitdepth",
+    "sensor-horizontal-binning",
+    "sensor-horizontal-binnings",
+    "sensor-vertical-binning",
+    "sensor-vertical-binnings",
+    "has-streaming",
+    "has-camram-recording"
 };
+
+static GParamSpec *mock_properties[N_PROPERTIES - N_INTERFACE_PROPERTIES - 1] = { NULL, };
 
 struct _UcaMockCameraPrivate {
     guint width;
     guint height;
+    guint framerate;
     guint16 *dummy_data;
+
+    GValueArray *binnings;
 };
 
 UcaMockCamera *uca_mock_camera_new(GError **error)
@@ -58,7 +76,6 @@ static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
 static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
-    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
 }
 
 static void uca_mock_camera_grab(UcaCamera *camera, gchar *data, GError **error)
@@ -73,6 +90,9 @@ static void uca_mock_camera_set_property(GObject *object, guint property_id, con
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
+        case PROP_FRAMERATE:
+            priv->framerate = g_value_get_uint(value);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -93,6 +113,27 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint(value, 8);
             break;
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+            g_value_set_uint(value, 1);
+            break;
+        case PROP_SENSOR_HORIZONTAL_BINNINGS:
+            g_value_set_boxed(value, priv->binnings);
+            break;
+        case PROP_SENSOR_VERTICAL_BINNING:
+            g_value_set_uint(value, 1);
+            break;
+        case PROP_SENSOR_VERTICAL_BINNINGS:
+            g_value_set_boxed(value, priv->binnings);
+            break;
+        case PROP_HAS_STREAMING:
+            g_value_set_boolean(value, TRUE);
+            break;
+        case PROP_HAS_CAMRAM_RECORDING:
+            g_value_set_boolean(value, FALSE);
+            break;
+        case PROP_FRAMERATE:
+            g_value_set_uint(value, priv->framerate);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -104,6 +145,7 @@ static void uca_mock_camera_finalize(GObject *object)
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
     g_free(priv->dummy_data);
+    g_value_array_free(priv->binnings);
 
     G_OBJECT_CLASS(uca_mock_camera_parent_class)->finalize(object);
 }
@@ -123,6 +165,16 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
     for (guint id = PROP_0 + 1; id < N_INTERFACE_PROPERTIES; id++)
         g_object_class_override_property(gobject_class, id, mock_overrideables[id-1]);
 
+    mock_properties[PROP_FRAMERATE] = 
+        g_param_spec_uint("framerate",
+                "Framerate",
+                "Number of frames per second that are taken",
+                1, 30, 25,
+                G_PARAM_READWRITE);
+
+    for (guint id = N_INTERFACE_PROPERTIES + 1; id < N_PROPERTIES; id++)
+        g_object_class_install_property(gobject_class, id, mock_properties[id]);
+
     g_type_class_add_private(klass, sizeof(UcaMockCameraPrivate));
 }
 
@@ -132,4 +184,10 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     self->priv->width = 640;
     self->priv->height = 480;
     self->priv->dummy_data = (guint16 *) g_malloc0(self->priv->width * self->priv->height);
+
+    self->priv->binnings = g_value_array_new(1);
+    GValue val = {0};
+    g_value_init(&val, G_TYPE_UINT);
+    g_value_set_uint(&val, 1);
+    g_value_array_append(self->priv->binnings, &val);
 }

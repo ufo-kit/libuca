@@ -38,7 +38,11 @@ enum {
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
     PROP_SENSOR_HORIZONTAL_BINNING,
+    PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
+    PROP_SENSOR_VERTICAL_BINNINGS,
+    PROP_HAS_STREAMING,
+    PROP_HAS_CAMRAM_RECORDING,
     N_PROPERTIES
 };
 
@@ -50,10 +54,12 @@ static GParamSpec *uca_camera_properties[N_PROPERTIES] = { NULL, };
 
 static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
+    G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
 }
 
 static void uca_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
+    G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
 }
 
 static void uca_camera_class_init(UcaCameraClass *klass)
@@ -94,12 +100,46 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
 
+    uca_camera_properties[PROP_SENSOR_HORIZONTAL_BINNINGS] = 
+        g_param_spec_value_array("sensor-horizontal-binnings",
+            "Array of possible binnings",
+            "Array of possible binnings in horizontal direction",
+            g_param_spec_uint(
+                "sensor-horizontal-binning", 
+                "Number of ADCs", 
+                "Number of ADCs that make up one pixel",
+                1, G_MAXUINT, 1,
+                G_PARAM_READABLE), G_PARAM_READABLE);
+
     uca_camera_properties[PROP_SENSOR_VERTICAL_BINNING] = 
         g_param_spec_uint("sensor-vertical-binning",
             "Vertical binning",
             "Number of sensor ADCs that are combined to one pixel in vertical direction",
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
+
+    uca_camera_properties[PROP_SENSOR_VERTICAL_BINNINGS] = 
+        g_param_spec_value_array("sensor-vertical-binnings",
+            "Array of possible binnings",
+            "Array of possible binnings in vertical direction",
+            g_param_spec_uint(
+                "sensor-vertical-binning", 
+                "Number of ADCs", 
+                "Number of ADCs that make up one pixel",
+                1, G_MAXUINT, 1,
+                G_PARAM_READABLE), G_PARAM_READABLE);
+
+    uca_camera_properties[PROP_HAS_STREAMING] = 
+        g_param_spec_boolean("has-streaming",
+            "Streaming capability",
+            "Is the camera able to stream the data",
+            TRUE, G_PARAM_READABLE);
+
+    uca_camera_properties[PROP_HAS_CAMRAM_RECORDING] = 
+        g_param_spec_boolean("has-camram-recording",
+            "Cam-RAM capability",
+            "Is the camera able to record the data in-camera",
+            FALSE, G_PARAM_READABLE);
 
     for (guint id = PROP_0 + 1; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, uca_camera_properties[id]);
