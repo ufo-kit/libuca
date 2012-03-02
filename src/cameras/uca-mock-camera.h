@@ -19,6 +19,7 @@
 #define __UCA_MOCK_CAMERA_H
 
 #include <glib-object.h>
+#include "uca-camera.h"
 
 #define UCA_TYPE_MOCK_CAMERA             (uca_mock_camera_get_type())
 #define UCA_MOCK_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_MOCK_CAMERA, UcaMockCamera))
@@ -40,7 +41,7 @@ typedef struct _UcaMockCameraPrivate    UcaMockCameraPrivate;
  */
 struct _UcaMockCamera {
     /*< private >*/
-    GObject parent;
+    UcaCamera parent;
 
     UcaMockCameraPrivate *priv;
 };
@@ -52,8 +53,10 @@ struct _UcaMockCamera {
  */
 struct _UcaMockCameraClass {
     /*< private >*/
-    GObjectClass parent;
+    UcaCameraClass parent;
 };
+
+UcaMockCamera *uca_mock_camera_new(GError **error);
 
 GType uca_mock_camera_get_type(void);
 

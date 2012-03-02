@@ -23,19 +23,35 @@
 #define UCA_TYPE_CAMERA             (uca_camera_get_type())
 #define UCA_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_CAMERA, UcaCamera))
 #define UCA_IS_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_CAMERA))
-#define UCA_CAMERA_GET_INTERFACE(obj)   (G_TYPE_INSTANCE_GET_INTERFACE((obj), UCA_TYPE_CAMERA, UcaCameraInterface))
+#define UCA_CAMERA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), UCA_TYPE_CAMERA, UcaCameraClass))
+#define UCA_IS_CAMERA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), UCA_TYPE_CAMERA))
+#define UCA_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_CAMERA, UcaCameraClass))
+
+#define UCA_CAMERA_ERROR uca_camera_error_quark()
+typedef enum {
+    UCA_CAMERA_ERROR_RECORDING,
+    UCA_CAMERA_ERROR_NOT_RECORDING
+} UcaCameraError;
 
 typedef struct _UcaCamera           UcaCamera;
-typedef struct _UcaCameraInterface  UcaCameraInterface;
+typedef struct _UcaCameraClass      UcaCameraClass;
+typedef struct _UcaCameraPrivate    UcaCameraPrivate;
+
+struct _UcaCamera {
+    /*< private >*/
+    GObject parent;
+
+    UcaCameraPrivate *priv;
+};
 
 /**
  * UcaCameraInterface:
  *
  * Base interface for cameras.
  */
-struct _UcaCameraInterface {
+struct _UcaCameraClass {
     /*< private >*/
-    GTypeInterface parent;
+    GObjectClass parent;
 
     void (*start_recording) (UcaCamera *camera, GError **error);
     void (*stop_recording) (UcaCamera *camera, GError **error);

@@ -19,6 +19,7 @@
 #define __UCA_PCO_CAMERA_H
 
 #include <glib-object.h>
+#include "uca-camera.h"
 
 #define UCA_TYPE_PCO_CAMERA             (uca_pco_camera_get_type())
 #define UCA_PCO_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCamera))
@@ -48,7 +49,7 @@ typedef struct _UcaPcoCameraPrivate    UcaPcoCameraPrivate;
  */
 struct _UcaPcoCamera {
     /*< private >*/
-    GObject parent;
+    UcaCamera parent;
 
     UcaPcoCameraPrivate *priv;
 };
@@ -60,7 +61,7 @@ struct _UcaPcoCamera {
  */
 struct _UcaPcoCameraClass {
     /*< private >*/
-    GObjectClass parent;
+    UcaCameraClass parent;
 };
 
 UcaPcoCamera *uca_pco_camera_new(GError **error);

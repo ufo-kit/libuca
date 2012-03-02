@@ -27,9 +27,7 @@
 
 static void uca_pco_camera_interface_init(UcaCameraInterface *iface);
 
-G_DEFINE_TYPE_WITH_CODE(UcaPcoCamera, uca_pco_camera, G_TYPE_OBJECT,
-                        G_IMPLEMENT_INTERFACE(UCA_TYPE_CAMERA,
-                                              uca_pco_camera_interface_init));
+G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
 
 /**
  * UcaPcoCameraError:
@@ -54,7 +52,7 @@ enum {
     N_PROPERTIES
 };
 
-static const gchar *pco_overrideables[N_PROPERTIES] = {
+static const gchar *base_overrideables[N_PROPERTIES] = {
     "sensor-width",
     "sensor-height",
     "sensor-bitdepth"
@@ -229,13 +227,6 @@ static void uca_pco_camera_finalize(GObject *object)
     G_OBJECT_CLASS(uca_pco_camera_parent_class)->finalize(object);
 }
 
-static void uca_pco_camera_interface_init(UcaCameraInterface *iface)
-{
-    iface->start_recording = uca_pco_camera_start_recording;
-    iface->stop_recording = uca_pco_camera_stop_recording;
-    iface->grab = uca_pco_camera_grab;
-}
-
 static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
@@ -243,8 +234,13 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
     gobject_class->get_property = uca_pco_camera_get_property;
     gobject_class->finalize = uca_pco_camera_finalize;
 
+    UcaCameraClass *camera_class = UCA_CAMERA_CLASS(klass);
+    camera_class->start_recording = uca_pco_camera_start_recording;
+    camera_class->stop_recording = uca_pco_camera_stop_recording;
+    camera_class->grab = uca_pco_camera_grab;
+
     for (guint id = PROP_0 + 1; id < N_INTERFACE_PROPERTIES; id++)
-        g_object_class_override_property(gobject_class, id, pco_overrideables[id-1]);
+        g_object_class_override_property(gobject_class, id, base_overrideables[id-1]);
 
     pco_properties[PROP_NAME] = 
         g_param_spec_string("name",
