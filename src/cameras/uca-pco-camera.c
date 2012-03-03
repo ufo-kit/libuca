@@ -25,8 +25,6 @@
 
 #define UCA_PCO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCameraPrivate))
 
-static void uca_pco_camera_interface_init(UcaCameraInterface *iface);
-
 G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
 
 /**
@@ -46,6 +44,10 @@ enum {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
+    PROP_SENSOR_HORIZONTAL_BINNING,
+    PROP_SENSOR_HORIZONTAL_BINNINGS,
+    PROP_SENSOR_VERTICAL_BINNING,
+    PROP_SENSOR_VERTICAL_BINNINGS,
     N_INTERFACE_PROPERTIES,
 
     PROP_NAME,
@@ -55,7 +57,11 @@ enum {
 static const gchar *base_overrideables[N_PROPERTIES] = {
     "sensor-width",
     "sensor-height",
-    "sensor-bitdepth"
+    "sensor-bitdepth",
+    "sensor-horizontal-binning",
+    "sensor-horizontal-binnings",
+    "sensor-vertical-binning",
+    "sensor-vertical-binnings",
 };
 
 static GParamSpec *pco_properties[N_PROPERTIES - N_INTERFACE_PROPERTIES - 1] = { NULL, };
@@ -83,6 +89,7 @@ static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
             return entry;
         entry++; 
     }
+
     return NULL;
 }
 
@@ -95,7 +102,42 @@ struct _UcaPcoCameraPrivate {
 
     guint16 width;
     guint16 height;
+    GValueArray *horizontal_binnings;
+    GValueArray *vertical_binnings;
 };
+
+static guint fill_binnings(UcaPcoCameraPrivate *priv)
+{
+    uint16_t *horizontal = NULL;
+    uint16_t *vertical = NULL;
+    guint num_horizontal, num_vertical;
+
+    guint err = pco_get_possible_binnings(priv->pco, 
+            &horizontal, &num_horizontal, 
+            &vertical, &num_vertical);
+
+    GValue val = {0};
+    g_value_init(&val, G_TYPE_UINT);
+
+    if (err == PCO_NOERROR) {
+        priv->horizontal_binnings = g_value_array_new(num_horizontal);
+        priv->vertical_binnings = g_value_array_new(num_vertical);
+
+        for (guint i = 0; i < num_horizontal; i++) {
+            g_value_set_uint(&val, horizontal[i]);
+            g_value_array_append(priv->horizontal_binnings, &val);
+        }
+
+        for (guint i = 0; i < num_vertical; i++) {
+            g_value_set_uint(&val, vertical[i]);
+            g_value_array_append(priv->vertical_binnings, &val);
+        }
+    }
+
+    free(horizontal);
+    free(vertical);
+    return err;
+}
 
 UcaPcoCamera *uca_pco_camera_new(GError **error)
 {
@@ -154,6 +196,8 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     int val = FREE_RUN;
     Fg_setParameter(priv->fg, FG_TRIGGERMODE, &val, priv->fg_port);
 
+    fill_binnings(priv);
+
     return camera;
 }
 
@@ -195,9 +239,37 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_SENSOR_WIDTH: 
             g_value_set_uint(value, priv->width);
             break;
+
         case PROP_SENSOR_HEIGHT: 
             g_value_set_uint(value, priv->height);
             break;
+
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+            {
+                uint16_t h, v;
+                /* TODO: check error */
+                pco_get_binning(priv->pco, &h, &v);
+                g_value_set_uint(value, h);
+            }
+            break;
+
+        case PROP_SENSOR_HORIZONTAL_BINNINGS:
+            g_value_set_boxed(value, priv->horizontal_binnings);
+            break;
+
+        case PROP_SENSOR_VERTICAL_BINNING:
+            {
+                uint16_t h, v;
+                /* TODO: check error */
+                pco_get_binning(priv->pco, &h, &v);
+                g_value_set_uint(value, v);
+            }
+            break;
+
+        case PROP_SENSOR_VERTICAL_BINNINGS:
+            g_value_set_boxed(value, priv->vertical_binnings);
+            break;
+
         case PROP_NAME: 
             {
                 char *name = NULL;
@@ -206,6 +278,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                 free(name);
             }
             break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -215,6 +288,12 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 static void uca_pco_camera_finalize(GObject *object)
 {
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
+
+    if (priv->horizontal_binnings)
+        g_value_array_free(priv->horizontal_binnings);
+
+    if (priv->vertical_binnings)
+        g_value_array_free(priv->vertical_binnings);
 
     if (priv->fg) {
         if (priv->fg_mem)
@@ -262,4 +341,6 @@ static void uca_pco_camera_init(UcaPcoCamera *self)
     self->priv->fg = NULL;
     self->priv->fg_mem = NULL;
     self->priv->pco = NULL;
+    self->priv->horizontal_binnings = NULL;
+    self->priv->vertical_binnings = NULL;
 }
