@@ -89,7 +89,6 @@ static void uca_mock_camera_set_property(GObject *object, guint property_id, con
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(object));
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
-    g_signal_emit_by_name(object, "property-changed", pspec->name, NULL);
 
     switch (property_id) {
         case PROP_FRAMERATE:
@@ -97,8 +96,10 @@ static void uca_mock_camera_set_property(GObject *object, guint property_id, con
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-            break;
+            return;
     }
+
+    g_signal_emit_by_name(object, "property-changed", pspec->name);
 }
 
 static void uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)

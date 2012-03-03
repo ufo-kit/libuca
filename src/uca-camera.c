@@ -33,6 +33,8 @@ GQuark uca_camera_error_quark()
 }
 
 enum {
+    RECORDING_STARTED,
+    RECORDING_STOPPED,
     PROPERTY_CHANGED,
     LAST_SIGNAL
 };
@@ -61,7 +63,6 @@ static guint camera_signals[LAST_SIGNAL] = { 0 };
 
 static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-
     G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
 }
 
@@ -159,7 +160,25 @@ static void uca_camera_class_init(UcaCameraClass *klass)
                 G_STRUCT_OFFSET(UcaCameraClass, property_changed),
                 NULL, NULL,
                 g_cclosure_marshal_VOID__STRING,
-                G_TYPE_NONE, 0);
+                G_TYPE_NONE, 1, G_TYPE_STRING);
+
+    camera_signals[RECORDING_STARTED] = 
+        g_signal_new("recording-started",
+                G_OBJECT_CLASS_TYPE(gobject_class),
+                G_SIGNAL_RUN_FIRST,
+                G_STRUCT_OFFSET(UcaCameraClass, recording_started),
+                NULL, NULL,
+                g_cclosure_marshal_VOID__VOID,
+                G_TYPE_NONE, 0, NULL);
+
+    camera_signals[RECORDING_STOPPED] = 
+        g_signal_new("recording-stopped",
+                G_OBJECT_CLASS_TYPE(gobject_class),
+                G_SIGNAL_RUN_FIRST,
+                G_STRUCT_OFFSET(UcaCameraClass, recording_stopped),
+                NULL, NULL,
+                g_cclosure_marshal_VOID__VOID,
+                G_TYPE_NONE, 0, NULL);
 
     g_type_class_add_private(klass, sizeof(UcaCameraPrivate));
 }
@@ -187,6 +206,7 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
 
     camera->priv->recording = TRUE;
     (*klass->start_recording)(camera, error);
+    g_signal_emit_by_name(G_OBJECT(camera), "recording-started");
 }
 
 void uca_camera_stop_recording(UcaCamera *camera, GError **error)
@@ -206,6 +226,7 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
 
     camera->priv->recording = FALSE;
     (*klass->stop_recording)(camera, error);
+    g_signal_emit_by_name(G_OBJECT(camera), "recording-stopped");
 }
 
 void uca_camera_grab(UcaCamera *camera, gchar *data, GError **error)

@@ -130,10 +130,10 @@ set_target_properties(uca-gobject PROPERTIES
       VERSION ${UCA_ABI_VERSION}
       SOVERSION ${UCA_VERSION_MINOR})
 
-target_link_libraries(uca-gobject ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES}
-    ${PCO_LIBRARIES}
-    ${CLSERME4_LIBRARY}
-    ${FGLIB5_LIBRARY})
+target_link_libraries(uca-gobject 
+    ${GLIB2_LIBRARIES} 
+    ${GOBJECT2_LIBRARIES} 
+    ${uca_LIBS})
 
 
 # --- Install target ----------------------------------------------------------
