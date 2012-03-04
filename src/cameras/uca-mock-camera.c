@@ -78,7 +78,7 @@ static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
 }
 
-static void uca_mock_camera_grab(UcaCamera *camera, gchar *data, GError **error)
+static void uca_mock_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);

@@ -37,6 +37,15 @@ typedef struct _UcaCamera           UcaCamera;
 typedef struct _UcaCameraClass      UcaCameraClass;
 typedef struct _UcaCameraPrivate    UcaCameraPrivate;
 
+/**
+ * UcaCameraGrabFunc:
+ * @data: a pointer to the raw data
+ * @user_data: user data passed to the function
+ *
+ * A function receiving the data when streaming in asynchronous mode.
+ */
+typedef void (*UcaCameraGrabFunc) (gpointer data, gpointer user_data);
+
 struct _UcaCamera {
     /*< private >*/
     GObject parent;
@@ -55,7 +64,7 @@ struct _UcaCameraClass {
 
     void (*start_recording) (UcaCamera *camera, GError **error);
     void (*stop_recording) (UcaCamera *camera, GError **error);
-    void (*grab) (UcaCamera *camera, gchar *data, GError **error);
+    void (*grab) (UcaCamera *camera, gpointer data, GError **error);
 
     void (*recording_started) (UcaCamera *camera);
     void (*recording_stopped) (UcaCamera *camera);
@@ -63,7 +72,8 @@ struct _UcaCameraClass {
 
 void uca_camera_start_recording(UcaCamera *camera, GError **error);
 void uca_camera_stop_recording(UcaCamera *camera, GError **error);
-void uca_camera_grab(UcaCamera *camera, gchar *data, GError **error);
+void uca_camera_grab(UcaCamera *camera, gpointer data, GError **error);
+void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func);
 
 GType uca_camera_get_type(void);
 

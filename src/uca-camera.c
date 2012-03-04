@@ -220,7 +220,12 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
     g_signal_emit_by_name(G_OBJECT(camera), "recording-stopped");
 }
 
-void uca_camera_grab(UcaCamera *camera, gchar *data, GError **error)
+void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func)
+{
+    /* TODO: implement */
+}
+
+void uca_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
     g_return_if_fail(UCA_IS_CAMERA(camera));
 
