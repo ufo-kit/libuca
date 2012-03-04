@@ -62,6 +62,7 @@ enum {
     N_INTERFACE_PROPERTIES,
 
     PROP_NAME,
+    PROP_COOLING_POINT,
     N_PROPERTIES
 };
 
@@ -150,6 +151,21 @@ static guint fill_binnings(UcaPcoCameraPrivate *priv)
     return err;
 }
 
+static guint override_temperature_range(UcaPcoCameraPrivate *priv)
+{
+    int16_t default_temp, min_temp, max_temp;
+    guint err = pco_get_cooling_range(priv->pco, &default_temp, &min_temp, &max_temp);
+
+    if (err == PCO_NOERROR) {
+        GParamSpecInt *spec = (GParamSpecInt *) pco_properties[PROP_COOLING_POINT];
+        spec->minimum = min_temp;
+        spec->maximum = max_temp;
+        spec->default_value = default_temp;
+    }
+
+    return err;
+}
+
 UcaPcoCamera *uca_pco_camera_new(GError **error)
 {
     /* TODO: find a good way to handle libpco and fg errors */
@@ -210,6 +226,12 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
 
     fill_binnings(priv);
 
+    /*
+     * Here we override the temperature property range because this was not
+     * possible at property installation time.
+     */
+    override_temperature_range(priv);
+
     return camera;
 }
 
@@ -235,6 +257,12 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
+        case PROP_COOLING_POINT:
+            {
+                int16_t temperature = (int16_t) g_value_get_int(value); 
+                pco_set_cooling_temperature(priv->pco, temperature);
+            }
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -291,6 +319,14 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             }
             break;
 
+        case PROP_COOLING_POINT:
+            {
+                int16_t temperature; 
+                pco_get_cooling_temperature(priv->pco, &temperature);
+                g_value_set_int(value, temperature);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -340,6 +376,17 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Name of the camera",
             "Name of the camera",
             "", G_PARAM_READABLE);
+
+    /*
+     * The default values here are set arbitrarily, because we are not yet
+     * connected to the camera and just don't know the cooling range. We
+     * override these values in uca_pco_camera_new().
+     */
+    pco_properties[PROP_COOLING_POINT] = 
+        g_param_spec_int("cooling-point",
+            "Cooling point of the camera",
+            "Cooling point of the camera",
+            0, 10, 5, G_PARAM_READWRITE);
 
     for (guint id = N_INTERFACE_PROPERTIES + 1; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, pco_properties[id]);
