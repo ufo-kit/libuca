@@ -153,15 +153,6 @@ static void uca_camera_class_init(UcaCameraClass *klass)
     for (guint id = PROP_0 + 1; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, camera_properties[id]);
 
-    camera_signals[PROPERTY_CHANGED] = 
-        g_signal_new("property-changed",
-                G_OBJECT_CLASS_TYPE(gobject_class),
-                G_SIGNAL_RUN_FIRST,
-                G_STRUCT_OFFSET(UcaCameraClass, property_changed),
-                NULL, NULL,
-                g_cclosure_marshal_VOID__STRING,
-                G_TYPE_NONE, 1, G_TYPE_STRING);
-
     camera_signals[RECORDING_STARTED] = 
         g_signal_new("recording-started",
                 G_OBJECT_CLASS_TYPE(gobject_class),

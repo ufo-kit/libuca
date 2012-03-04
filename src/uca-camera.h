@@ -57,7 +57,6 @@ struct _UcaCameraClass {
     void (*stop_recording) (UcaCamera *camera, GError **error);
     void (*grab) (UcaCamera *camera, gchar *data, GError **error);
 
-    void (*property_changed) (UcaCamera *camera, const gchar *name, gpointer user_data);
     void (*recording_started) (UcaCamera *camera);
     void (*recording_stopped) (UcaCamera *camera);
 };

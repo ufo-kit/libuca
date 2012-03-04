@@ -267,8 +267,6 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
     }
-
-    g_signal_emit_by_name(object, "property-changed", pspec->name);
 }
 
 static void uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
