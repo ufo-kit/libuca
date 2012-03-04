@@ -31,9 +31,10 @@
 #define UCA_PCO_CAMERA_ERROR uca_pco_camera_error_quark()
 typedef enum {
     UCA_PCO_CAMERA_ERROR_LIBPCO_INIT,
+    UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,
     UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
     UCA_PCO_CAMERA_ERROR_FG_INIT,
-    UCA_PCO_CAMERA_ERROR_FG_ERROR
+    UCA_PCO_CAMERA_ERROR_FG_GENERAL
 } UcaPcoCameraError;
 
 typedef struct _UcaPcoCamera           UcaPcoCamera;

@@ -23,6 +23,16 @@
 #include "uca-camera.h"
 #include "uca-pco-camera.h"
 
+#define FG_TRY_PARAM(fg, camobj, param, val_addr, port)     \
+    { int r = Fg_setParameter(fg, param, val_addr, port);   \
+        if (r != FG_OK) {                                   \
+            g_set_error(error, UCA_PCO_CAMERA_ERROR,        \
+                    UCA_PCO_CAMERA_ERROR_FG_GENERAL,        \
+                    "%s", Fg_getLastErrorDescription(fg));  \
+            g_object_unref(camobj);                         \
+            return NULL;                                    \
+        } }
+    
 #define UCA_PCO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCameraPrivate))
 
 G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
@@ -30,9 +40,10 @@ G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
 /**
  * UcaPcoCameraError:
  * @UCA_PCO_CAMERA_ERROR_LIBPCO_INIT: Initializing libpco failed
+ * @UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL: General libpco error
  * @UCA_PCO_CAMERA_ERROR_UNSUPPORTED: Camera type is not supported
  * @UCA_PCO_CAMERA_ERROR_FG_INIT: Framegrabber initialization failed
- * @UCA_PCO_CAMERA_ERROR_FG_ERROR: Framegrabber error
+ * @UCA_PCO_CAMERA_ERROR_FG_GENERAL: General framegrabber error
  */
 GQuark uca_pco_camera_error_quark()
 {
@@ -169,8 +180,8 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     priv->fg = Fg_Init(map_entry->so_file, priv->fg_port);
 
     if (priv->fg == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
-                "Initializing framegrabber failed");
+        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
+                "%s", Fg_getLastErrorDescription(priv->fg));
         g_object_unref(camera);
         return NULL;
     }
@@ -183,18 +194,19 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
 
     if (priv->fg_mem == NULL) {
         g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
-                "Framegrabber could not allocate DMA buffers");
+                "%s", Fg_getLastErrorDescription(priv->fg));
         g_object_unref(camera);
         return NULL;
     }
 
-    Fg_setParameter(priv->fg, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
-    Fg_setParameter(priv->fg, FG_FORMAT, &map_entry->cl_format, priv->fg_port);
-    Fg_setParameter(priv->fg, FG_WIDTH, &fg_width, priv->fg_port);
-    Fg_setParameter(priv->fg, FG_HEIGHT, &priv->height, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &map_entry->cl_format, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &fg_width, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &priv->height, priv->fg_port);
 
     int val = FREE_RUN;
-    Fg_setParameter(priv->fg, FG_TRIGGERMODE, &val, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_TRIGGERMODE, &val, priv->fg_port);
 
     fill_binnings(priv);
 
