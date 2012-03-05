@@ -57,3 +57,10 @@ target_link_libraries(test-mock
     ${GLIB2_LIBRARIES}
     ${GOBJECT2_LIBRARIES}
     )
+
+add_executable(test-all test-all.c)
+target_link_libraries(test-all
+    uca-gobject 
+    ${GLIB2_LIBRARIES}
+    ${GOBJECT2_LIBRARIES}
+    )
