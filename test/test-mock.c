@@ -33,6 +33,7 @@ static void test_recording(Fixture *fixture, gconstpointer data)
 
     uca_camera_stop_recording(camera, &error);
     g_assert(error != NULL);
+    g_error_free(error);
 
     error = NULL;
     uca_camera_start_recording(camera, &error);

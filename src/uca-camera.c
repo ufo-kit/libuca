@@ -211,12 +211,15 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
         return;
     }
 
-    (*klass->start_recording)(camera, error);
+    GError *tmp_error = NULL;
+    (*klass->start_recording)(camera, &tmp_error);
 
-    if (error == NULL) {
+    if (tmp_error == NULL) {
         camera->priv->recording = TRUE;
         g_object_notify_by_pspec(G_OBJECT(camera), camera_properties[PROP_IS_RECORDING]);
     }
+    else
+        g_propagate_error(error, tmp_error);
 }
 
 void uca_camera_stop_recording(UcaCamera *camera, GError **error)
@@ -234,12 +237,15 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
         return;
     }
 
-    (*klass->stop_recording)(camera, error);
+    GError *tmp_error = NULL;
+    (*klass->stop_recording)(camera, &tmp_error);
 
-    if (error == NULL) {
+    if (tmp_error == NULL) {
         camera->priv->recording = FALSE;
         g_object_notify_by_pspec(G_OBJECT(camera), camera_properties[PROP_IS_RECORDING]);
     }
+    else
+        g_propagate_error(error, tmp_error);
 }
 
 void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func)
