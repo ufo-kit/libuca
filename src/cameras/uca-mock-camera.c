@@ -59,23 +59,84 @@ struct _UcaMockCameraPrivate {
     guint framerate;
     guint16 *dummy_data;
 
+    gboolean thread_running;
+
+    GThread *grab_thread;
     GValueArray *binnings;
 };
 
+/**
+ * uca_mock_camera_new:
+ * @error: Location for error
+ *
+ * Create a new #UcaMockCamera object.
+ *
+ * Returns: A newly created #UcaMockCamera object
+ */
 UcaMockCamera *uca_mock_camera_new(GError **error)
 {
     UcaMockCamera *camera = g_object_new(UCA_TYPE_MOCK_CAMERA, NULL);
     return camera;
 }
 
+static gpointer mock_grab_func(gpointer data)
+{
+    UcaMockCamera *mock_camera = UCA_MOCK_CAMERA(data);
+    g_return_val_if_fail(UCA_IS_MOCK_CAMERA(mock_camera), NULL);
+
+    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(mock_camera);
+    UcaCamera *camera = UCA_CAMERA(mock_camera);
+    const gulong sleep_time = G_USEC_PER_SEC / priv->framerate;
+
+    while (priv->thread_running) {
+        camera->grab_func(NULL, camera->user_data);
+        g_usleep(sleep_time);
+    }
+
+    return NULL;
+}
+
 static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
+
+    /*
+     * In case asynchronous transfer is requested, we start a new thread that
+     * invokes the grab callback, otherwise nothing will be done here.
+     */
+
+    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
+    gboolean transfer_async = FALSE;
+    g_object_get(G_OBJECT(camera),
+            "transfer-asynchronously", &transfer_async,
+            NULL);
+
+    if (transfer_async) {
+        GError *tmp_error = NULL;
+        priv->thread_running = TRUE;
+        priv->grab_thread = g_thread_create(mock_grab_func, camera, TRUE, &tmp_error); 
+
+        if (tmp_error != NULL) {
+            priv->thread_running = FALSE;
+            g_propagate_error(error, tmp_error);
+        }
+    }
 }
 
 static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
+
+    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
+    gboolean transfer_async = FALSE;
+    g_object_get(G_OBJECT(camera),
+            "transfer-asynchronously", &transfer_async,
+            NULL);
+
+    if (transfer_async) {
+        priv->thread_running = FALSE;    
+        g_thread_join(priv->grab_thread);
+    }
 }
 
 static void uca_mock_camera_grab(UcaCamera *camera, gpointer data, GError **error)
@@ -145,6 +206,11 @@ static void uca_mock_camera_finalize(GObject *object)
 {
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
+    if (priv->thread_running) {
+        priv->thread_running = FALSE;    
+        g_thread_join(priv->grab_thread);
+    }
+
     g_free(priv->dummy_data);
     g_value_array_free(priv->binnings);
 
@@ -185,6 +251,7 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     self->priv->width = 640;
     self->priv->height = 480;
     self->priv->dummy_data = (guint16 *) g_malloc0(self->priv->width * self->priv->height);
+    self->priv->grab_thread = NULL;
 
     self->priv->binnings = g_value_array_new(1);
     GValue val = {0};

@@ -30,7 +30,8 @@
 #define UCA_CAMERA_ERROR uca_camera_error_quark()
 typedef enum {
     UCA_CAMERA_ERROR_RECORDING,
-    UCA_CAMERA_ERROR_NOT_RECORDING
+    UCA_CAMERA_ERROR_NOT_RECORDING,
+    UCA_CAMERA_ERROR_NO_GRAB_FUNC
 } UcaCameraError;
 
 typedef struct _UcaCamera           UcaCamera;
@@ -51,6 +52,8 @@ struct _UcaCamera {
     GObject parent;
 
     UcaCameraGrabFunc grab_func;
+    gpointer user_data;
+
     UcaCameraPrivate *priv;
 };
 
@@ -74,7 +77,7 @@ struct _UcaCameraClass {
 void uca_camera_start_recording(UcaCamera *camera, GError **error);
 void uca_camera_stop_recording(UcaCamera *camera, GError **error);
 void uca_camera_grab(UcaCamera *camera, gpointer data, GError **error);
-void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func);
+void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data);
 
 GType uca_camera_get_type(void);
 

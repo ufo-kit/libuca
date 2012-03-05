@@ -64,7 +64,16 @@ static GParamSpec *camera_properties[N_PROPERTIES] = { NULL, };
 
 static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-    G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
+
+    switch (property_id) {
+        case PROP_TRANSFER_ASYNCHRONOUSLY:
+            priv->transfer_async = g_value_get_boolean(value);
+            break;
+
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
 }
 
 static void uca_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
@@ -74,6 +83,10 @@ static void uca_camera_get_property(GObject *object, guint property_id, GValue *
     switch (property_id) {
         case PROP_IS_RECORDING:
             g_value_set_boolean(value, priv->is_recording);
+            break;
+
+        case PROP_TRANSFER_ASYNCHRONOUSLY:
+            g_value_set_boolean(value, priv->transfer_async);
             break;
 
         default:
@@ -180,6 +193,8 @@ static void uca_camera_class_init(UcaCameraClass *klass)
 
 static void uca_camera_init(UcaCamera *camera)
 {
+    camera->grab_func = NULL;
+
     camera->priv = UCA_CAMERA_GET_PRIVATE(camera);
     camera->priv->is_recording = FALSE;
     camera->priv->transfer_async = FALSE;
@@ -227,6 +242,12 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
     if (camera->priv->is_recording) {
         g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
                 "Camera is already recording");
+        return;
+    }
+
+    if (camera->priv->transfer_async && (camera->grab_func == NULL)) {
+        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NO_GRAB_FUNC,
+                "No grab callback function set");
         return;
     }
 
@@ -280,9 +301,10 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
  *
  * Set the grab function that is called whenever a frame is readily transfered.
  */
-void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func)
+void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data)
 {
-    /* TODO: implement */
+    camera->grab_func = func;
+    camera->user_data = user_data;
 }
 
 void uca_camera_grab(UcaCamera *camera, gpointer data, GError **error)

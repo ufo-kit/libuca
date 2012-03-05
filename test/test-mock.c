@@ -32,14 +32,14 @@ static void test_recording(Fixture *fixture, gconstpointer data)
     UcaCamera *camera = UCA_CAMERA(fixture->camera);
 
     uca_camera_stop_recording(camera, &error);
-    g_assert(error != NULL);
+    g_assert_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING);
     g_error_free(error);
 
     error = NULL;
     uca_camera_start_recording(camera, &error);
-    g_assert(error == NULL);
+    g_assert_no_error(error);
     uca_camera_stop_recording(camera, &error);
-    g_assert(error == NULL);
+    g_assert_no_error(error);
 }
 
 static void test_recording_signal(Fixture *fixture, gconstpointer data)
@@ -55,6 +55,34 @@ static void test_recording_signal(Fixture *fixture, gconstpointer data)
     success = FALSE;
     uca_camera_stop_recording(camera, NULL);
     g_assert(success == TRUE);
+}
+
+static void grab_func(gpointer data, gpointer user_data)
+{
+    gboolean *success = (gboolean *) user_data;
+    *success = TRUE;
+}
+
+static void test_recording_async(Fixture *fixture, gconstpointer data)
+{
+    UcaCamera *camera = UCA_CAMERA(fixture->camera);
+
+    gboolean success = FALSE;
+    uca_camera_set_grab_func(camera, grab_func, &success);
+
+    g_object_set(G_OBJECT(camera),
+            "framerate", 10,
+            "transfer-asynchronously", TRUE,
+            NULL);
+
+    GError *error = NULL;
+    uca_camera_start_recording(camera, &error);
+    g_assert_no_error(error);
+
+    g_usleep(G_USEC_PER_SEC / 8);
+
+    uca_camera_stop_recording(camera, &error);
+    g_assert_no_error(error);
 }
 
 static void test_recording_property(Fixture *fixture, gconstpointer data)
@@ -124,6 +152,7 @@ int main(int argc, char *argv[])
 
     g_test_add("/recording", Fixture, NULL, fixture_setup, test_recording, fixture_teardown);
     g_test_add("/recording/signal", Fixture, NULL, fixture_setup, test_recording_signal, fixture_teardown);
+    g_test_add("/recording/asynchronous", Fixture, NULL, fixture_setup, test_recording_async, fixture_teardown);
     g_test_add("/properties/base", Fixture, NULL, fixture_setup, test_base_properties, fixture_teardown);
     g_test_add("/properties/recording", Fixture, NULL, fixture_setup, test_recording_property, fixture_teardown);
     g_test_add("/properties/binnings", Fixture, NULL, fixture_setup, test_binnings_properties, fixture_teardown);
