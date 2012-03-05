@@ -9,7 +9,6 @@ set(uca_HDRS
     uca-camera.h
     )
 
-set(uca_LIBS)
 
 # --- Find packages and libraries ---------------------------------------------
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
@@ -30,6 +29,10 @@ find_package(Threads)
 pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
 
+set(uca_LIBS
+    ${GLIB2_LIBRARIES} 
+    ${GOBJECT2_LIBRARIES})
+
 # --- Build options -----------------------------------------------------------
 option(HAVE_DUMMY_CAMERA "Camera: Dummy" OFF)
 
@@ -39,7 +42,8 @@ if (PF_FOUND)
     option(HAVE_PHOTON_FOCUS "Camera: Photon Focus MV2-D1280-640-CL-8" ON)
 
     if (HAVE_PHOTON_FOCUS)
-        set(uca_SRCS ${uca_SRCS} cameras/pf.c)
+        set(uca_SRCS ${uca_SRCS} cameras/uca-pf-camera.c)
+        set(uca_HDRS ${uca_HDRS} cameras/uca-pf-camera.h)
         set(uca_LIBS ${uca_LIBS} ${PF_LIBRARIES})
 
         include_directories(${PF_INCLUDE_DIRS})
@@ -65,36 +69,18 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
     endif()
 endif()
 
-#if (IPE_FOUND)
-#    option(HAVE_IPE_CAMERA "Camera: Custom IPE based on Xilinx FPGA" ON)
-#
-#    if (HAVE_IPE_CAMERA)
-#        set(uca_SRCS ${uca_SRCS} cameras/ipe.c)
-#        set(uca_LIBS ${uca_LIBS} ${IPE_LIBRARIES})
-#
-#        include_directories(${IPE_INCLUDE_DIRS})
-#    endif()
-#endif()
-#
-#if (CLSERME4_FOUND AND FGLIB5_FOUND)
-#    option(HAVE_ME4 "Grabber: Silicon Software microEnable IV" ON)
-#    if (HAVE_ME4)
-#        set(uca_SRCS ${uca_SRCS} grabbers/me4.c)
-#        set(uca_LIBS ${uca_LIBS}
-#            ${CLSERME4_LIBRARY}
-#            ${FGLIB5_LIBRARY})
-#
-#        include_directories(
-#            ${CLSERME4_INCLUDE_DIR}
-#            ${FGLIB5_INCLUDE_DIR})
-#    endif()
-#
-#    option(HAVE_SIMPLE_CAMERA "Camera: Just grabber based" ON)
-#    if (HAVE_SIMPLE_CAMERA)
-#        set(uca_SRCS ${uca_SRCS} cameras/simple.c)
-#    endif()
-#endif()
-#
+if (IPE_FOUND)
+    option(HAVE_IPE_CAMERA "Camera: Custom IPE based on Xilinx FPGA" ON)
+
+    if (HAVE_IPE_CAMERA)
+        set(uca_SRCS ${uca_SRCS} cameras/uca-ipe-camera.c)
+        set(uca_HDRS ${uca_HDRS} cameras/uca-ipe-camera.h)
+        set(uca_LIBS ${uca_LIBS} ${IPE_LIBRARIES})
+
+        include_directories(${IPE_INCLUDE_DIRS})
+    endif()
+endif()
+
 if (HAVE_DUMMY_CAMERA)
     set(uca_SRCS ${uca_SRCS} cameras/uca-mock-camera.c)
     set(uca_HDRS ${uca_HDRS} cameras/uca-mock-camera.h)
@@ -105,8 +91,7 @@ if (Threads_FOUND)
 
     set(uca_LIBS
         ${uca_LIBS}
-        ${CMAKE_THREAD_LIBS_INIT}
-        )
+        ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
 # --- Configure step
@@ -118,8 +103,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/cameras
     ${GLIB2_INCLUDE_DIRS}
-    ${GOBJECT2_INCLUDE_DIRS}
-    )
+    ${GOBJECT2_INCLUDE_DIRS})
 
 # --- Build target ------------------------------------------------------------
 add_definitions("-std=c99 -Wall")
@@ -131,8 +115,6 @@ set_target_properties(uca-gobject PROPERTIES
       SOVERSION ${UCA_VERSION_MINOR})
 
 target_link_libraries(uca-gobject 
-    ${GLIB2_LIBRARIES} 
-    ${GOBJECT2_LIBRARIES} 
     ${uca_LIBS})
 
 

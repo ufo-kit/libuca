@@ -1,6 +1,23 @@
 
+Changes in libuca 0.6.0
+=======================
+
+GObject Type System
+-------------------
+
+Instead of using a home-grown type and class system, we switched to the GObject
+system as part of GLib. This effort has the advantage of much more typesafe
+properties and better signal and closure handling.
+
+Most of the ideas and approaches of libuca 0.5 have been transfered. However,
+instead of trying to initialize each camera first and having the user decide
+what to use, the user must now determine the used camera at compile time or use
+the factory pattern to delegate this to run-time. 
+
+
+
 Changes in libuca 0.5.0
------------------------
+=======================
 
 - Put work under LGPL 2.1
 
