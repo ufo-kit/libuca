@@ -50,6 +50,7 @@ struct _UcaCamera {
     /*< private >*/
     GObject parent;
 
+    UcaCameraGrabFunc grab_func;
     UcaCameraPrivate *priv;
 };
 

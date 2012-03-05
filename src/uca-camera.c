@@ -26,6 +26,7 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  * UcaCameraError:
  * @UCA_CAMERA_ERROR_RECORDING: Camera is already recording
  * @UCA_CAMERA_ERROR_NOT_RECORDING: Camera is not recording
+ * @UCA_CAMERA_ERROR_NO_GRAB_FUNC: No grab callback was set
  */
 GQuark uca_camera_error_quark()
 {
@@ -47,12 +48,14 @@ enum {
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
+    PROP_TRANSFER_ASYNCHRONOUSLY,
     PROP_IS_RECORDING,
     N_PROPERTIES
 };
 
 struct _UcaCameraPrivate {
-    gboolean recording;
+    gboolean is_recording;
+    gboolean transfer_async;
 };
 
 static GParamSpec *camera_properties[N_PROPERTIES] = { NULL, };
@@ -70,7 +73,7 @@ static void uca_camera_get_property(GObject *object, guint property_id, GValue *
 
     switch (property_id) {
         case PROP_IS_RECORDING:
-            g_value_set_boolean(value, priv->recording);
+            g_value_set_boolean(value, priv->is_recording);
             break;
 
         default:
@@ -157,6 +160,12 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             "Is the camera able to record the data in-camera",
             FALSE, G_PARAM_READABLE);
 
+    camera_properties[PROP_TRANSFER_ASYNCHRONOUSLY] = 
+        g_param_spec_boolean("transfer-asynchronously",
+            "Specify whether data should be transfered asynchronously",
+            "Specify whether data should be transfered asynchronously using a specified callback",
+            FALSE, G_PARAM_READWRITE);
+
     camera_properties[PROP_IS_RECORDING] = 
         g_param_spec_boolean("is-recording",
             "Is camera recording",
@@ -172,7 +181,8 @@ static void uca_camera_class_init(UcaCameraClass *klass)
 static void uca_camera_init(UcaCamera *camera)
 {
     camera->priv = UCA_CAMERA_GET_PRIVATE(camera);
-    camera->priv->recording = FALSE;
+    camera->priv->is_recording = FALSE;
+    camera->priv->transfer_async = FALSE;
 
     /*
      * This here would be the best place to instantiate the tango server object,
@@ -196,6 +206,15 @@ static void uca_camera_init(UcaCamera *camera)
      */
 }
 
+/**
+ * uca_camera_start_recording:
+ * @camera: A #UcaCamera object
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Initiate recording of frames. If UcaCamera:grab-asynchronous is %TRUE and a
+ * #UcaCameraGrabFunc callback is set, frames are automatically transfered to
+ * the client program, otherwise you must use uca_camera_grab().
+ */
 void uca_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_CAMERA(camera));
@@ -205,7 +224,7 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
     g_return_if_fail(klass != NULL);
     g_return_if_fail(klass->start_recording != NULL);
 
-    if (camera->priv->recording) {
+    if (camera->priv->is_recording) {
         g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
                 "Camera is already recording");
         return;
@@ -215,13 +234,20 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
     (*klass->start_recording)(camera, &tmp_error);
 
     if (tmp_error == NULL) {
-        camera->priv->recording = TRUE;
+        camera->priv->is_recording = TRUE;
         g_object_notify_by_pspec(G_OBJECT(camera), camera_properties[PROP_IS_RECORDING]);
     }
     else
         g_propagate_error(error, tmp_error);
 }
 
+/**
+ * uca_camera_stop_recording:
+ * @camera: A #UcaCamera object
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Stop recording.
+ */
 void uca_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_CAMERA(camera));
@@ -231,7 +257,7 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
     g_return_if_fail(klass != NULL);
     g_return_if_fail(klass->stop_recording != NULL);
 
-    if (!camera->priv->recording) {
+    if (!camera->priv->is_recording) {
         g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
                 "Camera is not recording");
         return;
@@ -241,13 +267,19 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
     (*klass->stop_recording)(camera, &tmp_error);
 
     if (tmp_error == NULL) {
-        camera->priv->recording = FALSE;
+        camera->priv->is_recording = FALSE;
         g_object_notify_by_pspec(G_OBJECT(camera), camera_properties[PROP_IS_RECORDING]);
     }
     else
         g_propagate_error(error, tmp_error);
 }
 
+/**
+ * uca_camera_set_grab_func:
+ * func: A #UcaCameraGrabFunc callback function
+ *
+ * Set the grab function that is called whenever a frame is readily transfered.
+ */
 void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func)
 {
     /* TODO: implement */
@@ -262,7 +294,7 @@ void uca_camera_grab(UcaCamera *camera, gpointer data, GError **error)
     g_return_if_fail(klass != NULL);
     g_return_if_fail(klass->grab != NULL);
 
-    if (!camera->priv->recording) {
+    if (!camera->priv->is_recording) {
         g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
                 "Camera is not recording");
         return;
