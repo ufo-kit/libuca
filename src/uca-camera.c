@@ -16,7 +16,16 @@
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #include <glib.h>
+#include "config.h"
 #include "uca-camera.h"
+
+#ifdef HAVE_PCO_CL
+#include "cameras/uca-pco-camera.h"
+#endif
+
+#ifdef HAVE_MOCK_CAMERA
+#include "cameras/uca-mock-camera.h"
+#endif
 
 #define UCA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_CAMERA, UcaCameraPrivate))
 
@@ -24,6 +33,7 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
 
 /**
  * UcaCameraError:
+ * @UCA_CAMERA_ERROR_NOT_FOUND: Camera type is unknown
  * @UCA_CAMERA_ERROR_RECORDING: Camera is already recording
  * @UCA_CAMERA_ERROR_NOT_RECORDING: Camera is not recording
  * @UCA_CAMERA_ERROR_NO_GRAB_FUNC: No grab callback was set
@@ -32,6 +42,16 @@ GQuark uca_camera_error_quark()
 {
     return g_quark_from_static_string("uca-camera-error-quark");
 }
+
+static gchar *uca_camera_types[] = {
+#ifdef HAVE_PCO_CL
+        "pco",
+#endif
+#ifdef HAVE_MOCK_CAMERA
+        "mock",
+#endif
+        NULL 
+};
 
 enum {
     LAST_SIGNAL
@@ -219,6 +239,58 @@ static void uca_camera_init(UcaCamera *camera)
      *     // g_object_get/set() whatever is more suitable.
      * }
      */
+}
+
+/**
+ * uca_camera_get_types:
+ *
+ * Enumerate all camera types that can be instantiated with uca_camera_new().
+ *
+ * Returns: An array of strings with camera types. The list should be freed with
+ * g_strfreev().
+ */
+gchar **uca_camera_get_types()
+{
+    return g_strdupv(uca_camera_types);
+}
+
+/**
+ * uca_camera_new:
+ * @param type: Type name of the camera
+ * @error: Location to store an error or %NULL
+ *
+ * Factory method for instantiating cameras by names listed in
+ * uca_camera_get_type().
+ *
+ * Returns: A new #UcaCamera of the correct type or %NULL if type was not found
+ */
+UcaCamera *uca_camera_new(const gchar *type, GError **error)
+{
+    UcaCamera *camera = NULL;
+    GError *tmp_error = NULL;
+
+#ifdef HAVE_MOCK_CAMERA
+    if (!g_strcmp0(type, "mock"))
+        camera = UCA_CAMERA(uca_mock_camera_new(&tmp_error));
+#endif
+
+#ifdef HAVE_PCO_CL
+    if (!g_strcmp0(type, "pco"))
+        camera = UCA_CAMERA(uca_pco_camera_new(&tmp_error));
+#endif
+
+    if (tmp_error != NULL) {
+        g_propagate_error(error, tmp_error);
+        return NULL;
+    }
+
+    if ((tmp_error == NULL) && (camera == NULL)) {
+        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_FOUND,
+                "Camera type %s not found", type);    
+        return NULL;
+    }
+
+    return camera;
 }
 
 /**

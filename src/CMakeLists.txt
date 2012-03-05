@@ -24,7 +24,6 @@ find_package(ClSerMe4)
 
 # --- Miscellanous packages
 find_package(PkgConfig)
-find_package(Threads)
 
 pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
@@ -34,7 +33,7 @@ set(uca_LIBS
     ${GOBJECT2_LIBRARIES})
 
 # --- Build options -----------------------------------------------------------
-option(HAVE_DUMMY_CAMERA "Camera: Dummy" OFF)
+option(HAVE_MOCK_CAMERA "Camera: Dummy" OFF)
 
 
 # --- Add sources if camera/framegrabber access sources are available ---------
@@ -81,18 +80,11 @@ if (IPE_FOUND)
     endif()
 endif()
 
-if (HAVE_DUMMY_CAMERA)
+if (HAVE_MOCK_CAMERA)
     set(uca_SRCS ${uca_SRCS} cameras/uca-mock-camera.c)
     set(uca_HDRS ${uca_HDRS} cameras/uca-mock-camera.h)
 endif()
 
-if (Threads_FOUND)
-    set(HAVE_PTHREADS TRUE)
-
-    set(uca_LIBS
-        ${uca_LIBS}
-        ${CMAKE_THREAD_LIBS_INIT})
-endif()
 
 # --- Configure step
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in

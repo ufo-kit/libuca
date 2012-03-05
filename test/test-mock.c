@@ -26,6 +26,14 @@ static void on_property_change(gpointer instance, GParamSpec *pspec, gpointer us
     *success = TRUE;
 }
 
+static void test_factory()
+{
+    GError *error = NULL;
+    UcaCamera *camera = uca_camera_new("fox994m3a0yxmy", &error);
+    g_assert_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_FOUND);
+    g_assert(camera == NULL);
+}
+
 static void test_recording(Fixture *fixture, gconstpointer data)
 {
     GError *error = NULL;
@@ -150,6 +158,7 @@ int main(int argc, char *argv[])
     g_test_init(&argc, &argv, NULL);
     g_test_bug_base("http://ufo.kit.edu/ufo/ticket");
 
+    g_test_add_func("/factory", test_factory);
     g_test_add("/recording", Fixture, NULL, fixture_setup, test_recording, fixture_teardown);
     g_test_add("/recording/signal", Fixture, NULL, fixture_setup, test_recording_signal, fixture_teardown);
     g_test_add("/recording/asynchronous", Fixture, NULL, fixture_setup, test_recording_async, fixture_teardown);
