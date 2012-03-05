@@ -33,7 +33,7 @@ set(uca_LIBS
     ${GOBJECT2_LIBRARIES})
 
 # --- Build options -----------------------------------------------------------
-option(HAVE_MOCK_CAMERA "Camera: Dummy" OFF)
+option(HAVE_MOCK_CAMERA "Camera: Dummy" ON)
 
 
 # --- Add sources if camera/framegrabber access sources are available ---------

@@ -28,6 +28,8 @@
 #define UCA_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_CAMERA, UcaCameraClass))
 
 #define UCA_CAMERA_ERROR uca_camera_error_quark()
+GQuark uca_camera_error_quark(void);
+
 typedef enum {
     UCA_CAMERA_ERROR_NOT_FOUND,
     UCA_CAMERA_ERROR_RECORDING,
