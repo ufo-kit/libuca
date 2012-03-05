@@ -173,6 +173,27 @@ static void uca_camera_init(UcaCamera *camera)
 {
     camera->priv = UCA_CAMERA_GET_PRIVATE(camera);
     camera->priv->recording = FALSE;
+
+    /*
+     * This here would be the best place to instantiate the tango server object,
+     * along these lines:
+     *
+     * // I'd prefer if you expose a single C method, so we don't have to
+     * // compile uca-camera.c with g++
+     * tango_handle = tango_server_new(camera);
+     *
+     * void tango_server_new(UcaCamera *camera)
+     * {
+     *     // Do whatever is necessary. In the end you will have some kind of
+     *     // Tango object t which needs to somehow hook up to the properties. A
+     *     // list of all available properties can be enumerated with 
+     *     // g_object_class_list_properties(G_OBJECT_CLASS(camera),
+     *     //     &n_properties);
+     *
+     *     // For setting/getting properties, use g_object_get/set_property() or
+     *     // g_object_get/set() whatever is more suitable.
+     * }
+     */
 }
 
 void uca_camera_start_recording(UcaCamera *camera, GError **error)
