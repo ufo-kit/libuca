@@ -20,6 +20,12 @@ static void fixture_teardown(Fixture *fixture, gconstpointer data)
     g_object_unref(fixture->camera);
 }
 
+static void on_property_change(gpointer instance, GParamSpec *pspec, gpointer user_data)
+{
+    gboolean *success = (gboolean *) user_data;
+    *success = TRUE;
+}
+
 static void test_recording(Fixture *fixture, gconstpointer data)
 {
     GError *error = NULL;
@@ -33,6 +39,39 @@ static void test_recording(Fixture *fixture, gconstpointer data)
     g_assert(error == NULL);
     uca_camera_stop_recording(camera, &error);
     g_assert(error == NULL);
+}
+
+static void test_recording_signal(Fixture *fixture, gconstpointer data)
+{
+    UcaCamera *camera = UCA_CAMERA(fixture->camera);
+    gboolean success = FALSE;
+    g_signal_connect(G_OBJECT(camera), "notify::is-recording", 
+            (GCallback) on_property_change, &success);
+
+    uca_camera_start_recording(camera, NULL);
+    g_assert(success == TRUE);
+
+    success = FALSE;
+    uca_camera_stop_recording(camera, NULL);
+    g_assert(success == TRUE);
+}
+
+static void test_recording_property(Fixture *fixture, gconstpointer data)
+{
+    UcaCamera *camera = UCA_CAMERA(fixture->camera);
+
+    gboolean is_recording = FALSE;
+    uca_camera_start_recording(camera, NULL);
+    g_object_get(G_OBJECT(camera),
+            "is-recording", &is_recording,
+            NULL);
+    g_assert(is_recording == TRUE);
+
+    uca_camera_stop_recording(camera, NULL);
+    g_object_get(G_OBJECT(camera),
+            "is-recording", &is_recording,
+            NULL);
+    g_assert(is_recording == FALSE);
 }
 
 static void test_base_properties(Fixture *fixture, gconstpointer data)
@@ -65,18 +104,11 @@ static void test_binnings_properties(Fixture *fixture, gconstpointer data)
     g_assert(g_value_get_uint(value) == 1);
 }
 
-static void signal_handler(gpointer instance, const gchar *name, gpointer user_data)
-{
-    g_print("name: %s\n", name);
-    gboolean *success = (gboolean *) user_data;
-    *success = TRUE;
-}
-
 static void test_signal(Fixture *fixture, gconstpointer data)
 {
     UcaCamera *camera = UCA_CAMERA(fixture->camera);
     gboolean success = FALSE;
-    g_signal_connect(camera, "property-changed", (GCallback) signal_handler, &success);
+    g_signal_connect(camera, "notify::framerate", (GCallback) on_property_change, &success);
     g_object_set(G_OBJECT(camera),
             "framerate", 30,
             NULL);
@@ -90,7 +122,9 @@ int main(int argc, char *argv[])
     g_test_bug_base("http://ufo.kit.edu/ufo/ticket");
 
     g_test_add("/recording", Fixture, NULL, fixture_setup, test_recording, fixture_teardown);
+    g_test_add("/recording/signal", Fixture, NULL, fixture_setup, test_recording_signal, fixture_teardown);
     g_test_add("/properties/base", Fixture, NULL, fixture_setup, test_base_properties, fixture_teardown);
+    g_test_add("/properties/recording", Fixture, NULL, fixture_setup, test_recording_property, fixture_teardown);
     g_test_add("/properties/binnings", Fixture, NULL, fixture_setup, test_binnings_properties, fixture_teardown);
     g_test_add("/signal", Fixture, NULL, fixture_setup, test_signal, fixture_teardown);
 

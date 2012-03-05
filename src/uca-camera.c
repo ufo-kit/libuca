@@ -33,9 +33,6 @@ GQuark uca_camera_error_quark()
 }
 
 enum {
-    RECORDING_STARTED,
-    RECORDING_STOPPED,
-    PROPERTY_CHANGED,
     LAST_SIGNAL
 };
 
@@ -50,6 +47,7 @@ enum {
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
+    PROP_IS_RECORDING,
     N_PROPERTIES
 };
 
@@ -59,7 +57,7 @@ struct _UcaCameraPrivate {
 
 static GParamSpec *camera_properties[N_PROPERTIES] = { NULL, };
 
-static guint camera_signals[LAST_SIGNAL] = { 0 };
+/* static guint camera_signals[LAST_SIGNAL] = { 0 }; */
 
 static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
@@ -68,7 +66,16 @@ static void uca_camera_set_property(GObject *object, guint property_id, const GV
 
 static void uca_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-    G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
+
+    switch (property_id) {
+        case PROP_IS_RECORDING:
+            g_value_set_boolean(value, priv->recording);
+            break;
+
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
 }
 
 static void uca_camera_class_init(UcaCameraClass *klass)
@@ -150,26 +157,14 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             "Is the camera able to record the data in-camera",
             FALSE, G_PARAM_READABLE);
 
+    camera_properties[PROP_IS_RECORDING] = 
+        g_param_spec_boolean("is-recording",
+            "Is camera recording",
+            "Is the camera currently recording",
+            FALSE, G_PARAM_READABLE);
+
     for (guint id = PROP_0 + 1; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, camera_properties[id]);
-
-    camera_signals[RECORDING_STARTED] = 
-        g_signal_new("recording-started",
-                G_OBJECT_CLASS_TYPE(gobject_class),
-                G_SIGNAL_RUN_FIRST,
-                G_STRUCT_OFFSET(UcaCameraClass, recording_started),
-                NULL, NULL,
-                g_cclosure_marshal_VOID__VOID,
-                G_TYPE_NONE, 0, NULL);
-
-    camera_signals[RECORDING_STOPPED] = 
-        g_signal_new("recording-stopped",
-                G_OBJECT_CLASS_TYPE(gobject_class),
-                G_SIGNAL_RUN_FIRST,
-                G_STRUCT_OFFSET(UcaCameraClass, recording_stopped),
-                NULL, NULL,
-                g_cclosure_marshal_VOID__VOID,
-                G_TYPE_NONE, 0, NULL);
 
     g_type_class_add_private(klass, sizeof(UcaCameraPrivate));
 }
@@ -197,7 +192,7 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
 
     camera->priv->recording = TRUE;
     (*klass->start_recording)(camera, error);
-    g_signal_emit_by_name(G_OBJECT(camera), "recording-started");
+    g_object_notify_by_pspec(G_OBJECT(camera), camera_properties[PROP_IS_RECORDING]);
 }
 
 void uca_camera_stop_recording(UcaCamera *camera, GError **error)
@@ -217,7 +212,7 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
 
     camera->priv->recording = FALSE;
     (*klass->stop_recording)(camera, error);
-    g_signal_emit_by_name(G_OBJECT(camera), "recording-stopped");
+    g_object_notify_by_pspec(G_OBJECT(camera), camera_properties[PROP_IS_RECORDING]);
 }
 
 void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func)
