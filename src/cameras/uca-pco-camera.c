@@ -59,6 +59,9 @@ enum {
     PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
+    PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_HAS_STREAMING,
+    PROP_HAS_CAMRAM_RECORDING,
     N_INTERFACE_PROPERTIES,
 
     PROP_NAME,
@@ -74,22 +77,30 @@ static const gchar *base_overrideables[N_PROPERTIES] = {
     "sensor-horizontal-binnings",
     "sensor-vertical-binning",
     "sensor-vertical-binnings",
+    "max-frame-rate",
+    "has-streaming",
+    "has-camram-recording"
 };
 
 static GParamSpec *pco_properties[N_PROPERTIES - N_INTERFACE_PROPERTIES - 1] = { NULL, };
 
+/*
+ * This structure defines type-specific properties of PCO cameras.
+ */
 typedef struct {
     int camera_type;
     const char *so_file;
     int cl_type;
     int cl_format;
+    gfloat max_frame_rate;
+    gboolean has_camram;
 } pco_cl_map_entry;
 
 static pco_cl_map_entry pco_cl_map[] = { 
-    { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY },
-    { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16 },
-    { CAMERATYPE_PCO_DIMAX_STD,  "libFullAreaGray16.so", FG_CL_SINGLETAP_8_BIT,     FG_GRAY16 },
-    { 0, NULL, 0, 0}
+    { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
+    { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE },
+    { CAMERATYPE_PCO_DIMAX_STD,  "libFullAreaGray16.so", FG_CL_SINGLETAP_8_BIT,     FG_GRAY16, 1279.0f, TRUE },
+    { 0, NULL, 0, 0, 0.0f, FALSE }
 };
 
 static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
@@ -107,6 +118,7 @@ static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
 
 struct _UcaPcoCameraPrivate {
     pco_handle pco;
+    pco_cl_map_entry *camera_description;
 
     Fg_Struct *fg;
     guint fg_port;
@@ -168,7 +180,6 @@ static guint override_temperature_range(UcaPcoCameraPrivate *priv)
 
 UcaPcoCamera *uca_pco_camera_new(GError **error)
 {
-    /* TODO: find a good way to handle libpco and fg errors */
     pco_handle pco = pco_init();
 
     if (pco == NULL) {
@@ -184,6 +195,7 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     guint16 camera_type, camera_subtype;
     pco_get_camera_type(priv->pco, &camera_type, &camera_subtype);
     pco_cl_map_entry *map_entry = get_pco_cl_map_entry(camera_type);
+    priv->camera_description = map_entry;
 
     if (map_entry == NULL) {
         g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
@@ -308,6 +320,22 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             g_value_set_boxed(value, priv->vertical_binnings);
             break;
 
+        case PROP_SENSOR_MAX_FRAME_RATE:
+            g_value_set_float(value, priv->camera_description->max_frame_rate);
+            break;
+
+        case PROP_SENSOR_BITDEPTH:
+            g_value_set_uint(value, 16);
+            break;
+
+        case PROP_HAS_STREAMING:
+            g_value_set_boolean(value, TRUE);
+            break;
+
+        case PROP_HAS_CAMRAM_RECORDING:
+            g_value_set_boolean(value, priv->camera_description->has_camram);
+            break;
+
         case PROP_NAME: 
             {
                 char *name = NULL;
@@ -400,4 +428,5 @@ static void uca_pco_camera_init(UcaPcoCamera *self)
     self->priv->pco = NULL;
     self->priv->horizontal_binnings = NULL;
     self->priv->vertical_binnings = NULL;
+    self->priv->camera_description = NULL;
 }

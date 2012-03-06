@@ -14,7 +14,7 @@ static void fixture_setup(Fixture *fixture, gconstpointer data)
     const gchar *type = (gchar *) data;
     GError *error = NULL;
     fixture->camera = uca_camera_new(type, &error);
-    g_assert(error == NULL);
+    g_assert_no_error(error);
     g_assert(fixture->camera);
 }
 
@@ -81,8 +81,13 @@ static void test_recording_async(Fixture *fixture, gconstpointer data)
     gboolean success = FALSE;
     uca_camera_set_grab_func(camera, grab_func, &success);
 
+    gfloat max_frame_rate = 1.0f;
+    g_object_get(G_OBJECT(camera),
+            "max-frame-rate", &max_frame_rate,
+            NULL);
+    g_assert(max_frame_rate != 0.0f);
+
     g_object_set(G_OBJECT(camera),
-            "framerate", 10,
             "transfer-asynchronously", TRUE,
             NULL);
 
@@ -90,7 +95,7 @@ static void test_recording_async(Fixture *fixture, gconstpointer data)
     uca_camera_start_recording(camera, &error);
     g_assert_no_error(error);
 
-    g_usleep(G_USEC_PER_SEC / 8);
+    g_usleep(G_USEC_PER_SEC / ((gulong) (max_frame_rate / 2.0f)));
 
     uca_camera_stop_recording(camera, &error);
     g_assert_no_error(error);

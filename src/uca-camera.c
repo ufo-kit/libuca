@@ -66,6 +66,7 @@ enum {
     PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
+    PROP_SENSOR_MAX_FRAME_RATE,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     PROP_TRANSFER_ASYNCHRONOUSLY,
@@ -180,6 +181,13 @@ static void uca_camera_class_init(UcaCameraClass *klass)
                 "Number of ADCs that make up one pixel",
                 1, G_MAXUINT, 1,
                 G_PARAM_READABLE), G_PARAM_READABLE);
+
+    camera_properties[PROP_SENSOR_MAX_FRAME_RATE] = 
+        g_param_spec_float("max-frame-rate",
+            "Maximum frame rate",
+            "Maximum frame rate at full frame resolution",
+            0.0f, G_MAXFLOAT, 1.0f,
+            G_PARAM_READABLE);
 
     camera_properties[PROP_HAS_STREAMING] = 
         g_param_spec_boolean("has-streaming",
