@@ -47,24 +47,16 @@ static void test_recording(Fixture *fixture, gconstpointer data)
     g_error_free(error);
 
     error = NULL;
-    uca_camera_start_recording(camera, &error);
-    g_assert_no_error(error);
-    uca_camera_stop_recording(camera, &error);
-    g_assert_no_error(error);
-}
-
-static void test_recording_signal(Fixture *fixture, gconstpointer data)
-{
-    UcaCamera *camera = UCA_CAMERA(fixture->camera);
     gboolean success = FALSE;
     g_signal_connect(G_OBJECT(camera), "notify::is-recording", 
             (GCallback) on_property_change, &success);
-
-    uca_camera_start_recording(camera, NULL);
+    uca_camera_start_recording(camera, &error);
+    g_assert_no_error(error);
     g_assert(success == TRUE);
 
     success = FALSE;
-    uca_camera_stop_recording(camera, NULL);
+    uca_camera_stop_recording(camera, &error);
+    g_assert_no_error(error);
     g_assert(success == TRUE);
 }
 
@@ -96,6 +88,24 @@ static void test_recording_async(Fixture *fixture, gconstpointer data)
     g_assert_no_error(error);
 
     g_usleep(G_USEC_PER_SEC / ((gulong) (max_frame_rate / 2.0f)));
+
+    uca_camera_stop_recording(camera, &error);
+    g_assert_no_error(error);
+    g_assert(success == TRUE);
+}
+
+static void test_recording_grab(Fixture *fixture, gconstpointer data)
+{
+    UcaCamera *camera = UCA_CAMERA(fixture->camera);
+    GError *error = NULL;
+    gpointer frame = NULL;
+
+    uca_camera_start_recording(camera, &error);
+    g_assert_no_error(error);
+
+    uca_camera_grab(camera, &frame, &error);
+    g_assert_no_error(error);
+    g_assert(frame != NULL);
 
     uca_camera_stop_recording(camera, &error);
     g_assert_no_error(error);
@@ -165,7 +175,7 @@ int main(int argc, char *argv[])
      */
     static const gchar *paths[] = {
         "/recording",
-        "/recording/signal",
+        "/recording/grab",
         "/recording/asynchronous",
         "/properties/base",
         "/properties/recording",
@@ -175,7 +185,7 @@ int main(int argc, char *argv[])
 
     static UcaFixtureFunc test_funcs[] = {
         test_recording,
-        test_recording_signal,
+        test_recording_grab,
         test_recording_async,
         test_base_properties,
         test_recording_property,

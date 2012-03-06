@@ -16,6 +16,7 @@
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #include <stdlib.h>
+#include <string.h>
 #include <libpco/libpco.h>
 #include <libpco/sc2_defs.h>
 #include <fgrab_struct.h>
@@ -32,6 +33,22 @@
             g_object_unref(camobj);                         \
             return NULL;                                    \
         } }
+
+#define FG_SET_ERROR(err, fg, err_type)                 \
+    if (err != FG_OK) {                                 \
+        g_set_error(error, UCA_PCO_CAMERA_ERROR,        \
+                err_type,                               \
+                "%s", Fg_getLastErrorDescription(fg));  \
+        return;                                         \
+    }
+
+#define HANDLE_PCO_ERROR(err)                       \
+    if ((err) != PCO_NOERROR) {                     \
+        g_set_error(error, UCA_PCO_CAMERA_ERROR,    \
+                UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,\
+                "libpco error %i", err);            \
+        return;                                     \
+    }
     
 #define UCA_PCO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCameraPrivate))
 
@@ -44,6 +61,7 @@ G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
  * @UCA_PCO_CAMERA_ERROR_UNSUPPORTED: Camera type is not supported
  * @UCA_PCO_CAMERA_ERROR_FG_INIT: Framegrabber initialization failed
  * @UCA_PCO_CAMERA_ERROR_FG_GENERAL: General framegrabber error
+ * @UCA_PCO_CAMERA_ERROR_FG_ACQUISITION: Framegrabber acquisition error
  */
 GQuark uca_pco_camera_error_quark()
 {
@@ -96,6 +114,24 @@ typedef struct {
     gboolean has_camram;
 } pco_cl_map_entry;
 
+struct _UcaPcoCameraPrivate {
+    pco_handle pco;
+    pco_cl_map_entry *camera_description;
+
+    Fg_Struct *fg;
+    guint fg_port;
+    dma_mem *fg_mem;
+
+    guint frame_width;
+    guint frame_height;
+    gsize num_bytes;
+
+    guint16 width;
+    guint16 height;
+    GValueArray *horizontal_binnings;
+    GValueArray *vertical_binnings;
+};
+
 static pco_cl_map_entry pco_cl_map[] = { 
     { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
     { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE },
@@ -115,20 +151,6 @@ static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
 
     return NULL;
 }
-
-struct _UcaPcoCameraPrivate {
-    pco_handle pco;
-    pco_cl_map_entry *camera_description;
-
-    Fg_Struct *fg;
-    guint fg_port;
-    dma_mem *fg_mem;
-
-    guint16 width;
-    guint16 height;
-    GValueArray *horizontal_binnings;
-    GValueArray *vertical_binnings;
-};
 
 static guint fill_binnings(UcaPcoCameraPrivate *priv)
 {
@@ -250,18 +272,71 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
 static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
-    pco_start_recording(UCA_PCO_CAMERA_GET_PRIVATE(camera)->pco);
+    guint err = PCO_NOERROR;
+
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+    /*
+     * Get the actual size of the frame that we are going to grab based on the
+     * currently selected region of interest. This size is fixed until recording
+     * has stopped.
+     */
+    guint16 roi[4] = {0};
+    err = pco_get_roi(priv->pco, roi);
+    priv->frame_width = roi[2] - roi[0];
+    priv->frame_height = roi[3] - roi[1];
+    priv->num_bytes = 2;
+
+    Fg_setParameter(priv->fg, FG_WIDTH, &priv->frame_width, priv->fg_port);
+    Fg_setParameter(priv->fg, FG_HEIGHT, &priv->frame_height, priv->fg_port);
+
+    if (priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD)
+        pco_clear_active_segment(priv->pco);
+
+    err = pco_arm_camera(priv->pco);
+    HANDLE_PCO_ERROR(err);
+
+    err = pco_start_recording(priv->pco);
+    HANDLE_PCO_ERROR(err);
+
+    err = Fg_AcquireEx(priv->fg, 0, GRAB_INFINITE, ACQ_STANDARD, priv->fg_mem);
+    FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
 
 static void uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
-    pco_stop_recording(UCA_PCO_CAMERA_GET_PRIVATE(camera)->pco);
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+    pco_stop_recording(priv->pco);
+    guint err = Fg_stopAcquireEx(priv->fg, 0, priv->fg_mem, STOP_SYNC);
+
+    FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
 
-static void uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
+static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
+    static frameindex_t last_frame = 0;
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+    pco_request_image(priv->pco);
+
+    last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, last_frame+1, priv->fg_port, 5, priv->fg_mem);
+    
+    if (last_frame <= 0) {
+        guint err = FG_OK + 1;
+        FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
+    }
+
+    guint16 *frame = Fg_getImagePtrEx(priv->fg, last_frame, PORT_A, priv->fg_mem);
+
+    if (*data == NULL)
+        *data = g_malloc0(priv->frame_width * priv->frame_height * priv->num_bytes); 
+
+    if (priv->camera_description->camera_type == CAMERATYPE_PCO_EDGE)
+        pco_get_reorder_func(priv->pco)((guint16 *) *data, frame, priv->frame_width, priv->frame_height);
+    else
+        memcpy((gchar *) *data, (gchar *) frame, priv->frame_width * priv->frame_height * priv->num_bytes);
 }
 
 static void uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)

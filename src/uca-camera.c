@@ -67,6 +67,10 @@ enum {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_ROI_X,
+    PROP_ROI_Y,
+    PROP_ROI_WIDTH,
+    PROP_ROI_HEIGHT,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     PROP_TRANSFER_ASYNCHRONOUSLY,
@@ -86,6 +90,11 @@ static GParamSpec *camera_properties[N_PROPERTIES] = { NULL, };
 static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
+
+    if (priv->is_recording) {
+        g_warning("You cannot change properties during data acquisition");
+        return;
+    }
 
     switch (property_id) {
         case PROP_TRANSFER_ASYNCHRONOUSLY:
@@ -181,6 +190,34 @@ static void uca_camera_class_init(UcaCameraClass *klass)
                 "Number of ADCs that make up one pixel",
                 1, G_MAXUINT, 1,
                 G_PARAM_READABLE), G_PARAM_READABLE);
+
+    camera_properties[PROP_ROI_X] = 
+        g_param_spec_uint("roi-x",
+            "Horizontal coordinate",
+            "Horizontal coordinate",
+            1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
+
+    camera_properties[PROP_ROI_Y] = 
+        g_param_spec_uint("roi-y",
+            "Vertical coordinate",
+            "Vertical coordinate",
+            1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
+
+    camera_properties[PROP_ROI_WIDTH] = 
+        g_param_spec_uint("roi-width",
+            "Width",
+            "Width of the region of interest",
+            1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
+
+    camera_properties[PROP_ROI_HEIGHT] = 
+        g_param_spec_uint("roi-height",
+            "Height",
+            "Height of the region of interest",
+            1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_MAX_FRAME_RATE] = 
         g_param_spec_float("max-frame-rate",
@@ -377,6 +414,7 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
 
 /**
  * uca_camera_set_grab_func:
+ * @camera: A #UcaCamera object
  * func: A #UcaCameraGrabFunc callback function
  *
  * Set the grab function that is called whenever a frame is readily transfered.
@@ -387,7 +425,21 @@ void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointe
     camera->user_data = user_data;
 }
 
-void uca_camera_grab(UcaCamera *camera, gpointer data, GError **error)
+/**
+ * uca_camera_grab:
+ * @camera: A #UcaCamera object
+ * @data: Pointer to pointer to the data. Must not be %NULL.
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Grab a frame a single frame and store the result in @data. If the pointer
+ * pointing to the data is %NULL, memory will be allocated otherwise it will be
+ * used to store the frame. If memory is allocated by uca_camera_grab() it must
+ * be freed by the caller.
+ *
+ * You must have called uca_camera_start_recording() before, otherwise you will
+ * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
+ */
+void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_CAMERA(camera));
 
@@ -395,6 +447,7 @@ void uca_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 
     g_return_if_fail(klass != NULL);
     g_return_if_fail(klass->grab != NULL);
+    g_return_if_fail(data != NULL);
 
     if (!camera->priv->is_recording) {
         g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,

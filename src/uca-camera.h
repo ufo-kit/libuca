@@ -71,7 +71,7 @@ struct _UcaCameraClass {
 
     void (*start_recording) (UcaCamera *camera, GError **error);
     void (*stop_recording) (UcaCamera *camera, GError **error);
-    void (*grab) (UcaCamera *camera, gpointer data, GError **error);
+    void (*grab) (UcaCamera *camera, gpointer *data, GError **error);
 
     void (*recording_started) (UcaCamera *camera);
     void (*recording_stopped) (UcaCamera *camera);
@@ -82,7 +82,7 @@ UcaCamera *uca_camera_new(const gchar *type, GError **error);
 
 void uca_camera_start_recording(UcaCamera *camera, GError **error);
 void uca_camera_stop_recording(UcaCamera *camera, GError **error);
-void uca_camera_grab(UcaCamera *camera, gpointer data, GError **error);
+void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error);
 void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data);
 
 GType uca_camera_get_type(void);

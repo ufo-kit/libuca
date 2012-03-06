@@ -142,11 +142,11 @@ static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
     }
 }
 
-static void uca_mock_camera_grab(UcaCamera *camera, gpointer data, GError **error)
+static void uca_mock_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
-    g_memmove(data, priv->dummy_data, priv->width * priv->height);
+    g_memmove(*data, priv->dummy_data, priv->width * priv->height);
 }
 
 static void uca_mock_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
