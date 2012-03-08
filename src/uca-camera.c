@@ -373,7 +373,8 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
 
     if (tmp_error == NULL) {
         camera->priv->is_recording = TRUE;
-        g_object_notify_by_pspec(G_OBJECT(camera), camera_properties[PROP_IS_RECORDING]);
+        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
+        g_object_notify(G_OBJECT(camera), "is-recording");
     }
     else
         g_propagate_error(error, tmp_error);
@@ -406,7 +407,8 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
 
     if (tmp_error == NULL) {
         camera->priv->is_recording = FALSE;
-        g_object_notify_by_pspec(G_OBJECT(camera), camera_properties[PROP_IS_RECORDING]);
+        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
+        g_object_notify(G_OBJECT(camera), "is-recording");
     }
     else
         g_propagate_error(error, tmp_error);
