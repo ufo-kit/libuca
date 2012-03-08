@@ -31,6 +31,10 @@ enum {
     PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
+    PROP_ROI_X,
+    PROP_ROI_Y,
+    PROP_ROI_WIDTH,
+    PROP_ROI_HEIGHT,
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
@@ -48,6 +52,10 @@ static const gchar *mock_overrideables[N_PROPERTIES] = {
     "sensor-horizontal-binnings",
     "sensor-vertical-binning",
     "sensor-vertical-binnings",
+    "roi-x",
+    "roi-y",
+    "roi-width",
+    "roi-height",
     "max-frame-rate",
     "has-streaming",
     "has-camram-recording"
@@ -58,7 +66,7 @@ static GParamSpec *mock_properties[N_PROPERTIES - N_INTERFACE_PROPERTIES - 1] = 
 struct _UcaMockCameraPrivate {
     guint width;
     guint height;
-    guint frame_rate;
+    gfloat frame_rate;
     gfloat max_frame_rate;
     guint16 *dummy_data;
 
@@ -89,7 +97,7 @@ static gpointer mock_grab_func(gpointer data)
 
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(mock_camera);
     UcaCamera *camera = UCA_CAMERA(mock_camera);
-    const gulong sleep_time = G_USEC_PER_SEC / priv->frame_rate;
+    const gulong sleep_time = (gulong) G_USEC_PER_SEC / priv->frame_rate;
 
     while (priv->thread_running) {
         camera->grab_func(NULL, camera->user_data);
@@ -145,7 +153,13 @@ static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
 static void uca_mock_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
+    g_return_if_fail(data != NULL);
+
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
+
+    if (*data == NULL)
+        *data = g_malloc0(priv->width * priv->height);
+
     g_memmove(*data, priv->dummy_data, priv->width * priv->height);
 }
 
@@ -156,7 +170,7 @@ static void uca_mock_camera_set_property(GObject *object, guint property_id, con
 
     switch (property_id) {
         case PROP_FRAMERATE:
-            priv->frame_rate = g_value_get_uint(value);
+            priv->frame_rate = g_value_get_float(value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -190,6 +204,18 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
         case PROP_SENSOR_VERTICAL_BINNINGS:
             g_value_set_boxed(value, priv->binnings);
             break;
+        case PROP_ROI_X:
+            g_value_set_uint(value, 0);
+            break;
+        case PROP_ROI_Y:
+            g_value_set_uint(value, 0);
+            break;
+        case PROP_ROI_WIDTH:
+            g_value_set_uint(value, priv->width);
+            break;
+        case PROP_ROI_HEIGHT:
+            g_value_set_uint(value, priv->height);
+            break;
         case PROP_SENSOR_MAX_FRAME_RATE:
             g_value_set_float(value, priv->max_frame_rate);
             break;
@@ -200,7 +226,7 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
             g_value_set_boolean(value, FALSE);
             break;
         case PROP_FRAMERATE:
-            g_value_set_uint(value, priv->frame_rate);
+            g_value_set_float(value, priv->frame_rate);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -239,10 +265,10 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
         g_object_class_override_property(gobject_class, id, mock_overrideables[id-1]);
 
     mock_properties[PROP_FRAMERATE] = 
-        g_param_spec_uint("frame-rate",
+        g_param_spec_float("frame-rate",
                 "Frame rate",
                 "Number of frames per second that are taken",
-                1, 30, 25,
+                1.0f, 100.0f, 100.0f,
                 G_PARAM_READWRITE);
 
     for (guint id = N_INTERFACE_PROPERTIES + 1; id < N_PROPERTIES; id++)
@@ -256,7 +282,7 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     self->priv = UCA_MOCK_CAMERA_GET_PRIVATE(self);
     self->priv->width = 640;
     self->priv->height = 480;
-    self->priv->max_frame_rate = 100.0f;
+    self->priv->frame_rate = self->priv->max_frame_rate = 100.0f;
     self->priv->dummy_data = (guint16 *) g_malloc0(self->priv->width * self->priv->height);
     self->priv->grab_thread = NULL;
 

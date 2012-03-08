@@ -87,7 +87,8 @@ static void test_recording_async(Fixture *fixture, gconstpointer data)
     uca_camera_start_recording(camera, &error);
     g_assert_no_error(error);
 
-    g_usleep(G_USEC_PER_SEC / ((gulong) (max_frame_rate / 2.0f)));
+    const gulong sleep_time = G_USEC_PER_SEC / ((gulong) (max_frame_rate / 2.0f));
+    g_usleep(sleep_time);
 
     uca_camera_stop_recording(camera, &error);
     g_assert_no_error(error);
