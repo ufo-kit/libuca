@@ -7,6 +7,8 @@ find_package(PkgConfig)
 
 pkg_check_modules(GTK2 gtk+-2.0)
 pkg_check_modules(GTHREAD2 gthread-2.0)
+pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
+pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
@@ -20,7 +22,7 @@ add_executable(grab grab.c)
 #add_executable(benchmark benchmark.c)
 
 #target_link_libraries(enum uca)
-target_link_libraries(grab uca-gobject)
+target_link_libraries(grab uca-gobject ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 #target_link_libraries(grab-async uca)
 #target_link_libraries(benchmark uca)
 
@@ -36,8 +38,6 @@ target_link_libraries(grab uca-gobject)
 #
 # >>> TEMPORARY TEST EXECUTABLE <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
-pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
 
 include_directories(
     ${GLIB2_INCLUDE_DIRS}

@@ -20,6 +20,8 @@
 
 #include <glib-object.h>
 
+G_BEGIN_DECLS
+
 #define UCA_TYPE_CAMERA             (uca_camera_get_type())
 #define UCA_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_CAMERA, UcaCamera))
 #define UCA_IS_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_CAMERA))
@@ -86,5 +88,7 @@ void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error);
 void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data);
 
 GType uca_camera_get_type(void);
+
+G_END_DECLS
 
 #endif
