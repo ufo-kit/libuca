@@ -16,6 +16,7 @@
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <libpco/libpco.h>
 #include <libpco/sc2_defs.h>
@@ -78,6 +79,10 @@ enum {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_ROI_X,
+    PROP_ROI_Y,
+    PROP_ROI_WIDTH,
+    PROP_ROI_HEIGHT,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     N_INTERFACE_PROPERTIES,
@@ -96,6 +101,10 @@ static const gchar *base_overrideables[N_PROPERTIES] = {
     "sensor-vertical-binning",
     "sensor-vertical-binnings",
     "max-frame-rate",
+    "roi-x",
+    "roi-y",
+    "roi-width",
+    "roi-height",
     "has-streaming",
     "has-camram-recording"
 };
@@ -214,6 +223,11 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     priv->pco = pco;
 
+    guint16 width_ex, height_ex;
+    pco_get_resolution(priv->pco, &priv->width, &priv->height, &width_ex, &height_ex);
+    pco_set_storage_mode(pco, STORAGE_MODE_RECORDER);
+    pco_set_auto_transfer(pco, 1);
+
     guint16 camera_type, camera_subtype;
     pco_get_camera_type(priv->pco, &camera_type, &camera_subtype);
     pco_cl_map_entry *map_entry = get_pco_cl_map_entry(camera_type);
@@ -236,20 +250,8 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
         return NULL;
     }
 
-    guint16 width_ex, height_ex;
-    pco_get_resolution(priv->pco, &priv->width, &priv->height, &width_ex, &height_ex);
-    const guint num_buffers = 2;
-    guint fg_width = camera_type == CAMERATYPE_PCO_EDGE ? priv->width * 2 : priv->width;
-    priv->fg_mem = Fg_AllocMemEx(priv->fg, fg_width * priv->height * sizeof(uint16_t), num_buffers);
+    const guint32 fg_width = camera_type == CAMERATYPE_PCO_EDGE ? priv->width * 2 : priv->width;
 
-    if (priv->fg_mem == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
-                "%s", Fg_getLastErrorDescription(priv->fg));
-        g_object_unref(camera);
-        return NULL;
-    }
-
-    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
     FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
     FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &map_entry->cl_format, priv->fg_port);
     FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &fg_width, priv->fg_port);
@@ -283,14 +285,28 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
      */
     guint16 roi[4] = {0};
     err = pco_get_roi(priv->pco, roi);
-    priv->frame_width = roi[2] - roi[0];
-    priv->frame_height = roi[3] - roi[1];
+    priv->frame_width = roi[2] - roi[0] + 1;
+    priv->frame_height = roi[3] - roi[1] + 1;
     priv->num_bytes = 2;
 
     Fg_setParameter(priv->fg, FG_WIDTH, &priv->frame_width, priv->fg_port);
     Fg_setParameter(priv->fg, FG_HEIGHT, &priv->frame_height, priv->fg_port);
 
-    if (priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD)
+    if (priv->fg_mem)
+        Fg_FreeMemEx(priv->fg, priv->fg_mem);
+
+    const guint num_buffers = 4;
+    priv->fg_mem = Fg_AllocMemEx(priv->fg, priv->frame_width * priv->frame_height * sizeof(uint16_t), num_buffers);
+
+    if (priv->fg_mem == NULL) {
+        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
+                "%s", Fg_getLastErrorDescription(priv->fg));
+        g_object_unref(camera);
+        return NULL;
+    }
+
+    if ((priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD) ||
+        (priv->camera_description->camera_type == CAMERATYPE_PCO4000))
         pco_clear_active_segment(priv->pco);
 
     err = pco_arm_camera(priv->pco);
@@ -320,7 +336,6 @@ static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
     pco_request_image(priv->pco);
-
     last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, last_frame+1, priv->fg_port, 5, priv->fg_mem);
     
     if (last_frame <= 0) {
@@ -411,12 +426,44 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             g_value_set_boolean(value, priv->camera_description->has_camram);
             break;
 
+        case PROP_ROI_X:
+            {
+                guint16 roi[4] = {0};
+                guint err = pco_get_roi(priv->pco, roi);
+                g_value_set_uint(value, roi[0]);
+            }
+            break;
+
+        case PROP_ROI_Y:
+            {
+                guint16 roi[4] = {0};
+                guint err = pco_get_roi(priv->pco, roi);
+                g_value_set_uint(value, roi[1]);
+            }
+            break;
+
+        case PROP_ROI_WIDTH:
+            {
+                guint16 roi[4] = {0};
+                guint err = pco_get_roi(priv->pco, roi);
+                g_value_set_uint(value, (roi[2] - roi[0]));
+            }
+            break;
+
+        case PROP_ROI_HEIGHT:
+            {
+                guint16 roi[4] = {0};
+                guint err = pco_get_roi(priv->pco, roi);
+                g_value_set_uint(value, (roi[3] - roi[1]));
+            }
+            break;
+
         case PROP_NAME: 
             {
-                char *name = NULL;
+                gchar *name = NULL;
                 pco_get_name(priv->pco, &name);
                 g_value_set_string(value, name);
-                free(name);
+                g_free(name);
             }
             break;
 
