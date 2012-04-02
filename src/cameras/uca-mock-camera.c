@@ -68,7 +68,7 @@ struct _UcaMockCameraPrivate {
     guint height;
     gfloat frame_rate;
     gfloat max_frame_rate;
-    guint16 *dummy_data;
+    guint8 *dummy_data;
 
     gboolean thread_running;
 
@@ -100,7 +100,7 @@ static gpointer mock_grab_func(gpointer data)
     const gulong sleep_time = (gulong) G_USEC_PER_SEC / priv->frame_rate;
 
     while (priv->thread_running) {
-        camera->grab_func(NULL, camera->user_data);
+        camera->grab_func(priv->dummy_data, camera->user_data);
         g_usleep(sleep_time);
     }
 
@@ -282,8 +282,8 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     self->priv = UCA_MOCK_CAMERA_GET_PRIVATE(self);
     self->priv->width = 640;
     self->priv->height = 480;
-    self->priv->frame_rate = self->priv->max_frame_rate = 100.0f;
-    self->priv->dummy_data = (guint16 *) g_malloc0(self->priv->width * self->priv->height);
+    self->priv->frame_rate = self->priv->max_frame_rate = 100000.0f;
+    self->priv->dummy_data = (guint8 *) g_malloc0(self->priv->width * self->priv->height);
     self->priv->grab_thread = NULL;
 
     self->priv->binnings = g_value_array_new(1);

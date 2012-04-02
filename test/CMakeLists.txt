@@ -65,3 +65,10 @@ target_link_libraries(test-all
     ${GLIB2_LIBRARIES}
     ${GOBJECT2_LIBRARIES}
     )
+
+add_executable(perf-overhead perf-overhead.c)
+target_link_libraries(perf-overhead
+    uca-gobject 
+    ${GLIB2_LIBRARIES}
+    ${GOBJECT2_LIBRARIES}
+    )
