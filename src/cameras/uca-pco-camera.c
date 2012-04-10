@@ -295,8 +295,9 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
     if (priv->fg_mem)
         Fg_FreeMemEx(priv->fg, priv->fg_mem);
 
-    const guint num_buffers = 4;
-    priv->fg_mem = Fg_AllocMemEx(priv->fg, priv->frame_width * priv->frame_height * sizeof(uint16_t), num_buffers);
+    const guint num_buffers = 2;
+    priv->fg_mem = Fg_AllocMemEx(priv->fg, 
+            num_buffers * priv->frame_width * priv->frame_height * sizeof(uint16_t), num_buffers);
 
     if (priv->fg_mem == NULL) {
         g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
@@ -315,7 +316,7 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
     err = pco_start_recording(priv->pco);
     HANDLE_PCO_ERROR(err);
 
-    err = Fg_AcquireEx(priv->fg, 0, GRAB_INFINITE, ACQ_STANDARD, priv->fg_mem);
+    err = Fg_AcquireEx(priv->fg, priv->fg_port, GRAB_INFINITE, ACQ_STANDARD, priv->fg_mem);
     FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
 
@@ -324,7 +325,7 @@ static void uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     pco_stop_recording(priv->pco);
-    guint err = Fg_stopAcquireEx(priv->fg, 0, priv->fg_mem, STOP_SYNC);
+    guint err = Fg_stopAcquireEx(priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
 
     FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
@@ -343,7 +344,7 @@ static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
         FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
     }
 
-    guint16 *frame = Fg_getImagePtrEx(priv->fg, last_frame, PORT_A, priv->fg_mem);
+    guint16 *frame = Fg_getImagePtrEx(priv->fg, last_frame, priv->fg_port, priv->fg_mem);
 
     if (*data == NULL)
         *data = g_malloc0(priv->frame_width * priv->frame_height * priv->num_bytes); 
