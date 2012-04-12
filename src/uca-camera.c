@@ -75,11 +75,13 @@ enum {
     PROP_HAS_CAMRAM_RECORDING,
     PROP_TRANSFER_ASYNCHRONOUSLY,
     PROP_IS_RECORDING,
+    PROP_IS_READOUT,
     N_PROPERTIES
 };
 
 struct _UcaCameraPrivate {
     gboolean is_recording;
+    gboolean is_readout;
     gboolean transfer_async;
 };
 
@@ -250,6 +252,12 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             "Is the camera currently recording",
             FALSE, G_PARAM_READABLE);
 
+    camera_properties[PROP_IS_READOUT] = 
+        g_param_spec_boolean("is-readout",
+            "Is camera in readout mode",
+            "Is camera in readout mode",
+            FALSE, G_PARAM_READABLE);
+
     for (guint id = PROP_0 + 1; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, camera_properties[id]);
 
@@ -262,6 +270,7 @@ static void uca_camera_init(UcaCamera *camera)
 
     camera->priv = UCA_CAMERA_GET_PRIVATE(camera);
     camera->priv->is_recording = FALSE;
+    camera->priv->is_readout = FALSE;
     camera->priv->transfer_async = FALSE;
 
     /*
@@ -372,6 +381,7 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
     (*klass->start_recording)(camera, &tmp_error);
 
     if (tmp_error == NULL) {
+        camera->priv->is_readout = FALSE;
         camera->priv->is_recording = TRUE;
         /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
         g_object_notify(G_OBJECT(camera), "is-recording");
@@ -406,9 +416,47 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
     (*klass->stop_recording)(camera, &tmp_error);
 
     if (tmp_error == NULL) {
+        camera->priv->is_readout = FALSE;
         camera->priv->is_recording = FALSE;
         /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
         g_object_notify(G_OBJECT(camera), "is-recording");
+    }
+    else
+        g_propagate_error(error, tmp_error);
+}
+
+/**
+ * uca_camera_start_readout:
+ * @camera: A #UcaCamera object
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Initiate readout mode for cameras that support
+ * #UcaCamera:has-camram-recording after calling
+ * uca_camera_stop_recording(). Frames have to be picked up with
+ * ufo_camera_grab().
+ */
+void uca_camera_start_readout(UcaCamera *camera, GError **error)
+{
+    g_return_if_fail(UCA_IS_CAMERA(camera));
+
+    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+
+    g_return_if_fail(klass != NULL);
+    g_return_if_fail(klass->start_readout != NULL);
+
+    if (camera->priv->is_recording) {
+        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                "Camera is still recording");
+        return;
+    }
+
+    GError *tmp_error = NULL;
+    (*klass->start_readout)(camera, &tmp_error);
+
+    if (tmp_error == NULL) {
+        camera->priv->is_readout = TRUE;
+        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
+        g_object_notify(G_OBJECT(camera), "is-readout");
     }
     else
         g_propagate_error(error, tmp_error);
@@ -451,9 +499,9 @@ void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
     g_return_if_fail(klass->grab != NULL);
     g_return_if_fail(data != NULL);
 
-    if (!camera->priv->is_recording) {
+    if (!camera->priv->is_recording || !camera->priv->is_readout) {
         g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
-                "Camera is not recording");
+                "Camera is neither recording nor in readout mode");
         return;
     }
 

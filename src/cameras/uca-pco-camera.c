@@ -139,6 +139,10 @@ struct _UcaPcoCameraPrivate {
     guint16 height;
     GValueArray *horizontal_binnings;
     GValueArray *vertical_binnings;
+
+    guint16 active_segment;
+    guint num_recorded_images;
+    guint current_image;
 };
 
 static pco_cl_map_entry pco_cl_map[] = { 
@@ -303,7 +307,7 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
         g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
                 "%s", Fg_getLastErrorDescription(priv->fg));
         g_object_unref(camera);
-        return NULL;
+        return;
     }
 
     if ((priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD) ||
@@ -330,11 +334,48 @@ static void uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
     FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
 
+static void uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
+{
+    g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+    /* 
+     * TODO: Check if readout mode is possible. This is not the case for the
+     * edge. 
+     */
+
+    guint err = pco_get_active_segment(priv->pco, &priv->active_segment);
+    HANDLE_PCO_ERROR(err);
+
+    err = pco_get_num_images(priv->pco, priv->active_segment, &priv->num_recorded_images);
+    HANDLE_PCO_ERROR(err);
+
+    priv->current_image = 1;
+}
+
 static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     static frameindex_t last_frame = 0;
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+    gboolean is_readout = FALSE;
+    g_object_get(G_OBJECT(camera), "is-readout", &is_readout, NULL);
+
+    if (is_readout) {
+        if (priv->current_image == priv->num_recorded_images) {
+            *data = NULL;
+            return;
+        }
+
+        /*
+         * No joke, the pco firmware allows to read a range of images but
+         * implements only reading single images ...
+         */
+        pco_read_images(priv->pco, priv->active_segment, 
+                priv->current_image, priv->current_image);
+        priv->current_image++;
+    }
 
     pco_request_image(priv->pco);
     last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, last_frame+1, priv->fg_port, 5, priv->fg_mem);
@@ -430,7 +471,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_ROI_X:
             {
                 guint16 roi[4] = {0};
-                guint err = pco_get_roi(priv->pco, roi);
+                pco_get_roi(priv->pco, roi);
                 g_value_set_uint(value, roi[0]);
             }
             break;
@@ -438,7 +479,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_ROI_Y:
             {
                 guint16 roi[4] = {0};
-                guint err = pco_get_roi(priv->pco, roi);
+                pco_get_roi(priv->pco, roi);
                 g_value_set_uint(value, roi[1]);
             }
             break;
@@ -446,7 +487,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_ROI_WIDTH:
             {
                 guint16 roi[4] = {0};
-                guint err = pco_get_roi(priv->pco, roi);
+                pco_get_roi(priv->pco, roi);
                 g_value_set_uint(value, (roi[2] - roi[0]));
             }
             break;
@@ -454,7 +495,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_ROI_HEIGHT:
             {
                 guint16 roi[4] = {0};
-                guint err = pco_get_roi(priv->pco, roi);
+                pco_get_roi(priv->pco, roi);
                 g_value_set_uint(value, (roi[3] - roi[1]));
             }
             break;
@@ -515,6 +556,7 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
     UcaCameraClass *camera_class = UCA_CAMERA_CLASS(klass);
     camera_class->start_recording = uca_pco_camera_start_recording;
     camera_class->stop_recording = uca_pco_camera_stop_recording;
+    camera_class->start_readout = uca_pco_camera_start_readout;
     camera_class->grab = uca_pco_camera_grab;
 
     for (guint id = PROP_0 + 1; id < N_INTERFACE_PROPERTIES; id++)
