@@ -333,9 +333,11 @@ static void uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
-    pco_stop_recording(priv->pco);
-    guint err = Fg_stopAcquireEx(priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
 
+    guint err = pco_stop_recording(priv->pco);
+    HANDLE_PCO_ERROR(err);
+
+    err = Fg_stopAcquireEx(priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
     FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
 

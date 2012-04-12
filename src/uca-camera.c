@@ -117,6 +117,10 @@ static void uca_camera_get_property(GObject *object, guint property_id, GValue *
             g_value_set_boolean(value, priv->is_recording);
             break;
 
+        case PROP_IS_READOUT:
+            g_value_set_boolean(value, priv->is_readout);
+            break;
+
         case PROP_TRANSFER_ASYNCHRONOUSLY:
             g_value_set_boolean(value, priv->transfer_async);
             break;
@@ -499,7 +503,7 @@ void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
     g_return_if_fail(klass->grab != NULL);
     g_return_if_fail(data != NULL);
 
-    if (!camera->priv->is_recording || !camera->priv->is_readout) {
+    if (!camera->priv->is_recording && !camera->priv->is_readout) {
         g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
                 "Camera is neither recording nor in readout mode");
         return;
