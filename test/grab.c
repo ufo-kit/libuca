@@ -57,25 +57,32 @@ int main(int argc, char *argv[])
     const int pixel_size = bits == 8 ? 1 : 2;
     gpointer buffer = g_malloc0(width * height * pixel_size);
 
-    uca_camera_start_recording(camera, &error);
-
     gchar filename[FILENAME_MAX];
-    gint counter = 0;
 
-    while (counter < 20) {
-        g_print(" grab frame ... ");
-        uca_camera_grab(camera, &buffer, &error);
-        if (error != NULL)
-            break;
-        g_print("done\n");
+    for (int i = 0; i < 2; i++) {
+        gint counter = 0;
+        g_print("Start recording\n");
+        uca_camera_start_recording(camera, &error);
+        g_assert_no_error(error);
 
-        snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
-        FILE *fp = fopen(filename, "wb");
-        fwrite(buffer, width*height, pixel_size, fp);
-        fclose(fp);
+        while (counter < 4) {
+            g_print(" grab frame ... ");
+            uca_camera_grab(camera, &buffer, &error);
+            if (error != NULL)
+                break;
+            g_print("done\n");
+
+            snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
+            FILE *fp = fopen(filename, "wb");
+            fwrite(buffer, width*height, pixel_size, fp);
+            fclose(fp);
+        }
+
+        g_print("Start recording\n");
+        uca_camera_stop_recording(camera, &error);
+        g_assert_no_error(error);
     }
 
-    uca_camera_stop_recording(camera, &error);
     g_object_unref(camera);
     g_free(buffer);
 
