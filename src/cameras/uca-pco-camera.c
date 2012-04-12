@@ -289,25 +289,30 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
      */
     guint16 roi[4] = {0};
     err = pco_get_roi(priv->pco, roi);
-    priv->frame_width = roi[2] - roi[0] + 1;
-    priv->frame_height = roi[3] - roi[1] + 1;
-    priv->num_bytes = 2;
+    guint frame_width = roi[2] - roi[0] + 1;
+    guint frame_height = roi[3] - roi[1] + 1;
 
-    Fg_setParameter(priv->fg, FG_WIDTH, &priv->frame_width, priv->fg_port);
-    Fg_setParameter(priv->fg, FG_HEIGHT, &priv->frame_height, priv->fg_port);
+    if (priv->frame_width != frame_width || priv->frame_height != frame_height || priv->fg_mem == NULL) {
+        priv->frame_width = frame_width;
+        priv->frame_height = frame_height;
+        priv->num_bytes = 2;
 
-    if (priv->fg_mem)
-        Fg_FreeMemEx(priv->fg, priv->fg_mem);
+        Fg_setParameter(priv->fg, FG_WIDTH, &priv->frame_width, priv->fg_port);
+        Fg_setParameter(priv->fg, FG_HEIGHT, &priv->frame_height, priv->fg_port);
 
-    const guint num_buffers = 2;
-    priv->fg_mem = Fg_AllocMemEx(priv->fg, 
-            num_buffers * priv->frame_width * priv->frame_height * sizeof(uint16_t), num_buffers);
+        if (priv->fg_mem)
+            Fg_FreeMemEx(priv->fg, priv->fg_mem);
 
-    if (priv->fg_mem == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
-                "%s", Fg_getLastErrorDescription(priv->fg));
-        g_object_unref(camera);
-        return;
+        const guint num_buffers = 2;
+        priv->fg_mem = Fg_AllocMemEx(priv->fg, 
+                num_buffers * priv->frame_width * priv->frame_height * sizeof(uint16_t), num_buffers);
+
+        if (priv->fg_mem == NULL) {
+            g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
+                    "%s", Fg_getLastErrorDescription(priv->fg));
+            g_object_unref(camera);
+            return;
+        }
     }
 
     if ((priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD) ||
