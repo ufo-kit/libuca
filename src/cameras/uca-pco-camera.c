@@ -140,6 +140,7 @@ struct _UcaPcoCameraPrivate {
     GValueArray *horizontal_binnings;
     GValueArray *vertical_binnings;
 
+    frameindex_t last_frame;
     guint16 active_segment;
     guint num_recorded_images;
     guint current_image;
@@ -319,6 +320,8 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
         (priv->camera_description->camera_type == CAMERATYPE_PCO4000))
         pco_clear_active_segment(priv->pco);
 
+    priv->last_frame = 0;
+
     err = pco_arm_camera(priv->pco);
     HANDLE_PCO_ERROR(err);
 
@@ -339,6 +342,10 @@ static void uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
 
     err = Fg_stopAcquireEx(priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
     FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
+
+    err = Fg_setStatusEx(priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
+    if (err == FG_INVALID_PARAMETER)
+        g_print(" Unable to unblock all\n");
 }
 
 static void uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
@@ -363,7 +370,6 @@ static void uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
 static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
-    static frameindex_t last_frame = 0;
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
     gboolean is_readout = FALSE;
@@ -385,14 +391,14 @@ static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     }
 
     pco_request_image(priv->pco);
-    last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, last_frame+1, priv->fg_port, 5, priv->fg_mem);
+    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame+1, priv->fg_port, 5, priv->fg_mem);
     
-    if (last_frame <= 0) {
+    if (priv->last_frame <= 0) {
         guint err = FG_OK + 1;
         FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
     }
 
-    guint16 *frame = Fg_getImagePtrEx(priv->fg, last_frame, priv->fg_port, priv->fg_mem);
+    guint16 *frame = Fg_getImagePtrEx(priv->fg, priv->last_frame, priv->fg_port, priv->fg_mem);
 
     if (*data == NULL)
         *data = g_malloc0(priv->frame_width * priv->frame_height * priv->num_bytes); 
@@ -601,4 +607,5 @@ static void uca_pco_camera_init(UcaPcoCamera *self)
     self->priv->horizontal_binnings = NULL;
     self->priv->vertical_binnings = NULL;
     self->priv->camera_description = NULL;
+    self->priv->last_frame = 0;
 }

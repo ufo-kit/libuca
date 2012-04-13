@@ -65,11 +65,13 @@ int main(int argc, char *argv[])
         uca_camera_start_recording(camera, &error);
         g_assert_no_error(error);
 
-        while (counter < 4) {
+        while (counter < 2) {
             g_print(" grab frame ... ");
             uca_camera_grab(camera, &buffer, &error);
-            if (error != NULL)
-                break;
+            if (error != NULL) {
+                g_print("\nError: %s\n", error->message);
+                goto cleanup;
+            }
             g_print("done\n");
 
             snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
@@ -78,11 +80,13 @@ int main(int argc, char *argv[])
             fclose(fp);
         }
 
-        g_print("Start recording\n");
+        g_print("Stop recording\n");
         uca_camera_stop_recording(camera, &error);
         g_assert_no_error(error);
     }
 
+cleanup:
+    uca_camera_stop_recording(camera, NULL);
     g_object_unref(camera);
     g_free(buffer);
 
