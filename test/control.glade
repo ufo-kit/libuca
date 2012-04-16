@@ -2,28 +2,24 @@
 <interface>
   <requires lib="gtk+" version="2.20"/>
   <!-- interface-naming-policy project-wide -->
-  <object class="GtkTreeStore" id="cameraproperties">
-    <columns>
-      <!-- column-name PropertyName -->
-      <column type="gchararray"/>
-      <!-- column-name PropertyValue -->
-      <column type="gchararray"/>
-      <!-- column-name PropertyUnit -->
-      <column type="gchararray"/>
-      <!-- column-name PropertyUCA -->
-      <column type="guint"/>
-    </columns>
-  </object>
   <object class="GtkListStore" id="camera-types">
     <columns>
       <!-- column-name name -->
       <column type="gchararray"/>
     </columns>
   </object>
+  <object class="GtkListStore" id="camera-properties">
+    <columns>
+      <!-- column-name PropertyName -->
+      <column type="gchararray"/>
+      <!-- column-name PropertyValue -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkWindow" id="window">
     <property name="title" translatable="yes">Camera Control</property>
-    <property name="default_width">800</property>
-    <property name="default_height">600</property>
+    <property name="default_width">1024</property>
+    <property name="default_height">768</property>
     <signal name="delete_event" handler="on_delete_event"/>
     <child>
       <object class="GtkVBox" id="vbox1">
@@ -198,10 +194,10 @@
                     <property name="hscrollbar_policy">automatic</property>
                     <property name="vscrollbar_policy">automatic</property>
                     <child>
-                      <object class="GtkTreeView" id="treeview">
+                      <object class="GtkTreeView" id="treeview-properties">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
-                        <property name="model">cameraproperties</property>
+                        <property name="model">camera-properties</property>
                         <property name="headers_clickable">False</property>
                         <property name="search_column">0</property>
                         <child>
@@ -222,17 +218,6 @@
                               <object class="GtkCellRendererText" id="valuecell"/>
                               <attributes>
                                 <attribute name="text">1</attribute>
-                              </attributes>
-                            </child>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkTreeViewColumn" id="unitcolumn">
-                            <property name="title">Unit</property>
-                            <child>
-                              <object class="GtkCellRendererText" id="unitcell"/>
-                              <attributes>
-                                <attribute name="text">2</attribute>
                               </attributes>
                             </child>
                           </object>
@@ -314,6 +299,7 @@
     <property name="page_increment">10</property>
   </object>
   <object class="GtkWindow" id="choice-window">
+    <property name="border_width">6</property>
     <child>
       <object class="GtkVBox" id="vbox3">
         <property name="visible">True</property>
@@ -325,7 +311,7 @@
             <property name="model">camera-types</property>
             <child>
               <object class="GtkTreeViewColumn" id="treeviewcolumn1">
-                <property name="title">column</property>
+                <property name="title">Choose camera</property>
                 <child>
                   <object class="GtkCellRendererText" id="cellrenderertext1"/>
                   <attributes>
@@ -378,36 +364,6 @@
             <property name="expand">False</property>
             <property name="padding">6</property>
             <property name="position">1</property>
-          </packing>
-        </child>
-      </object>
-    </child>
-  </object>
-  <object class="GtkDialog" id="dialog1">
-    <property name="border_width">5</property>
-    <property name="type_hint">normal</property>
-    <child internal-child="vbox">
-      <object class="GtkVBox" id="dialog-vbox2">
-        <property name="visible">True</property>
-        <property name="spacing">2</property>
-        <child>
-          <placeholder/>
-        </child>
-        <child internal-child="action_area">
-          <object class="GtkHButtonBox" id="dialog-action_area2">
-            <property name="visible">True</property>
-            <property name="layout_style">end</property>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="pack_type">end</property>
-            <property name="position">0</property>
           </packing>
         </child>
       </object>
