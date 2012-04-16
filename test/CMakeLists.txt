@@ -26,17 +26,15 @@ target_link_libraries(grab uca-gobject ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 #target_link_libraries(grab-async uca)
 #target_link_libraries(benchmark uca)
 
-#if (GTK2_FOUND)
-#    include_directories(${GTK2_INCLUDE_DIRS})
-#    add_executable(control control.c)
-#    target_link_libraries(control
-#        uca
-#        ${GTK2_LIBRARIES}
-#	    ${GTHREAD2_LIBRARIES}
-#        )
-#endif()
-#
-# >>> TEMPORARY TEST EXECUTABLE <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+if (GTK2_FOUND)
+    include_directories(${GTK2_INCLUDE_DIRS})
+    add_executable(control control.c)
+    target_link_libraries(control
+        uca-gobject
+        ${GTK2_LIBRARIES}
+	    ${GTHREAD2_LIBRARIES}
+        )
+endif()
 
 
 include_directories(
