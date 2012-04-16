@@ -43,13 +43,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/cameras
     )
 
-add_executable(test-gobject test-gobject.c)
-target_link_libraries(test-gobject 
-    uca-gobject 
-    ${GLIB2_LIBRARIES}
-    ${GOBJECT2_LIBRARIES}
-    )
-
 add_executable(test-mock test-mock.c)
 target_link_libraries(test-mock
     uca-gobject 
