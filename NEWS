@@ -15,6 +15,15 @@ what to use, the user must now determine the used camera at compile time or use
 the factory pattern to delegate this to run-time. 
 
 
+Tango Wrapper
+-------------
+
+The old Tango wrapper has been superseded by a generic one that proxies
+GObject's to the Tango bus. This makes things a lot easier, for example reacting
+on remote property setting and more robust type safety.
+
+The wrapper is developed as an external project at ISS by Volker Kaiser.
+
 
 Changes in libuca 0.5.0
 =======================
