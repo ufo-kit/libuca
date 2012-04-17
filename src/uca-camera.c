@@ -234,7 +234,7 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             "Exposure time in seconds",
             "Exposure time in seconds",
             0.0, G_MAXDOUBLE, 1.0,
-            G_PARAM_READABLE);
+            G_PARAM_READWRITE);
 
     camera_properties[PROP_SENSOR_MAX_FRAME_RATE] = 
         g_param_spec_float("max-frame-rate",

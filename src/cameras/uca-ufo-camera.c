@@ -181,7 +181,16 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
 
 static void uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
+    UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(object);
+
     switch (property_id) {
+        case PROP_EXPOSURE_TIME:
+            {
+                pcilib_register_value_t reg_value = (pcilib_register_value_t) 2.67e6 * g_value_get_double(value);
+                pcilib_write_register(priv->handle, NULL, "exp_time", reg_value);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
