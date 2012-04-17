@@ -24,7 +24,7 @@
 #define UCA_TYPE_PCO_CAMERA             (uca_pco_camera_get_type())
 #define UCA_PCO_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCamera))
 #define UCA_IS_PCO_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_PCO_CAMERA))
-#define UCA_PCO_CAMERA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), UFO_TYPE_PCO_CAMERA, UfoPcoCameraClass))
+#define UCA_PCO_CAMERA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), UCA_TYPE_PCO_CAMERA, UcaPcoCameraClass))
 #define UCA_IS_PCO_CAMERA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), UCA_TYPE_PCO_CAMERA))
 #define UCA_PCO_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCameraClass))
 
