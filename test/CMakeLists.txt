@@ -5,7 +5,7 @@ add_definitions("--std=c99 -Wall")
 # --- Find packages and libraries ---------------------------------------------
 find_package(PkgConfig)
 
-pkg_check_modules(GTK2 gtk+-2.0)
+pkg_check_modules(GTK2 gtk+-2.0>=2.22)
 pkg_check_modules(GTHREAD2 gthread-2.0)
 pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
