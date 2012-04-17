@@ -109,7 +109,7 @@ static const gchar *base_overrideables[N_PROPERTIES] = {
     "has-camram-recording"
 };
 
-static GParamSpec *pco_properties[N_PROPERTIES - N_INTERFACE_PROPERTIES - 1] = { NULL, };
+static GParamSpec *pco_properties[N_PROPERTIES - N_INTERFACE_PROPERTIES] = { NULL, };
 
 /*
  * This structure defines type-specific properties of PCO cameras.
