@@ -1,6 +1,6 @@
 #cmakedefine HAVE_PCO_CL
 #cmakedefine HAVE_PHOTON_FOCUS
 #cmakedefine HAVE_PHOTRON_FASTCAM
-#cmakedefine HAVE_IPE_CAMERA
+#cmakedefine HAVE_UFO_CAMERA
 
 #cmakedefine HAVE_MOCK_CAMERA

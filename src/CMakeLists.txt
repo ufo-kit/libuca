@@ -69,11 +69,11 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
 endif()
 
 if (IPE_FOUND)
-    option(HAVE_IPE_CAMERA "Camera: Custom IPE based on Xilinx FPGA" ON)
+    option(HAVE_UFO_CAMERA "Camera: Custom based on Xilinx FPGA" ON)
 
-    if (HAVE_IPE_CAMERA)
-        set(uca_SRCS ${uca_SRCS} cameras/uca-ipe-camera.c)
-        set(uca_HDRS ${uca_HDRS} cameras/uca-ipe-camera.h)
+    if (HAVE_UFO_CAMERA)
+        set(uca_SRCS ${uca_SRCS} cameras/uca-ufo-camera.c)
+        set(uca_HDRS ${uca_HDRS} cameras/uca-ufo-camera.h)
         set(uca_LIBS ${uca_LIBS} ${IPE_LIBRARIES})
 
         include_directories(${IPE_INCLUDE_DIRS})

@@ -50,6 +50,9 @@ static gchar *uca_camera_types[] = {
 #ifdef HAVE_MOCK_CAMERA
         "mock",
 #endif
+#ifdef HAVE_UFO_CAMERA
+        "ufo",
+#endif
         NULL 
 };
 
@@ -67,6 +70,7 @@ enum {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -223,6 +227,13 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             "Height",
             "Height of the region of interest",
             1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
+
+    camera_properties[PROP_EXPOSURE_TIME] =
+        g_param_spec_double("exposure-time",
+            "Exposure time in seconds",
+            "Exposure time in seconds",
+            0.0, G_MAXDOUBLE, 1.0,
             G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_MAX_FRAME_RATE] = 

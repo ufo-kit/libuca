@@ -31,6 +31,7 @@ enum {
     PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
+    PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -52,6 +53,7 @@ static const gchar *mock_overrideables[N_PROPERTIES] = {
     "sensor-horizontal-binnings",
     "sensor-vertical-binning",
     "sensor-vertical-binnings",
+    "exposure-time",
     "roi-x",
     "roi-y",
     "roi-width",
@@ -203,6 +205,9 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
             break;
         case PROP_SENSOR_VERTICAL_BINNINGS:
             g_value_set_boxed(value, priv->binnings);
+            break;
+        case PROP_EXPOSURE_TIME:
+            g_value_set_double(value, 0.001);
             break;
         case PROP_ROI_X:
             g_value_set_uint(value, 0);
