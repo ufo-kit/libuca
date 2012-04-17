@@ -67,16 +67,16 @@ static void test_recording_signal(Fixture *fixture, gconstpointer data)
 
 static void grab_func(gpointer data, gpointer user_data)
 {
-    gboolean *success = (gboolean *) user_data;
-    *success = TRUE;
+    guint *count = (guint *) user_data;
+    *count += 1;
 }
 
 static void test_recording_async(Fixture *fixture, gconstpointer data)
 {
     UcaCamera *camera = UCA_CAMERA(fixture->camera);
 
-    gboolean success = FALSE;
-    uca_camera_set_grab_func(camera, grab_func, &success);
+    guint count = 0;
+    uca_camera_set_grab_func(camera, grab_func, &count);
 
     g_object_set(G_OBJECT(camera),
             "frame-rate", 10.0,
@@ -87,10 +87,15 @@ static void test_recording_async(Fixture *fixture, gconstpointer data)
     uca_camera_start_recording(camera, &error);
     g_assert_no_error(error);
 
+    /*
+     * We sleep for an 1/8 of a second at 10 frames per second, thus we should
+     * record 2 frames.
+     */
     g_usleep(G_USEC_PER_SEC / 8);
 
     uca_camera_stop_recording(camera, &error);
     g_assert_no_error(error);
+    g_assert_cmpint(count, ==, 2);
 }
 
 static void test_recording_property(Fixture *fixture, gconstpointer data)
