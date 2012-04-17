@@ -79,7 +79,7 @@ static void test_recording_async(Fixture *fixture, gconstpointer data)
     uca_camera_set_grab_func(camera, grab_func, &success);
 
     g_object_set(G_OBJECT(camera),
-            "frame-rate", 10,
+            "frame-rate", 10.0,
             "transfer-asynchronously", TRUE,
             NULL);
 
@@ -147,7 +147,7 @@ static void test_signal(Fixture *fixture, gconstpointer data)
     gboolean success = FALSE;
     g_signal_connect(camera, "notify::frame-rate", (GCallback) on_property_change, &success);
     g_object_set(G_OBJECT(camera),
-            "frame-rate", 30,
+            "frame-rate", 30.0,
             NULL);
     g_assert(success == TRUE);
 }
