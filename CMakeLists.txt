@@ -29,5 +29,4 @@ set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION_MAJOR
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
 
 add_subdirectory(src)
-add_subdirectory(doc)
 add_subdirectory(test)

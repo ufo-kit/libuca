@@ -326,11 +326,11 @@ gchar **uca_camera_get_types()
 
 /**
  * uca_camera_new:
- * @param type: Type name of the camera
+ * @type: Type name of the camera
  * @error: Location to store an error or %NULL
  *
  * Factory method for instantiating cameras by names listed in
- * uca_camera_get_type().
+ * uca_camera_get_types().
  *
  * Returns: A new #UcaCamera of the correct type or %NULL if type was not found
  */
@@ -481,7 +481,8 @@ void uca_camera_start_readout(UcaCamera *camera, GError **error)
 /**
  * uca_camera_set_grab_func:
  * @camera: A #UcaCamera object
- * func: A #UcaCameraGrabFunc callback function
+ * @func: A #UcaCameraGrabFunc callback function
+ * @user_data: Data that is passed on to #func
  *
  * Set the grab function that is called whenever a frame is readily transfered.
  */

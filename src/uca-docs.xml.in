@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+               "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd"
+[
+  <!ENTITY % local.common.attrib "xmlns:xi  CDATA  #FIXED 'http://www.w3.org/2003/XInclude'">
+]>
+<book id="index">
+  <bookinfo>
+    <title>libuca Reference Manual</title>
+    <releaseinfo>
+        for libuca ${UCA_VERSION_STRING}. The latest version of this documentation can be found on-line at
+      <ulink role="online-location"
+          url="http://ufo.kit.edu/extra/libuca">http://ufo.kit.edu/extra/libuca</ulink>.
+    </releaseinfo>
+  </bookinfo>
+
+  <chapter>
+    <title>Unified Camera Access</title>
+        <xi:include href="xml/uca-camera.xml"/>
+    <xi:include href="xml/uca-mock-camera.xml"/>
+    <xi:include href="xml/uca-ufo-camera.xml"/>
+    <xi:include href="xml/uca-pco-camera.xml"/>
+
+  </chapter>
+  <index id="api-index-full">
+    <title>API Index</title>
+    <xi:include href="xml/api-index-full.xml"><xi:fallback /></xi:include>
+  </index>
+
+</book>

@@ -41,8 +41,8 @@ if (PF_FOUND)
     option(HAVE_PHOTON_FOCUS "Camera: Photon Focus MV2-D1280-640-CL-8" ON)
 
     if (HAVE_PHOTON_FOCUS)
-        set(uca_SRCS ${uca_SRCS} cameras/uca-pf-camera.c)
-        set(uca_HDRS ${uca_HDRS} cameras/uca-pf-camera.h)
+        #set(uca_SRCS ${uca_SRCS} cameras/uca-pf-camera.c)
+        #set(uca_HDRS ${uca_HDRS} cameras/uca-pf-camera.h)
         set(uca_LIBS ${uca_LIBS} ${PF_LIBRARIES})
 
         include_directories(${PF_INCLUDE_DIRS})
@@ -108,6 +108,81 @@ set_target_properties(uca-gobject PROPERTIES
 
 target_link_libraries(uca-gobject 
     ${uca_LIBS})
+
+
+# --- Build documentation -----------------------------------------------------
+pkg_check_modules(GTK_DOC gtk-doc)
+if(GTK_DOC_FOUND)
+    option(WITH_GTK_DOC "Build documentation" ON)
+    if (WITH_GTK_DOC)
+        set(docs_dir "${CMAKE_CURRENT_BINARY_DIR}/..")
+        set(docs_out "${docs_dir}/reference")
+        file(MAKE_DIRECTORY ${docs_out})
+
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/uca-docs.xml.in
+            ${docs_out}/uca-docs.xml)
+
+        set(reference_files 
+            "${docs_out}/index.html"
+            "${docs_out}/api-index-full.html"
+            "${docs_out}/ch01.html"
+            "${docs_out}/UcaCamera.html"
+            "${docs_out}/UcaMockCamera.html"
+            "${docs_out}/UcaPcoCamera.html"
+            "${docs_out}/UcaUfoCamera.html"
+            "${docs_out}/style.css"
+            "${docs_out}/uca.devhelp2"
+            "${docs_out}/home.png"
+            "${docs_out}/left.png"
+            "${docs_out}/right.png"
+            "${docs_out}/up.png")
+
+        find_program(GTK_DOC_SCAN gtkdoc-scan REQUIRED)
+        find_program(GTK_DOC_SCANGOBJ gtkdoc-scangobj REQUIRED)
+        find_program(GTK_DOC_MKDB gtkdoc-mkdb REQUIRED)
+        find_program(GTK_DOC_MKHTML gtkdoc-mkhtml REQUIRED)
+
+        get_directory_property(_current_include_dirs INCLUDE_DIRECTORIES)
+
+        set(GTK_DOC_CFLAGS)
+        foreach(_incl ${_current_include_dirs})
+            set(GTK_DOC_CFLAGS "-I${_incl} ${GTK_DOC_CFLAGS}")
+        endforeach()
+
+        configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scangobj.sh.in" "${docs_out}/scangobj.sh")
+
+        add_custom_command(OUTPUT ${docs_out}/uca-decl.txt
+            COMMAND ${GTK_DOC_SCAN}
+                    --module=uca
+                    --source-dir=${CMAKE_CURRENT_SOURCE_DIR}
+                    DEPENDS ${uca_SRCS} 
+            WORKING_DIRECTORY ${docs_out})
+
+        add_custom_command(OUTPUT ${docs_out}/uca.args
+            COMMAND sh scangobj.sh
+            DEPENDS uca-gobject ${docs_out}/uca-decl.txt
+            WORKING_DIRECTORY ${docs_out})
+
+        add_custom_command(OUTPUT ${docs_out}/sgml.stamp
+            COMMAND ${GTK_DOC_MKDB}
+                    --module=uca
+                    --source-dir=${CMAKE_CURRENT_SOURCE_DIR}
+                    --output-format=xml
+                    DEPENDS ${docs_out}/uca-decl.txt ${docs_out}/uca.args
+            WORKING_DIRECTORY ${docs_out})
+
+        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/../html.stamp
+            COMMAND ${GTK_DOC_MKHTML}
+                    uca
+                    ${docs_out}/uca-docs.xml
+            DEPENDS ${docs_out}/sgml.stamp
+            WORKING_DIRECTORY ${docs_out})
+
+        add_custom_target(reference ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../html.stamp)
+
+        install(FILES ${reference_files} DESTINATION share/gtk-doc/html/uca)
+    endif()
+endif(GTK_DOC_FOUND)
 
 
 # --- Install target ----------------------------------------------------------
