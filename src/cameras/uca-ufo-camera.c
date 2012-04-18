@@ -84,7 +84,7 @@ static const gchar *base_overrideables[N_PROPERTIES] = {
     "has-camram-recording"
 };
 
-static GParamSpec *ufo_properties[N_PROPERTIES - N_INTERFACE_PROPERTIES] = { NULL, };
+static GParamSpec *ufo_properties[N_PROPERTIES] = { NULL, };
 
 
 struct _UcaUfoCameraPrivate {

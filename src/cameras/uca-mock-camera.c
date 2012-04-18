@@ -63,7 +63,7 @@ static const gchar *mock_overrideables[N_PROPERTIES] = {
     "has-camram-recording"
 };
 
-static GParamSpec *mock_properties[N_PROPERTIES - N_INTERFACE_PROPERTIES] = { NULL, };
+static GParamSpec *mock_properties[N_PROPERTIES] = { NULL, };
 
 struct _UcaMockCameraPrivate {
     guint width;
