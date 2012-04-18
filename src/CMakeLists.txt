@@ -9,6 +9,7 @@ set(uca_HDRS
     uca-camera.h
     )
 
+set(cameras)
 
 # --- Find packages and libraries ---------------------------------------------
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
@@ -55,6 +56,7 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
     if (HAVE_PCO_CL)
         set(uca_SRCS ${uca_SRCS} cameras/uca-pco-camera.c)
         set(uca_HDRS ${uca_HDRS} cameras/uca-pco-camera.h)
+        list(APPEND cameras "Pco")
 
         set(uca_LIBS ${uca_LIBS}
             ${PCO_LIBRARIES}
@@ -75,6 +77,7 @@ if (IPE_FOUND)
         set(uca_SRCS ${uca_SRCS} cameras/uca-ufo-camera.c)
         set(uca_HDRS ${uca_HDRS} cameras/uca-ufo-camera.h)
         set(uca_LIBS ${uca_LIBS} ${IPE_LIBRARIES})
+        list(APPEND cameras "Ufo")
 
         include_directories(${IPE_INCLUDE_DIRS})
     endif()
@@ -83,6 +86,7 @@ endif()
 if (HAVE_MOCK_CAMERA)
     set(uca_SRCS ${uca_SRCS} cameras/uca-mock-camera.c)
     set(uca_HDRS ${uca_HDRS} cameras/uca-mock-camera.h)
+    list(APPEND cameras "Mock")
 endif()
 
 
@@ -119,9 +123,6 @@ if(GTK_DOC_FOUND)
         set(docs_out "${docs_dir}/reference")
         file(MAKE_DIRECTORY ${docs_out})
 
-        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/uca-docs.xml.in
-            ${docs_out}/uca-docs.xml)
-
         set(reference_files 
             "${docs_out}/index.html"
             "${docs_out}/api-index-full.html"
@@ -137,19 +138,37 @@ if(GTK_DOC_FOUND)
             "${docs_out}/right.png"
             "${docs_out}/up.png")
 
-        find_program(GTK_DOC_SCAN gtkdoc-scan REQUIRED)
-        find_program(GTK_DOC_SCANGOBJ gtkdoc-scangobj REQUIRED)
-        find_program(GTK_DOC_MKDB gtkdoc-mkdb REQUIRED)
-        find_program(GTK_DOC_MKHTML gtkdoc-mkhtml REQUIRED)
+        # Put in uca-docs.xml and uca.types all cameras that are built
+        set(_xml_doc_input)
+        set(_types_input)
+        foreach (_cam ${cameras})
+            # add camera to the installed documentation
+            list(APPEND "${docs_out}/Uca${_cam}Camera.html")
 
+            string(TOLOWER ${_cam} _cam)
+            set(_xml_doc_input "${_xml_doc_input}\n<xi:include href=\"xml/uca-${_cam}-camera.xml\"/>")
+            set(_types_input "${_types_input}\nuca_${_cam}_camera_get_type")
+        endforeach()
+
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/uca-docs.xml.in
+            ${docs_out}/uca-docs.xml)
+
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/uca.types.in
+            ${docs_out}/uca.types)
+
+        # Create scangobj.sh from scangobj.sh.in
         get_directory_property(_current_include_dirs INCLUDE_DIRECTORIES)
-
         set(GTK_DOC_CFLAGS)
         foreach(_incl ${_current_include_dirs})
             set(GTK_DOC_CFLAGS "-I${_incl} ${GTK_DOC_CFLAGS}")
         endforeach()
 
         configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scangobj.sh.in" "${docs_out}/scangobj.sh")
+
+        find_program(GTK_DOC_SCAN gtkdoc-scan REQUIRED)
+        find_program(GTK_DOC_SCANGOBJ gtkdoc-scangobj REQUIRED)
+        find_program(GTK_DOC_MKDB gtkdoc-mkdb REQUIRED)
+        find_program(GTK_DOC_MKHTML gtkdoc-mkhtml REQUIRED)
 
         add_custom_command(OUTPUT ${docs_out}/uca-decl.txt
             COMMAND ${GTK_DOC_SCAN}

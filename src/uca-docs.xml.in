@@ -17,9 +17,7 @@
   <chapter>
     <title>Unified Camera Access</title>
         <xi:include href="xml/uca-camera.xml"/>
-    <xi:include href="xml/uca-mock-camera.xml"/>
-    <xi:include href="xml/uca-ufo-camera.xml"/>
-    <xi:include href="xml/uca-pco-camera.xml"/>
+        ${_xml_doc_input}
 
   </chapter>
   <index id="api-index-full">
