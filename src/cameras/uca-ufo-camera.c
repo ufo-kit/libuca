@@ -164,6 +164,8 @@ static void uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
 static void uca_ufo_camera_start_readout(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
+    g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_IMPLEMENTED,
+            "Ufo camera does not support recording to internal memory");
 }
 
 static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
