@@ -69,7 +69,7 @@ enum {
     N_BASE_PROPERTIES
 };
 
-const gchar *uca_camera_props[N_BASE_PROPERTIES];
+extern const gchar *uca_camera_props[N_BASE_PROPERTIES];
 
 /**
  * UcaCameraGrabFunc:
