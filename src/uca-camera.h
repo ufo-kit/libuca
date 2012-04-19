@@ -44,6 +44,33 @@ typedef struct _UcaCamera           UcaCamera;
 typedef struct _UcaCameraClass      UcaCameraClass;
 typedef struct _UcaCameraPrivate    UcaCameraPrivate;
 
+enum {
+    PROP_0 = 0,
+    PROP_SENSOR_WIDTH,
+    PROP_SENSOR_HEIGHT,
+    PROP_SENSOR_BITDEPTH,
+    PROP_SENSOR_HORIZONTAL_BINNING,
+    PROP_SENSOR_HORIZONTAL_BINNINGS,
+    PROP_SENSOR_VERTICAL_BINNING,
+    PROP_SENSOR_VERTICAL_BINNINGS,
+    PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_EXPOSURE_TIME,
+    PROP_ROI_X,
+    PROP_ROI_Y,
+    PROP_ROI_WIDTH,
+    PROP_ROI_HEIGHT,
+    PROP_HAS_STREAMING,
+    PROP_HAS_CAMRAM_RECORDING,
+
+    /* These properties are handled internally */
+    PROP_TRANSFER_ASYNCHRONOUSLY,
+    PROP_IS_RECORDING,
+    PROP_IS_READOUT,
+    N_BASE_PROPERTIES
+};
+
+const gchar *uca_camera_props[N_BASE_PROPERTIES];
+
 /**
  * UcaCameraGrabFunc:
  * @data: a pointer to the raw data
