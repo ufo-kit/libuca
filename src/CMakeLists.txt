@@ -217,7 +217,7 @@ if (CI_INSTALL_PREFIX)
 endif()
 
 set(exec_prefix "\${prefix}")
-set(libdir      "${LIB_INSTALL_DIR}")
+set(libdir      ${prefix}/${LIB_INSTALL_DIR})
 set(includedir  "\${prefix}/include")
 set(VERSION     ${UCA_VERSION_STRING})
 
