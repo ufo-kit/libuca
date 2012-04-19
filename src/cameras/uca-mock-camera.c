@@ -23,7 +23,11 @@
 G_DEFINE_TYPE(UcaMockCamera, uca_mock_camera, UCA_TYPE_CAMERA)
 
 enum {
-    PROP_0,
+    PROP_FRAMERATE = N_BASE_PROPERTIES,
+    N_PROPERTIES
+};
+
+static const gint mock_overrideables[] = {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
@@ -39,28 +43,7 @@ enum {
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
-    N_INTERFACE_PROPERTIES,
-
-    PROP_FRAMERATE,
-    N_PROPERTIES
-};
-
-static const gchar *mock_overrideables[N_PROPERTIES] = {
-    "sensor-width",
-    "sensor-height",
-    "sensor-bitdepth",
-    "sensor-horizontal-binning",
-    "sensor-horizontal-binnings",
-    "sensor-vertical-binning",
-    "sensor-vertical-binnings",
-    "exposure-time",
-    "roi-x",
-    "roi-y",
-    "roi-width",
-    "roi-height",
-    "max-frame-rate",
-    "has-streaming",
-    "has-camram-recording"
+    0,
 };
 
 static GParamSpec *mock_properties[N_PROPERTIES] = { NULL, };
@@ -357,8 +340,8 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
     camera_class->stop_recording = uca_mock_camera_stop_recording;
     camera_class->grab = uca_mock_camera_grab;
 
-    for (guint id = PROP_0 + 1; id < N_INTERFACE_PROPERTIES; id++)
-        g_object_class_override_property(gobject_class, id, mock_overrideables[id-1]);
+    for (guint i = 0; mock_overrideables[i] != 0; i++)
+        g_object_class_override_property(gobject_class, mock_overrideables[i], uca_camera_props[mock_overrideables[i]]);
 
     mock_properties[PROP_FRAMERATE] = 
         g_param_spec_float("frame-rate",
@@ -367,7 +350,7 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
                 1.0f, 100.0f, 100.0f,
                 G_PARAM_READWRITE);
 
-    for (guint id = N_INTERFACE_PROPERTIES + 1; id < N_PROPERTIES; id++)
+    for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, mock_properties[id]);
 
     g_type_class_add_private(klass, sizeof(UcaMockCameraPrivate));

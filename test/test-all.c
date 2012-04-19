@@ -75,7 +75,7 @@ static void test_recording_async(Fixture *fixture, gconstpointer data)
 
     gfloat max_frame_rate = 1.0f;
     g_object_get(G_OBJECT(camera),
-            "max-frame-rate", &max_frame_rate,
+            "sensor-max-frame-rate", &max_frame_rate,
             NULL);
     g_assert(max_frame_rate != 0.0f);
 

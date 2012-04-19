@@ -61,36 +61,39 @@ enum {
     LAST_SIGNAL
 };
 
-enum {
-    PROP_0 = 0,
-    PROP_SENSOR_WIDTH,
-    PROP_SENSOR_HEIGHT,
-    PROP_SENSOR_BITDEPTH,
-    PROP_SENSOR_HORIZONTAL_BINNING,
-    PROP_SENSOR_HORIZONTAL_BINNINGS,
-    PROP_SENSOR_VERTICAL_BINNING,
-    PROP_SENSOR_VERTICAL_BINNINGS,
-    PROP_SENSOR_MAX_FRAME_RATE,
-    PROP_EXPOSURE_TIME,
-    PROP_ROI_X,
-    PROP_ROI_Y,
-    PROP_ROI_WIDTH,
-    PROP_ROI_HEIGHT,
-    PROP_HAS_STREAMING,
-    PROP_HAS_CAMRAM_RECORDING,
-    PROP_TRANSFER_ASYNCHRONOUSLY,
-    PROP_IS_RECORDING,
-    PROP_IS_READOUT,
-    N_PROPERTIES
+/*
+ * These strings must UNDER ALL CIRCUMSTANCES match the property id's in the
+ * public header! Everyone relies on this relationship.
+ */
+const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
+    NULL,
+    "sensor-width",
+    "sensor-height",
+    "sensor-bitdepth",
+    "sensor-horizontal-binning",
+    "sensor-horizontal-binnings",
+    "sensor-vertical-binning",
+    "sensor-vertical-binnings",
+    "sensor-max-frame-rate",
+    "exposure-time",
+    "roi-x",
+    "roi-y",
+    "roi-width",
+    "roi-height",
+    "has-streaming",
+    "has-camram-recording",
+    "transfer-asynchronously",
+    "is-recording",
+    "is-readout"
 };
+
+static GParamSpec *camera_properties[N_BASE_PROPERTIES] = { NULL, };
 
 struct _UcaCameraPrivate {
     gboolean is_recording;
     gboolean is_readout;
     gboolean transfer_async;
 };
-
-static GParamSpec *camera_properties[N_PROPERTIES] = { NULL, };
 
 /* static guint camera_signals[LAST_SIGNAL] = { 0 }; */
 
@@ -146,135 +149,135 @@ static void uca_camera_class_init(UcaCameraClass *klass)
     klass->grab = NULL;
 
     camera_properties[PROP_SENSOR_WIDTH] = 
-        g_param_spec_uint("sensor-width",
+        g_param_spec_uint(uca_camera_props[PROP_SENSOR_WIDTH],
             "Width of sensor",
             "Width of the sensor in pixels",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_HEIGHT] = 
-        g_param_spec_uint("sensor-height",
+        g_param_spec_uint(uca_camera_props[PROP_SENSOR_HEIGHT],
             "Height of sensor",
             "Height of the sensor in pixels",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_BITDEPTH] = 
-        g_param_spec_uint("sensor-bitdepth",
+        g_param_spec_uint(uca_camera_props[PROP_SENSOR_BITDEPTH],
             "Number of bits per pixel",
             "Number of bits per pixel",
             1, 32, 1,
             G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_HORIZONTAL_BINNING] = 
-        g_param_spec_uint("sensor-horizontal-binning",
+        g_param_spec_uint(uca_camera_props[PROP_SENSOR_HORIZONTAL_BINNING],
             "Horizontal binning",
             "Number of sensor ADCs that are combined to one pixel in horizontal direction",
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
 
     camera_properties[PROP_SENSOR_HORIZONTAL_BINNINGS] = 
-        g_param_spec_value_array("sensor-horizontal-binnings",
+        g_param_spec_value_array(uca_camera_props[PROP_SENSOR_HORIZONTAL_BINNINGS],
             "Array of possible binnings",
             "Array of possible binnings in horizontal direction",
             g_param_spec_uint(
-                "sensor-horizontal-binning", 
+                uca_camera_props[PROP_SENSOR_HORIZONTAL_BINNING],
                 "Number of ADCs", 
                 "Number of ADCs that make up one pixel",
                 1, G_MAXUINT, 1,
                 G_PARAM_READABLE), G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_VERTICAL_BINNING] = 
-        g_param_spec_uint("sensor-vertical-binning",
+        g_param_spec_uint(uca_camera_props[PROP_SENSOR_VERTICAL_BINNING],
             "Vertical binning",
             "Number of sensor ADCs that are combined to one pixel in vertical direction",
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
 
     camera_properties[PROP_SENSOR_VERTICAL_BINNINGS] = 
-        g_param_spec_value_array("sensor-vertical-binnings",
+        g_param_spec_value_array(uca_camera_props[PROP_SENSOR_VERTICAL_BINNINGS],
             "Array of possible binnings",
             "Array of possible binnings in vertical direction",
             g_param_spec_uint(
-                "sensor-vertical-binning", 
+                uca_camera_props[PROP_SENSOR_VERTICAL_BINNING],
                 "Number of ADCs", 
                 "Number of ADCs that make up one pixel",
                 1, G_MAXUINT, 1,
                 G_PARAM_READABLE), G_PARAM_READABLE);
 
+    camera_properties[PROP_SENSOR_MAX_FRAME_RATE] = 
+        g_param_spec_float(uca_camera_props[PROP_SENSOR_MAX_FRAME_RATE],
+            "Maximum frame rate",
+            "Maximum frame rate at full frame resolution",
+            0.0f, G_MAXFLOAT, 1.0f,
+            G_PARAM_READABLE);
+
     camera_properties[PROP_ROI_X] = 
-        g_param_spec_uint("roi-x",
+        g_param_spec_uint(uca_camera_props[PROP_ROI_X],
             "Horizontal coordinate",
             "Horizontal coordinate",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
     camera_properties[PROP_ROI_Y] = 
-        g_param_spec_uint("roi-y",
+        g_param_spec_uint(uca_camera_props[PROP_ROI_Y],
             "Vertical coordinate",
             "Vertical coordinate",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
     camera_properties[PROP_ROI_WIDTH] = 
-        g_param_spec_uint("roi-width",
+        g_param_spec_uint(uca_camera_props[PROP_ROI_WIDTH],
             "Width",
             "Width of the region of interest",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
     camera_properties[PROP_ROI_HEIGHT] = 
-        g_param_spec_uint("roi-height",
+        g_param_spec_uint(uca_camera_props[PROP_ROI_HEIGHT],
             "Height",
             "Height of the region of interest",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
     camera_properties[PROP_EXPOSURE_TIME] =
-        g_param_spec_double("exposure-time",
+        g_param_spec_double(uca_camera_props[PROP_EXPOSURE_TIME],
             "Exposure time in seconds",
             "Exposure time in seconds",
             0.0, G_MAXDOUBLE, 1.0,
             G_PARAM_READWRITE);
 
-    camera_properties[PROP_SENSOR_MAX_FRAME_RATE] = 
-        g_param_spec_float("max-frame-rate",
-            "Maximum frame rate",
-            "Maximum frame rate at full frame resolution",
-            0.0f, G_MAXFLOAT, 1.0f,
-            G_PARAM_READABLE);
-
     camera_properties[PROP_HAS_STREAMING] = 
-        g_param_spec_boolean("has-streaming",
+        g_param_spec_boolean(uca_camera_props[PROP_HAS_STREAMING],
             "Streaming capability",
             "Is the camera able to stream the data",
             TRUE, G_PARAM_READABLE);
 
     camera_properties[PROP_HAS_CAMRAM_RECORDING] = 
-        g_param_spec_boolean("has-camram-recording",
+        g_param_spec_boolean(uca_camera_props[PROP_HAS_CAMRAM_RECORDING],
             "Cam-RAM capability",
             "Is the camera able to record the data in-camera",
             FALSE, G_PARAM_READABLE);
 
     camera_properties[PROP_TRANSFER_ASYNCHRONOUSLY] = 
-        g_param_spec_boolean("transfer-asynchronously",
+        g_param_spec_boolean(uca_camera_props[PROP_TRANSFER_ASYNCHRONOUSLY],
             "Specify whether data should be transfered asynchronously",
             "Specify whether data should be transfered asynchronously using a specified callback",
             FALSE, G_PARAM_READWRITE);
 
     camera_properties[PROP_IS_RECORDING] = 
-        g_param_spec_boolean("is-recording",
+        g_param_spec_boolean(uca_camera_props[PROP_IS_RECORDING],
             "Is camera recording",
             "Is the camera currently recording",
             FALSE, G_PARAM_READABLE);
 
     camera_properties[PROP_IS_READOUT] = 
-        g_param_spec_boolean("is-readout",
+        g_param_spec_boolean(uca_camera_props[PROP_IS_READOUT],
             "Is camera in readout mode",
             "Is camera in readout mode",
             FALSE, G_PARAM_READABLE);
 
-    for (guint id = PROP_0 + 1; id < N_PROPERTIES; id++)
+    for (guint id = PROP_0 + 1; id < N_BASE_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, camera_properties[id]);
 
     g_type_class_add_private(klass, sizeof(UcaCameraPrivate));

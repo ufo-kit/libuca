@@ -54,7 +54,11 @@ GQuark uca_ufo_camera_error_quark()
 }
 
 enum {
-    PROP_0,
+    PROP_NAME = N_BASE_PROPERTIES,
+    N_PROPERTIES
+};
+
+static gint base_overrideables[] = {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
@@ -65,23 +69,7 @@ enum {
     PROP_ROI_HEIGHT,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
-    N_INTERFACE_PROPERTIES,
-
-    PROP_NAME,
-    N_PROPERTIES
-};
-
-static const gchar *base_overrideables[N_PROPERTIES] = {
-    "sensor-width",
-    "sensor-height",
-    "sensor-bitdepth",
-    "exposure-time",
-    "roi-x",
-    "roi-y",
-    "roi-width",
-    "roi-height",
-    "has-streaming",
-    "has-camram-recording"
+    0,
 };
 
 static GParamSpec *ufo_properties[N_PROPERTIES] = { NULL, };
@@ -308,8 +296,8 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
     camera_class->start_readout = uca_ufo_camera_start_readout;
     camera_class->grab = uca_ufo_camera_grab;
 
-    for (guint id = PROP_0 + 1; id < N_INTERFACE_PROPERTIES; id++)
-        g_object_class_override_property(gobject_class, id, base_overrideables[id-1]);
+    for (guint i = 0; base_overrideables[i] != 0; i++)
+        g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
 
     ufo_properties[PROP_NAME] = 
         g_param_spec_string("name",
@@ -317,7 +305,7 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
             "Name of the camera",
             "", G_PARAM_READABLE);
 
-    for (guint id = N_INTERFACE_PROPERTIES + 1; id < N_PROPERTIES; id++)
+    for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, ufo_properties[id]);
 
     g_type_class_add_private(klass, sizeof(UcaUfoCameraPrivate));
