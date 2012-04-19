@@ -101,7 +101,7 @@ struct _UcaPfCameraPrivate {
 UcaPfCamera *uca_pf_camera_new(GError **error)
 {
     static const gchar *so_file = "libFullAreaGray8.so";
-    static const int camera_link_type = FG_CL_8BIT_FULL_10;
+    static const int camera_link_type = FG_CL_8BIT_FULL_8;
     static const int camera_format = FG_GRAY;
 
     /* gint num_ports; */
@@ -143,7 +143,7 @@ UcaPfCamera *uca_pf_camera_new(GError **error)
 
     /* TODO: get this from the camera */
     priv->roi_width = 1280;
-    priv->roi_height = 640;
+    priv->roi_height = 1024;
 
     if (priv->fg == NULL) {
         g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
