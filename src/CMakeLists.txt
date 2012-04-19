@@ -44,6 +44,8 @@ if (PF_FOUND)
     if (HAVE_PHOTON_FOCUS AND CLSERME4_FOUND AND FGLIB5_FOUND)
         set(uca_SRCS ${uca_SRCS} cameras/uca-pf-camera.c)
         set(uca_HDRS ${uca_HDRS} cameras/uca-pf-camera.h)
+        list(APPEND cameras "Pf")
+
         set(uca_LIBS ${uca_LIBS} 
             ${CLSERME4_LIBRARY} 
             ${FGLIB5_LIBRARY} 
@@ -176,7 +178,7 @@ if(GTK_DOC_FOUND)
             COMMAND ${GTK_DOC_SCAN}
                     --module=uca
                     --source-dir=${CMAKE_CURRENT_SOURCE_DIR}
-                    DEPENDS ${uca_SRCS} 
+                    DEPENDS ${uca_SRCS}
             WORKING_DIRECTORY ${docs_out})
 
         add_custom_command(OUTPUT ${docs_out}/uca.args
@@ -196,7 +198,7 @@ if(GTK_DOC_FOUND)
             COMMAND ${GTK_DOC_MKHTML}
                     uca
                     ${docs_out}/uca-docs.xml
-            DEPENDS ${docs_out}/sgml.stamp
+            DEPENDS ${docs_out}/sgml.stamp ${docs_out}/uca-docs.xml
             WORKING_DIRECTORY ${docs_out})
 
         add_custom_target(reference ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../html.stamp)
