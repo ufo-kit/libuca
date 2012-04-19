@@ -212,6 +212,10 @@ install(FILES ${uca_HDRS}
 
 # --- install pkg-config file
 set(prefix      ${CMAKE_INSTALL_PREFIX})
+if (CI_INSTALL_PREFIX)
+  set(prefix      ${CI_INSTALL_PREFIX})
+endif()
+
 set(exec_prefix "\${prefix}")
 set(libdir      "${LIB_INSTALL_DIR}")
 set(includedir  "\${prefix}/include")
