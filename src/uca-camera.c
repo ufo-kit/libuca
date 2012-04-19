@@ -27,6 +27,10 @@
 #include "cameras/uca-mock-camera.h"
 #endif
 
+#ifdef HAVE_PHOTON_FOCUS
+#include "cameras/uca-pf-camera.h"
+#endif
+
 #define UCA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_CAMERA, UcaCameraPrivate))
 
 G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
@@ -53,6 +57,9 @@ static gchar *uca_camera_types[] = {
 #endif
 #ifdef HAVE_UFO_CAMERA
         "ufo",
+#endif
+#ifdef HAVE_PHOTON_FOCUS
+        "pf",
 #endif
         NULL 
 };
@@ -350,6 +357,11 @@ UcaCamera *uca_camera_new(const gchar *type, GError **error)
 #ifdef HAVE_PCO_CL
     if (!g_strcmp0(type, "pco"))
         camera = UCA_CAMERA(uca_pco_camera_new(&tmp_error));
+#endif
+
+#ifdef HAVE_PHOTON_FOCUS
+    if (!g_strcmp0(type, "pf"))
+        camera = UCA_CAMERA(uca_pf_camera_new(&tmp_error));
 #endif
 
     if (tmp_error != NULL) {

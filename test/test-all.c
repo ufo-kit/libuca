@@ -169,7 +169,8 @@ int main(int argc, char *argv[])
 
     g_test_add_func("/factory", test_factory);
 
-    gchar **types = uca_camera_get_types();
+    gchar **types = NULL;
+    types = argc > 1 ? argv + 1 : uca_camera_get_types();
 
     /*
      * paths and test_funcs MUST correspond!
@@ -205,6 +206,9 @@ int main(int argc, char *argv[])
     }
 
     gint result = g_test_run();
-    g_strfreev(types);
+
+    if (argc == 1)
+        g_strfreev(types);
+
     return result;
 }

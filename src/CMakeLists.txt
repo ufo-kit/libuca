@@ -41,12 +41,17 @@ option(HAVE_MOCK_CAMERA "Camera: Dummy" ON)
 if (PF_FOUND)
     option(HAVE_PHOTON_FOCUS "Camera: Photon Focus MV2-D1280-640-CL-8" ON)
 
-    if (HAVE_PHOTON_FOCUS)
-        #set(uca_SRCS ${uca_SRCS} cameras/uca-pf-camera.c)
-        #set(uca_HDRS ${uca_HDRS} cameras/uca-pf-camera.h)
-        set(uca_LIBS ${uca_LIBS} ${PF_LIBRARIES})
+    if (HAVE_PHOTON_FOCUS AND CLSERME4_FOUND AND FGLIB5_FOUND)
+        set(uca_SRCS ${uca_SRCS} cameras/uca-pf-camera.c)
+        set(uca_HDRS ${uca_HDRS} cameras/uca-pf-camera.h)
+        set(uca_LIBS ${uca_LIBS} 
+            ${CLSERME4_LIBRARY} 
+            ${FGLIB5_LIBRARY} 
+            ${PF_LIBRARIES})
 
-        include_directories(${PF_INCLUDE_DIRS})
+        include_directories(${PF_INCLUDE_DIRS}
+            ${CLSERME4_INCLUDE_DIR}
+            ${FGLIB5_INCLUDE_DIR})
     endif()
 endif()
 
