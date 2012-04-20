@@ -17,25 +17,12 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_CURRENT_BINARY_DIR})
 
 # --- Build targets -----------------------------------------------------------
 #add_executable(enum enum.c)
-add_executable(grab grab.c)
 #add_executable(grab-async grab-async.c)
 #add_executable(benchmark benchmark.c)
 
 #target_link_libraries(enum uca)
-target_link_libraries(grab uca-gobject ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 #target_link_libraries(grab-async uca)
 #target_link_libraries(benchmark uca)
-
-if (GTK2_FOUND)
-    include_directories(${GTK2_INCLUDE_DIRS})
-    add_executable(control control.c)
-    target_link_libraries(control
-        uca-gobject
-        ${GTK2_LIBRARIES}
-	    ${GTHREAD2_LIBRARIES}
-        )
-endif()
-
 
 include_directories(
     ${GLIB2_INCLUDE_DIRS}
@@ -43,25 +30,26 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/cameras
     )
 
+add_executable(grab grab.c)
+target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+
+if (GTK2_FOUND)
+    include_directories(${GTK2_INCLUDE_DIRS})
+    add_executable(control control.c)
+    target_link_libraries(control uca
+        ${GTK2_LIBRARIES} ${GTHREAD2_LIBRARIES})
+endif()
+
 if (HAVE_MOCK_CAMERA)
     add_executable(test-mock test-mock.c)
-    target_link_libraries(test-mock
-        uca-gobject 
-        ${GLIB2_LIBRARIES}
-        ${GOBJECT2_LIBRARIES}
-        )
+    target_link_libraries(test-mock uca
+        ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 endif()
 
 add_executable(test-all test-all.c)
-target_link_libraries(test-all
-    uca-gobject 
-    ${GLIB2_LIBRARIES}
-    ${GOBJECT2_LIBRARIES}
-    )
+target_link_libraries(test-all uca
+    ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
 add_executable(perf-overhead perf-overhead.c)
-target_link_libraries(perf-overhead
-    uca-gobject 
-    ${GLIB2_LIBRARIES}
-    ${GOBJECT2_LIBRARIES}
-    )
+target_link_libraries(perf-overhead uca
+    ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})

@@ -111,13 +111,13 @@ include_directories(
 # --- Build target ------------------------------------------------------------
 add_definitions("-std=c99 -Wall")
 
-add_library(uca-gobject SHARED ${uca_SRCS})
+add_library(uca SHARED ${uca_SRCS})
 
-set_target_properties(uca-gobject PROPERTIES
+set_target_properties(uca PROPERTIES
       VERSION ${UCA_ABI_VERSION}
       SOVERSION ${UCA_VERSION_MINOR})
 
-target_link_libraries(uca-gobject 
+target_link_libraries(uca
     ${uca_LIBS})
 
 
@@ -178,12 +178,12 @@ if(GTK_DOC_FOUND)
             COMMAND ${GTK_DOC_SCAN}
                     --module=uca
                     --source-dir=${CMAKE_CURRENT_SOURCE_DIR}
-                    DEPENDS uca-gobject
+                    DEPENDS uca
             WORKING_DIRECTORY ${docs_out})
 
         add_custom_command(OUTPUT ${docs_out}/uca.args
             COMMAND sh scangobj.sh
-            DEPENDS uca-gobject ${docs_out}/uca-decl.txt
+            DEPENDS uca ${docs_out}/uca-decl.txt
             WORKING_DIRECTORY ${docs_out})
 
         add_custom_command(OUTPUT ${docs_out}/sgml.stamp
@@ -211,7 +211,7 @@ endif(GTK_DOC_FOUND)
 # --- Install target ----------------------------------------------------------
 set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
 
-install(TARGETS uca-gobject
+install(TARGETS uca
     LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
 install(FILES ${uca_HDRS}
