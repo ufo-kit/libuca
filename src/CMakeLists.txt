@@ -5,10 +5,6 @@ set(uca_SRCS
     uca-camera.c
     )
 
-set(uca_HDRS
-    uca-camera.h
-    )
-
 set(cameras)
 
 # --- Find packages and libraries ---------------------------------------------
@@ -43,7 +39,6 @@ if (PF_FOUND)
 
     if (HAVE_PHOTON_FOCUS AND CLSERME4_FOUND AND FGLIB5_FOUND)
         set(uca_SRCS ${uca_SRCS} cameras/uca-pf-camera.c)
-        set(uca_HDRS ${uca_HDRS} cameras/uca-pf-camera.h)
         list(APPEND cameras "Pf")
 
         set(uca_LIBS ${uca_LIBS} 
@@ -62,7 +57,6 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
 
     if (HAVE_PCO_CL)
         set(uca_SRCS ${uca_SRCS} cameras/uca-pco-camera.c)
-        set(uca_HDRS ${uca_HDRS} cameras/uca-pco-camera.h)
         list(APPEND cameras "Pco")
 
         set(uca_LIBS ${uca_LIBS}
@@ -82,7 +76,6 @@ if (IPE_FOUND)
 
     if (HAVE_UFO_CAMERA)
         set(uca_SRCS ${uca_SRCS} cameras/uca-ufo-camera.c)
-        set(uca_HDRS ${uca_HDRS} cameras/uca-ufo-camera.h)
         set(uca_LIBS ${uca_LIBS} ${IPE_LIBRARIES})
         list(APPEND cameras "Ufo")
 
@@ -92,7 +85,6 @@ endif()
 
 if (HAVE_MOCK_CAMERA)
     set(uca_SRCS ${uca_SRCS} cameras/uca-mock-camera.c)
-    set(uca_HDRS ${uca_HDRS} cameras/uca-mock-camera.h)
     list(APPEND cameras "Mock")
 endif()
 
@@ -214,7 +206,7 @@ set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
 install(TARGETS uca
     LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
-install(FILES ${uca_HDRS}
+install(FILES uca-camera.h
     DESTINATION include/uca)
 
 # --- install pkg-config file
