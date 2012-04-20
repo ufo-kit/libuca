@@ -16,9 +16,6 @@ find_library(PF_LIBRARY_PFCAM NAMES pfcam)
 
 set(PF_LIBRARIES 
     ${PF_LIBRARY_MV2} 
-    ${PF_LIBRARY_PFCAM}
-    ${PF_LIBRARY_COMDLL}
-    ${PF_LIBRARY_COMDLL_FG}
     )
 
 find_package_handle_standard_args(PF DEFAULT_MSG PF_LIBRARIES PF_INCLUDE_DIRS)

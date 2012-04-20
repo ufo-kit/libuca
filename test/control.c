@@ -339,7 +339,7 @@ static void create_main_window(GtkBuilder *builder, const gchar* camera_name)
     GError *error = NULL;
     UcaCamera *camera = uca_camera_new(camera_name, &error);
 
-    if (error != NULL) {
+    if ((camera == NULL) || (error != NULL)) {
         g_error("%s\n", error->message);
         gtk_main_quit();
     }

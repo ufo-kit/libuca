@@ -104,36 +104,20 @@ UcaPfCamera *uca_pf_camera_new(GError **error)
     static const int camera_link_type = FG_CL_8BIT_FULL_8;
     static const int camera_format = FG_GRAY;
 
-    /* gint num_ports; */
-    /* if (pfPortInit(&num_ports) < 0) { */
-    /*     g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT, */
-    /*             "Could not initialize ports"); */ 
-    /*     return NULL; */
-    /* } */
+    /*
+    gint num_ports;
+    if (pfPortInit(&num_ports) < 0) {
+        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
+                "Could not initialize ports"); 
+        return NULL;
+    }
 
-    /* g_print("We have %i ports\n", num_ports); */
-    /* gchar vendor[256]; */
-    /* gint vendor_size; */
-    /* gchar name[256]; */
-    /* gint name_size; */
-    /* int version, type; */
-    /* for (guint i = 0; i < num_ports; i++) { */
-    /*     int result = pfPortInfo(i, vendor, &vendor_size, name, &name_size, &version, &type); */
-    /*     if (result < 0) { */
-    /*         g_print("[%i] could not retrieve information\n", i); */ 
-    /*     } */
-    /*     else { */
-    /*         int baudrate; */
-    /*         pfGetBaudRate(i, &baudrate); */
-    /*         g_print("[%i] %s %s %i %i at %i bps\n", i, vendor, name, version, type, baudrate); */
-    /*     } */
-    /* } */
-
-    /* if (pfDeviceOpen(0) != 0) { */
-    /*     g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT, */
-    /*             "Could not open device"); */ 
-    /*     return NULL; */
-    /* } */
+    if (pfDeviceOpen(0) < 0) {
+        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
+                "Could not open device"); 
+        return NULL;
+    }
+    */
 
     UcaPfCamera *camera = g_object_new(UCA_TYPE_PF_CAMERA, NULL);
     UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
