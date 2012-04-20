@@ -174,7 +174,11 @@ static void on_toolbutton_stop_clicked(GtkWidget *widget, gpointer args)
     ThreadData *data = (ThreadData *) args;
     data->running = FALSE;
     data->store = FALSE;
-    uca_camera_stop_recording(data->camera, NULL);
+    GError *error = NULL;
+    uca_camera_stop_recording(data->camera, &error);
+
+    if (error != NULL)
+        g_printerr("Failed to stop: %s\n", error->message);
 }
 
 static void on_toolbutton_record_clicked(GtkWidget *widget, gpointer args)
@@ -190,9 +194,8 @@ static void on_toolbutton_record_clicked(GtkWidget *widget, gpointer args)
         data->running = TRUE;
         uca_camera_start_recording(data->camera, &error);
 
-        if (!g_thread_create(grab_thread, data, FALSE, &error)) {
+        if (!g_thread_create(grab_thread, data, FALSE, &error))
             g_printerr("Failed to create thread: %s\n", error->message);
-        }
     }
 }
 
@@ -220,7 +223,7 @@ static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gcha
             gtk_list_store_set(GTK_LIST_STORE(td->property_model), &iter, COLUMN_VALUE, g_value_get_string(&src_value), -1);
         }
         else
-            g_print("Couldn't transform %s\n", g_value_get_string(&src_value));
+            g_warning("Couldn't transform %s\n", g_value_get_string(&src_value));
     }
 }
 
