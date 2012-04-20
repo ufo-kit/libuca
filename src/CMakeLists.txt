@@ -126,7 +126,7 @@ pkg_check_modules(GTK_DOC gtk-doc)
 if(GTK_DOC_FOUND)
     option(WITH_GTK_DOC "Build documentation" ON)
     if (WITH_GTK_DOC)
-        set(docs_dir "${CMAKE_CURRENT_BINARY_DIR}/..")
+        set(docs_dir "${CMAKE_CURRENT_BINARY_DIR}")
         set(docs_out "${docs_dir}/reference")
         file(MAKE_DIRECTORY ${docs_out})
 
@@ -178,7 +178,7 @@ if(GTK_DOC_FOUND)
             COMMAND ${GTK_DOC_SCAN}
                     --module=uca
                     --source-dir=${CMAKE_CURRENT_SOURCE_DIR}
-                    DEPENDS ${uca_SRCS}
+                    DEPENDS uca-gobject
             WORKING_DIRECTORY ${docs_out})
 
         add_custom_command(OUTPUT ${docs_out}/uca.args
@@ -191,17 +191,17 @@ if(GTK_DOC_FOUND)
                     --module=uca
                     --source-dir=${CMAKE_CURRENT_SOURCE_DIR}
                     --output-format=xml
-                    DEPENDS ${docs_out}/uca-decl.txt ${docs_out}/uca.args
+                    DEPENDS ${docs_out}/uca.args
             WORKING_DIRECTORY ${docs_out})
 
-        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/../html.stamp
+        add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/html.stamp
             COMMAND ${GTK_DOC_MKHTML}
                     uca
                     ${docs_out}/uca-docs.xml
             DEPENDS ${docs_out}/sgml.stamp ${docs_out}/uca-docs.xml
             WORKING_DIRECTORY ${docs_out})
 
-        add_custom_target(reference ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../html.stamp)
+        add_custom_target(reference ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html.stamp)
 
         install(FILES ${reference_files} DESTINATION share/gtk-doc/html/uca)
     endif()
