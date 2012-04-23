@@ -125,8 +125,8 @@ static const char g_digits[10][20] = {
       0xff, 0xff, 0xff, 0x00 }
 };
 
-const guint DIGIT_WIDTH = 4;
-const guint DIGIT_HEIGHT = 5;
+static const guint DIGIT_WIDTH = 4;
+static const guint DIGIT_HEIGHT = 5;
 
 static void print_number(gchar *buffer, guint number, guint x, guint y, guint width)
 {
