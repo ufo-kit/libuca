@@ -24,6 +24,10 @@
 #include "cameras/uca-pco-camera.h"
 #endif
 
+#ifdef HAVE_PYLON_CAMERA
+#include "cameras/uca-pylon-camera.h"
+#endif
+
 #ifdef HAVE_MOCK_CAMERA
 #include "cameras/uca-mock-camera.h"
 #endif
@@ -64,6 +68,9 @@ GQuark uca_camera_error_quark()
 static gchar *uca_camera_types[] = {
 #ifdef HAVE_PCO_CL
         "pco",
+#endif
+#ifdef HAVE_PYLON_CAMERA
+        "pylon",
 #endif
 #ifdef HAVE_MOCK_CAMERA
         "mock",
@@ -418,6 +425,10 @@ UcaCamera *uca_camera_new(const gchar *type, GError **error)
 
     camera = uca_camera_new_from_type(type, &tmp_error);
 
+#ifdef HAVE_PYLON_CAMERA
+    if (!g_strcmp0(type, "pylon"))
+        camera = UCA_CAMERA(uca_pylon_camera_new(&tmp_error));
+#endif
     if (tmp_error != NULL) {
         g_propagate_error(error, tmp_error);
         return NULL;

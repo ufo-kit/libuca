@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 # --- Set sources -------------------------------------------------------------
 set(uca_SRCS
@@ -14,13 +15,14 @@ set(cameras)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # --- Find camera interfaces
-find_package(PCO)
+#find_package(PCO)
 find_package(PF)
 find_package(IPE)
+find_package(Pylon)
 
 # --- Find frame grabber interfaces
-find_package(FgLib5)
-find_package(ClSerMe4)
+#find_package(FgLib5)
+#find_package(ClSerMe4)
 
 # --- Miscellanous packages
 find_package(PkgConfig)
@@ -88,6 +90,19 @@ if (IPE_FOUND)
 
         include_directories(${IPE_INCLUDE_DIRS})
     endif()
+endif()
+
+if (PYLON_FOUND)
+  option(HAVE_PYLON_CAMERA "Camera: Pylon based (Basler)" ON)
+
+  if (HAVE_PYLON_CAMERA)
+    set(uca_SRCS ${uca_SRCS} cameras/uca-pylon-camera.c cameras/pylon_camera.cpp)
+    set(uca_HDRS ${uca_HDRS} cameras/uca-pylon-camera.h)
+    set(uca_LIBS ${uca_LIBS} ${PYLON_LIBS})
+
+    include_directories(${PYLON_INCLUDE_DIRS})
+  endif()
+
 endif()
 
 if (HAVE_MOCK_CAMERA)

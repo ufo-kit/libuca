@@ -21,9 +21,12 @@
 #include <stdlib.h>
 #include "uca-camera.h"
 
+#define handle_error(errno) {if ((errno) != UCA_NO_ERROR) printf("error at <%s:%i>\n", \
+    __FILE__, __LINE__);}
+
 static UcaCamera *camera = NULL;
 
-static void sigint_handler(int signal)
+void sigint_handler(int signal)
 {
     printf("Closing down libuca\n");
     uca_camera_stop_recording(camera, NULL);
@@ -31,115 +34,57 @@ static void sigint_handler(int signal)
     exit(signal);
 }
 
-static void print_usage(void)
-{
-    gchar **types;
-    
-    g_print("Usage: grab (");
-    types = uca_camera_get_types();
-
-    for (guint i = 0; types[i] != NULL; i++) {
-        if (types[i+1] == NULL)
-            g_print("%s)", types[i]);
-        else
-            g_print("%s | ", types[i]);
-    }
-
-    g_print("\n");
-    g_strfreev(types);
-}
-
 int main(int argc, char *argv[])
 {
     GError *error = NULL;
     (void) signal(SIGINT, sigint_handler);
 
-    guint sensor_width, sensor_height;
-    guint roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier;
-    guint bits;
-    gchar *name;
-
-    if (argc < 2) {
-        print_usage();
-        return 1;
-    }
-
     g_type_init();
-    camera = uca_camera_new(argv[1], &error);
+    camera = uca_camera_new("pylon", &error);
 
     if (camera == NULL) {
-        g_print("Error during initialization: %s\n", error->message);
+        g_print("Couldn't initialize camera\n");
         return 1;
     }
 
+    guint width, height, bits;
     g_object_get(G_OBJECT(camera),
-            "sensor-width", &sensor_width,
-            "sensor-height", &sensor_height,
-            "name", &name,
-            NULL);
-
-    g_object_set(G_OBJECT(camera),
-            "exposure-time", 0.001,
-            "roi-x0", 0,
-            "roi-y0", 0,
-            "roi-width", 1000,
-            "roi-height", sensor_height,
-            NULL);
-
-    g_object_get(G_OBJECT(camera),
-            "roi-width", &roi_width,
-            "roi-height", &roi_height,
-            "roi-width-multiplier", &roi_width_multiplier,
-            "roi-height-multiplier", &roi_height_multiplier,
-            "roi-x0", &roi_x,
-            "roi-y0", &roi_y,
+            "sensor-width", &width,
+            "sensor-height", &height,
             "sensor-bitdepth", &bits,
             NULL);
 
-    g_print("Camera: %s\n", name);
-    g_free(name);
-
-    g_print("Sensor: %ix%i px\n", sensor_width, sensor_height);
-    g_print("ROI: %ix%i @ (%i, %i), steps: %i, %i\n", 
-            roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier);
-
     const int pixel_size = bits == 8 ? 1 : 2;
-    gpointer buffer = g_malloc0(roi_width * roi_height * pixel_size);
-    gchar filename[FILENAME_MAX];
-    GTimer *timer = g_timer_new();
+    gpointer buffer = g_malloc0(width * height * pixel_size);
 
-    for (int i = 0; i < 1; i++) {
+    gchar filename[FILENAME_MAX];
+
+    for (int i = 0; i < 2; i++) {
         gint counter = 0;
         g_print("Start recording\n");
         uca_camera_start_recording(camera, &error);
         g_assert_no_error(error);
 
-        while (counter < 5) {
+        while (counter < 50) {
             g_print(" grab frame ... ");
-            g_timer_start(timer);
             uca_camera_grab(camera, &buffer, &error);
-
             if (error != NULL) {
                 g_print("\nError: %s\n", error->message);
                 goto cleanup;
             }
-
-            g_timer_stop(timer);
-            g_print("done (took %3.5fs)\n", g_timer_elapsed(timer, NULL));
+            g_print("done\n");
 
             snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
             FILE *fp = fopen(filename, "wb");
-            fwrite(buffer, roi_width * roi_height, pixel_size, fp);
+            fwrite(buffer, width*height, pixel_size, fp);
             fclose(fp);
-            g_usleep(2 * G_USEC_PER_SEC);
+            //g_usleep(2 * G_USEC_PER_SEC);
         }
 
         g_print("Stop recording\n");
         uca_camera_stop_recording(camera, &error);
         g_assert_no_error(error);
     }
-
-    g_timer_destroy(timer);
 
 cleanup:
     uca_camera_stop_recording(camera, NULL);
