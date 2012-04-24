@@ -82,6 +82,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "sensor-vertical-binning",
     "sensor-vertical-binnings",
     "sensor-max-frame-rate",
+    "trigger-mode",
     "exposure-time",
     "roi-x",
     "roi-y",
@@ -102,7 +103,30 @@ struct _UcaCameraPrivate {
     gboolean transfer_async;
 };
 
-/* static guint camera_signals[LAST_SIGNAL] = { 0 }; */
+/**
+ * UcaCameraTrigger:
+ * @UCA_CAMERA_TRIGGER_AUTO: Trigger automatically
+ * @UCA_CAMERA_TRIGGER_EXTERNAL: Trigger from an external source
+ * @UCA_CAMERA_TRIGGER_INTERNAL: Trigger internally from software using
+ *      #uca_camera_trigger
+ */
+static GType uca_camera_trigger_get_type(void)
+{
+    static GType camera_trigger_type = 0;
+
+    if (!camera_trigger_type) {
+        static GEnumValue trigger_types[] = {
+            { UCA_CAMERA_TRIGGER_AUTO,      "Automatic internal camera trigger",  "auto" },
+            { UCA_CAMERA_TRIGGER_EXTERNAL,  "External trigger",                   "external" },
+            { UCA_CAMERA_TRIGGER_INTERNAL,  "Internal software trigger",          "internal" },
+            { 0, NULL, NULL }
+        }; 
+
+        camera_trigger_type = g_enum_register_static("UcaCameraTrigger", trigger_types);
+    }
+
+    return camera_trigger_type;
+}
 
 static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
@@ -218,6 +242,13 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             "Maximum frame rate at full frame resolution",
             0.0f, G_MAXFLOAT, 1.0f,
             G_PARAM_READABLE);
+
+    camera_properties[PROP_TRIGGER_MODE] = 
+        g_param_spec_enum("trigger-mode", 
+            "Trigger mode",
+            "Trigger mode",
+            UCA_TYPE_CAMERA_TRIGGER, UCA_CAMERA_TRIGGER_AUTO,
+            G_PARAM_READWRITE);
 
     camera_properties[PROP_ROI_X] = 
         g_param_spec_uint(uca_camera_props[PROP_ROI_X],
@@ -505,6 +536,34 @@ void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointe
 {
     camera->grab_func = func;
     camera->user_data = user_data;
+}
+
+/**
+ * uca_camera_trigger:
+ * @camera: A #UcaCamera object
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Trigger from software if supported by camera.
+ *
+ * You must have called uca_camera_start_recording() before, otherwise you will
+ * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
+ */
+void uca_camera_trigger(UcaCamera *camera, GError **error)
+{
+    g_return_if_fail(UCA_IS_CAMERA(camera));
+
+    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+
+    g_return_if_fail(klass != NULL);
+    g_return_if_fail(klass->trigger != NULL);
+
+    if (!camera->priv->is_recording) {
+        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
+                "Camera is not recording");
+        return;
+    }
+
+    (*klass->trigger)(camera, error);
 }
 
 /**

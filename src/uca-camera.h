@@ -40,6 +40,14 @@ typedef enum {
     UCA_CAMERA_ERROR_NOT_IMPLEMENTED
 } UcaCameraError;
 
+#define UCA_TYPE_CAMERA_TRIGGER     (uca_camera_trigger_get_type())
+
+typedef enum {
+    UCA_CAMERA_TRIGGER_AUTO,
+    UCA_CAMERA_TRIGGER_INTERNAL,
+    UCA_CAMERA_TRIGGER_EXTERNAL
+} UcaCameraTrigger;
+
 typedef struct _UcaCamera           UcaCamera;
 typedef struct _UcaCameraClass      UcaCameraClass;
 typedef struct _UcaCameraPrivate    UcaCameraPrivate;
@@ -54,6 +62,7 @@ enum {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_TRIGGER_MODE,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
@@ -102,6 +111,7 @@ struct _UcaCameraClass {
     void (*start_recording) (UcaCamera *camera, GError **error);
     void (*stop_recording) (UcaCamera *camera, GError **error);
     void (*start_readout) (UcaCamera *camera, GError **error);
+    void (*trigger) (UcaCamera *camera, GError **error);
     void (*grab) (UcaCamera *camera, gpointer *data, GError **error);
 
     void (*recording_started) (UcaCamera *camera);
@@ -114,6 +124,7 @@ UcaCamera *uca_camera_new(const gchar *type, GError **error);
 void uca_camera_start_recording(UcaCamera *camera, GError **error);
 void uca_camera_stop_recording(UcaCamera *camera, GError **error);
 void uca_camera_start_readout(UcaCamera *camera, GError **error);
+void uca_camera_trigger(UcaCamera *camera, GError **error);
 void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error);
 void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data);
 

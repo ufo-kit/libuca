@@ -84,6 +84,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_TRIGGER_MODE,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -351,6 +352,20 @@ static void uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
     priv->current_image = 1;
 }
 
+static void uca_pco_camera_trigger(UcaCamera *camera, GError **error)
+{
+    g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+    /* TODO: Check if we can trigger */
+    guint32 success = 0;
+    pco_force_trigger(priv->pco, &success);
+
+    if (!success)
+        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,
+                "Could not trigger frame acquisition"); 
+}
+
 static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
@@ -404,6 +419,25 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                 pco_set_cooling_temperature(priv->pco, temperature);
             }
             break;
+
+        case PROP_TRIGGER_MODE:
+            {
+                UcaCameraTrigger trigger_mode = (UcaCameraTrigger) g_value_get_enum(value);
+
+                switch (trigger_mode) {
+                    case UCA_CAMERA_TRIGGER_AUTO:
+                        pco_set_trigger_mode(priv->pco, TRIGGER_MODE_AUTOTRIGGER);
+                        break;
+                    case UCA_CAMERA_TRIGGER_INTERNAL:
+                        pco_set_trigger_mode(priv->pco, TRIGGER_MODE_SOFTWARETRIGGER);
+                        break;
+                    case UCA_CAMERA_TRIGGER_EXTERNAL:
+                        pco_set_trigger_mode(priv->pco, TRIGGER_MODE_EXTERNALTRIGGER);
+                        break;
+                }
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -463,6 +497,27 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_HAS_CAMRAM_RECORDING:
             g_value_set_boolean(value, priv->camera_description->has_camram);
+            break;
+
+        case PROP_TRIGGER_MODE:
+            {
+                guint16 mode;                 
+                pco_get_trigger_mode(priv->pco, &mode);
+
+                switch (mode) {
+                    case TRIGGER_MODE_AUTOTRIGGER:
+                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
+                        break;
+                    case TRIGGER_MODE_SOFTWARETRIGGER:
+                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_INTERNAL);
+                        break;
+                    case TRIGGER_MODE_EXTERNALTRIGGER:
+                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_EXTERNAL);
+                        break;
+                    default:
+                        g_warning("pco trigger mode not handled\n");
+                }
+            }
             break;
 
         case PROP_ROI_X:
@@ -554,6 +609,7 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
     camera_class->start_recording = uca_pco_camera_start_recording;
     camera_class->stop_recording = uca_pco_camera_stop_recording;
     camera_class->start_readout = uca_pco_camera_start_readout;
+    camera_class->trigger = uca_pco_camera_trigger;
     camera_class->grab = uca_pco_camera_grab;
 
     for (guint i = 0; base_overrideables[i] != 0; i++)
