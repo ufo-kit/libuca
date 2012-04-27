@@ -77,6 +77,8 @@ enum {
     PROP_SENSOR_WIDTH_EXTENDED,
     PROP_SENSOR_HEIGHT_EXTENDED,
     PROP_SENSOR_TEMPERATURE,
+    PROP_SENSOR_PIXELRATES,
+    PROP_SENSOR_PIXELRATE,
     PROP_SENSOR_ADCS,
     PROP_DELAY_TIME,
     PROP_HAS_DOUBLE_IMAGE_MODE,
@@ -139,6 +141,7 @@ struct _UcaPcoCameraPrivate {
     guint16 width_ex, height_ex;
     GValueArray *horizontal_binnings;
     GValueArray *vertical_binnings;
+    GValueArray *pixelrates;
 
     /* The time bases are given as pco time bases (TIMEBASE_NS and so on) */
     guint16 delay_timebase;
@@ -248,6 +251,24 @@ static guint fill_binnings(UcaPcoCameraPrivate *priv)
     return err;
 }
 
+static guint fill_pixelrates(UcaPcoCameraPrivate *priv)
+{
+    guint32 rates[4] = {0};
+    gint num_rates = 0;
+    guint err = pco_get_available_pixelrates(priv->pco, rates, &num_rates);
+    GValue val = {0};
+    g_value_init(&val, G_TYPE_UINT);
+
+    if (err == PCO_NOERROR) {
+        for (gint i = 0; i < num_rates; i++) {
+            g_value_set_uint(&val, (guint) rates[i]); 
+            g_value_array_append(priv->pixelrates, &val);
+        }
+    }
+
+    return err;
+}
+
 static guint override_temperature_range(UcaPcoCameraPrivate *priv)
 {
     int16_t default_temp, min_temp, max_temp;
@@ -345,6 +366,7 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     FG_TRY_PARAM(priv->fg, camera, FG_TRIGGERMODE, &val, priv->fg_port);
 
     fill_binnings(priv);
+    fill_pixelrates(priv);
 
     /*
      * Here we override the temperature property range because this was not
@@ -579,6 +601,10 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             }
             break;
 
+        case PROP_SENSOR_PIXELRATE:
+            pco_set_pixelrate(priv->pco, g_value_get_uint(value));
+            break;
+
         case PROP_DOUBLE_IMAGE_MODE:
             if (!pco_is_double_image_mode_available(priv->pco))
                 g_warning("Double image mode is not available on this pco model");
@@ -735,6 +761,18 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                 pco_adc_mode mode; 
                 pco_get_adc_mode(priv->pco, &mode);
                 g_value_set_uint(value, mode);
+            }
+            break;
+
+        case PROP_SENSOR_PIXELRATES:
+            g_value_set_boxed(value, priv->pixelrates);
+            break;
+
+        case PROP_SENSOR_PIXELRATE:
+            {
+                guint32 pixelrate; 
+                pco_get_pixelrate(priv->pco, &pixelrate);
+                g_value_set_uint(value, pixelrate);
             }
             break;
 
@@ -972,6 +1010,28 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
+    /**
+     * UcaPcoCamera:sensor-pixelrate:
+     *
+     * Read and write the pixel rate or clock of the sensor in terms of Hertz.
+     * Make sure to query the possible pixel rates through the
+     * #UcaPcoCamera:sensor-pixelrates property. Any other value will be
+     * rejected by the camera.
+     */
+    pco_properties[PROP_SENSOR_PIXELRATE] = 
+        g_param_spec_uint("sensor-pixelrate",
+            "Pixel rate",
+            "Pixel rate",
+            1, G_MAXUINT, 1,
+            G_PARAM_READWRITE);
+
+    pco_properties[PROP_SENSOR_PIXELRATES] = 
+        g_param_spec_value_array("sensor-pixelrates",
+            "Array of possible sensor pixel rates",
+            "Array of possible sensor pixel rates",
+            pco_properties[PROP_SENSOR_PIXELRATE],
+            G_PARAM_READABLE);
+
     pco_properties[PROP_NAME] = 
         g_param_spec_string("name",
             "Name of the camera",
@@ -1037,10 +1097,12 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Noise filter",
             FALSE, G_PARAM_READWRITE);
 
-    /*
-     * The default values here are set arbitrarily, because we are not yet
-     * connected to the camera and just don't know the cooling range. We
-     * override these values in uca_pco_camera_new().
+    /**
+     * UcaPcoCamera:cooling-point:
+     *
+     * The value range is set arbitrarily, because we are not yet connected to
+     * the camera and just don't know the cooling range. We override these
+     * values in #uca_pco_camera_new().
      */
     pco_properties[PROP_COOLING_POINT] = 
         g_param_spec_int("cooling-point",
