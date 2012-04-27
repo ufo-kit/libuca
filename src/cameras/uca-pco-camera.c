@@ -76,6 +76,7 @@ enum {
     PROP_DELAY_TIME,
     PROP_HAS_DOUBLE_IMAGE_MODE,
     PROP_DOUBLE_IMAGE_MODE,
+    PROP_OFFSET_MODE,
     PROP_COOLING_POINT,
     N_PROPERTIES
 };
@@ -528,6 +529,10 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                 pco_set_double_image_mode(priv->pco, g_value_get_boolean(value));
             break;
 
+        case PROP_OFFSET_MODE:
+            pco_set_offset_mode(priv->pco, g_value_get_boolean(value));
+            break;
+
         case PROP_COOLING_POINT:
             {
                 int16_t temperature = (int16_t) g_value_get_int(value); 
@@ -660,6 +665,14 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             else {
                 bool on;
                 pco_get_double_image_mode(priv->pco, &on);
+                g_value_set_boolean(value, on);
+            }
+            break;
+
+        case PROP_OFFSET_MODE:
+            {
+                bool on;
+                pco_get_offset_mode(priv->pco, &on);
                 g_value_set_boolean(value, on);
             }
             break;
@@ -815,9 +828,15 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             FALSE, G_PARAM_READABLE);
 
     pco_properties[PROP_DOUBLE_IMAGE_MODE] = 
-        g_param_spec_boolean("use-double-image-mode",
+        g_param_spec_boolean("double-image-mode",
             "Use double image mode",
             "Use double image mode",
+            FALSE, G_PARAM_READWRITE);
+
+    pco_properties[PROP_OFFSET_MODE] = 
+        g_param_spec_boolean("offset-mode",
+            "Use offset mode",
+            "Use offset mode",
             FALSE, G_PARAM_READWRITE);
     
     pco_properties[PROP_DELAY_TIME] =
