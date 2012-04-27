@@ -79,6 +79,7 @@ enum {
     PROP_OFFSET_MODE,
     PROP_RECORD_MODE,
     PROP_COOLING_POINT,
+    PROP_NOISE_FILTER,
     N_PROPERTIES
 };
 
@@ -566,6 +567,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
 
         case PROP_RECORD_MODE:
             {
+                /* TODO: setting this is not possible for the edge */
                 UcaPcoCameraRecordMode mode = (UcaPcoCameraRecordMode) g_value_get_enum(value);
 
                 if (mode == UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE)
@@ -592,6 +594,13 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                         pco_set_trigger_mode(priv->pco, TRIGGER_MODE_EXTERNALTRIGGER);
                         break;
                 }
+            }
+            break;
+
+        case PROP_NOISE_FILTER:
+            {
+                guint16 filter_mode = g_value_get_boolean(value) ? NOISE_FILTER_MODE_ON : NOISE_FILTER_MODE_OFF;
+                pco_set_noise_filter_mode(priv->pco, filter_mode);
             }
             break;
 
@@ -806,6 +815,14 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             }
             break;
 
+        case PROP_NOISE_FILTER:
+            {
+                guint16 filter_mode;
+                pco_get_noise_filter_mode(priv->pco, &filter_mode);
+                g_value_set_boolean(value, filter_mode != NOISE_FILTER_MODE_OFF);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -903,6 +920,12 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Delay before starting actual exposure",
             0.0, G_MAXDOUBLE, 0.0,
             G_PARAM_READWRITE);
+
+    pco_properties[PROP_NOISE_FILTER] = 
+        g_param_spec_boolean("noise-filter",
+            "Noise filter",
+            "Noise filter",
+            FALSE, G_PARAM_READWRITE);
 
     /*
      * The default values here are set arbitrarily, because we are not yet
