@@ -72,6 +72,7 @@ GQuark uca_pco_camera_error_quark()
 enum {
     PROP_NAME = N_BASE_PROPERTIES,
     PROP_SENSOR_TEMPERATURE,
+    PROP_SENSOR_ADCS,
     PROP_DELAY_TIME,
     PROP_COOLING_POINT,
     N_PROPERTIES
@@ -455,7 +456,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
             {
-                gdouble time = g_value_get_double(value);
+                const gdouble time = g_value_get_double(value);
                  
                 if (priv->exposure_timebase == TIMEBASE_INVALID)
                     read_timebase(priv);
@@ -484,7 +485,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
 
         case PROP_DELAY_TIME:
             {
-                gdouble time = g_value_get_double(value);
+                const gdouble time = g_value_get_double(value);
                  
                 if (priv->delay_timebase == TIMEBASE_INVALID)
                     read_timebase(priv);
@@ -508,6 +509,13 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                     guint32 timesteps = time / timebase;
                     pco_set_delay_time(priv->pco, timesteps);
                 }
+            }
+            break;
+
+        case PROP_SENSOR_ADCS:
+            {
+                const guint num_adcs = g_value_get_uint(value); 
+                pco_set_adc_mode(priv->pco, num_adcs);
             }
             break;
 
@@ -594,6 +602,18 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                 guint32 ccd, camera, power;                 
                 pco_get_temperature(priv->pco, &ccd, &camera, &power);
                 g_value_set_double(value, ccd / 10.0);
+            }
+            break;
+
+        case PROP_SENSOR_ADCS:
+            {
+                /*
+                 * Up to now, the ADC mode corresponds directly to the number of
+                 * ADCs in use.
+                 */
+                pco_adc_mode mode; 
+                pco_get_adc_mode(priv->pco, &mode);
+                g_value_set_uint(value, mode);
             }
             break;
 
@@ -757,6 +777,13 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Temperature of the sensor in degree Celsius",
             -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
             G_PARAM_READABLE);
+
+    pco_properties[PROP_SENSOR_ADCS] = 
+        g_param_spec_uint("sensor-adcs",
+            "Number of ADCs to use",
+            "Number of ADCs to use",
+            1, 2, 1, 
+            G_PARAM_READWRITE);
     
     pco_properties[PROP_DELAY_TIME] =
         g_param_spec_double("delay-time",
