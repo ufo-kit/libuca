@@ -77,6 +77,7 @@ enum {
     PROP_HAS_DOUBLE_IMAGE_MODE,
     PROP_DOUBLE_IMAGE_MODE,
     PROP_OFFSET_MODE,
+    PROP_RECORD_MODE,
     PROP_COOLING_POINT,
     N_PROPERTIES
 };
@@ -141,6 +142,29 @@ struct _UcaPcoCameraPrivate {
     guint num_recorded_images;
     guint current_image;
 };
+
+/**
+ * UcaPcoCameraRecordMode:
+ * @UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE: Store all frames and stop if necessary
+ * @UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER: Store frames in ring-buffer fashion
+ *      and overwrite if necessary
+ */
+static GType uca_pco_camera_record_mode_get_type(void)
+{
+    static GType record_mode_type = 0;
+
+    if (!record_mode_type) {
+        static GEnumValue record_modes[] = {
+            { UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE, "Store frames in a ring buffer", "ring-buffer" },
+            { UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER, "Store frames in a ring buffer", "sequence" },
+            { 0, NULL, NULL }
+        }; 
+
+        record_mode_type = g_enum_register_static("UcaPcoCameraRecordMode", record_modes);
+    }
+
+    return record_mode_type;
+}
 
 #define TIMEBASE_INVALID 0xDEAD
 
@@ -540,6 +564,19 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             }
             break;
 
+        case PROP_RECORD_MODE:
+            {
+                UcaPcoCameraRecordMode mode = (UcaPcoCameraRecordMode) g_value_get_enum(value);
+
+                if (mode == UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE)
+                    pco_set_record_mode(priv->pco, 0);
+                else if (mode == UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER)
+                    pco_set_record_mode(priv->pco, 1);
+                else
+                    g_warning("Unknown record mode");
+            }
+            break;
+
         case PROP_TRIGGER_MODE:
             {
                 UcaCameraTrigger trigger_mode = (UcaCameraTrigger) g_value_get_enum(value);
@@ -685,6 +722,20 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             g_value_set_boolean(value, priv->camera_description->has_camram);
             break;
 
+        case PROP_RECORD_MODE:
+            {
+                guint16 mode;
+                pco_get_record_mode(priv->pco, &mode);
+
+                if (mode == 0)
+                    g_value_set_enum(value, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE);
+                else if (mode == 1)
+                    g_value_set_enum(value, UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER);
+                else
+                    g_warning("pco record mode not handled");
+            }
+            break;
+
         case PROP_TRIGGER_MODE:
             {
                 guint16 mode;                 
@@ -701,7 +752,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                         g_value_set_enum(value, UCA_CAMERA_TRIGGER_EXTERNAL);
                         break;
                     default:
-                        g_warning("pco trigger mode not handled\n");
+                        g_warning("pco trigger mode not handled");
                 }
             }
             break;
@@ -838,6 +889,13 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Use offset mode",
             "Use offset mode",
             FALSE, G_PARAM_READWRITE);
+
+    pco_properties[PROP_RECORD_MODE] = 
+        g_param_spec_enum("record-mode", 
+            "Record mode",
+            "Record mode",
+            UCA_TYPE_PCO_CAMERA_RECORDE_MODE, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE,
+            G_PARAM_READWRITE);
     
     pco_properties[PROP_DELAY_TIME] =
         g_param_spec_double("delay-time",
