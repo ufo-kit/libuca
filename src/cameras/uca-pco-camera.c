@@ -71,6 +71,7 @@ GQuark uca_pco_camera_error_quark()
 
 enum {
     PROP_NAME = N_BASE_PROPERTIES,
+    PROP_SENSOR_TEMPERATURE,
     PROP_DELAY_TIME,
     PROP_COOLING_POINT,
     N_PROPERTIES
@@ -588,6 +589,14 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             g_value_set_uint(value, 16);
             break;
 
+        case PROP_SENSOR_TEMPERATURE:
+            {
+                guint32 ccd, camera, power;                 
+                pco_get_temperature(priv->pco, &ccd, &camera, &power);
+                g_value_set_double(value, ccd / 10.0);
+            }
+            break;
+
         case PROP_EXPOSURE_TIME:
             {
                 uint32_t exposure_time;
@@ -741,6 +750,13 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Name of the camera",
             "Name of the camera",
             "", G_PARAM_READABLE);
+
+    pco_properties[PROP_SENSOR_TEMPERATURE] =
+        g_param_spec_double("sensor-temperature",
+            "Temperature of the sensor",
+            "Temperature of the sensor in degree Celsius",
+            -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+            G_PARAM_READABLE);
     
     pco_properties[PROP_DELAY_TIME] =
         g_param_spec_double("delay-time",
