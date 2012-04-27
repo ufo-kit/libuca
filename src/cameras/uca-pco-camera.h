@@ -42,12 +42,19 @@ typedef struct _UcaPcoCamera           UcaPcoCamera;
 typedef struct _UcaPcoCameraClass      UcaPcoCameraClass;
 typedef struct _UcaPcoCameraPrivate    UcaPcoCameraPrivate;
 
-#define UCA_TYPE_PCO_CAMERA_RECORDE_MODE (uca_pco_camera_record_mode_get_type())
+#define UCA_TYPE_PCO_CAMERA_RECORD_MODE (uca_pco_camera_record_mode_get_type())
 
 typedef enum {
     UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE,
     UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER,
 } UcaPcoCameraRecordMode;
+
+#define UCA_TYPE_PCO_CAMERA_ACQUIRE_MODE (uca_pco_camera_acquire_mode_get_type())
+
+typedef enum {
+    UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO,
+    UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL
+} UcaPcoCameraAcquireMode;
 
 /**
  * UcaPcoCamera:

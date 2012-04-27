@@ -55,6 +55,8 @@
 
 G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
 
+#define TIMEBASE_INVALID 0xDEAD
+
 /**
  * UcaPcoCameraError:
  * @UCA_PCO_CAMERA_ERROR_LIBPCO_INIT: Initializing libpco failed
@@ -81,6 +83,7 @@ enum {
     PROP_DOUBLE_IMAGE_MODE,
     PROP_OFFSET_MODE,
     PROP_RECORD_MODE,
+    PROP_ACQUIRE_MODE,
     PROP_COOLING_POINT,
     PROP_NOISE_FILTER,
     N_PROPERTIES
@@ -170,7 +173,27 @@ static GType uca_pco_camera_record_mode_get_type(void)
     return record_mode_type;
 }
 
-#define TIMEBASE_INVALID 0xDEAD
+/**
+ * UcaPcoCameraAcquireMode:
+ * @UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO: Take all images
+ * @UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL: Use <acq enbl> signal
+ */
+static GType uca_pco_camera_acquire_mode_get_type(void)
+{
+    static GType acquire_mode_type = 0;
+
+    if (!acquire_mode_type) {
+        static GEnumValue acquire_modes[] = {
+            { UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO, "Take all images", "auto" },
+            { UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL, "Use <acq enbl> signal", "external" },
+            { 0, NULL, NULL }
+        }; 
+
+        acquire_mode_type = g_enum_register_static("UcaPcoCameraAcquireMode", acquire_modes);
+    }
+
+    return acquire_mode_type;
+}
 
 static pco_cl_map_entry pco_cl_map[] = { 
     { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
@@ -588,6 +611,19 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             }
             break;
 
+        case PROP_ACQUIRE_MODE:
+            {
+                UcaPcoCameraAcquireMode mode = (UcaPcoCameraAcquireMode) g_value_get_enum(value);
+
+                if (mode == UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO)
+                    pco_set_acquire_mode(priv->pco, ACQUIRE_MODE_AUTO);
+                else if (mode == UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL)
+                    pco_set_record_mode(priv->pco, ACQUIRE_MODE_EXTERNAL);
+                else
+                    g_warning("Unknown acquire mode");
+            }
+            break;
+
         case PROP_TRIGGER_MODE:
             {
                 UcaCameraTrigger trigger_mode = (UcaCameraTrigger) g_value_get_enum(value);
@@ -767,6 +803,20 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                     g_value_set_enum(value, UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER);
                 else
                     g_warning("pco record mode not handled");
+            }
+            break;
+
+        case PROP_ACQUIRE_MODE:
+            {
+                guint16 mode;
+                pco_get_acquire_mode(priv->pco, &mode);
+
+                if (mode == ACQUIRE_MODE_AUTO)
+                    g_value_set_enum(value, UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO);
+                else if (mode == ACQUIRE_MODE_EXTERNAL)
+                    g_value_set_enum(value, UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL);
+                else
+                    g_warning("pco acquire mode not handled");
             }
             break;
 
@@ -964,7 +1014,14 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
         g_param_spec_enum("record-mode", 
             "Record mode",
             "Record mode",
-            UCA_TYPE_PCO_CAMERA_RECORDE_MODE, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE,
+            UCA_TYPE_PCO_CAMERA_RECORD_MODE, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE,
+            G_PARAM_READWRITE);
+
+    pco_properties[PROP_ACQUIRE_MODE] = 
+        g_param_spec_enum("acquire-mode", 
+            "Acquire mode",
+            "Acquire mode",
+            UCA_TYPE_PCO_CAMERA_ACQUIRE_MODE, UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO,
             G_PARAM_READWRITE);
     
     pco_properties[PROP_DELAY_TIME] =
