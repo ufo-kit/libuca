@@ -71,6 +71,9 @@ GQuark uca_pco_camera_error_quark()
 
 enum {
     PROP_NAME = N_BASE_PROPERTIES,
+    PROP_SENSOR_EXTENDED,
+    PROP_SENSOR_WIDTH_EXTENDED,
+    PROP_SENSOR_HEIGHT_EXTENDED,
     PROP_SENSOR_TEMPERATURE,
     PROP_SENSOR_ADCS,
     PROP_DELAY_TIME,
@@ -129,8 +132,8 @@ struct _UcaPcoCameraPrivate {
     guint frame_height;
     gsize num_bytes;
 
-    guint16 width;
-    guint16 height;
+    guint16 width, height;
+    guint16 width_ex, height_ex;
     GValueArray *horizontal_binnings;
     GValueArray *vertical_binnings;
 
@@ -282,8 +285,7 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     priv->pco = pco;
 
-    guint16 width_ex, height_ex;
-    pco_get_resolution(priv->pco, &priv->width, &priv->height, &width_ex, &height_ex);
+    pco_get_resolution(priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
     pco_set_storage_mode(pco, STORAGE_MODE_RECORDER);
     pco_set_auto_transfer(pco, 1);
 
@@ -482,6 +484,13 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
+        case PROP_SENSOR_EXTENDED:
+            {
+                guint16 format = g_value_get_boolean(value) ? SENSORFORMAT_EXTENDED : SENSORFORMAT_STANDARD; 
+                pco_set_sensor_format(priv->pco, format);
+            }
+            break;
+
         case PROP_EXPOSURE_TIME:
             {
                 const gdouble time = g_value_get_double(value);
@@ -571,9 +580,9 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                 UcaPcoCameraRecordMode mode = (UcaPcoCameraRecordMode) g_value_get_enum(value);
 
                 if (mode == UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE)
-                    pco_set_record_mode(priv->pco, 0);
+                    pco_set_record_mode(priv->pco, RECORDER_SUBMODE_SEQUENCE);
                 else if (mode == UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER)
-                    pco_set_record_mode(priv->pco, 1);
+                    pco_set_record_mode(priv->pco, RECORDER_SUBMODE_RINGBUFFER);
                 else
                     g_warning("Unknown record mode");
             }
@@ -615,12 +624,28 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
+        case PROP_SENSOR_EXTENDED:
+            {
+                guint16 format; 
+                pco_get_sensor_format(priv->pco, &format);
+                g_value_set_boolean(value, format == SENSORFORMAT_EXTENDED);
+            }
+            break;
+
         case PROP_SENSOR_WIDTH: 
             g_value_set_uint(value, priv->width);
             break;
 
         case PROP_SENSOR_HEIGHT: 
             g_value_set_uint(value, priv->height);
+            break;
+
+        case PROP_SENSOR_WIDTH_EXTENDED: 
+            g_value_set_uint(value, priv->width_ex);
+            break;
+
+        case PROP_SENSOR_HEIGHT_EXTENDED: 
+            g_value_set_uint(value, priv->height_ex);
             break;
 
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -736,9 +761,9 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                 guint16 mode;
                 pco_get_record_mode(priv->pco, &mode);
 
-                if (mode == 0)
+                if (mode == RECORDER_SUBMODE_SEQUENCE)
                     g_value_set_enum(value, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE);
-                else if (mode == 1)
+                else if (mode == RECORDER_SUBMODE_RINGBUFFER)
                     g_value_set_enum(value, UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER);
                 else
                     g_warning("pco record mode not handled");
@@ -868,6 +893,34 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
 
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
+
+    /**
+     * UcaPcoCamera:sensor-extended:
+     *
+     * Activate larger sensor area that contains surrounding pixels for dark
+     * references and dummies. Use #UcaPcoCamera:sensor-width-extended and
+     * #UcaPcoCamera:sensor-height-extended to query the resolution of the
+     * larger area.
+     */
+    pco_properties[PROP_SENSOR_EXTENDED] = 
+        g_param_spec_boolean("sensor-extended",
+            "Use extended sensor format",
+            "Use extended sensor format",
+            FALSE, G_PARAM_READWRITE);
+
+    pco_properties[PROP_SENSOR_WIDTH_EXTENDED] = 
+        g_param_spec_uint("sensor-width-extended",
+            "Width of extended sensor",
+            "Width of the extended sensor in pixels",
+            1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
+
+    pco_properties[PROP_SENSOR_HEIGHT_EXTENDED] = 
+        g_param_spec_uint("sensor-height-extended",
+            "Height of extended sensor",
+            "Height of the extended sensor in pixels",
+            1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
 
     pco_properties[PROP_NAME] = 
         g_param_spec_string("name",
