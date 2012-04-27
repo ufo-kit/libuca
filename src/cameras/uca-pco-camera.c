@@ -71,6 +71,7 @@ GQuark uca_pco_camera_error_quark()
 
 enum {
     PROP_NAME = N_BASE_PROPERTIES,
+    PROP_DELAY_TIME,
     PROP_COOLING_POINT,
     N_PROPERTIES
 };
@@ -84,6 +85,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_EXPOSURE_TIME,
     PROP_TRIGGER_MODE,
     PROP_ROI_X,
     PROP_ROI_Y,
@@ -125,11 +127,17 @@ struct _UcaPcoCameraPrivate {
     GValueArray *horizontal_binnings;
     GValueArray *vertical_binnings;
 
+    /* The time bases are given as pco time bases (TIMEBASE_NS and so on) */
+    guint16 delay_timebase;
+    guint16 exposure_timebase;
+
     frameindex_t last_frame;
     guint16 active_segment;
     guint num_recorded_images;
     guint current_image;
 };
+
+#define TIMEBASE_INVALID 0xDEAD
 
 static pco_cl_map_entry pco_cl_map[] = { 
     { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
@@ -197,6 +205,37 @@ static guint override_temperature_range(UcaPcoCameraPrivate *priv)
     }
 
     return err;
+}
+
+static gdouble convert_timebase(guint16 timebase)
+{
+    switch (timebase) {
+        case TIMEBASE_NS:
+            return 10e-9;
+        case TIMEBASE_US:
+            return 10e-6;
+        case TIMEBASE_MS:
+            return 10e-3;
+        default:
+            g_warning("Unknown timebase");
+    }
+    return 10e-3;
+}
+
+static void read_timebase(UcaPcoCameraPrivate *priv)
+{
+    pco_get_timebase(priv->pco, &priv->delay_timebase, &priv->exposure_timebase);
+}
+
+static gdouble get_suitable_timebase(gdouble time)
+{
+    if (time * 10e3 >= 1.0)
+        return TIMEBASE_MS;
+    if (time * 10e6 >= 1.0)
+        return TIMEBASE_US;
+    if (time * 10e9 >= 1.0)
+        return TIMEBASE_NS;
+    return TIMEBASE_INVALID;
 }
 
 UcaPcoCamera *uca_pco_camera_new(GError **error)
@@ -413,6 +452,64 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
+        case PROP_EXPOSURE_TIME:
+            {
+                gdouble time = g_value_get_double(value);
+                 
+                if (priv->exposure_timebase == TIMEBASE_INVALID)
+                    read_timebase(priv);
+
+                /*
+                 * Lets check if we can express the time in the current time
+                 * base. If not, we need to adjust that.
+                 */
+                guint16 suitable_timebase = get_suitable_timebase(time);
+
+                if (suitable_timebase == TIMEBASE_INVALID) {
+                    g_warning("Cannot set such a small exposure time"); 
+                }
+                else {
+                    if (suitable_timebase != priv->exposure_timebase) {
+                        priv->exposure_timebase = suitable_timebase;
+                        pco_set_timebase(priv->pco, priv->delay_timebase, suitable_timebase);
+                    }
+
+                    gdouble timebase = convert_timebase(suitable_timebase);
+                    guint32 timesteps = time / timebase;
+                    pco_set_exposure_time(priv->pco, timesteps);
+                }
+            }
+            break;
+
+        case PROP_DELAY_TIME:
+            {
+                gdouble time = g_value_get_double(value);
+                 
+                if (priv->delay_timebase == TIMEBASE_INVALID)
+                    read_timebase(priv);
+
+                /*
+                 * Lets check if we can express the time in the current time
+                 * base. If not, we need to adjust that.
+                 */
+                guint16 suitable_timebase = get_suitable_timebase(time);
+
+                if (suitable_timebase == TIMEBASE_INVALID) {
+                    g_warning("Cannot set such a small exposure time"); 
+                }
+                else {
+                    if (suitable_timebase != priv->delay_timebase) {
+                        priv->delay_timebase = suitable_timebase;
+                        pco_set_timebase(priv->pco, suitable_timebase, priv->exposure_timebase);
+                    }
+
+                    gdouble timebase = convert_timebase(suitable_timebase);
+                    guint32 timesteps = time / timebase;
+                    pco_set_delay_time(priv->pco, timesteps);
+                }
+            }
+            break;
+
         case PROP_COOLING_POINT:
             {
                 int16_t temperature = (int16_t) g_value_get_int(value); 
@@ -489,6 +586,30 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint(value, 16);
+            break;
+
+        case PROP_EXPOSURE_TIME:
+            {
+                uint32_t exposure_time;
+                pco_get_exposure_time(priv->pco, &exposure_time);
+
+                if (priv->exposure_timebase == TIMEBASE_INVALID)
+                    read_timebase(priv);
+
+                g_value_set_double(value, convert_timebase(priv->exposure_timebase) * exposure_time);
+            }
+            break;
+
+        case PROP_DELAY_TIME:
+            {
+                uint32_t delay_time;
+                pco_get_delay_time(priv->pco, &delay_time);
+
+                if (priv->delay_timebase == TIMEBASE_INVALID)
+                    read_timebase(priv);
+
+                g_value_set_double(value, convert_timebase(priv->delay_timebase) * delay_time);
+            }
             break;
 
         case PROP_HAS_STREAMING:
@@ -620,6 +741,13 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Name of the camera",
             "Name of the camera",
             "", G_PARAM_READABLE);
+    
+    pco_properties[PROP_DELAY_TIME] =
+        g_param_spec_double("delay-time",
+            "Delay time",
+            "Delay before starting actual exposure",
+            0.0, G_MAXDOUBLE, 0.0,
+            G_PARAM_READWRITE);
 
     /*
      * The default values here are set arbitrarily, because we are not yet
@@ -648,4 +776,7 @@ static void uca_pco_camera_init(UcaPcoCamera *self)
     self->priv->vertical_binnings = NULL;
     self->priv->camera_description = NULL;
     self->priv->last_frame = 0;
+
+    self->priv->delay_timebase = TIMEBASE_INVALID;
+    self->priv->exposure_timebase = TIMEBASE_INVALID;
 }
