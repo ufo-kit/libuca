@@ -74,6 +74,8 @@ enum {
     PROP_SENSOR_TEMPERATURE,
     PROP_SENSOR_ADCS,
     PROP_DELAY_TIME,
+    PROP_HAS_DOUBLE_IMAGE_MODE,
+    PROP_DOUBLE_IMAGE_MODE,
     PROP_COOLING_POINT,
     N_PROPERTIES
 };
@@ -519,6 +521,13 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             }
             break;
 
+        case PROP_DOUBLE_IMAGE_MODE:
+            if (!pco_is_double_image_mode_available(priv->pco))
+                g_warning("Double image mode is not available on this pco model");
+            else
+                pco_set_double_image_mode(priv->pco, g_value_get_boolean(value));
+            break;
+
         case PROP_COOLING_POINT:
             {
                 int16_t temperature = (int16_t) g_value_get_int(value); 
@@ -638,6 +647,20 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                     read_timebase(priv);
 
                 g_value_set_double(value, convert_timebase(priv->delay_timebase) * delay_time);
+            }
+            break;
+
+        case PROP_HAS_DOUBLE_IMAGE_MODE:
+            g_value_set_boolean(value, pco_is_double_image_mode_available(priv->pco));
+            break;
+
+        case PROP_DOUBLE_IMAGE_MODE:
+            if (!pco_is_double_image_mode_available(priv->pco))
+                g_warning("Double image mode is not available on this pco model");
+            else {
+                bool on;
+                pco_get_double_image_mode(priv->pco, &on);
+                g_value_set_boolean(value, on);
             }
             break;
 
@@ -784,6 +807,18 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Number of ADCs to use",
             1, 2, 1, 
             G_PARAM_READWRITE);
+
+    pco_properties[PROP_HAS_DOUBLE_IMAGE_MODE] = 
+        g_param_spec_boolean("has-double-image-mode",
+            "Is double image mode supported by this model",
+            "Is double image mode supported by this model",
+            FALSE, G_PARAM_READABLE);
+
+    pco_properties[PROP_DOUBLE_IMAGE_MODE] = 
+        g_param_spec_boolean("use-double-image-mode",
+            "Use double image mode",
+            "Use double image mode",
+            FALSE, G_PARAM_READWRITE);
     
     pco_properties[PROP_DELAY_TIME] =
         g_param_spec_double("delay-time",
