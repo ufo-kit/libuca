@@ -8,24 +8,19 @@
 namespace {
 
   GrabAPI::IGrabber* pGrabber = 0;
-  //yat::Mutex* pImageMutex = NULL;
-  //yat::Condition* pImageCondition = NULL;
-  //yat::Mutex pImageMutex;
-  //yat::Condition pImageCondition(pImageMutex);
+  yat::Mutex pImageMutex;
+  yat::Condition pImageCondition(pImageMutex);
   guint imageCounter = 0;
   guint currentImage = 0;
   GrabAPI::Image* image = NULL;
 
   void handle_image(GrabAPI::Image* newImage)
   {
-    //g_assert(pImageMutex);
-    //g_assert(pImageCondition);
-    //yat::MutexLock lock(pImageMutex);
+    yat::MutexLock lock(pImageMutex);
     delete image;
     image = newImage;
     imageCounter++;
-    std::cerr << "signal next image ready " << std::endl;
-    //pImageCondition.signal();
+    pImageCondition.signal();
   }
 
   void yat_exception_to_gerror(const yat::Exception& e, GError** error)
@@ -70,12 +65,8 @@ namespace {
 
 void pylon_camera_new(const char* lib_path, const char* camera_ip, GError** error)
 {
-
   g_assert(!pGrabber);
   try {
-
-    //pImageMutex = new yat::Mutex;
-    //pImageCondition = new yat::Condition(*pImageMutex);
 
     yat::PlugInManager pm;
     std::pair<yat::IPlugInInfo*, yat::IPlugInFactory*> pp = 
@@ -91,7 +82,6 @@ void pylon_camera_new(const char* lib_path, const char* camera_ip, GError** erro
     pGrabber->initialize();
     pGrabber->set_image_handler(GrabAPI::ImageHandlerCallback::instanciate(handle_image));
     pGrabber->open();
-
   } 
   catch (const yat::Exception& e) {
     yat_exception_to_gerror(e, error);
@@ -146,6 +136,7 @@ void pylon_camera_get_sensor_size(guint* width, guint* height, GError** error)
 
 void pylon_camera_get_bit_depth(guint* depth, GError** error)
 {
+  std::cerr << __func__ << std::endl;
   g_assert(pGrabber);
   try
   {
@@ -162,11 +153,10 @@ void pylon_camera_get_bit_depth(guint* depth, GError** error)
 void pylon_camera_start_acquision(GError** error)
 {
   g_assert(pGrabber);
-  //g_assert(pImageMutex);
   try
   {
     {
-      //yat::MutexLock lock(pImageMutex);
+      yat::MutexLock lock(pImageMutex);
       imageCounter = 0;
       currentImage = 0;
     }
@@ -194,24 +184,22 @@ void pylon_camera_stop_acquision(GError** error)
 void pylon_camera_grab(gpointer *data, GError** error)
 {
   g_assert(pGrabber);
-  //g_assert(pImageMutex);
-  //g_assert(pImageCondition);
-  sleep(1);
   try
   {
-      //yat::MutexLock lock(pImageMutex);
+      yat::MutexLock lock(pImageMutex);
       g_assert(currentImage <= imageCounter);
 
       while (currentImage == imageCounter)
       {
         std::cerr << "wait for next image... " << currentImage << std::endl;
-        //pImageCondition.wait();
+        pImageCondition.wait();
       }
 
-      std::cerr << "grab next image " << currentImage << ", " << imageCounter << std::endl;
+      std::cerr << "grab next image " << currentImage << ", " << imageCounter 
+        << "; width: " << image->width() << ", height: " << image->height() << std::endl;
       g_assert(currentImage < imageCounter);
       currentImage = imageCounter;
-      //memcpy(*data, image->base(), image->width() * image->height() * 2);
+      memcpy(*data, image->base(), image->width() * image->height() * 2);
 
   }
   catch (const yat::Exception& e)

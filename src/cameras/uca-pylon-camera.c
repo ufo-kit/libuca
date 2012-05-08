@@ -77,8 +77,6 @@ static GParamSpec *pylon_properties[N_PROPERTIES] = { NULL, };
 
 
 struct _UcaPylonCameraPrivate {
-    guint frame_width;
-    guint frame_height;
     guint bit_depth;
     gsize num_bytes;
 
@@ -99,6 +97,11 @@ UcaPylonCamera *uca_pylon_camera_new(GError **error)
     return NULL;
   }
 
+  pylon_camera_get_sensor_size(&priv->width, &priv->height, error);
+  if (*error) {
+    g_print("Error when calling pylon_camera_get_sensor_size %s\n", (*error)->message);
+    return NULL;
+  }
   return camera;
 }
 
@@ -115,7 +118,6 @@ static void uca_pylon_camera_start_recording(UcaCamera *camera, GError **error)
 static void uca_pylon_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PYLON_CAMERA(camera));
-    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(camera);
     pylon_camera_stop_acquision(error);
 }
 
@@ -125,14 +127,14 @@ static void uca_pylon_camera_grab(UcaCamera *camera, gpointer *data, GError **er
     UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(camera);
 
     if (*data == NULL) {
-        *data = g_malloc0(priv->frame_width * priv->frame_height * priv->num_bytes); 
+        *data = g_malloc0(priv->width * priv->height * priv->num_bytes); 
     }
     pylon_camera_grab(data, error);
 }
 
 static void uca_pylon_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
+    /*UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);*/
 
     switch (property_id) {
         default:
@@ -143,7 +145,7 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
 
 static void uca_pylon_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-  printf("pylon_get_property\n");
+  fprintf(stderr, "pylon_get_property\n");
     UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
     GError* error = NULL;
 
@@ -152,13 +154,13 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
         case PROP_SENSOR_WIDTH: 
             pylon_camera_get_sensor_size(&priv->width, &priv->height, &error);
             g_value_set_uint(value, priv->width);
-            printf("pylon_get_property sensor width %d\n", priv->width);
+            g_print("pylon_get_property sensor width %d\n", priv->width);
             break;
 
         case PROP_SENSOR_HEIGHT: 
             pylon_camera_get_sensor_size(&priv->width, &priv->height, &error);
             g_value_set_uint(value, priv->height);
-            printf("pylon_get_property sensor height %d\n", priv->height);
+            g_print("pylon_get_property sensor height %d\n", priv->height);
             break;
 
             /*
@@ -170,7 +172,7 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
         case PROP_SENSOR_BITDEPTH:
             pylon_camera_get_bit_depth(&priv->bit_depth, &error);
             g_value_set_uint(value, priv->bit_depth);
-            printf("pylon_get_property depth %d\n", priv->bit_depth);
+            g_print("pylon_get_property depth %d\n", priv->bit_depth);
             break;
 
             /*

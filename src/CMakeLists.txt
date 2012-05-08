@@ -15,14 +15,14 @@ set(cameras)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # --- Find camera interfaces
-#find_package(PCO)
+find_package(PCO)
 find_package(PF)
 find_package(IPE)
 find_package(Pylon)
 
 # --- Find frame grabber interfaces
-#find_package(FgLib5)
-#find_package(ClSerMe4)
+find_package(FgLib5)
+find_package(ClSerMe4)
 
 # --- Miscellanous packages
 find_package(PkgConfig)
@@ -101,6 +101,7 @@ if (PYLON_FOUND)
     set(uca_LIBS ${uca_LIBS} ${PYLON_LIBS})
 
     include_directories(${PYLON_INCLUDE_DIRS})
+    link_directories(/opt/pylon/lib64)
   endif()
 
 endif()

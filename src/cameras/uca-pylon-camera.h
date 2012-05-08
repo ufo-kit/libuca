@@ -19,7 +19,6 @@
 #define __UCA_PYLON_CAMERA_H
 
 #include <glib-object.h>
-
 #include "uca-camera.h"
 
 G_BEGIN_DECLS

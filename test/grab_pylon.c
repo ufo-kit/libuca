@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
             NULL);
 
     const int pixel_size = bits == 8 ? 1 : 2;
+    g_print("allocate buffer %u, %u, %d\n", width, height, pixel_size);
     gpointer buffer = g_malloc0(width * height * pixel_size);
 
     gchar filename[FILENAME_MAX];
@@ -65,7 +66,7 @@ int main(int argc, char *argv[])
         uca_camera_start_recording(camera, &error);
         g_assert_no_error(error);
 
-        while (counter < 50) {
+        while (counter < 10) {
             g_print(" grab frame ... ");
             uca_camera_grab(camera, &buffer, &error);
             if (error != NULL) {
