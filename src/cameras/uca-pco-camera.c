@@ -355,12 +355,13 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
         return NULL;
     }
 
+    const guint32 fg_height = priv->height;
     const guint32 fg_width = camera_type == CAMERATYPE_PCO_EDGE ? priv->width * 2 : priv->width;
 
     FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
     FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &map_entry->cl_format, priv->fg_port);
     FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &fg_width, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &priv->height, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &fg_height, priv->fg_port);
 
     int val = FREE_RUN;
     FG_TRY_PARAM(priv->fg, camera, FG_TRIGGERMODE, &val, priv->fg_port);
