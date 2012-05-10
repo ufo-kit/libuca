@@ -258,6 +258,7 @@ static guint fill_pixelrates(UcaPcoCameraPrivate *priv)
     guint err = pco_get_available_pixelrates(priv->pco, rates, &num_rates);
     GValue val = {0};
     g_value_init(&val, G_TYPE_UINT);
+    priv->pixelrates = g_value_array_new(num_rates);
 
     if (err == PCO_NOERROR) {
         for (gint i = 0; i < num_rates; i++) {
@@ -953,6 +954,9 @@ static void uca_pco_camera_finalize(GObject *object)
     if (priv->vertical_binnings)
         g_value_array_free(priv->vertical_binnings);
 
+    if (priv->pixelrates)
+        g_value_array_free(priv->pixelrates);
+
     if (priv->fg) {
         if (priv->fg_mem)
             Fg_FreeMemEx(priv->fg, priv->fg_mem);
@@ -1125,6 +1129,7 @@ static void uca_pco_camera_init(UcaPcoCamera *self)
     self->priv->pco = NULL;
     self->priv->horizontal_binnings = NULL;
     self->priv->vertical_binnings = NULL;
+    self->priv->pixelrates = NULL;
     self->priv->camera_description = NULL;
     self->priv->last_frame = 0;
 
