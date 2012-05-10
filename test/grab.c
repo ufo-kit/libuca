@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     camera = uca_camera_new("pco", &error);
 
     if (camera == NULL) {
-        g_print("Couldn't initialize camera\n");
+        g_print("Error during initialization: %s\n", error->message);
         return 1;
     }
 
