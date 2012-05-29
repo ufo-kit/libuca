@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
 {
     GError *error = NULL;
     (void) signal(SIGINT, sigint_handler);
+    guint sensor_width, sensor_height, roi_width, roi_height, roi_x, roi_y, bits;
 
     g_type_init();
     camera = uca_camera_new("pco", &error);
@@ -47,22 +48,34 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    guint width, height, bits;
+    g_object_set(G_OBJECT(camera),
+            "exposure-time", 0.1,
+            "delay-time", 0.0,
+            "roi-x", 0,
+            "roi-y", 0,
+            "roi-width", 1024,
+            "roi-height", 512,
+            NULL);
+
     g_object_get(G_OBJECT(camera),
-            "sensor-width", &width,
-            "sensor-height", &height,
+            "sensor-width", &sensor_width,
+            "sensor-height", &sensor_height,
+            "roi-width", &roi_width,
+            "roi-height", &roi_height,
+            "roi-x", &roi_x,
+            "roi-y", &roi_y,
             "sensor-bitdepth", &bits,
             NULL);
 
-    g_object_set(G_OBJECT(camera),
-            "exposure-time", 0.1,
-            NULL);
+    g_print("Sensor: %ix%i px, ROI %ix%i @ (%i, %i)\n", 
+            sensor_width, sensor_height, roi_width, roi_height, roi_x, roi_y);
 
     const int pixel_size = bits == 8 ? 1 : 2;
-    gpointer buffer = g_malloc0(width * height * pixel_size);
+    gpointer buffer = g_malloc0(roi_width * roi_height * pixel_size);
     gchar filename[FILENAME_MAX];
+    GTimer *timer = g_timer_new();
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 1; i++) {
         gint counter = 0;
         g_print("Start recording\n");
         uca_camera_start_recording(camera, &error);
@@ -70,16 +83,20 @@ int main(int argc, char *argv[])
 
         while (counter < 2) {
             g_print(" grab frame ... ");
+            g_timer_start(timer);
             uca_camera_grab(camera, &buffer, &error);
+
             if (error != NULL) {
                 g_print("\nError: %s\n", error->message);
                 goto cleanup;
             }
-            g_print("done\n");
+
+            g_timer_stop(timer);
+            g_print("done (took %3.5fs)\n", g_timer_elapsed(timer, NULL));
 
             snprintf(filename, FILENAME_MAX, "frame-%08i.raw", counter++);
             FILE *fp = fopen(filename, "wb");
-            fwrite(buffer, width*height, pixel_size, fp);
+            fwrite(buffer, roi_width * roi_height, pixel_size, fp);
             fclose(fp);
         }
 
@@ -87,6 +104,8 @@ int main(int argc, char *argv[])
         uca_camera_stop_recording(camera, &error);
         g_assert_no_error(error);
     }
+
+    g_timer_destroy(timer);
 
 cleanup:
     uca_camera_stop_recording(camera, NULL);
