@@ -560,13 +560,13 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                     if (suitable_timebase != priv->exposure_timebase) {
                         priv->exposure_timebase = suitable_timebase;
                         if (pco_set_timebase(priv->pco, priv->delay_timebase, suitable_timebase) != PCO_NOERROR)
-                            g_warning("Could not set timebase via libpco");
+                            g_warning("Cannot set exposure time base");
                     }
 
                     gdouble timebase = convert_timebase(suitable_timebase);
                     guint32 timesteps = time / timebase;
                     if (pco_set_exposure_time(priv->pco, timesteps) != PCO_NOERROR)
-                        g_warning("Could not set exposure time via libpco");
+                        g_warning("Cannot set exposure time");
                 }
             }
             break;
@@ -585,17 +585,29 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                 guint16 suitable_timebase = get_suitable_timebase(time);
 
                 if (suitable_timebase == TIMEBASE_INVALID) {
-                    g_warning("Cannot set such a small exposure time"); 
+                    if (time == 0.0) {
+                        /*
+                         * If we want to suppress any pre-exposure delays, we
+                         * can set the 0 seconds in whatever time base that is
+                         * currently active.
+                         */
+                        if (pco_set_delay_time(priv->pco, 0) != PCO_NOERROR)
+                            g_warning("Cannot set zero delay time");
+                    }
+                    else
+                        g_warning("Cannot set such a small exposure time"); 
                 }
                 else {
                     if (suitable_timebase != priv->delay_timebase) {
                         priv->delay_timebase = suitable_timebase;
-                        pco_set_timebase(priv->pco, suitable_timebase, priv->exposure_timebase);
+                        if (pco_set_timebase(priv->pco, suitable_timebase, priv->exposure_timebase) != PCO_NOERROR)
+                            g_warning("Cannot set delay time base");
                     }
 
                     gdouble timebase = convert_timebase(suitable_timebase);
                     guint32 timesteps = time / timebase;
-                    pco_set_delay_time(priv->pco, timesteps);
+                    if (pco_set_delay_time(priv->pco, timesteps) != PCO_NOERROR)
+                        g_warning("Cannot set delay time");
                 }
             }
             break;
