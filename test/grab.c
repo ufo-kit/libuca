@@ -54,9 +54,12 @@ int main(int argc, char *argv[])
             "sensor-bitdepth", &bits,
             NULL);
 
+    g_object_set(G_OBJECT(camera),
+            "exposure-time", 0.1,
+            NULL);
+
     const int pixel_size = bits == 8 ? 1 : 2;
     gpointer buffer = g_malloc0(width * height * pixel_size);
-
     gchar filename[FILENAME_MAX];
 
     for (int i = 0; i < 2; i++) {

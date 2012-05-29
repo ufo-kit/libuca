@@ -289,15 +289,15 @@ static gdouble convert_timebase(guint16 timebase)
 {
     switch (timebase) {
         case TIMEBASE_NS:
-            return 10e-9;
+            return 1e-9;
         case TIMEBASE_US:
-            return 10e-6;
+            return 1e-6;
         case TIMEBASE_MS:
-            return 10e-3;
+            return 1e-3;
         default:
             g_warning("Unknown timebase");
     }
-    return 10e-3;
+    return 1e-3;
 }
 
 static void read_timebase(UcaPcoCameraPrivate *priv)
@@ -307,11 +307,11 @@ static void read_timebase(UcaPcoCameraPrivate *priv)
 
 static gdouble get_suitable_timebase(gdouble time)
 {
-    if (time * 10e3 >= 1.0)
+    if (time * 1e3 >= 1.0)
         return TIMEBASE_MS;
-    if (time * 10e6 >= 1.0)
+    if (time * 1e6 >= 1.0)
         return TIMEBASE_US;
-    if (time * 10e9 >= 1.0)
+    if (time * 1e9 >= 1.0)
         return TIMEBASE_NS;
     return TIMEBASE_INVALID;
 }
@@ -486,6 +486,8 @@ static void uca_pco_camera_trigger(UcaCamera *camera, GError **error)
 
 static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
+    static const gint MAX_TIMEOUT = G_MAXINT;
+
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
@@ -508,7 +510,7 @@ static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     }
 
     pco_request_image(priv->pco);
-    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame+1, priv->fg_port, 5, priv->fg_mem);
+    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame+1, priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
     
     if (priv->last_frame <= 0) {
         guint err = FG_OK + 1;
@@ -557,12 +559,14 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                 else {
                     if (suitable_timebase != priv->exposure_timebase) {
                         priv->exposure_timebase = suitable_timebase;
-                        pco_set_timebase(priv->pco, priv->delay_timebase, suitable_timebase);
+                        if (pco_set_timebase(priv->pco, priv->delay_timebase, suitable_timebase) != PCO_NOERROR)
+                            g_warning("Could not set timebase via libpco");
                     }
 
                     gdouble timebase = convert_timebase(suitable_timebase);
                     guint32 timesteps = time / timebase;
-                    pco_set_exposure_time(priv->pco, timesteps);
+                    if (pco_set_exposure_time(priv->pco, timesteps) != PCO_NOERROR)
+                        g_warning("Could not set exposure time via libpco");
                 }
             }
             break;
