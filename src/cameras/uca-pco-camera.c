@@ -166,7 +166,7 @@ static GType uca_pco_camera_record_mode_get_type(void)
     if (!record_mode_type) {
         static GEnumValue record_modes[] = {
             { UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE, "Store frames in a ring buffer", "ring-buffer" },
-            { UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER, "Store frames in a ring buffer", "sequence" },
+            { UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER, "Store frames in a sequence", "sequence" },
             { 0, NULL, NULL }
         }; 
 
