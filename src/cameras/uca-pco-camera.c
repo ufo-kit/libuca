@@ -540,6 +540,53 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             }
             break;
 
+        case PROP_ROI_X:
+            {
+                guint16 roi[4] = {0};
+                pco_get_roi(priv->pco, roi);
+
+                /* 
+                 * According to PCO specs, the image starts coordinates (1,1)
+                 * rather than (0,0). Therefore we adjust the coordinates here.
+                 */
+                roi[0] = g_value_get_uint(value) + 1;
+
+                if (pco_set_roi(priv->pco, roi) != PCO_NOERROR)
+                    g_warning("Cannot set horizontal ROI position");
+            }
+            break;
+
+        case PROP_ROI_Y:
+            {
+                guint16 roi[4] = {0};
+                pco_get_roi(priv->pco, roi);
+                roi[1] = g_value_get_uint(value) + 1;
+
+                if (pco_set_roi(priv->pco, roi) != PCO_NOERROR)
+                    g_warning("Cannot set vertical ROI position");
+            }
+            break;
+
+        case PROP_ROI_WIDTH:
+            {
+                guint16 roi[4] = {0};
+                pco_get_roi(priv->pco, roi);
+                roi[2] = roi[0] + g_value_get_uint(value) - 1;
+                if (pco_set_roi(priv->pco, roi) != PCO_NOERROR)
+                    g_warning("Cannot set ROI width");
+            }
+            break;
+
+        case PROP_ROI_HEIGHT:
+            {
+                guint16 roi[4] = {0};
+                pco_get_roi(priv->pco, roi);
+                roi[3] = roi[1] + g_value_get_uint(value) - 1;
+                if (pco_set_roi(priv->pco, roi) != PCO_NOERROR)
+                    g_warning("Cannot set ROI height");
+            }
+            break;
+
         case PROP_EXPOSURE_TIME:
             {
                 const gdouble time = g_value_get_double(value);
@@ -901,7 +948,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             {
                 guint16 roi[4] = {0};
                 pco_get_roi(priv->pco, roi);
-                g_value_set_uint(value, roi[0]);
+                g_value_set_uint(value, roi[0] - 1);
             }
             break;
 
@@ -909,7 +956,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             {
                 guint16 roi[4] = {0};
                 pco_get_roi(priv->pco, roi);
-                g_value_set_uint(value, roi[1]);
+                g_value_set_uint(value, roi[1] - 1);
             }
             break;
 
@@ -917,7 +964,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             {
                 guint16 roi[4] = {0};
                 pco_get_roi(priv->pco, roi);
-                g_value_set_uint(value, (roi[2] - roi[0]));
+                g_value_set_uint(value, (roi[2] - roi[0] + 1));
             }
             break;
 
@@ -925,7 +972,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             {
                 guint16 roi[4] = {0};
                 pco_get_roi(priv->pco, roi);
-                g_value_set_uint(value, (roi[3] - roi[1]));
+                g_value_set_uint(value, (roi[3] - roi[1] + 1));
             }
             break;
 

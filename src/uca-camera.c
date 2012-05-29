@@ -254,29 +254,29 @@ static void uca_camera_class_init(UcaCameraClass *klass)
         g_param_spec_uint(uca_camera_props[PROP_ROI_X],
             "Horizontal coordinate",
             "Horizontal coordinate",
-            1, G_MAXUINT, 1,
-            G_PARAM_READABLE);
+            0, G_MAXUINT, 1,
+            G_PARAM_READWRITE);
 
     camera_properties[PROP_ROI_Y] = 
         g_param_spec_uint(uca_camera_props[PROP_ROI_Y],
             "Vertical coordinate",
             "Vertical coordinate",
-            1, G_MAXUINT, 1,
-            G_PARAM_READABLE);
+            0, G_MAXUINT, 1,
+            G_PARAM_READWRITE);
 
     camera_properties[PROP_ROI_WIDTH] = 
         g_param_spec_uint(uca_camera_props[PROP_ROI_WIDTH],
             "Width",
             "Width of the region of interest",
             1, G_MAXUINT, 1,
-            G_PARAM_READABLE);
+            G_PARAM_READWRITE);
 
     camera_properties[PROP_ROI_HEIGHT] = 
         g_param_spec_uint(uca_camera_props[PROP_ROI_HEIGHT],
             "Height",
             "Height of the region of interest",
             1, G_MAXUINT, 1,
-            G_PARAM_READABLE);
+            G_PARAM_READWRITE);
 
     camera_properties[PROP_EXPOSURE_TIME] =
         g_param_spec_double(uca_camera_props[PROP_EXPOSURE_TIME],
