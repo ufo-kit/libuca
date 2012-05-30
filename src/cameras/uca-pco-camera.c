@@ -139,6 +139,9 @@ struct _UcaPcoCameraPrivate {
 
     guint16 width, height;
     guint16 width_ex, height_ex;
+    guint16 binning_h, binning_v;
+    guint16 roi_x, roi_y;
+    guint16 roi_width, roi_height;
     GValueArray *horizontal_binnings;
     GValueArray *vertical_binnings;
     GValueArray *pixelrates;
@@ -331,8 +334,16 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     priv->pco = pco;
 
     pco_get_resolution(priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
+    pco_get_binning(priv->pco, &priv->binning_h, &priv->binning_v);
     pco_set_storage_mode(pco, STORAGE_MODE_RECORDER);
     pco_set_auto_transfer(pco, 1);
+
+    guint16 roi[4];
+    pco_get_roi(priv->pco, roi);
+    priv->roi_x = roi[0] - 1;
+    priv->roi_y = roi[1] - 1;
+    priv->roi_width = roi[2] - roi[0] + 1;
+    priv->roi_height = roi[3] - roi[1] + 1;
 
     guint16 camera_type, camera_subtype;
     pco_get_camera_type(priv->pco, &camera_type, &camera_subtype);
@@ -386,19 +397,35 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
 
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
-    /*
-     * Get the actual size of the frame that we are going to grab based on the
-     * currently selected region of interest. This size is fixed until recording
-     * has stopped.
-     */
-    guint16 roi[4] = {0};
-    err = pco_get_roi(priv->pco, roi);
-    guint frame_width = roi[2] - roi[0] + 1;
-    guint frame_height = roi[3] - roi[1] + 1;
+    guint16 binned_width = priv->width / priv->binning_h;
+    guint16 binned_height = priv->height / priv->binning_v;
 
-    if (priv->frame_width != frame_width || priv->frame_height != frame_height || priv->fg_mem == NULL) {
-        priv->frame_width = frame_width;
-        priv->frame_height = frame_height;
+    if ((priv->roi_x + priv->roi_width > binned_width) || (priv->roi_y + priv->roi_height > binned_height)) {
+        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
+                "ROI of size %ix%i @ (%i, %i) is outside of (binned) sensor size %ix%i\n",
+                priv->roi_width, priv->roi_height, priv->roi_x, priv->roi_y, binned_width, binned_height);
+        return;
+    }
+
+    /*
+     * All parameters are valid. Now, set them on the camera.
+     */
+    guint16 roi[4] = { priv->roi_x + 1, priv->roi_y + 1, priv->roi_x + priv->roi_width, priv->roi_y + priv->roi_height };
+    pco_set_roi(priv->pco, roi);
+
+    /*
+     * FIXME: We cannot set the binning here as this breaks communication with
+     * the camera. Setting the binning works _before_ initializing the frame
+     * grabber though. However, it is rather inconvenient to initialize and
+     * de-initialize the frame grabber for each recording sequence.
+     */
+
+    /* if (pco_set_binning(priv->pco, priv->binning_h, priv->binning_v) != PCO_NOERROR) */
+    /*     g_warning("Cannot set binning\n"); */
+
+    if (priv->frame_width != priv->roi_width || priv->frame_height != priv->roi_height || priv->fg_mem == NULL) {
+        priv->frame_width = priv->roi_width;
+        priv->frame_height = priv->roi_height;
         priv->num_bytes = 2;
 
         Fg_setParameter(priv->fg, FG_WIDTH, &priv->frame_width, priv->fg_port);
@@ -448,7 +475,7 @@ static void uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
 
     err = Fg_setStatusEx(priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
     if (err == FG_INVALID_PARAMETER)
-        g_print(" Unable to unblock all\n");
+        g_warning(" Unable to unblock all\n");
 }
 
 static void uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
@@ -541,50 +568,27 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             break;
 
         case PROP_ROI_X:
-            {
-                guint16 roi[4] = {0};
-                pco_get_roi(priv->pco, roi);
-
-                /* 
-                 * According to PCO specs, the image starts coordinates (1,1)
-                 * rather than (0,0). Therefore we adjust the coordinates here.
-                 */
-                roi[0] = g_value_get_uint(value) + 1;
-
-                if (pco_set_roi(priv->pco, roi) != PCO_NOERROR)
-                    g_warning("Cannot set horizontal ROI position");
-            }
+            priv->roi_x = g_value_get_uint(value);
             break;
 
         case PROP_ROI_Y:
-            {
-                guint16 roi[4] = {0};
-                pco_get_roi(priv->pco, roi);
-                roi[1] = g_value_get_uint(value) + 1;
-
-                if (pco_set_roi(priv->pco, roi) != PCO_NOERROR)
-                    g_warning("Cannot set vertical ROI position");
-            }
+            priv->roi_y = g_value_get_uint(value);
             break;
 
         case PROP_ROI_WIDTH:
-            {
-                guint16 roi[4] = {0};
-                pco_get_roi(priv->pco, roi);
-                roi[2] = roi[0] + g_value_get_uint(value) - 1;
-                if (pco_set_roi(priv->pco, roi) != PCO_NOERROR)
-                    g_warning("Cannot set ROI width");
-            }
+            priv->roi_width = g_value_get_uint(value);
             break;
 
         case PROP_ROI_HEIGHT:
-            {
-                guint16 roi[4] = {0};
-                pco_get_roi(priv->pco, roi);
-                roi[3] = roi[1] + g_value_get_uint(value) - 1;
-                if (pco_set_roi(priv->pco, roi) != PCO_NOERROR)
-                    g_warning("Cannot set ROI height");
-            }
+            priv->roi_height = g_value_get_uint(value);
+            break;
+
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+            priv->binning_h = g_value_get_uint(value);
+            break;
+
+        case PROP_SENSOR_VERTICAL_BINNING:
+            priv->binning_v = g_value_get_uint(value);
             break;
 
         case PROP_EXPOSURE_TIME:
@@ -776,12 +780,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             break;
 
         case PROP_SENSOR_HORIZONTAL_BINNING:
-            {
-                uint16_t h, v;
-                /* TODO: check error */
-                pco_get_binning(priv->pco, &h, &v);
-                g_value_set_uint(value, h);
-            }
+            g_value_set_uint(value, priv->binning_h);
             break;
 
         case PROP_SENSOR_HORIZONTAL_BINNINGS:
@@ -789,12 +788,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             break;
 
         case PROP_SENSOR_VERTICAL_BINNING:
-            {
-                uint16_t h, v;
-                /* TODO: check error */
-                pco_get_binning(priv->pco, &h, &v);
-                g_value_set_uint(value, v);
-            }
+            g_value_set_uint(value, priv->binning_v);
             break;
 
         case PROP_SENSOR_VERTICAL_BINNINGS:
@@ -945,35 +939,19 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             break;
 
         case PROP_ROI_X:
-            {
-                guint16 roi[4] = {0};
-                pco_get_roi(priv->pco, roi);
-                g_value_set_uint(value, roi[0] - 1);
-            }
+            g_value_set_uint(value, priv->roi_x);
             break;
 
         case PROP_ROI_Y:
-            {
-                guint16 roi[4] = {0};
-                pco_get_roi(priv->pco, roi);
-                g_value_set_uint(value, roi[1] - 1);
-            }
+            g_value_set_uint(value, priv->roi_y);
             break;
 
         case PROP_ROI_WIDTH:
-            {
-                guint16 roi[4] = {0};
-                pco_get_roi(priv->pco, roi);
-                g_value_set_uint(value, (roi[2] - roi[0] + 1));
-            }
+            g_value_set_uint(value, priv->roi_width);
             break;
 
         case PROP_ROI_HEIGHT:
-            {
-                guint16 roi[4] = {0};
-                pco_get_roi(priv->pco, roi);
-                g_value_set_uint(value, (roi[3] - roi[1] + 1));
-            }
+            g_value_set_uint(value, priv->roi_height);
             break;
 
         case PROP_NAME: 
