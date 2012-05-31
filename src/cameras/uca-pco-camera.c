@@ -284,6 +284,8 @@ static guint override_temperature_range(UcaPcoCameraPrivate *priv)
         spec->maximum = max_temp;
         spec->default_value = default_temp;
     }
+    else
+        g_warning("Unable to retrieve cooling range");
 
     return err;
 }
@@ -966,7 +968,8 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_COOLING_POINT:
             {
                 int16_t temperature; 
-                pco_get_cooling_temperature(priv->pco, &temperature);
+                if (pco_get_cooling_temperature(priv->pco, &temperature) != PCO_NOERROR)
+                    g_warning("Cannot read cooling temperature\n");
                 g_value_set_int(value, temperature);
             }
             break;
