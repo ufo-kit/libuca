@@ -47,7 +47,7 @@
     if ((err) != PCO_NOERROR) {                     \
         g_set_error(error, UCA_PCO_CAMERA_ERROR,    \
                 UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,\
-                "libpco error %i", err);            \
+                "libpco error %x", err);            \
         return;                                     \
     }
     
@@ -290,6 +290,12 @@ static guint override_temperature_range(UcaPcoCameraPrivate *priv)
     return err;
 }
 
+static void override_maximum_adcs(UcaPcoCameraPrivate *priv)
+{
+    GParamSpecInt *spec = (GParamSpecInt *) pco_properties[PROP_SENSOR_ADCS];
+    spec->maximum = pco_get_maximum_number_of_adcs(priv->pco);
+}
+
 static gdouble convert_timebase(guint16 timebase)
 {
     switch (timebase) {
@@ -384,10 +390,11 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     fill_pixelrates(priv);
 
     /*
-     * Here we override the temperature property range because this was not
-     * possible at property installation time.
+     * Here we override property ranges because we didn't know them at property
+     * installation time.
      */
     override_temperature_range(priv);
+    override_maximum_adcs(priv);
 
     return camera;
 }
@@ -668,7 +675,8 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
         case PROP_SENSOR_ADCS:
             {
                 const guint num_adcs = g_value_get_uint(value); 
-                pco_set_adc_mode(priv->pco, num_adcs);
+                if (pco_set_adc_mode(priv->pco, num_adcs) != PCO_NOERROR)
+                    g_warning("Cannot set the number of ADCs per pixel\n");
             }
             break;
 
@@ -820,7 +828,8 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                  * ADCs in use.
                  */
                 pco_adc_mode mode; 
-                pco_get_adc_mode(priv->pco, &mode);
+                if (pco_get_adc_mode(priv->pco, &mode) != PCO_NOERROR)
+                    g_warning("Cannot read number of ADCs per pixel");
                 g_value_set_uint(value, mode);
             }
             break;
@@ -1094,13 +1103,6 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
             G_PARAM_READABLE);
 
-    pco_properties[PROP_SENSOR_ADCS] = 
-        g_param_spec_uint("sensor-adcs",
-            "Number of ADCs to use",
-            "Number of ADCs to use",
-            1, 2, 1, 
-            G_PARAM_READWRITE);
-
     pco_properties[PROP_HAS_DOUBLE_IMAGE_MODE] = 
         g_param_spec_boolean("has-double-image-mode",
             "Is double image mode supported by this model",
@@ -1158,6 +1160,13 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Cooling point of the camera",
             "Cooling point of the camera",
             0, 10, 5, G_PARAM_READWRITE);
+    
+    pco_properties[PROP_SENSOR_ADCS] = 
+        g_param_spec_uint("sensor-adcs",
+            "Number of ADCs to use",
+            "Number of ADCs to use",
+            1, 2, 1, 
+            G_PARAM_READWRITE);
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, pco_properties[id]);
