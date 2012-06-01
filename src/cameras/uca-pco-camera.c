@@ -719,13 +719,17 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
         case PROP_ACQUIRE_MODE:
             {
                 UcaPcoCameraAcquireMode mode = (UcaPcoCameraAcquireMode) g_value_get_enum(value);
+                unsigned int err = PCO_NOERROR;
 
                 if (mode == UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO)
-                    pco_set_acquire_mode(priv->pco, ACQUIRE_MODE_AUTO);
+                    err = pco_set_acquire_mode(priv->pco, ACQUIRE_MODE_AUTO);
                 else if (mode == UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL)
-                    pco_set_record_mode(priv->pco, ACQUIRE_MODE_EXTERNAL);
+                    err = pco_set_acquire_mode(priv->pco, ACQUIRE_MODE_EXTERNAL);
                 else
                     g_warning("Unknown acquire mode");
+
+                if (err != PCO_NOERROR)
+                    g_warning("Cannot set acquire mode");
             }
             break;
 
