@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 {
     GError *error = NULL;
     (void) signal(SIGINT, sigint_handler);
-    guint sensor_width, sensor_height, roi_width, roi_height, roi_x, roi_y, bits;
+    guint sensor_width, sensor_height, roi_width, roi_height, roi_x, roi_y, bits, sensor_rate;
 
     g_type_init();
     camera = uca_camera_new("pco", &error);
@@ -65,10 +65,11 @@ int main(int argc, char *argv[])
             "roi-x", &roi_x,
             "roi-y", &roi_y,
             "sensor-bitdepth", &bits,
+            "sensor-pixelrate", &sensor_rate,
             NULL);
 
-    g_print("Sensor: %ix%i px, ROI %ix%i @ (%i, %i)\n", 
-            sensor_width, sensor_height, roi_width, roi_height, roi_x, roi_y);
+    g_print("Sensor: %ix%i px, ROI %ix%i @ (%i, %i) and %i Hz\n", 
+            sensor_width, sensor_height, roi_width, roi_height, roi_x, roi_y, sensor_rate);
 
     const int pixel_size = bits == 8 ? 1 : 2;
     gpointer buffer = g_malloc0(roi_width * roi_height * pixel_size);

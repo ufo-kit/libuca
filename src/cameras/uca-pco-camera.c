@@ -681,7 +681,24 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             break;
 
         case PROP_SENSOR_PIXELRATE:
-            pco_set_pixelrate(priv->pco, g_value_get_uint(value));
+            {
+                guint desired_pixel_rate = g_value_get_uint(value);
+                guint32 pixel_rate = 0;
+
+                for (guint i = 0; i < priv->pixelrates->n_values; i++) {
+                    if (g_value_get_uint(g_value_array_get_nth(priv->pixelrates, i)) == desired_pixel_rate) {
+                        pixel_rate = desired_pixel_rate;    
+                        break;
+                    }
+                }
+
+                if (pixel_rate != 0) {
+                    if (pco_set_pixelrate(priv->pco, pixel_rate) != PCO_NOERROR)
+                        g_warning("Cannot set pixel rate");
+                }
+                else
+                    g_warning("%i Hz is not possible. Please check the \"sensor-pixelrates\" property", desired_pixel_rate);
+            }
             break;
 
         case PROP_DOUBLE_IMAGE_MODE:
