@@ -52,6 +52,12 @@ typedef enum {
     UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL
 } UcaPcoCameraAcquireMode;
 
+typedef enum {
+    UCA_PCO_CAMERA_TIMESTAMP_NONE       = 0,
+    UCA_PCO_CAMERA_TIMESTAMP_BINARY     = 1 << 0,
+    UCA_PCO_CAMERA_TIMESTAMP_ASCII      = 1 << 1
+} UcaPcoCameraTimestamp;
+
 /**
  * UcaPcoCamera:
  *

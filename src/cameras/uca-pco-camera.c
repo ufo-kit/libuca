@@ -72,6 +72,14 @@ G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
  */
 
 /**
+ * UcaPcoCameraTimestamp:
+ * @UCA_PCO_CAMERA_TIMESTAMP_NONE: Don't embed any timestamp
+ * @UCA_PCO_CAMERA_TIMESTAMP_BINARY: Embed a BCD-coded timestamp in the first
+ *     bytes
+ * @UCA_PCO_CAMERA_TIMESTAMP_ASCII: Embed a visible ASCII timestamp in the image
+ */
+
+/**
  * UcaPcoCameraError:
  * @UCA_PCO_CAMERA_ERROR_LIBPCO_INIT: Initializing libpco failed
  * @UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL: General libpco error
@@ -102,6 +110,7 @@ enum {
     PROP_ACQUIRE_MODE,
     PROP_COOLING_POINT,
     PROP_NOISE_FILTER,
+    PROP_TIMESTAMP_MODE,
     N_PROPERTIES
 };
 
@@ -744,6 +753,18 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             }
             break;
 
+        case PROP_TIMESTAMP_MODE:
+            {
+                guint16 modes[] = {
+                    TIMESTAMP_MODE_OFF,             /* 0 */ 
+                    TIMESTAMP_MODE_BINARY,          /* 1 = 1 << 0 */ 
+                    TIMESTAMP_MODE_ASCII,           /* 2 = 1 << 1 */ 
+                    TIMESTAMP_MODE_BINARYANDASCII,  /* 3 = 1 << 0 | 1 << 1 */ 
+                }; 
+                pco_set_timestamp_mode(priv->pco, modes[g_value_get_flags(value)]);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -975,9 +996,32 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_NOISE_FILTER:
             {
-                guint16 filter_mode;
-                pco_get_noise_filter_mode(priv->pco, &filter_mode);
-                g_value_set_boolean(value, filter_mode != NOISE_FILTER_MODE_OFF);
+                guint16 mode;
+                pco_get_noise_filter_mode(priv->pco, &mode);
+                g_value_set_boolean(value, mode != NOISE_FILTER_MODE_OFF);
+            }
+            break;
+
+        case PROP_TIMESTAMP_MODE:
+            {
+                guint16 mode; 
+                pco_get_timestamp_mode(priv->pco, &mode);
+
+                switch (mode) {
+                    case TIMESTAMP_MODE_OFF:
+                        g_value_set_flags(value, UCA_PCO_CAMERA_TIMESTAMP_NONE);
+                        break;
+                    case TIMESTAMP_MODE_BINARY:
+                        g_value_set_flags(value, UCA_PCO_CAMERA_TIMESTAMP_BINARY);
+                        break;
+                    case TIMESTAMP_MODE_BINARYANDASCII:
+                        g_value_set_flags(value, 
+                                UCA_PCO_CAMERA_TIMESTAMP_BINARY | UCA_PCO_CAMERA_TIMESTAMP_ASCII);
+                        break;
+                    case TIMESTAMP_MODE_ASCII:
+                        g_value_set_flags(value, UCA_PCO_CAMERA_TIMESTAMP_ASCII);
+                        break;
+                }
             }
             break;
 
@@ -1156,6 +1200,13 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Number of ADCs to use",
             "Number of ADCs to use",
             1, 2, 1, 
+            G_PARAM_READWRITE);
+
+    pco_properties[PROP_TIMESTAMP_MODE] =
+        g_param_spec_flags("timestamp-mode",
+            "Timestamp mode",
+            "Timestamp mode",
+            UCA_TYPE_PCO_CAMERA_TIMESTAMP, UCA_PCO_CAMERA_TIMESTAMP_NONE,
             G_PARAM_READWRITE);
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
