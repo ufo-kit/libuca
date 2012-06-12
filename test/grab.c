@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
     g_object_set(G_OBJECT(camera),
             "exposure-time", 0.1,
             "delay-time", 0.0,
-            "roi-x", 0,
-            "roi-y", 0,
+            "roi-x0", 0,
+            "roi-y0", 0,
             "roi-width", 1024,
             "roi-height", 512,
             NULL);
@@ -62,8 +62,8 @@ int main(int argc, char *argv[])
             "sensor-height", &sensor_height,
             "roi-width", &roi_width,
             "roi-height", &roi_height,
-            "roi-x", &roi_x,
-            "roi-y", &roi_y,
+            "roi-x0", &roi_x,
+            "roi-y0", &roi_y,
             "sensor-bitdepth", &bits,
             "sensor-pixelrate", &sensor_rate,
             NULL);
