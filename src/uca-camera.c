@@ -18,6 +18,7 @@
 #include <glib.h>
 #include "config.h"
 #include "uca-camera.h"
+#include "uca-enums.h"
 
 #ifdef HAVE_PCO_CL
 #include "cameras/uca-pco-camera.h"
@@ -34,6 +35,14 @@
 #define UCA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_CAMERA, UcaCameraPrivate))
 
 G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
+
+/**
+ * UcaCameraTrigger:
+ * @UCA_CAMERA_TRIGGER_AUTO: Trigger automatically
+ * @UCA_CAMERA_TRIGGER_EXTERNAL: Trigger from an external source
+ * @UCA_CAMERA_TRIGGER_INTERNAL: Trigger internally from software using
+ *      #uca_camera_trigger
+ */
 
 /**
  * UcaCameraError:
@@ -102,31 +111,6 @@ struct _UcaCameraPrivate {
     gboolean is_readout;
     gboolean transfer_async;
 };
-
-/**
- * UcaCameraTrigger:
- * @UCA_CAMERA_TRIGGER_AUTO: Trigger automatically
- * @UCA_CAMERA_TRIGGER_EXTERNAL: Trigger from an external source
- * @UCA_CAMERA_TRIGGER_INTERNAL: Trigger internally from software using
- *      #uca_camera_trigger
- */
-static GType uca_camera_trigger_get_type(void)
-{
-    static GType camera_trigger_type = 0;
-
-    if (!camera_trigger_type) {
-        static GEnumValue trigger_types[] = {
-            { UCA_CAMERA_TRIGGER_AUTO,      "Automatic internal camera trigger",  "auto" },
-            { UCA_CAMERA_TRIGGER_EXTERNAL,  "External trigger",                   "external" },
-            { UCA_CAMERA_TRIGGER_INTERNAL,  "Internal software trigger",          "internal" },
-            { 0, NULL, NULL }
-        }; 
-
-        camera_trigger_type = g_enum_register_static("UcaCameraTrigger", trigger_types);
-    }
-
-    return camera_trigger_type;
-}
 
 static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {

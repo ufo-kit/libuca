@@ -24,6 +24,7 @@
 #include <fgrab_prototyp.h>
 #include "uca-camera.h"
 #include "uca-pco-camera.h"
+#include "uca-enums.h"
 
 #define FG_TRY_PARAM(fg, camobj, param, val_addr, port)     \
     { int r = Fg_setParameter(fg, param, val_addr, port);   \
@@ -56,6 +57,19 @@
 G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
 
 #define TIMEBASE_INVALID 0xDEAD
+
+/**
+ * UcaPcoCameraRecordMode:
+ * @UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE: Store all frames and stop if necessary
+ * @UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER: Store frames in ring-buffer fashion
+ *      and overwrite if necessary
+ */
+
+/**
+ * UcaPcoCameraAcquireMode:
+ * @UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO: Take all images
+ * @UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL: Use <acq enbl> signal
+ */
 
 /**
  * UcaPcoCameraError:
@@ -155,51 +169,6 @@ struct _UcaPcoCameraPrivate {
     guint num_recorded_images;
     guint current_image;
 };
-
-/**
- * UcaPcoCameraRecordMode:
- * @UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE: Store all frames and stop if necessary
- * @UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER: Store frames in ring-buffer fashion
- *      and overwrite if necessary
- */
-static GType uca_pco_camera_record_mode_get_type(void)
-{
-    static GType record_mode_type = 0;
-
-    if (!record_mode_type) {
-        static GEnumValue record_modes[] = {
-            { UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE, "Store frames in a ring buffer", "ring-buffer" },
-            { UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER, "Store frames in a sequence", "sequence" },
-            { 0, NULL, NULL }
-        }; 
-
-        record_mode_type = g_enum_register_static("UcaPcoCameraRecordMode", record_modes);
-    }
-
-    return record_mode_type;
-}
-
-/**
- * UcaPcoCameraAcquireMode:
- * @UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO: Take all images
- * @UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL: Use <acq enbl> signal
- */
-static GType uca_pco_camera_acquire_mode_get_type(void)
-{
-    static GType acquire_mode_type = 0;
-
-    if (!acquire_mode_type) {
-        static GEnumValue acquire_modes[] = {
-            { UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO, "Take all images", "auto" },
-            { UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL, "Use <acq enbl> signal", "external" },
-            { 0, NULL, NULL }
-        }; 
-
-        acquire_mode_type = g_enum_register_static("UcaPcoCameraAcquireMode", acquire_modes);
-    }
-
-    return acquire_mode_type;
-}
 
 static pco_cl_map_entry pco_cl_map[] = { 
     { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },

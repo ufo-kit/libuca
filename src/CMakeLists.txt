@@ -24,7 +24,7 @@ find_package(ClSerMe4)
 
 # --- Miscellanous packages
 find_package(PkgConfig)
-
+find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
 pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
 
@@ -96,6 +96,28 @@ if (HAVE_MOCK_CAMERA)
     list(APPEND cameras "Mock")
 endif()
 
+# --- Generate enum file
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
+    COMMAND ${GLIB2_MKENUMS}
+    ARGS
+        --template uca-enums.h.template
+        ${uca_HDRS} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS ${uca_HDRS} 
+            ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums.h.template)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c
+    COMMAND ${GLIB2_MKENUMS}
+    ARGS
+        --template uca-enums.c.template
+        ${uca_HDRS} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS ${uca_HDRS} 
+            ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums.c.template
+    )
 
 # --- Configure step
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
@@ -111,7 +133,9 @@ include_directories(
 # --- Build target ------------------------------------------------------------
 add_definitions("-std=c99 -Wall")
 
-add_library(uca SHARED ${uca_SRCS})
+add_library(uca SHARED 
+    ${uca_SRCS} 
+    ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)
 
 set_target_properties(uca PROPERTIES
       VERSION ${UCA_ABI_VERSION}

@@ -40,8 +40,6 @@ typedef enum {
     UCA_CAMERA_ERROR_NOT_IMPLEMENTED
 } UcaCameraError;
 
-#define UCA_TYPE_CAMERA_TRIGGER     (uca_camera_trigger_get_type())
-
 typedef enum {
     UCA_CAMERA_TRIGGER_AUTO,
     UCA_CAMERA_TRIGGER_INTERNAL,
