@@ -20,7 +20,6 @@
 #include <string.h>
 #include <libpco/libpco.h>
 #include <libpco/sc2_defs.h>
-#include <fgrab_struct.h>
 #include <fgrab_prototyp.h>
 #include "uca-camera.h"
 #include "uca-pco-camera.h"
@@ -826,7 +825,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_SENSOR_TEMPERATURE:
             {
-                guint32 ccd, camera, power;                 
+                gint32 ccd, camera, power;                 
                 pco_get_temperature(priv->pco, &ccd, &camera, &power);
                 g_value_set_double(value, ccd / 10.0);
             }
