@@ -145,6 +145,7 @@ typedef struct {
     int cl_format;
     gfloat max_frame_rate;
     gboolean has_camram;
+    guint default_pixel_rate;
 } pco_cl_map_entry;
 
 struct _UcaPcoCameraPrivate {
@@ -179,10 +180,10 @@ struct _UcaPcoCameraPrivate {
 };
 
 static pco_cl_map_entry pco_cl_map[] = { 
-    { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
-    { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE },
-    { CAMERATYPE_PCO_DIMAX_STD,  "libFullAreaGray16.so", FG_CL_SINGLETAP_8_BIT,     FG_GRAY16, 1279.0f, TRUE },
-    { 0, NULL, 0, 0, 0.0f, FALSE }
+    { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE,  1       },
+    { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE,   8000000 },
+    { CAMERATYPE_PCO_DIMAX_STD,  "libFullAreaGray16.so", FG_CL_SINGLETAP_8_BIT,     FG_GRAY16, 1279.0f, TRUE,   1       },
+    { 0, NULL, 0, 0, 0.0f, FALSE, 1 }
 };
 
 static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
@@ -231,23 +232,16 @@ static guint fill_binnings(UcaPcoCameraPrivate *priv)
     return err;
 }
 
-static guint fill_pixelrates(UcaPcoCameraPrivate *priv)
+static void fill_pixelrates(UcaPcoCameraPrivate *priv, guint32 rates[4], gint num_rates)
 {
-    guint32 rates[4] = {0};
-    gint num_rates = 0;
-    guint err = pco_get_available_pixelrates(priv->pco, rates, &num_rates);
     GValue val = {0};
     g_value_init(&val, G_TYPE_UINT);
     priv->pixelrates = g_value_array_new(num_rates);
 
-    if (err == PCO_NOERROR) {
-        for (gint i = 0; i < num_rates; i++) {
-            g_value_set_uint(&val, (guint) rates[i]); 
-            g_value_array_append(priv->pixelrates, &val);
-        }
+    for (gint i = 0; i < num_rates; i++) {
+        g_value_set_uint(&val, (guint) rates[i]); 
+        g_value_array_append(priv->pixelrates, &val);
     }
-
-    return err;
 }
 
 static guint override_temperature_range(UcaPcoCameraPrivate *priv)
@@ -265,6 +259,16 @@ static guint override_temperature_range(UcaPcoCameraPrivate *priv)
         g_warning("Unable to retrieve cooling range");
 
     return err;
+}
+
+void property_override_default_guint_value (GObjectClass *oclass, const gchar *property_name, guint new_default)
+{
+    GParamSpecUInt *pspec = G_PARAM_SPEC_UINT (g_object_class_find_property (oclass, property_name));
+
+    if (pspec != NULL)
+        pspec->default_value = new_default;
+    else
+        g_warning ("pspec for %s not found\n", property_name);
 }
 
 static void override_maximum_adcs(UcaPcoCameraPrivate *priv)
@@ -364,14 +368,27 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     FG_TRY_PARAM(priv->fg, camera, FG_TRIGGERMODE, &val, priv->fg_port);
 
     fill_binnings(priv);
-    fill_pixelrates(priv);
 
     /*
      * Here we override property ranges because we didn't know them at property
      * installation time.
      */
-    override_temperature_range(priv);
-    override_maximum_adcs(priv);
+    GObjectClass *camera_class = G_OBJECT_CLASS (UCA_CAMERA_GET_CLASS (camera));
+    property_override_default_guint_value (camera_class, "roi-width", priv->width);
+    property_override_default_guint_value (camera_class, "roi-height", priv->height);
+
+    guint32 rates[4] = {0};
+    gint num_rates = 0;
+
+    if (pco_get_available_pixelrates(priv->pco, rates, &num_rates) == PCO_NOERROR) {
+        GObjectClass *pco_camera_class = G_OBJECT_CLASS (UCA_PCO_CAMERA_GET_CLASS (camera));
+
+        fill_pixelrates(priv, rates, num_rates);
+        property_override_default_guint_value (pco_camera_class, "sensor-pixelrate", rates[0]);
+    }
+
+    override_temperature_range (priv);
+    override_maximum_adcs (priv);
 
     return camera;
 }

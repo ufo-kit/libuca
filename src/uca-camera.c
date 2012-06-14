@@ -238,14 +238,14 @@ static void uca_camera_class_init(UcaCameraClass *klass)
         g_param_spec_uint(uca_camera_props[PROP_ROI_X],
             "Horizontal coordinate",
             "Horizontal coordinate",
-            0, G_MAXUINT, 1,
+            0, G_MAXUINT, 0,
             G_PARAM_READWRITE);
 
     camera_properties[PROP_ROI_Y] = 
         g_param_spec_uint(uca_camera_props[PROP_ROI_Y],
             "Vertical coordinate",
             "Vertical coordinate",
-            0, G_MAXUINT, 1,
+            0, G_MAXUINT, 0,
             G_PARAM_READWRITE);
 
     camera_properties[PROP_ROI_WIDTH] = 
