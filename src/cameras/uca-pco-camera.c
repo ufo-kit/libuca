@@ -382,9 +382,22 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
     guint err = PCO_NOERROR;
 
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+    guint16 binned_width, binned_height;
+    gboolean use_extended = FALSE;
 
-    guint16 binned_width = priv->width / priv->binning_h;
-    guint16 binned_height = priv->height / priv->binning_v;
+    g_object_get (camera, "sensor-extended", &use_extended, NULL);
+
+    if (use_extended) {
+        binned_width = priv->width_ex;
+        binned_height = priv->height_ex;
+    }
+    else {
+        binned_width = priv->width;
+        binned_height = priv->height;
+    }
+
+    binned_width /= priv->binning_h;
+    binned_height /= priv->binning_v;
 
     if ((priv->roi_x + priv->roi_width > binned_width) || (priv->roi_y + priv->roi_height > binned_height)) {
         g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
@@ -548,7 +561,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
     switch (property_id) {
         case PROP_SENSOR_EXTENDED:
             {
-                guint16 format = g_value_get_boolean(value) ? SENSORFORMAT_EXTENDED : SENSORFORMAT_STANDARD; 
+                guint16 format = g_value_get_boolean (value) ? SENSORFORMAT_EXTENDED : SENSORFORMAT_STANDARD; 
                 pco_set_sensor_format(priv->pco, format);
             }
             break;
