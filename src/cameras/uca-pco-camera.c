@@ -145,7 +145,6 @@ typedef struct {
     int cl_format;
     gfloat max_frame_rate;
     gboolean has_camram;
-    guint default_pixel_rate;
 } pco_cl_map_entry;
 
 struct _UcaPcoCameraPrivate {
@@ -180,10 +179,10 @@ struct _UcaPcoCameraPrivate {
 };
 
 static pco_cl_map_entry pco_cl_map[] = { 
-    { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE,  1       },
-    { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE,   8000000 },
-    { CAMERATYPE_PCO_DIMAX_STD,  "libFullAreaGray16.so", FG_CL_SINGLETAP_8_BIT,     FG_GRAY16, 1279.0f, TRUE,   1       },
-    { 0, NULL, 0, 0, 0.0f, FALSE, 1 }
+    { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
+    { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE  },
+    { CAMERATYPE_PCO_DIMAX_STD,  "libFullAreaGray16.so", FG_CL_SINGLETAP_8_BIT,     FG_GRAY16, 1279.0f, TRUE  },
+    { 0, NULL, 0, 0, 0.0f, FALSE }
 };
 
 static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
