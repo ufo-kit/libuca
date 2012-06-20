@@ -158,6 +158,7 @@ struct _UcaPcoCameraPrivate {
     guint frame_width;
     guint frame_height;
     gsize num_bytes;
+    guint16 *grab_buffer;
 
     guint16 width, height;
     guint16 width_ex, height_ex;
@@ -392,6 +393,43 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
     return camera;
 }
 
+static int fg_callback(frameindex_t frame, struct fg_apc_data *apc)
+{
+    UcaCamera *camera = UCA_CAMERA(apc);
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+    gpointer data = Fg_getImagePtrEx(priv->fg, frame, priv->fg_port, priv->fg_mem);
+
+    if (priv->camera_description->camera_type == CAMERATYPE_PCO_EDGE) {
+        pco_get_reorder_func(priv->pco)(priv->grab_buffer, data, priv->frame_width, priv->frame_height);
+        camera->grab_func(priv->grab_buffer, camera->user_data);
+    }
+    else {
+        camera->grab_func(data, camera->user_data);
+    }
+
+    return 0;
+}
+
+static gboolean setup_fg_callback(UcaCamera *camera)
+{
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+    struct FgApcControl ctrl;
+
+    /* Jeez, as if a NULL pointer would not be good enough. */
+    ctrl.data = (struct fg_apc_data *) camera;
+    ctrl.version = 0;
+    ctrl.func = &fg_callback;
+    ctrl.flags = FG_APC_DEFAULTS;
+    ctrl.timeout = 1;
+
+    if (priv->grab_buffer)
+        g_free(priv->grab_buffer);
+
+    priv->grab_buffer = g_malloc0(priv->frame_width * priv->frame_height * sizeof(guint16));
+
+    return Fg_registerApcHandler(priv->fg, priv->fg_port, &ctrl, FG_APC_CONTROL_BASIC) == FG_OK;
+}
+
 static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
@@ -400,6 +438,7 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     guint16 binned_width, binned_height;
     gboolean use_extended = FALSE;
+    gboolean transfer_async = FALSE;
 
     g_object_get (camera, "sensor-extended", &use_extended, NULL);
 
@@ -427,6 +466,8 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
      */
     guint16 roi[4] = { priv->roi_x + 1, priv->roi_y + 1, priv->roi_x + priv->roi_width, priv->roi_y + priv->roi_height };
     pco_set_roi(priv->pco, roi);
+
+    g_object_get(G_OBJECT(camera), "transfer-asynchronously", &transfer_async, NULL);
 
     /*
      * FIXME: We cannot set the binning here as this breaks communication with
@@ -460,6 +501,9 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
             return;
         }
     }
+
+    if (transfer_async)
+        setup_fg_callback(camera);
 
     if ((priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD) ||
         (priv->camera_description->camera_type == CAMERATYPE_PCO4000))
@@ -1082,6 +1126,8 @@ static void uca_pco_camera_finalize(GObject *object)
     if (priv->pco)
         pco_destroy(priv->pco);
 
+    g_free(priv->grab_buffer);
+
     G_OBJECT_CLASS(uca_pco_camera_parent_class)->finalize(object);
 }
 
@@ -1254,6 +1300,7 @@ static void uca_pco_camera_init(UcaPcoCamera *self)
     self->priv->pixelrates = NULL;
     self->priv->camera_description = NULL;
     self->priv->last_frame = 0;
+    self->priv->grab_buffer = NULL;
 
     self->priv->delay_timebase = TIMEBASE_INVALID;
     self->priv->exposure_timebase = TIMEBASE_INVALID;

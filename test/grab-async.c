@@ -15,66 +15,88 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <glib-object.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include "uca.h"
+#include "uca-camera.h"
 
-struct image_props {
-    uint32_t width;
-    uint32_t height;
-    uint32_t bits;
-};
+static UcaCamera *camera = NULL;
 
-uca_buffer_status grab_callback(uint64_t image_number, void *buffer, void *meta_data, void *user)
+typedef struct {
+    guint roi_width;
+    guint roi_height;
+    guint counter;
+} CallbackData;
+
+static void sigint_handler(int signal)
 {
-    struct image_props *props = (struct image_props *) user;
-    const int pixel_size = props->bits == 8 ? 1 : 2;
-    char filename[256];
+    printf("Closing down libuca\n");
+    uca_camera_stop_recording(camera, NULL);
+    g_object_unref(camera);
+    exit(signal);
+}
 
-    sprintf(filename, "out-%04i.raw", (int) image_number);
+static void grab_callback(gpointer data, gpointer user_data)
+{
+    CallbackData *cbd = (CallbackData *) user_data;
+    gchar *filename = g_strdup_printf("frame-%04i.raw", cbd->counter++);
     FILE *fp = fopen(filename, "wb");
-    fwrite(buffer, props->width * props->height, pixel_size, fp);
+
+    fwrite(data, sizeof(guint16), cbd->roi_width * cbd->roi_height, fp);
+    g_print(".");
     fclose(fp);
-
-    printf("grabbed picture %i at %p (%ix%i @ %i bits)\n", 
-            (int) image_number, buffer, 
-            props->width, props->height, props->bits);
-
-    return UCA_BUFFER_RELEASE;
+    g_free(filename);
 }
 
 int main(int argc, char *argv[])
 {
-    uca *u = uca_init(NULL);
-    if (u == NULL) {
-        printf("Couldn't find a camera\n");
+    CallbackData cbd;
+    guint sensor_width, sensor_height;
+    gchar *name;
+    GError *error = NULL;
+    (void) signal(SIGINT, sigint_handler);
+
+    g_type_init();
+    camera = uca_camera_new("pco", &error);
+
+    if (camera == NULL) {
+        g_print("Error during initialization: %s\n", error->message);
         return 1;
     }
 
-    /* take first camera */
-    uca_camera *cam = u->cameras;
+    g_object_get(G_OBJECT(camera),
+            "name", &name,
+            "sensor-width", &sensor_width,
+            "sensor-height", &sensor_height,
+            NULL);
 
-    uint32_t val = 5000;
-    uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val);
-    val = 0;
-    uca_cam_set_property(cam, UCA_PROP_DELAY, &val);
+    g_object_set(G_OBJECT(camera),
+            "roi-x0", 0,
+            "roi-y0", 0,
+            "roi-width", sensor_width,
+            "roi-height", sensor_height,
+            "transfer-asynchronously", TRUE,
+            NULL);
 
-    struct image_props props;
-    uca_cam_get_property(cam, UCA_PROP_WIDTH, &props.width, 0);
-    uca_cam_get_property(cam, UCA_PROP_HEIGHT, &props.height, 0);
-    uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &props.bits, 0);
+    g_object_get(G_OBJECT(camera),
+            "roi-width", &cbd.roi_width,
+            "roi-height", &cbd.roi_height,
+            NULL);
 
-    uca_cam_alloc(cam, 10);
+    g_print("Camera: %s\n", name);
+    g_free(name);
 
-    uca_cam_start_recording(cam);
-    uca_cam_register_callback(cam, &grab_callback, &props);
-    printf("grabbing for 1 second ... ");
-    fflush(stdout);
-    sleep(1);
-    uca_cam_stop_recording(cam);
-    printf("done\n");
+    g_print("Start asynchronous recording\n");
+    cbd.counter = 0;
+    uca_camera_set_grab_func(camera, grab_callback, &cbd);
+    uca_camera_start_recording(camera, &error);
+    g_assert_no_error(error);
+    g_usleep(2 * G_USEC_PER_SEC);
 
-    uca_destroy(u);
-    return 0;
+    g_print(" done\n");
+    uca_camera_stop_recording(camera, NULL);
+    g_object_unref(camera);
+
+    return error != NULL ? 1 : 0;
 }

@@ -21,12 +21,9 @@
 #include <stdlib.h>
 #include "uca-camera.h"
 
-#define handle_error(errno) {if ((errno) != UCA_NO_ERROR) printf("error at <%s:%i>\n", \
-    __FILE__, __LINE__);}
-
 static UcaCamera *camera = NULL;
 
-void sigint_handler(int signal)
+static void sigint_handler(int signal)
 {
     printf("Closing down libuca\n");
     uca_camera_stop_recording(camera, NULL);
@@ -41,6 +38,7 @@ int main(int argc, char *argv[])
     guint sensor_width, sensor_height, sensor_width_extended, sensor_height_extended;
     guint roi_width, roi_height, roi_x, roi_y;
     guint bits, sensor_rate;
+    gchar *name;
 
     g_type_init();
     camera = uca_camera_new("pco", &error);
@@ -55,6 +53,7 @@ int main(int argc, char *argv[])
             "sensor-height", &sensor_height,
             "sensor-width-extended", &sensor_width_extended,
             "sensor-height-extended", &sensor_height_extended,
+            "name", &name,
             NULL);
 
     g_object_set(G_OBJECT(camera),
@@ -75,6 +74,9 @@ int main(int argc, char *argv[])
             "sensor-bitdepth", &bits,
             "sensor-pixelrate", &sensor_rate,
             NULL);
+
+    g_print("Camera: %s\n", name);
+    g_free(name);
 
     g_print("Sensor: %ix%i px (extended: %ix%i), ROI %ix%i @ (%i, %i) and %i Hz\n", 
             sensor_width, sensor_height, 
