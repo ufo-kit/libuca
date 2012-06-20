@@ -865,11 +865,11 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             break;
 
         case PROP_SENSOR_WIDTH_EXTENDED: 
-            g_value_set_uint(value, priv->width_ex);
+            g_value_set_uint(value, priv->width_ex < priv->width ? priv->width : priv->width_ex);
             break;
 
         case PROP_SENSOR_HEIGHT_EXTENDED: 
-            g_value_set_uint(value, priv->height_ex);
+            g_value_set_uint(value, priv->height_ex < priv->height ? priv->height : priv->height_ex);
             break;
 
         case PROP_SENSOR_HORIZONTAL_BINNING:
