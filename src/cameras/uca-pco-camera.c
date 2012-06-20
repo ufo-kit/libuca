@@ -399,12 +399,11 @@ static int fg_callback(frameindex_t frame, struct fg_apc_data *apc)
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     gpointer data = Fg_getImagePtrEx(priv->fg, frame, priv->fg_port, priv->fg_mem);
 
-    if (priv->camera_description->camera_type == CAMERATYPE_PCO_EDGE) {
+    if (priv->camera_description->camera_type != CAMERATYPE_PCO_EDGE)
+        camera->grab_func(data, camera->user_data);
+    else {
         pco_get_reorder_func(priv->pco)(priv->grab_buffer, data, priv->frame_width, priv->frame_height);
         camera->grab_func(priv->grab_buffer, camera->user_data);
-    }
-    else {
-        camera->grab_func(data, camera->user_data);
     }
 
     return 0;
@@ -480,11 +479,13 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
     /*     g_warning("Cannot set binning\n"); */
 
     if (priv->frame_width != priv->roi_width || priv->frame_height != priv->roi_height || priv->fg_mem == NULL) {
+        guint fg_width = priv->camera_description->camera_type == CAMERATYPE_PCO_EDGE ? 2 * priv->roi_width : priv->roi_width;
+
         priv->frame_width = priv->roi_width;
         priv->frame_height = priv->roi_height;
         priv->num_bytes = 2;
 
-        Fg_setParameter(priv->fg, FG_WIDTH, &priv->frame_width, priv->fg_port);
+        Fg_setParameter(priv->fg, FG_WIDTH, &fg_width, priv->fg_port);
         Fg_setParameter(priv->fg, FG_HEIGHT, &priv->frame_height, priv->fg_port);
 
         if (priv->fg_mem)
@@ -590,8 +591,7 @@ static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
          * No joke, the pco firmware allows to read a range of images but
          * implements only reading single images ...
          */
-        pco_read_images(priv->pco, priv->active_segment, 
-                priv->current_image, priv->current_image);
+        pco_read_images(priv->pco, priv->active_segment, priv->current_image, priv->current_image);
         priv->current_image++;
     }
 
