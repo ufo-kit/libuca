@@ -15,7 +15,7 @@ set(cameras)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # --- Find camera interfaces
-find_package(PCO)
+#find_package(PCO)
 find_package(PF)
 find_package(IPE)
 find_package(Pylon)
@@ -99,6 +99,7 @@ if (PYLON_FOUND)
     set(uca_SRCS ${uca_SRCS} cameras/uca-pylon-camera.c cameras/pylon_camera.cpp)
     set(uca_HDRS ${uca_HDRS} cameras/uca-pylon-camera.h)
     set(uca_LIBS ${uca_LIBS} ${PYLON_LIBS})
+    #list(APPEND cameras "Pylon")
 
     include_directories(${PYLON_INCLUDE_DIRS})
     link_directories(/opt/pylon/lib64)
@@ -241,7 +242,7 @@ if(GTK_DOC_FOUND)
             DEPENDS ${docs_out}/sgml.stamp ${docs_out}/uca-docs.xml
             WORKING_DIRECTORY ${docs_out})
 
-        add_custom_target(reference ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html.stamp)
+        add_custom_target(reference DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html.stamp)
 
         install(FILES ${reference_files} DESTINATION share/gtk-doc/html/uca)
     endif()

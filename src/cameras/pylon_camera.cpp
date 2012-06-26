@@ -13,6 +13,7 @@ namespace {
   guint imageCounter = 0;
   guint currentImage = 0;
   GrabAPI::Image* image = NULL;
+  guint bytesPerPixel = 0;
 
   void handle_image(GrabAPI::Image* newImage)
   {
@@ -136,7 +137,6 @@ void pylon_camera_get_sensor_size(guint* width, guint* height, GError** error)
 
 void pylon_camera_get_bit_depth(guint* depth, GError** error)
 {
-  std::cerr << __func__ << std::endl;
   g_assert(pGrabber);
   try
   {
@@ -153,6 +153,12 @@ void pylon_camera_get_bit_depth(guint* depth, GError** error)
 void pylon_camera_start_acquision(GError** error)
 {
   g_assert(pGrabber);
+  guint bit_depth = 0;
+  pylon_camera_get_bit_depth(&bit_depth, error);
+  bytesPerPixel = 1;
+  if (bit_depth > 8) bytesPerPixel = 2;
+  if (bit_depth > 16) bytesPerPixel = 3;
+  if (bit_depth > 24) bytesPerPixel = 4;
   try
   {
     {
@@ -196,10 +202,10 @@ void pylon_camera_grab(gpointer *data, GError** error)
       }
 
       std::cerr << "grab next image " << currentImage << ", " << imageCounter 
-        << "; width: " << image->width() << ", height: " << image->height() << std::endl;
+        << "; width: " << image->width() / bytesPerPixel << ", height: " << image->height() << std::endl;
       g_assert(currentImage < imageCounter);
       currentImage = imageCounter;
-      memcpy(*data, image->base(), image->width() * image->height() * 2);
+      memcpy(*data, image->base(), image->width() * image->height());
 
   }
   catch (const yat::Exception& e)
