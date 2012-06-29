@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     GError *error = NULL;
     (void) signal(SIGINT, sigint_handler);
     guint sensor_width, sensor_height, sensor_width_extended, sensor_height_extended;
-    guint roi_width, roi_height, roi_x, roi_y;
+    guint roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier;
     guint bits, sensor_rate;
     gchar *name;
 
@@ -62,13 +62,15 @@ int main(int argc, char *argv[])
             "roi-x0", 0,
             "roi-y0", 0,
             "sensor-extended", FALSE,
-            "roi-width", sensor_width,
+            "roi-width", 1000,
             "roi-height", sensor_height,
             NULL);
 
     g_object_get(G_OBJECT(camera),
             "roi-width", &roi_width,
             "roi-height", &roi_height,
+            "roi-width-multiplier", &roi_width_multiplier,
+            "roi-height-multiplier", &roi_height_multiplier,
             "roi-x0", &roi_x,
             "roi-y0", &roi_y,
             "sensor-bitdepth", &bits,
@@ -78,10 +80,13 @@ int main(int argc, char *argv[])
     g_print("Camera: %s\n", name);
     g_free(name);
 
-    g_print("Sensor: %ix%i px (extended: %ix%i), ROI %ix%i @ (%i, %i) and %i Hz\n", 
+    g_print("Sensor: %ix%i px (extended: %ix%i) @ %i Hz\n", 
             sensor_width, sensor_height, 
             sensor_width_extended, sensor_height_extended,
-            roi_width, roi_height, roi_x, roi_y, sensor_rate);
+            sensor_rate);
+
+    g_print("ROI: %ix%i @ (%i, %i), steps: %i, %i\n", 
+            roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier);
 
     const int pixel_size = bits == 8 ? 1 : 2;
     gpointer buffer = g_malloc0(roi_width * roi_height * pixel_size);

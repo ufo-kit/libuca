@@ -97,6 +97,8 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "roi-y0",
     "roi-width",
     "roi-height",
+    "roi-width-multiplier",
+    "roi-height-multiplier",
     "has-streaming",
     "has-camram-recording",
     "transfer-asynchronously",
@@ -261,6 +263,20 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             "Height of the region of interest",
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
+
+    camera_properties[PROP_ROI_WIDTH_MULTIPLIER] =
+        g_param_spec_uint(uca_camera_props[PROP_ROI_WIDTH_MULTIPLIER],
+            "Horizontal ROI multiplier",
+            "Minimum possible step size of horizontal ROI",
+            1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
+
+    camera_properties[PROP_ROI_HEIGHT_MULTIPLIER] =
+        g_param_spec_uint(uca_camera_props[PROP_ROI_HEIGHT_MULTIPLIER],
+            "Vertical ROI multiplier",
+            "Minimum possible step size of vertical ROI",
+            1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
 
     camera_properties[PROP_EXPOSURE_TIME] =
         g_param_spec_double(uca_camera_props[PROP_EXPOSURE_TIME],

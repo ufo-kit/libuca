@@ -128,6 +128,8 @@ static gint base_overrideables[] = {
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
+    PROP_ROI_WIDTH_MULTIPLIER,
+    PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     0
@@ -165,6 +167,7 @@ struct _UcaPcoCameraPrivate {
     guint16 binning_h, binning_v;
     guint16 roi_x, roi_y;
     guint16 roi_width, roi_height;
+    guint16 roi_horizontal_steps, roi_vertical_steps;
     GValueArray *horizontal_binnings;
     GValueArray *vertical_binnings;
     GValueArray *pixelrates;
@@ -329,6 +332,8 @@ UcaPcoCamera *uca_pco_camera_new(GError **error)
 
     guint16 roi[4];
     pco_get_roi(priv->pco, roi);
+    pco_get_roi_steps(priv->pco, &priv->roi_horizontal_steps, &priv->roi_vertical_steps);
+
     priv->roi_x = roi[0] - 1;
     priv->roi_y = roi[1] - 1;
     priv->roi_width = roi[2] - roi[0] + 1;
@@ -464,7 +469,12 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
      * All parameters are valid. Now, set them on the camera.
      */
     guint16 roi[4] = { priv->roi_x + 1, priv->roi_y + 1, priv->roi_x + priv->roi_width, priv->roi_y + priv->roi_height };
-    pco_set_roi(priv->pco, roi);
+
+    if (pco_set_roi(priv->pco, roi) != PCO_NOERROR) {
+        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,
+                "Could not set ROI via pco_set_roi()");
+        return;
+    }
 
     g_object_get(G_OBJECT(camera), "transfer-asynchronously", &transfer_async, NULL);
 
@@ -635,11 +645,25 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
             break;
 
         case PROP_ROI_WIDTH:
-            priv->roi_width = g_value_get_uint(value);
+            {
+                guint width = g_value_get_uint(value);
+                
+                if (width % priv->roi_horizontal_steps)
+                    g_warning("ROI width %i is not a multiple of %i", width, priv->roi_horizontal_steps);
+                else
+                    priv->roi_width = width;
+            }
             break;
 
         case PROP_ROI_HEIGHT:
-            priv->roi_height = g_value_get_uint(value);
+            {
+                guint height = g_value_get_uint(value);
+                
+                if (height % priv->roi_vertical_steps)
+                    g_warning("ROI height %i is not a multiple of %i", height, priv->roi_vertical_steps);
+                else
+                    priv->roi_height = height;
+            }
             break;
 
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -1046,6 +1070,14 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_ROI_HEIGHT:
             g_value_set_uint(value, priv->roi_height);
+            break;
+
+        case PROP_ROI_WIDTH_MULTIPLIER:
+            g_value_set_uint(value, priv->roi_horizontal_steps);
+            break;
+
+        case PROP_ROI_HEIGHT_MULTIPLIER:
+            g_value_set_uint(value, priv->roi_vertical_steps);
             break;
 
         case PROP_NAME: 
