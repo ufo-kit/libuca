@@ -41,6 +41,8 @@ static const gint mock_overrideables[] = {
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
+    PROP_ROI_HEIGHT_MULTIPLIER,
+    PROP_ROI_WIDTH_MULTIPLIER,
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
@@ -298,6 +300,12 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
             break;
         case PROP_ROI_HEIGHT:
             g_value_set_uint(value, priv->height);
+            break;
+        case PROP_ROI_WIDTH_MULTIPLIER:
+            g_value_set_uint(value, 1);
+            break;
+        case PROP_ROI_HEIGHT_MULTIPLIER:
+            g_value_set_uint(value, 1);
             break;
         case PROP_SENSOR_MAX_FRAME_RATE:
             g_value_set_float(value, priv->max_frame_rate);
