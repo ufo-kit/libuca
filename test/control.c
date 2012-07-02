@@ -229,12 +229,10 @@ static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gcha
 
 static void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 {
-    UcaCamera *camera = UCA_CAMERA(data);
-    gchar *propname;
-    gtk_tree_model_get(model, iter, COLUMN_NAME, &propname, -1);
-    GParamSpec *spec = g_object_class_find_property(G_OBJECT_GET_CLASS(camera), propname);
+    gboolean editable;
+    gtk_tree_model_get(model, iter, 2, &editable, -1);
 
-    if (spec->flags & G_PARAM_WRITABLE) {
+    if (editable) {
         g_object_set(cell,
                 "mode", GTK_CELL_RENDERER_MODE_EDITABLE,
                 "editable", TRUE,
@@ -249,8 +247,6 @@ static void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cel
                 "foreground", "#aaaaaa",
                 NULL); 
     }
-
-    g_free(propname);
 }
 
 static void populate_property_list(GtkBuilder *builder, UcaCamera *camera)
@@ -260,7 +256,7 @@ static void populate_property_list(GtkBuilder *builder, UcaCamera *camera)
     GtkListStore *list_store = GTK_LIST_STORE(gtk_builder_get_object(builder, "camera-properties"));
     GtkTreeIter iter;
 
-    gtk_tree_view_column_set_cell_data_func(value_column, GTK_CELL_RENDERER(value_renderer), value_cell_data_func, camera, NULL);
+    gtk_tree_view_column_set_cell_data_func(value_column, GTK_CELL_RENDERER(value_renderer), value_cell_data_func, NULL, NULL);
 
     GObjectClass *oclass = G_OBJECT_GET_CLASS(camera);
     guint num_specs = 0;
@@ -276,7 +272,10 @@ static void populate_property_list(GtkBuilder *builder, UcaCamera *camera)
             g_value_init(&src_value, specs[i]->value_type);
             g_object_get_property(G_OBJECT(camera), specs[i]->name, &src_value);
             if (g_value_transform(&src_value, &dest_value))
-                gtk_list_store_set(list_store, &iter, 1, g_value_get_string(&dest_value), -1);
+                gtk_list_store_set(list_store, &iter, 
+                        1, g_value_get_string(&dest_value), 
+                        2, specs[i]->flags & G_PARAM_WRITABLE,
+                        -1);
             g_value_unset(&src_value);
         }
     }
