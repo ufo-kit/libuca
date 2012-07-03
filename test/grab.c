@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
     guint sensor_width, sensor_height, sensor_width_extended, sensor_height_extended;
     guint roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier;
     guint bits, sensor_rate;
+    gint  cp_min, cp_max, cp_default;
     gchar *name;
 
     g_type_init();
@@ -75,6 +76,9 @@ int main(int argc, char *argv[])
             "roi-y0", &roi_y,
             "sensor-bitdepth", &bits,
             "sensor-pixelrate", &sensor_rate,
+            "cooling-point-min", &cp_min,
+            "cooling-point-max", &cp_max,
+            "cooling-point-default", &cp_default,
             NULL);
 
     g_print("Camera: %s\n", name);
@@ -87,6 +91,8 @@ int main(int argc, char *argv[])
 
     g_print("ROI: %ix%i @ (%i, %i), steps: %i, %i\n", 
             roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier);
+
+    g_print("Valid cooling point range: [%i, %i] (default: %i)\n", cp_min, cp_max, cp_default);
 
     const int pixel_size = bits == 8 ? 1 : 2;
     gpointer buffer = g_malloc0(roi_width * roi_height * pixel_size);

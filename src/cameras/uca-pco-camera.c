@@ -108,6 +108,9 @@ enum {
     PROP_RECORD_MODE,
     PROP_ACQUIRE_MODE,
     PROP_COOLING_POINT,
+    PROP_COOLING_POINT_MIN,
+    PROP_COOLING_POINT_MAX,
+    PROP_COOLING_POINT_DEFAULT,
     PROP_NOISE_FILTER,
     PROP_TIMESTAMP_MODE,
     N_PROPERTIES
@@ -1098,6 +1101,27 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             }
             break;
 
+        case PROP_COOLING_POINT_MIN:
+            {
+                GParamSpecInt *spec = (GParamSpecInt *) pco_properties[PROP_COOLING_POINT];
+                g_value_set_int(value, spec->minimum);
+            }
+            break;
+
+        case PROP_COOLING_POINT_MAX:
+            {
+                GParamSpecInt *spec = (GParamSpecInt *) pco_properties[PROP_COOLING_POINT];
+                g_value_set_int(value, spec->maximum);
+            }
+            break;
+
+        case PROP_COOLING_POINT_DEFAULT:
+            {
+                GParamSpecInt *spec = (GParamSpecInt *) pco_properties[PROP_COOLING_POINT];
+                g_value_set_int(value, spec->default_value);
+            }
+            break;
+
         case PROP_NOISE_FILTER:
             {
                 guint16 mode;
@@ -1298,8 +1322,26 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
     pco_properties[PROP_COOLING_POINT] = 
         g_param_spec_int("cooling-point",
             "Cooling point of the camera",
-            "Cooling point of the camera",
+            "Cooling point of the camera in degree celsius",
             0, 10, 5, G_PARAM_READWRITE);
+
+    pco_properties[PROP_COOLING_POINT_MIN] = 
+        g_param_spec_int("cooling-point-min",
+            "Minimum cooling point",
+            "Minimum cooling point in degree celsius",
+            G_MININT, G_MAXINT, 0, G_PARAM_READABLE);
+
+    pco_properties[PROP_COOLING_POINT_MAX] = 
+        g_param_spec_int("cooling-point-max",
+            "Maximum cooling point",
+            "Maximum cooling point in degree celsius",
+            G_MININT, G_MAXINT, 0, G_PARAM_READABLE);
+
+    pco_properties[PROP_COOLING_POINT_DEFAULT] = 
+        g_param_spec_int("cooling-point-default",
+            "Default cooling point",
+            "Default cooling point in degree celsius",
+            G_MININT, G_MAXINT, 0, G_PARAM_READABLE);
     
     pco_properties[PROP_SENSOR_ADCS] = 
         g_param_spec_uint("sensor-adcs",
