@@ -230,79 +230,6 @@ static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gcha
     }
 }
 
-static void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
-{
-    gboolean editable;
-    gtk_tree_model_get(model, iter, COLUMN_EDITABLE, &editable, -1);
-
-    if (editable) {
-        g_object_set(cell,
-                "mode", GTK_CELL_RENDERER_MODE_EDITABLE,
-                "editable", TRUE,
-                "style", PANGO_STYLE_NORMAL,
-                "foreground", "#000000",
-                NULL); 
-    }
-    else {
-        g_object_set(cell,
-                "mode", GTK_CELL_RENDERER_MODE_INERT,
-                "editable", FALSE,
-                "foreground", "#aaaaaa",
-                NULL); 
-    }
-}
-
-static void transform_string_to_boolean(const GValue *src_value, GValue *dest_value)
-{
-    const gchar *str = g_value_get_string(src_value);
-
-    if (g_ascii_strncasecmp(str, "TRUE", 4) == 0)
-        g_value_set_boolean(dest_value, TRUE);
-    else if (g_ascii_strncasecmp(str, "FALSE", 4) == 0)
-        g_value_set_boolean(dest_value, FALSE);
-}
-
-static void transform_string_to_uint(const GValue *src_value, GValue *dest_value)
-{
-    const gchar *str = g_value_get_string(src_value);
-    gchar *endptr = NULL;
-    guint64 result = g_ascii_strtoull(str, &endptr, 10);
-    if (endptr != str)
-        g_value_set_uint(dest_value, result);
-    else
-        errno = EINVAL;
-}
-
-static void transform_string_to_double(const GValue *src_value, GValue *dest_value)
-{
-    const gchar *str = g_value_get_string(src_value);
-    gchar *endptr = NULL;
-    gdouble result = g_ascii_strtod(str, &endptr);
-    if (endptr != str)
-        g_value_set_double(dest_value, result);
-    else
-        errno = EINVAL;
-}
-
-static void transform_string_to_float(const GValue *src_value, GValue *dest_value)
-{
-    const gchar *str = g_value_get_string(src_value);
-    gchar *endptr = NULL;
-    gdouble result = g_ascii_strtod(str, &endptr);
-    if (endptr != str)
-        g_value_set_float(dest_value, (gfloat) result);
-    else
-        errno = EINVAL;
-}
-
-static void register_transform_funcs(void)
-{
-    g_value_register_transform_func(G_TYPE_STRING, G_TYPE_BOOLEAN, &transform_string_to_boolean);
-    g_value_register_transform_func(G_TYPE_STRING, G_TYPE_UINT, &transform_string_to_uint);
-    g_value_register_transform_func(G_TYPE_STRING, G_TYPE_DOUBLE, &transform_string_to_double);
-    g_value_register_transform_func(G_TYPE_STRING, G_TYPE_FLOAT, &transform_string_to_float);
-}
-
 static void create_main_window(GtkBuilder *builder, const gchar* camera_name)
 {
     static ThreadData td;
@@ -332,8 +259,6 @@ static void create_main_window(GtkBuilder *builder, const gchar* camera_name)
 
     GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, td.width, td.height);
     gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf);
-
-    register_transform_funcs();
 
     td.pixel_size = bits_per_sample == 16 ? 2 : 1;
     td.image  = image;
