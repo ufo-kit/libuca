@@ -23,7 +23,9 @@
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
+
 #include "uca-camera.h"
+#include "egg-property-tree-view.h"
 
 
 typedef struct {
@@ -54,6 +56,7 @@ typedef struct {
 enum {
     COLUMN_NAME = 0,
     COLUMN_VALUE,
+    COLUMN_EDITABLE,
     NUM_COLUMNS
 };
 
@@ -230,7 +233,7 @@ static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gcha
 static void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cell, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 {
     gboolean editable;
-    gtk_tree_model_get(model, iter, 2, &editable, -1);
+    gtk_tree_model_get(model, iter, COLUMN_EDITABLE, &editable, -1);
 
     if (editable) {
         g_object_set(cell,
@@ -247,40 +250,6 @@ static void value_cell_data_func(GtkTreeViewColumn *column, GtkCellRenderer *cel
                 "foreground", "#aaaaaa",
                 NULL); 
     }
-}
-
-static void populate_property_list(GtkBuilder *builder, UcaCamera *camera)
-{
-    GtkTreeViewColumn *value_column = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "valuecolumn"));
-    GtkCellRendererText *value_renderer = GTK_CELL_RENDERER_TEXT(gtk_builder_get_object(builder, "valuecell"));
-    GtkListStore *list_store = GTK_LIST_STORE(gtk_builder_get_object(builder, "camera-properties"));
-    GtkTreeIter iter;
-
-    gtk_tree_view_column_set_cell_data_func(value_column, GTK_CELL_RENDERER(value_renderer), value_cell_data_func, NULL, NULL);
-
-    GObjectClass *oclass = G_OBJECT_GET_CLASS(camera);
-    guint num_specs = 0;
-    GParamSpec **specs = g_object_class_list_properties(oclass, &num_specs);
-    GValue dest_value = {0}, src_value = {0};
-    g_value_init(&dest_value, G_TYPE_STRING);
-
-    for (guint i = 0; i < num_specs; i++) {
-        gtk_list_store_append(list_store, &iter);
-        gtk_list_store_set(list_store, &iter, 0, specs[i]->name, -1);
-
-        if (specs[i]->flags & G_PARAM_READABLE) {
-            g_value_init(&src_value, specs[i]->value_type);
-            g_object_get_property(G_OBJECT(camera), specs[i]->name, &src_value);
-            if (g_value_transform(&src_value, &dest_value))
-                gtk_list_store_set(list_store, &iter, 
-                        1, g_value_get_string(&dest_value), 
-                        2, specs[i]->flags & G_PARAM_WRITABLE,
-                        -1);
-            g_value_unset(&src_value);
-        }
-    }
-
-    g_free(specs);
 }
 
 static void transform_string_to_boolean(const GValue *src_value, GValue *dest_value)
@@ -355,11 +324,16 @@ static void create_main_window(GtkBuilder *builder, const gchar* camera_name)
 
     GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "window"));
     GtkWidget *image = GTK_WIDGET(gtk_builder_get_object(builder, "image"));
+    GtkWidget *property_tree_view = egg_property_tree_view_new (G_OBJECT (camera));
+    GtkContainer *scrolled_property_window = GTK_CONTAINER (gtk_builder_get_object (builder, "scrolledwindow2"));
+
+    gtk_container_add (scrolled_property_window, property_tree_view);
+    gtk_widget_show_all (GTK_WIDGET (scrolled_property_window));
+
     GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, td.width, td.height);
     gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf);
 
     register_transform_funcs();
-    populate_property_list(builder, camera);
 
     td.pixel_size = bits_per_sample == 16 ? 2 : 1;
     td.image  = image;

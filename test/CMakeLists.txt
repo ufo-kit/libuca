@@ -36,7 +36,10 @@ target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
 if (GTK2_FOUND)
     include_directories(${GTK2_INCLUDE_DIRS})
-    add_executable(control control.c)
+    add_executable(control 
+        control.c 
+        egg-property-cell-renderer.c
+        egg-property-tree-view.c)
     target_link_libraries(control uca
         ${GTK2_LIBRARIES} ${GTHREAD2_LIBRARIES})
 endif()
