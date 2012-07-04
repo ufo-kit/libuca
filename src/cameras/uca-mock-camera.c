@@ -56,6 +56,7 @@ struct _UcaMockCameraPrivate {
     guint height;
     gfloat frame_rate;
     gfloat max_frame_rate;
+    gdouble exposure_time;
     guint8 *dummy_data;
     guint current_frame;
 
@@ -248,6 +249,9 @@ static void uca_mock_camera_set_property(GObject *object, guint property_id, con
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
+        case PROP_EXPOSURE_TIME:
+            priv->exposure_time = g_value_get_double(value);
+            break;
         case PROP_FRAMERATE:
             priv->frame_rate = g_value_get_float(value);
             break;
@@ -284,7 +288,7 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
             g_value_set_boxed(value, priv->binnings);
             break;
         case PROP_EXPOSURE_TIME:
-            g_value_set_double(value, 0.001);
+            g_value_set_double(value, priv->exposure_time);
             break;
         case PROP_TRIGGER_MODE:
             g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
