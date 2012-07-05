@@ -101,6 +101,7 @@ enum {
     PROP_SENSOR_PIXELRATES,
     PROP_SENSOR_PIXELRATE,
     PROP_SENSOR_ADCS,
+    PROP_SENSOR_MAX_ADCS,
     PROP_DELAY_TIME,
     PROP_HAS_DOUBLE_IMAGE_MODE,
     PROP_DOUBLE_IMAGE_MODE,
@@ -267,7 +268,7 @@ static guint override_temperature_range(UcaPcoCameraPrivate *priv)
     return err;
 }
 
-void property_override_default_guint_value (GObjectClass *oclass, const gchar *property_name, guint new_default)
+static void property_override_default_guint_value (GObjectClass *oclass, const gchar *property_name, guint new_default)
 {
     GParamSpecUInt *pspec = G_PARAM_SPEC_UINT (g_object_class_find_property (oclass, property_name));
 
@@ -944,6 +945,13 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             }
             break;
 
+        case PROP_SENSOR_MAX_ADCS:
+            {
+                GParamSpecUInt *spec = (GParamSpecUInt *) pco_properties[PROP_SENSOR_ADCS];
+                g_value_set_uint(value, spec->maximum);
+            }
+            break;
+
         case PROP_SENSOR_PIXELRATES:
             g_value_set_boxed(value, priv->pixelrates);
             break;
@@ -1349,6 +1357,13 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Number of ADCs to use",
             1, 2, 1, 
             G_PARAM_READWRITE);
+
+    pco_properties[PROP_SENSOR_MAX_ADCS] = 
+        g_param_spec_uint("sensor-max-adcs",
+            "Maximum number of ADCs",
+            "Maximum number of ADCs that can be set with \"sensor-adcs\"",
+            1, G_MAXUINT, 1, 
+            G_PARAM_READABLE);
 
     pco_properties[PROP_TIMESTAMP_MODE] =
         g_param_spec_flags("timestamp-mode",
