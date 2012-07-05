@@ -28,6 +28,10 @@
 #include "cameras/uca-mock-camera.h"
 #endif
 
+#ifdef HAVE_UFO_CAMERA
+#include "cameras/uca-ufo-camera.h"
+#endif
+
 #ifdef HAVE_PHOTON_FOCUS
 #include "cameras/uca-pf-camera.h"
 #endif
@@ -352,6 +356,31 @@ static void uca_camera_init(UcaCamera *camera)
      */
 }
 
+static UcaCamera *uca_camera_new_from_type(const gchar *type, GError **error)
+{
+#ifdef HAVE_MOCK_CAMERA
+    if (!g_strcmp0(type, "mock"))
+        return UCA_CAMERA(uca_mock_camera_new(error));
+#endif
+
+#ifdef HAVE_PCO_CL
+    if (!g_strcmp0(type, "pco"))
+        return UCA_CAMERA(uca_pco_camera_new(error));
+#endif
+
+#ifdef HAVE_UFO_CAMERA
+    if (!g_strcmp0(type, "ufo"))
+        return UCA_CAMERA(uca_ufo_camera_new(error));
+#endif
+
+#ifdef HAVE_PHOTON_FOCUS
+    if (!g_strcmp0(type, "pf"))
+        return UCA_CAMERA(uca_pf_camera_new(error));
+#endif
+
+    return NULL;
+}
+
 /**
  * uca_camera_get_types:
  *
@@ -380,20 +409,7 @@ UcaCamera *uca_camera_new(const gchar *type, GError **error)
     UcaCamera *camera = NULL;
     GError *tmp_error = NULL;
 
-#ifdef HAVE_MOCK_CAMERA
-    if (!g_strcmp0(type, "mock"))
-        camera = UCA_CAMERA(uca_mock_camera_new(&tmp_error));
-#endif
-
-#ifdef HAVE_PCO_CL
-    if (!g_strcmp0(type, "pco"))
-        camera = UCA_CAMERA(uca_pco_camera_new(&tmp_error));
-#endif
-
-#ifdef HAVE_PHOTON_FOCUS
-    if (!g_strcmp0(type, "pf"))
-        camera = UCA_CAMERA(uca_pf_camera_new(&tmp_error));
-#endif
+    camera = uca_camera_new_from_type(type, &tmp_error);
 
     if (tmp_error != NULL) {
         g_propagate_error(error, tmp_error);
