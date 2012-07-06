@@ -31,18 +31,41 @@ static void sigint_handler(int signal)
     exit(signal);
 }
 
+static void print_usage(void)
+{
+    gchar **types;
+    
+    g_print("Usage: grab (");
+    types = uca_camera_get_types();
+
+    for (guint i = 0; types[i] != NULL; i++) {
+        if (types[i+1] == NULL)
+            g_print("%s)", types[i]);
+        else
+            g_print("%s | ", types[i]);
+    }
+
+    g_print("\n");
+    g_strfreev(types);
+}
+
 int main(int argc, char *argv[])
 {
     GError *error = NULL;
     (void) signal(SIGINT, sigint_handler);
-    guint sensor_width, sensor_height, sensor_width_extended, sensor_height_extended;
+
+    guint sensor_width, sensor_height;
     guint roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier;
-    guint bits, sensor_rate;
-    gint  cp_min, cp_max, cp_default;
+    guint bits;
     gchar *name;
 
+    if (argc < 2) {
+        print_usage();
+        return 1;
+    }
+
     g_type_init();
-    camera = uca_camera_new("pco", &error);
+    camera = uca_camera_new(argv[1], &error);
 
     if (camera == NULL) {
         g_print("Error during initialization: %s\n", error->message);
@@ -52,17 +75,13 @@ int main(int argc, char *argv[])
     g_object_get(G_OBJECT(camera),
             "sensor-width", &sensor_width,
             "sensor-height", &sensor_height,
-            "sensor-width-extended", &sensor_width_extended,
-            "sensor-height-extended", &sensor_height_extended,
             "name", &name,
             NULL);
 
     g_object_set(G_OBJECT(camera),
             "exposure-time", 0.1,
-            "delay-time", 0.0,
             "roi-x0", 0,
             "roi-y0", 0,
-            "sensor-extended", FALSE,
             "roi-width", 1000,
             "roi-height", sensor_height,
             NULL);
@@ -75,24 +94,14 @@ int main(int argc, char *argv[])
             "roi-x0", &roi_x,
             "roi-y0", &roi_y,
             "sensor-bitdepth", &bits,
-            "sensor-pixelrate", &sensor_rate,
-            "cooling-point-min", &cp_min,
-            "cooling-point-max", &cp_max,
-            "cooling-point-default", &cp_default,
             NULL);
 
     g_print("Camera: %s\n", name);
     g_free(name);
 
-    g_print("Sensor: %ix%i px (extended: %ix%i) @ %i Hz\n", 
-            sensor_width, sensor_height, 
-            sensor_width_extended, sensor_height_extended,
-            sensor_rate);
-
+    g_print("Sensor: %ix%i px\n", sensor_width, sensor_height);
     g_print("ROI: %ix%i @ (%i, %i), steps: %i, %i\n", 
             roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier);
-
-    g_print("Valid cooling point range: [%i, %i] (default: %i)\n", cp_min, cp_max, cp_default);
 
     const int pixel_size = bits == 8 ? 1 : 2;
     gpointer buffer = g_malloc0(roi_width * roi_height * pixel_size);
