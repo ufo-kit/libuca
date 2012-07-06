@@ -189,7 +189,7 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
      */
     /* assert(err == size); */
 
-    memcpy(data, src, size);
+    memcpy(*data, src, size);
 
     /*
      * Another problem here. What does this help us? At this point we have
