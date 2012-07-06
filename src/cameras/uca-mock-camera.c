@@ -54,6 +54,7 @@ static GParamSpec *mock_properties[N_PROPERTIES] = { NULL, };
 struct _UcaMockCameraPrivate {
     guint width;
     guint height;
+    guint roi_x, roi_y, roi_width, roi_height;
     gfloat frame_rate;
     gfloat max_frame_rate;
     gdouble exposure_time;
@@ -187,19 +188,22 @@ static gpointer mock_grab_func(gpointer data)
 
 static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
 {
+    gboolean transfer_async = FALSE;
+    UcaMockCameraPrivate *priv;
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
+
+    priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
+    /* TODO: check that roi_x + roi_width < priv->width */
+    priv->dummy_data = (guint8 *) g_malloc0(priv->roi_width * priv->roi_height);
+
+    g_object_get(G_OBJECT(camera),
+            "transfer-asynchronously", &transfer_async,
+            NULL);
 
     /*
      * In case asynchronous transfer is requested, we start a new thread that
      * invokes the grab callback, otherwise nothing will be done here.
      */
-
-    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
-    gboolean transfer_async = FALSE;
-    g_object_get(G_OBJECT(camera),
-            "transfer-asynchronously", &transfer_async,
-            NULL);
-
     if (transfer_async) {
         GError *tmp_error = NULL;
         priv->thread_running = TRUE;
@@ -214,10 +218,14 @@ static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
 
 static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
 {
+    gboolean transfer_async = FALSE;
+    UcaMockCameraPrivate *priv;
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
 
-    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
-    gboolean transfer_async = FALSE;
+    priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
+    g_free(priv->dummy_data);
+    priv->dummy_data = NULL;
+
     g_object_get(G_OBJECT(camera),
             "transfer-asynchronously", &transfer_async,
             NULL);
@@ -254,6 +262,18 @@ static void uca_mock_camera_set_property(GObject *object, guint property_id, con
             break;
         case PROP_FRAMERATE:
             priv->frame_rate = g_value_get_float(value);
+            break;
+        case PROP_ROI_X:
+            priv->roi_x = g_value_get_uint(value);
+            break;
+        case PROP_ROI_Y:
+            priv->roi_y = g_value_get_uint(value);
+            break;
+        case PROP_ROI_WIDTH:
+            priv->roi_width = g_value_get_uint(value);
+            break;
+        case PROP_ROI_HEIGHT:
+            priv->roi_height = g_value_get_uint(value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -294,16 +314,16 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
             g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
             break;
         case PROP_ROI_X:
-            g_value_set_uint(value, 0);
+            g_value_set_uint(value, priv->roi_x);
             break;
         case PROP_ROI_Y:
-            g_value_set_uint(value, 0);
+            g_value_set_uint(value, priv->roi_y);
             break;
         case PROP_ROI_WIDTH:
-            g_value_set_uint(value, priv->width);
+            g_value_set_uint(value, priv->roi_width);
             break;
         case PROP_ROI_HEIGHT:
-            g_value_set_uint(value, priv->height);
+            g_value_set_uint(value, priv->roi_height);
             break;
         case PROP_ROI_WIDTH_MULTIPLIER:
             g_value_set_uint(value, 1);
@@ -375,10 +395,11 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
 static void uca_mock_camera_init(UcaMockCamera *self)
 {
     self->priv = UCA_MOCK_CAMERA_GET_PRIVATE(self);
-    self->priv->width = 640;
-    self->priv->height = 480;
+    self->priv->roi_x = 0;
+    self->priv->roi_y = 0;
+    self->priv->width = self->priv->roi_width = 640;
+    self->priv->height = self->priv->roi_height = 480;
     self->priv->frame_rate = self->priv->max_frame_rate = 100000.0f;
-    self->priv->dummy_data = (guint8 *) g_malloc0(self->priv->width * self->priv->height);
     self->priv->grab_thread = NULL;
     self->priv->current_frame = 0;
 
