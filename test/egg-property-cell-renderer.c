@@ -111,7 +111,6 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
     GParamSpec *pspec;
     gchar *text = NULL;
     gdouble number;
-    gboolean change_adjustment = FALSE;
 
     priv = EGG_PROPERTY_CELL_RENDERER_GET_PRIVATE (renderer);
     pspec = get_pspec_from_object (priv->object, prop_name);
@@ -133,7 +132,6 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
             priv->renderer = priv->spin_renderer;
             g_object_set (renderer, "mode", GTK_CELL_RENDERER_MODE_EDITABLE, NULL);
             g_object_set (priv->renderer, "digits", 5, NULL);
-            change_adjustment = TRUE;
             break;
 
         case G_TYPE_INT:
@@ -145,7 +143,6 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
             priv->renderer = priv->spin_renderer;
             g_object_set (renderer, "mode", GTK_CELL_RENDERER_MODE_EDITABLE, NULL);
             g_object_set (priv->renderer, "digits", 0, NULL);
-            change_adjustment = TRUE;
             break;
 
         /* text renderers */
