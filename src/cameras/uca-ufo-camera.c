@@ -67,6 +67,8 @@ static gint base_overrideables[] = {
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
+    PROP_ROI_WIDTH_MULTIPLIER,
+    PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     0,
@@ -209,6 +211,12 @@ static void uca_ufo_camera_set_property(GObject *object, guint property_id, cons
                 pcilib_write_register(priv->handle, NULL, "exp_time", reg_value);
             }
             break;
+        case PROP_ROI_X:
+        case PROP_ROI_Y:
+        case PROP_ROI_WIDTH:
+        case PROP_ROI_HEIGHT:
+            g_debug("ROI feature not implemented yet");
+            break;
 
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -224,15 +232,12 @@ static void uca_ufo_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_SENSOR_WIDTH: 
             g_value_set_uint(value, SENSOR_WIDTH);
             break;
-
         case PROP_SENSOR_HEIGHT: 
             g_value_set_uint(value, SENSOR_HEIGHT);
             break;
-
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint(value, 10);
             break;
-
         case PROP_EXPOSURE_TIME:
             {
                 const gdouble factor = 2.67e-6;
@@ -241,35 +246,33 @@ static void uca_ufo_camera_get_property(GObject *object, guint property_id, GVal
                 g_value_set_double(value, factor * time_steps); 
             }
             break;
-
         case PROP_HAS_STREAMING:
             g_value_set_boolean(value, TRUE);
             break;
-
         case PROP_HAS_CAMRAM_RECORDING:
             g_value_set_boolean(value, FALSE);
             break;
-
         case PROP_ROI_X:
             g_value_set_uint(value, 0);
             break;
-
         case PROP_ROI_Y:
             g_value_set_uint(value, 0);
             break;
-
         case PROP_ROI_WIDTH:
             g_value_set_uint(value, SENSOR_WIDTH);
             break;
-
         case PROP_ROI_HEIGHT:
             g_value_set_uint(value, SENSOR_HEIGHT);
             break;
-
+        case PROP_ROI_WIDTH_MULTIPLIER:
+            g_value_set_uint(value, 1);
+            break;
+        case PROP_ROI_HEIGHT_MULTIPLIER:
+            g_value_set_uint(value, 1);
+            break;
         case PROP_NAME: 
             g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");
             break;
-
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
