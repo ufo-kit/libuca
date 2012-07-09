@@ -27,7 +27,7 @@
     if (err != 0) {                                     \
         g_set_error(error, UCA_UFO_CAMERA_ERROR,        \
                 err_type,                               \
-                "Errno: %s", strerror(err));            \
+                "pcilib: %s", strerror(err));           \
         return;                                         \
     }
 
@@ -61,6 +61,9 @@ enum {
 static gint base_overrideables[] = {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
+    PROP_SENSOR_HORIZONTAL_BINNING,
+    PROP_SENSOR_VERTICAL_BINNING,
+    PROP_SENSOR_MAX_FRAME_RATE,
     PROP_SENSOR_BITDEPTH,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
@@ -237,6 +240,15 @@ static void uca_ufo_camera_get_property(GObject *object, guint property_id, GVal
             break;
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint(value, 10);
+            break;
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+            g_value_set_uint(value, 1);
+            break;
+        case PROP_SENSOR_VERTICAL_BINNING:
+            g_value_set_uint(value, 1);
+            break;
+        case PROP_SENSOR_MAX_FRAME_RATE:
+            g_value_set_float(value, 340.0);
             break;
         case PROP_EXPOSURE_TIME:
             {
