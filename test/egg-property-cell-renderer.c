@@ -31,6 +31,8 @@ struct _EggPropertyCellRendererPrivate
     GtkCellRenderer *text_renderer;
     GtkCellRenderer *spin_renderer;
     GtkCellRenderer *toggle_renderer;
+    GtkCellRenderer *combo_renderer;
+    GHashTable      *combo_models;
 };
 
 enum
@@ -38,6 +40,13 @@ enum
     PROP_0,
     PROP_PROP_NAME,
     N_PROPERTIES
+};
+
+enum
+{
+    COMBO_COLUMN_VALUE_NAME,
+    COMBO_COLUMN_VALUE,
+    N_COMBO_COLUMNS
 };
 
 static GParamSpec *egg_property_cell_renderer_properties[N_PROPERTIES] = { NULL, };
@@ -154,7 +163,10 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
 
         /* combo renderers */
         default:
-            /* g_print ("no idea how to handle %s -> %s\n", prop_name, g_type_name (pspec->value_type)); */
+            if (G_TYPE_IS_ENUM (pspec->value_type)) {
+                priv->renderer = priv->combo_renderer;
+                g_object_set (renderer, "mode", GTK_CELL_RENDERER_MODE_EDITABLE, NULL);
+            }
             break;
     }
 
@@ -199,6 +211,43 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
             break;
 
         default:
+            if (G_TYPE_IS_ENUM (pspec->value_type)) {
+                GParamSpecEnum *pspec_enum;
+                GEnumClass *enum_class;
+                GtkTreeModel *combo_model;
+                GtkTreeIter iter;
+                gint value;
+
+                g_object_get (priv->object, prop_name, &value, NULL);
+
+                pspec_enum = G_PARAM_SPEC_ENUM (pspec);
+                enum_class = pspec_enum->enum_class;
+                combo_model = g_hash_table_lookup (priv->combo_models, prop_name);
+
+                if (combo_model == NULL) {
+                    combo_model = GTK_TREE_MODEL (gtk_list_store_new (N_COMBO_COLUMNS, G_TYPE_STRING, G_TYPE_INT));
+                    g_hash_table_insert (priv->combo_models, g_strdup (prop_name), combo_model);
+
+                    for (guint i = 0; i < enum_class->n_values; i++) {
+                        gtk_list_store_append (GTK_LIST_STORE (combo_model), &iter);
+                        gtk_list_store_set (GTK_LIST_STORE (combo_model), &iter,
+                                COMBO_COLUMN_VALUE_NAME, enum_class->values[i].value_name,
+                                COMBO_COLUMN_VALUE, enum_class->values[i].value,
+                                -1);
+                    }
+                }
+
+
+                for (guint i = 0; i < enum_class->n_values; i++) {
+                    if (enum_class->values[i].value == value)
+                        text = g_strdup (enum_class->values[i].value_name);
+                }
+
+                g_object_set (priv->renderer,
+                        "model", combo_model,
+                        "text-column", 0,
+                        NULL);
+            }
             break;
     }
 
@@ -350,6 +399,36 @@ egg_property_cell_renderer_spin_edited_cb (GtkCellRendererText  *renderer,
 }
 
 static void
+egg_property_cell_renderer_changed_cb (GtkCellRendererCombo *combo,
+                                       gchar                *path,
+                                       GtkTreeIter          *new_iter,
+                                       gpointer              user_data)
+{
+    EggPropertyCellRendererPrivate *priv;
+    gchar *prop_name;
+
+    priv = (EggPropertyCellRendererPrivate *) user_data;
+    prop_name = get_prop_name_from_tree_model (GTK_TREE_MODEL (priv->list_store), path);
+
+    if (prop_name != NULL) {
+        GtkTreeModel *combo_model;
+        gchar *value_name;
+        gint value;
+
+        combo_model = g_hash_table_lookup (priv->combo_models, prop_name);
+
+        gtk_tree_model_get (combo_model, new_iter,
+                COMBO_COLUMN_VALUE_NAME, &value_name,
+                COMBO_COLUMN_VALUE, &value,
+                -1);
+
+        g_object_set (priv->object, prop_name, value, NULL);
+        g_free (value_name);
+        g_free (prop_name);
+    }
+}
+
+static void
 egg_property_cell_renderer_get_size (GtkCellRenderer    *cell,
                                      GtkWidget          *widget,
                                      GdkRectangle       *cell_area,
@@ -360,7 +439,6 @@ egg_property_cell_renderer_get_size (GtkCellRenderer    *cell,
 {
 
     EggPropertyCellRendererPrivate *priv = EGG_PROPERTY_CELL_RENDERER_GET_PRIVATE (cell);
-
     gtk_cell_renderer_get_size (priv->renderer, widget, cell_area, x_offset, y_offset, width, height);
 }
 
@@ -401,6 +479,13 @@ egg_property_cell_renderer_start_editing (GtkCellRenderer        *cell,
 {
     EggPropertyCellRendererPrivate *priv = EGG_PROPERTY_CELL_RENDERER_GET_PRIVATE (cell);
     return gtk_cell_renderer_start_editing (priv->renderer, event, widget, path, background_area, cell_area, flags);
+}
+
+static void
+egg_property_cell_renderer_dispose (GObject *object)
+{
+    EggPropertyCellRenderer *renderer = EGG_PROPERTY_CELL_RENDERER (object);
+    g_hash_table_destroy (renderer->priv->combo_models);
 }
 
 static void
@@ -446,6 +531,7 @@ egg_property_cell_renderer_class_init (EggPropertyCellRendererClass *klass)
 
     gobject_class->set_property = egg_property_cell_renderer_set_property;
     gobject_class->get_property = egg_property_cell_renderer_get_property;
+    gobject_class->dispose = egg_property_cell_renderer_dispose;
 
     cellrenderer_class->render = egg_property_cell_renderer_render;
     cellrenderer_class->get_size = egg_property_cell_renderer_get_size;
@@ -472,7 +558,9 @@ egg_property_cell_renderer_init (EggPropertyCellRenderer *renderer)
     priv->text_renderer = gtk_cell_renderer_text_new ();
     priv->spin_renderer = gtk_cell_renderer_spin_new ();
     priv->toggle_renderer = gtk_cell_renderer_toggle_new ();
+    priv->combo_renderer = gtk_cell_renderer_combo_new ();
     priv->renderer = priv->text_renderer;
+    priv->combo_models = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
     g_object_set (priv->text_renderer,
             "editable", TRUE,
@@ -488,6 +576,10 @@ egg_property_cell_renderer_init (EggPropertyCellRenderer *renderer)
             "mode", GTK_CELL_RENDERER_MODE_ACTIVATABLE,
             NULL);
 
+    g_object_set (priv->combo_renderer,
+            "has-entry", FALSE,
+            NULL);
+
     g_signal_connect (priv->spin_renderer, "edited",
             G_CALLBACK (egg_property_cell_renderer_spin_edited_cb), priv);
 
@@ -496,4 +588,7 @@ egg_property_cell_renderer_init (EggPropertyCellRenderer *renderer)
 
     g_signal_connect (priv->toggle_renderer, "toggled",
             G_CALLBACK (egg_property_cell_renderer_toggle_cb), priv);
+
+    g_signal_connect (priv->combo_renderer, "changed",
+            G_CALLBACK (egg_property_cell_renderer_changed_cb), priv);
 }
