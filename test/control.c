@@ -280,8 +280,6 @@ static void create_main_window(GtkBuilder *builder, const gchar* camera_name)
             "clicked", G_CALLBACK(on_toolbutton_stop_clicked), &td);
     g_signal_connect(gtk_builder_get_object(builder, "toolbutton_record"),
             "clicked", G_CALLBACK(on_toolbutton_record_clicked), &td);
-    g_signal_connect(gtk_builder_get_object(builder, "valuecell"),
-            "edited", G_CALLBACK(on_valuecell_edited), &td);
 
     gtk_widget_show(image);
     gtk_widget_show(window);
