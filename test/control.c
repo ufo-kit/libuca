@@ -61,7 +61,7 @@ enum {
 };
 
 
-void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
+static void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
 {
     for (int i = 0, j = 0; i < width*height; i++) {
         output[j++] = input[i];
@@ -70,34 +70,33 @@ void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
     }
 }
 
-void convert_16bit_to_rgb(guchar *output, guchar *input, int width, int height, float scale)
+static void convert_16bit_to_rgb(guchar *output, guchar *input, int width, int height)
 {
     guint16 *in = (guint16 *) input;
-    for (int i = 0, j = 0; i < width*height; i++) {
-        guchar val = (guint8) ((in[i]/scale)*256.0f);
-        output[j++] = val;
-        output[j++] = val;
-        output[j++] = val;
+    guint16 min = G_MAXUINT16, max = 0;
+    gfloat spread = 0.0f;
+
+    for (int i = 0; i < width * height; i++) {
+        guint16 v = in[i];
+        if (v < min)
+            min = v;
+        if (v > max)
+            max = v;
+    }
+
+    spread = (gfloat) max - min;
+
+    if (spread > 0.0f) {
+        for (int i = 0, j = 0; i < width*height; i++) {
+            guchar val = (guint8) (((in[i] - min) / spread) * 255.0f);
+            output[j++] = val;
+            output[j++] = val;
+            output[j++] = val;
+        }
     }
 }
 
-void reallocate_buffers(ThreadData *td, int width, int height)
-{
-    const size_t num_bytes = width * height * td->pixel_size;
-
-    g_object_unref(td->pixbuf);
-    g_free(td->buffer);
-
-    td->pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, width, height);
-    td->buffer = (guchar *) g_malloc(num_bytes);
-    td->width  = width;
-    td->height = height;
-    td->pixels = gdk_pixbuf_get_pixels(td->pixbuf);
-    gtk_image_set_from_pixbuf(GTK_IMAGE(td->image), td->pixbuf);
-    memset(td->buffer, 0, num_bytes);
-}
-
-void *grab_thread(void *args)
+static void *grab_thread(void *args)
 {
     ThreadData *data = (ThreadData *) args;
     gchar filename[FILENAME_MAX] = {0,};
@@ -117,8 +116,9 @@ void *grab_thread(void *args)
          * just do nothing if it is an already displayed one. */
         if (data->pixel_size == 1)
             convert_8bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
-        else if (data->pixel_size == 2)
-            convert_16bit_to_rgb(data->pixels, data->buffer, data->width, data->height, data->scale);
+        else if (data->pixel_size == 2) {
+            convert_16bit_to_rgb(data->pixels, data->buffer, data->width, data->height);
+        }
 
         gdk_threads_enter();
         gdk_flush();
@@ -232,7 +232,7 @@ static void create_main_window(GtkBuilder *builder, const gchar* camera_name)
     GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, td.width, td.height);
     gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf);
 
-    td.pixel_size = bits_per_sample == 16 ? 2 : 1;
+    td.pixel_size = bits_per_sample > 8 ? 2 : 1;
     td.image  = image;
     td.pixbuf = pixbuf;
     td.buffer = (guchar *) g_malloc(td.pixel_size * td.width * td.height);

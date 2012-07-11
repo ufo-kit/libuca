@@ -74,6 +74,7 @@ static gint base_overrideables[] = {
     PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
+    PROP_TRIGGER_MODE,
     0,
 };
 
@@ -284,6 +285,8 @@ static void uca_ufo_camera_get_property(GObject *object, guint property_id, GVal
             break;
         case PROP_NAME: 
             g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");
+            break;
+        case PROP_TRIGGER_MODE:
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);

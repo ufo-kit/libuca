@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
             NULL);
 
     g_object_set(G_OBJECT(camera),
-            "exposure-time", 0.1,
+            "exposure-time", 0.001,
             "roi-x0", 0,
             "roi-y0", 0,
             "roi-width", 1000,
