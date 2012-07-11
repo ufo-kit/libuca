@@ -55,7 +55,8 @@ GQuark uca_ufo_camera_error_quark()
 
 enum {
     PROP_NAME = N_BASE_PROPERTIES,
-    N_PROPERTIES
+    PROP_UFO_START,
+    N_MAX_PROPERTIES = 512
 };
 
 static gint base_overrideables[] = {
@@ -78,8 +79,15 @@ static gint base_overrideables[] = {
     0,
 };
 
-static GParamSpec *ufo_properties[N_PROPERTIES] = { NULL, };
+typedef struct _RegisterInfo {
+    gchar  *name;
+    guint   cached_value; 
+} RegisterInfo;
 
+static GParamSpec *ufo_properties[N_MAX_PROPERTIES] = { NULL, };
+
+static guint N_PROPERTIES;
+static GHashTable *ufo_property_table; /* maps from prop_id to RegisterInfo* */
 
 struct _UcaUfoCameraPrivate {
     pcilib_t *handle;
@@ -112,7 +120,9 @@ static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info,
 UcaUfoCamera *uca_ufo_camera_new(GError **error)
 {
     pcilib_model_t model = PCILIB_MODEL_DETECT;
+    pcilib_model_description_t *model_description;
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
+    guint prop = PROP_UFO_START;
 
     if (handle == NULL) {
         g_set_error(error, UCA_UFO_CAMERA_ERROR, UCA_UFO_CAMERA_ERROR_INIT,
@@ -121,6 +131,48 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     }
 
     pcilib_set_error_handler(&ignore_messages, &ignore_messages);
+    model_description = pcilib_get_model_description(handle);
+    ufo_property_table = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_free);
+
+    for (guint i = 0; model_description->registers[i].name != NULL; i++) {
+        GParamFlags flags;
+        RegisterInfo *reg_info;
+        gchar *prop_name;
+        pcilib_register_description_t *reg;
+        pcilib_register_value_t value;
+        
+        reg = &model_description->registers[i];
+
+        switch (reg->mode) {
+            case PCILIB_REGISTER_R:
+                flags = G_PARAM_READABLE;
+                break;
+            case PCILIB_REGISTER_W:
+            case PCILIB_REGISTER_W1C:
+                flags = G_PARAM_WRITABLE;
+                break;
+            case PCILIB_REGISTER_RW:
+            case PCILIB_REGISTER_RW1C:
+                flags = G_PARAM_READWRITE;
+                break;
+        }
+
+        pcilib_read_register (handle, NULL, reg->name, &value);
+        reg_info = g_new0 (RegisterInfo, 1);
+        reg_info->name = g_strdup (reg->name);
+        reg_info->cached_value = (guint32) value;
+
+        g_hash_table_insert (ufo_property_table, GINT_TO_POINTER (prop), reg_info);
+        prop_name = g_strdup_printf ("ufo-%s", reg->name);
+
+        ufo_properties[prop++] = g_param_spec_uint (
+                prop_name, reg->description, reg->description,
+                0, G_MAXUINT, reg->defvalue, flags);
+
+        g_free (prop_name);
+    }
+
+    N_PROPERTIES = prop;
 
     UcaUfoCamera *camera = g_object_new(UCA_TYPE_UFO_CAMERA, NULL);
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
@@ -223,7 +275,20 @@ static void uca_ufo_camera_set_property(GObject *object, guint property_id, cons
             break;
 
         default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            {
+                RegisterInfo *reg_info = g_hash_table_lookup (ufo_property_table, GINT_TO_POINTER (property_id));
+
+                if (reg_info != NULL) {
+                    pcilib_register_value_t reg_value;
+                    
+                    reg_value = g_value_get_uint (value);
+                    pcilib_write_register(priv->handle, NULL, reg_info->name, reg_value);
+                    pcilib_read_register (priv->handle, NULL, reg_info->name, &reg_value);
+                    reg_info->cached_value = (guint) reg_value;
+                }
+                else
+                    G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            }
             return;
     }
 }
@@ -289,7 +354,14 @@ static void uca_ufo_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_TRIGGER_MODE:
             break;
         default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            {
+                RegisterInfo *reg_info = g_hash_table_lookup (ufo_property_table, GINT_TO_POINTER (property_id));
+
+                if (reg_info != NULL) 
+                    g_value_set_uint (value, reg_info->cached_value);
+                else
+                    G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            }
             break;
     }
 }
@@ -323,6 +395,10 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
             "Name of the camera",
             "", G_PARAM_READABLE);
 
+    /*
+     * This automatic property installation includes the properties created 
+     * dynamically in uca_ufo_camera_new().
+     */
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, ufo_properties[id]);
 
