@@ -31,7 +31,7 @@
 typedef struct {
     gboolean running;
     gboolean store;
-    
+
     guchar *buffer, *pixels;
     GdkPixbuf *pixbuf;
     GtkWidget *image;
@@ -65,7 +65,7 @@ void convert_8bit_to_rgb(guchar *output, guchar *input, int width, int height)
 {
     for (int i = 0, j = 0; i < width*height; i++) {
         output[j++] = input[i];
-        output[j++] = input[i]; 
+        output[j++] = input[i];
         output[j++] = input[i];
     }
 }
@@ -155,7 +155,7 @@ static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
 
     if (data->running)
         return;
-    
+
     GError *error = NULL;
     data->running = TRUE;
 
@@ -190,43 +190,15 @@ static void on_toolbutton_record_clicked(GtkWidget *widget, gpointer args)
     data->timestamp = (int) time(0);
     data->store = TRUE;
     GError *error = NULL;
-    
+
     gtk_statusbar_push(data->statusbar, data->statusbar_context_id, "Recording...");
-    
+
     if (data->running != TRUE) {
         data->running = TRUE;
         uca_camera_start_recording(data->camera, &error);
 
         if (!g_thread_create(grab_thread, data, FALSE, &error))
             g_printerr("Failed to create thread: %s\n", error->message);
-    }
-}
-
-static void on_valuecell_edited(GtkCellRendererText *renderer, gchar *path, gchar *new_text, gpointer data)
-{
-    ThreadData *td = (ThreadData *) data;
-    GtkTreePath *tree_path = gtk_tree_path_new_from_string(path);
-    GtkTreeIter iter;
-
-    if (gtk_tree_model_get_iter(td->property_model, &iter, tree_path)) {
-        gchar *propname;
-        GValue dest_value = {0}, src_value = {0};
-        g_value_init(&src_value, G_TYPE_STRING);
-        g_value_set_string(&src_value, new_text);
-
-        gtk_tree_model_get(td->property_model, &iter, COLUMN_NAME, &propname, -1);
-
-        GParamSpec *spec = g_object_class_find_property(G_OBJECT_GET_CLASS(td->camera), propname);
-        g_value_init(&dest_value, spec->value_type);
-        errno = 0;
-
-        if (g_value_transform(&src_value, &dest_value) && (errno != EINVAL)) {
-            g_object_set_property(G_OBJECT(td->camera), propname, &dest_value);
-            g_object_get_property(G_OBJECT(td->camera), propname, &src_value);
-            gtk_list_store_set(GTK_LIST_STORE(td->property_model), &iter, COLUMN_VALUE, g_value_get_string(&src_value), -1);
-        }
-        else
-            g_warning("Couldn't transform %s\n", g_value_get_string(&src_value));
     }
 }
 
@@ -300,7 +272,7 @@ static void on_button_proceed_clicked(GtkWidget *widget, gpointer data)
     gboolean valid = gtk_tree_model_get_iter(GTK_TREE_MODEL(list_store), &iter, selected_rows->data);
 
     if (valid) {
-        gchar *data; 
+        gchar *data;
         gtk_tree_model_get(GTK_TREE_MODEL(list_store), &iter, 0, &data, -1);
         create_main_window(builder, data);
         g_free(data);
@@ -366,6 +338,6 @@ int main(int argc, char *argv[])
     gdk_threads_enter();
     gtk_main();
     gdk_threads_leave();
-    
+
     return 0;
 }
