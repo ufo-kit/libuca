@@ -45,7 +45,6 @@ typedef struct {
     int width;
     int height;
     int pixel_size;
-    float scale;
 } ThreadData;
 
 typedef struct {
@@ -143,12 +142,6 @@ void on_destroy(GtkWidget *widget, gpointer data)
     gtk_main_quit();
 }
 
-void on_adjustment_scale_value_changed(GtkAdjustment* adjustment, gpointer user_data)
-{
-    ThreadData *data = (ThreadData *) user_data;
-    data->scale = gtk_adjustment_get_value(adjustment);
-}
-
 static void on_toolbutton_run_clicked(GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
@@ -238,7 +231,6 @@ static void create_main_window(GtkBuilder *builder, const gchar* camera_name)
     td.buffer = (guchar *) g_malloc(td.pixel_size * td.width * td.height);
     td.pixels = gdk_pixbuf_get_pixels(pixbuf);
     td.running = FALSE;
-    td.scale = 65535.0f;
     td.statusbar = GTK_STATUSBAR(gtk_builder_get_object(builder, "statusbar"));
     td.statusbar_context_id = gtk_statusbar_get_context_id(td.statusbar, "Recording Information");
     td.store = FALSE;
