@@ -54,12 +54,12 @@ GQuark uca_ufo_camera_error_quark()
 }
 
 enum {
-    PROP_NAME = N_BASE_PROPERTIES,
-    PROP_UFO_START,
+    PROP_UFO_START = N_BASE_PROPERTIES,
     N_MAX_PROPERTIES = 512
 };
 
 static gint base_overrideables[] = {
+    PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_HORIZONTAL_BINNING,
@@ -388,12 +388,6 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
 
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
-
-    ufo_properties[PROP_NAME] = 
-        g_param_spec_string("name",
-            "Name of the camera",
-            "Name of the camera",
-            "", G_PARAM_READABLE);
 
     /*
      * This automatic property installation includes the properties created 

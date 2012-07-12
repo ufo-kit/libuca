@@ -62,6 +62,7 @@ GQuark uca_pf_camera_error_quark()
 }
 
 static gint base_overrideables[] = {
+    PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
@@ -81,11 +82,9 @@ static gint base_overrideables[] = {
 };
 
 enum {
-    PROP_NAME = N_BASE_PROPERTIES,
+    PROP_FOO = N_BASE_PROPERTIES,
     N_PROPERTIES
 };
-
-static GParamSpec *pf_properties[N_PROPERTIES] = { NULL, };
 
 
 struct _UcaPfCameraPrivate {
@@ -336,15 +335,6 @@ static void uca_pf_camera_class_init(UcaPfCameraClass *klass)
 
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
-
-    pf_properties[PROP_NAME] = 
-        g_param_spec_string("name",
-            "Name of the camera",
-            "Name of the camera",
-            "", G_PARAM_READABLE);
-
-    for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
-        g_object_class_install_property(gobject_class, id, pf_properties[id]);
 
     g_type_class_add_private(klass, sizeof(UcaPfCameraPrivate));
 }

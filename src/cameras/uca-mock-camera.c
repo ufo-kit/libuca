@@ -28,6 +28,7 @@ enum {
 };
 
 static const gint mock_overrideables[] = {
+    PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
@@ -286,6 +287,9 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
+        case PROP_NAME:
+            g_value_set_string(value, "mock camera");
+            break;
         case PROP_SENSOR_WIDTH:
             g_value_set_uint(value, priv->width);
             break;

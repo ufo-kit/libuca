@@ -52,6 +52,7 @@ typedef struct _UcaCameraPrivate    UcaCameraPrivate;
 
 enum {
     PROP_0 = 0,
+    PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,

@@ -93,8 +93,7 @@ GQuark uca_pco_camera_error_quark()
 }
 
 enum {
-    PROP_NAME = N_BASE_PROPERTIES,
-    PROP_SENSOR_EXTENDED,
+    PROP_SENSOR_EXTENDED = N_BASE_PROPERTIES,
     PROP_SENSOR_WIDTH_EXTENDED,
     PROP_SENSOR_HEIGHT_EXTENDED,
     PROP_SENSOR_TEMPERATURE,
@@ -118,6 +117,7 @@ enum {
 };
 
 static gint base_overrideables[] = {
+    PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
