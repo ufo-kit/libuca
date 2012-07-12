@@ -37,6 +37,7 @@ G_DEFINE_TYPE(UcaUfoCamera, uca_ufo_camera, UCA_TYPE_CAMERA)
 
 static const guint SENSOR_WIDTH = 2048;
 static const guint SENSOR_HEIGHT = 1088;
+static const gdouble EXPOSURE_TIME_SCALE = 2.69e6;
 
 /**
  * UcaUfoCameraError:
@@ -263,7 +264,7 @@ static void uca_ufo_camera_set_property(GObject *object, guint property_id, cons
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
             {
-                pcilib_register_value_t reg_value = (pcilib_register_value_t) 2.67e6 * g_value_get_double(value);
+                pcilib_register_value_t reg_value = (pcilib_register_value_t) EXPOSURE_TIME_SCALE * g_value_get_double(value);
                 pcilib_write_register(priv->handle, NULL, "exp_time", reg_value);
             }
             break;
@@ -318,10 +319,9 @@ static void uca_ufo_camera_get_property(GObject *object, guint property_id, GVal
             break;
         case PROP_EXPOSURE_TIME:
             {
-                const gdouble factor = 2.67e-6;
-                pcilib_register_value_t time_steps;
-                pcilib_read_register(priv->handle, NULL, "exp_time", &time_steps);
-                g_value_set_double(value, factor * time_steps); 
+                pcilib_register_value_t reg_value;
+                pcilib_read_register(priv->handle, NULL, "exp_time", &reg_value);
+                g_value_set_double(value, reg_value / EXPOSURE_TIME_SCALE);
             }
             break;
         case PROP_HAS_STREAMING:
