@@ -294,7 +294,17 @@ static void uca_ufo_camera_set_property(GObject *object, guint property_id, cons
     }
 }
 
-static void uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+static guint
+read_register_value (UcaUfoCameraPrivate *priv, const gchar *name)
+{
+    pcilib_register_value_t reg_value;
+
+    pcilib_read_register(priv->handle, NULL, name, &reg_value);
+    return (guint) reg_value;
+}
+
+static void
+uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(object);
 
@@ -306,7 +316,7 @@ static void uca_ufo_camera_get_property(GObject *object, guint property_id, GVal
             g_value_set_uint(value, SENSOR_HEIGHT);
             break;
         case PROP_SENSOR_BITDEPTH:
-            g_value_set_uint(value, 10);
+            g_value_set_uint(value, read_register_value (priv, "bit_mode"));
             break;
         case PROP_SENSOR_HORIZONTAL_BINNING:
             g_value_set_uint(value, 1);
@@ -318,11 +328,7 @@ static void uca_ufo_camera_get_property(GObject *object, guint property_id, GVal
             g_value_set_float(value, 340.0);
             break;
         case PROP_EXPOSURE_TIME:
-            {
-                pcilib_register_value_t reg_value;
-                pcilib_read_register(priv->handle, NULL, "exp_time", &reg_value);
-                g_value_set_double(value, reg_value / EXPOSURE_TIME_SCALE);
-            }
+            g_value_set_double (value, read_register_value (priv, "exp_time") / EXPOSURE_TIME_SCALE);
             break;
         case PROP_HAS_STREAMING:
             g_value_set_boolean(value, TRUE);
