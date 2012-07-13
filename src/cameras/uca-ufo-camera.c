@@ -55,7 +55,8 @@ GQuark uca_ufo_camera_error_quark()
 }
 
 enum {
-    PROP_UFO_START = N_BASE_PROPERTIES,
+    PROP_SENSOR_TEMPERATURE = N_BASE_PROPERTIES,
+    PROP_UFO_START,
     N_MAX_PROPERTIES = 512
 };
 
@@ -83,6 +84,7 @@ static gint base_overrideables[] = {
 typedef struct _RegisterInfo {
     gchar  *name;
     guint   cached_value; 
+    guint   n_bits;
 } RegisterInfo;
 
 static GParamSpec *ufo_properties[N_MAX_PROPERTIES] = { NULL, };
@@ -96,6 +98,15 @@ struct _UcaUfoCameraPrivate {
 
 static void ignore_messages(const char *format, ...)
 {
+}
+
+static guint
+read_register_value (UcaUfoCameraPrivate *priv, const gchar *name)
+{
+    pcilib_register_value_t reg_value;
+
+    pcilib_read_register(priv->handle, NULL, name, &reg_value);
+    return (guint) reg_value;
 }
 
 static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info, void *user)
@@ -124,6 +135,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     pcilib_model_description_t *model_description;
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
     guint prop = PROP_UFO_START;
+    guint bit_mode;
 
     if (handle == NULL) {
         g_set_error(error, UCA_UFO_CAMERA_ERROR, UCA_UFO_CAMERA_ERROR_INIT,
@@ -132,6 +144,11 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     }
 
     pcilib_set_error_handler(&ignore_messages, &ignore_messages);
+
+    bit_mode = read_register_value (priv, "bit_mode");
+    priv->n_bits = bit_mode == 2 ? 12 : 10;
+
+    /* Generate properties from model description */
     model_description = pcilib_get_model_description(handle);
     ufo_property_table = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_free);
 
@@ -294,14 +311,6 @@ static void uca_ufo_camera_set_property(GObject *object, guint property_id, cons
     }
 }
 
-static guint
-read_register_value (UcaUfoCameraPrivate *priv, const gchar *name)
-{
-    pcilib_register_value_t reg_value;
-
-    pcilib_read_register(priv->handle, NULL, name, &reg_value);
-    return (guint) reg_value;
-}
 
 static void
 uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
@@ -316,16 +325,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             g_value_set_uint(value, SENSOR_HEIGHT);
             break;
         case PROP_SENSOR_BITDEPTH:
-            switch (read_register_value (priv, "bit_mode")) {
-                case 1:
-                    g_value_set_uint (value, 10);
-                    break;
-                case 2:
-                    g_value_set_uint (value, 12);
-                    break;
-                default:
-                    g_warning ("Bit mode unknown");
-            }
+            g_value_set_uing (value, priv->n_bits);
             break;
         case PROP_SENSOR_HORIZONTAL_BINNING:
             g_value_set_uint(value, 1);
@@ -335,6 +335,9 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_SENSOR_MAX_FRAME_RATE:
             g_value_set_float(value, 340.0);
+            break;
+        case PROP_SENSOR_TEMPERATURE:
+            g_value_set_double (value, 0.17537 * read_register_value (priv, "cmosis_temperature") - 198.03733);
             break;
         case PROP_EXPOSURE_TIME:
             g_value_set_double (value, read_register_value (priv, "exp_time") / EXPOSURE_TIME_SCALE);
@@ -403,6 +406,13 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
 
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
+
+    ufo_properties[PROP_SENSOR_TEMPERATURE] =
+        g_param_spec_double("sensor-temperature",
+            "Temperature of the sensor",
+            "Temperature of the sensor in degree Celsius",
+            -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+            G_PARAM_READABLE);
 
     /*
      * This automatic property installation includes the properties created 
