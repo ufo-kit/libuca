@@ -316,8 +316,14 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             g_value_set_uint(value, SENSOR_HEIGHT);
             break;
         case PROP_SENSOR_BITDEPTH:
-            g_value_set_uint(value, read_register_value (priv, "bit_mode"));
-            break;
+            switch (read_register_value (priv, "bit_mode")) {
+                case 1:
+                    g_value_set_uint (value, 10);
+                    break;
+                case 2:
+                    g_value_set_uint (value, 12);
+                    break;
+            }
         case PROP_SENSOR_HORIZONTAL_BINNING:
             g_value_set_uint(value, 1);
             break;
