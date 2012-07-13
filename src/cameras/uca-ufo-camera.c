@@ -323,7 +323,10 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
                 case 2:
                     g_value_set_uint (value, 12);
                     break;
+                default:
+                    g_warning ("Bit mode unknown");
             }
+            break;
         case PROP_SENSOR_HORIZONTAL_BINNING:
             g_value_set_uint(value, 1);
             break;
