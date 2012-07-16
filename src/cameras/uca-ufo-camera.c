@@ -193,7 +193,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
 
     bit_mode = read_register_value (handle, "bit_mode");
-    priv->n_bits = bit_mode == 2 ? 12 : 10;
+    priv->n_bits = bit_mode == 0 ? 12 : 10;
     priv->handle = handle;
 
     return camera;
