@@ -1,0 +1,65 @@
+Simple install procedure
+========================
+
+  $ tar xfz libuca-0.x.tar.gz
+  $ cd libuca-0.x
+  $ mkdir build
+  $ cd build/
+  $ cmake ..
+  $ make
+
+  [ Become root if necessary ]
+  $ make install
+
+
+Requirements
+============
+
+libuca requires CMake and pkg-config for building libraries and accompanying
+tools. Information about CMake can be found at:
+
+    http://www.cmake.org
+
+and pkg-config at:
+
+    http://www.freedesktop.org/software/pkgconfig
+
+libuca depends on the GObject library for object oriented programming.
+Information about this library can be found at:
+
+    http://developers.gnome.org/gobject/stable
+
+Each specific camera needs a camera SDK and/or a driver:
+
+    - UFO camera: pcilib
+    - pco.edge, pco.4000, pco.dimax cameras: SiliconSoftware menable IV driver
+      and SDK as well as the libpco wrapper.
+
+The control tools require Gtk+ GUI toolkit. Information is available at:
+
+    http://developer.gnome.org/platform-overview/
+
+
+Building the Library
+====================
+
+On Linux, libuca uses the CMake build system and pkg-config for dependency
+detection. The normal procedure to build this library is to create an empty
+build directory:
+
+    $ mkdir build/ && cd build
+
+configure the project using CMake:
+
+    $ cmake ../
+
+and compiling the library with make:
+
+    $ make
+    $ make install
+
+Options to the build process can be passed to the system when configuring:
+
+    $ cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
+
+or via configuration tools like `ccmake`.
