@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "config.h"
 #include "uca-camera.h"
 #include "egg-property-tree-view.h"
 
@@ -319,7 +320,7 @@ int main(int argc, char *argv[])
 
     GtkBuilder *builder = gtk_builder_new();
 
-    if (!gtk_builder_add_from_file(builder, "control.glade", &error)) {
+    if (!gtk_builder_add_from_file(builder, CONTROL_GLADE_PATH, &error)) {
         g_print("Error: %s\n", error->message);
         return 1;
     }

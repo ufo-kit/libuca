@@ -1,7 +1,7 @@
 
 #include <glib.h>
 #include "uca-camera.h"
-#include "uca-mock-camera.h"
+#include "cameras/uca-mock-camera.h"
 
 typedef struct {
     UcaMockCamera *camera;
