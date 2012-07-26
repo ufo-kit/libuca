@@ -50,11 +50,11 @@ GQuark uca_pylon_camera_error_quark()
 }
 
 enum {
-    PROP_NAME = N_BASE_PROPERTIES,
-    N_PROPERTIES
+    N_PROPERTIES = N_BASE_PROPERTIES
 };
 
 static gint base_overrideables[] = {
+    PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
@@ -63,10 +63,10 @@ static gint base_overrideables[] = {
 //    PROP_SENSOR_VERTICAL_BINNING,
 //    PROP_SENSOR_VERTICAL_BINNINGS,
 //    PROP_SENSOR_MAX_FRAME_RATE,
-//    PROP_ROI_X,
-//    PROP_ROI_Y,
-//    PROP_ROI_WIDTH,
-//    PROP_ROI_HEIGHT,
+    PROP_ROI_X,
+    PROP_ROI_Y,
+    PROP_ROI_WIDTH,
+    PROP_ROI_HEIGHT,
 //    PROP_HAS_STREAMING,
 //    PROP_HAS_CAMRAM_RECORDING,
     0
@@ -82,9 +82,22 @@ struct _UcaPylonCameraPrivate {
 
     guint width;
     guint height;
+    guint16 roi_x, roi_y;
+    guint16 roi_width, roi_height;
 };
 
 
+static void pylon_get_roi(GObject *object, GError** error)
+{
+    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
+    pylon_camera_get_roi(&priv->roi_x, &priv->roi_y, &priv->roi_width, &priv->roi_height, error);
+}
+
+static void pylon_set_roi(GObject *object, GError** error)
+{
+    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
+    pylon_camera_set_roi(priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height, error);
+}
 
 UcaPylonCamera *uca_pylon_camera_new(GError **error)
 {
@@ -134,9 +147,39 @@ static void uca_pylon_camera_grab(UcaCamera *camera, gpointer *data, GError **er
 
 static void uca_pylon_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-    /*UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);*/
+    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
+    GError* error = NULL;
 
     switch (property_id) {
+
+        case PROP_ROI_X:
+            {
+              priv->roi_x = g_value_get_uint(value);
+              pylon_set_roi(object, &error);
+            }
+            break;
+
+        case PROP_ROI_Y:
+            {
+              priv->roi_y = g_value_get_uint(value);
+              pylon_set_roi(object, &error);
+            }
+            break;
+
+        case PROP_ROI_WIDTH:
+            {
+              priv->roi_width = g_value_get_uint(value);
+              pylon_set_roi(object, &error);
+            }
+            break;
+
+        case PROP_ROI_HEIGHT:
+            {
+              priv->roi_height = g_value_get_uint(value);
+              pylon_set_roi(object, &error);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -183,44 +226,41 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
         case PROP_HAS_CAMRAM_RECORDING:
             g_value_set_boolean(value, priv->camera_description->has_camram);
             break;
+            */
 
         case PROP_ROI_X:
             {
-              guint16 roi[4] = {0};
-              guint err = pylon_get_roi(priv->pylon, roi);
-              g_value_set_uint(value, roi[0]);
+              pylon_get_roi(object, &error);
+              g_value_set_uint(value, priv->roi_x);
             }
             break;
 
         case PROP_ROI_Y:
             {
-              guint16 roi[4] = {0};
-              guint err = pylon_get_roi(priv->pylon, roi);
-              g_value_set_uint(value, roi[1]);
+              pylon_get_roi(object, &error);
+              g_value_set_uint(value, priv->roi_y);
             }
             break;
 
         case PROP_ROI_WIDTH:
             {
-              guint16 roi[4] = {0};
-              guint err = pylon_get_roi(priv->pylon, roi);
-              g_value_set_uint(value, (roi[2] - roi[0]));
+              pylon_get_roi(object, &error);
+              g_value_set_uint(value, priv->roi_width);
             }
             break;
 
         case PROP_ROI_HEIGHT:
             {
-              guint16 roi[4] = {0};
-              guint err = pylon_get_roi(priv->pylon, roi);
-              g_value_set_uint(value, (roi[3] - roi[1]));
+              pylon_get_roi(object, &error);
+              g_value_set_uint(value, priv->roi_height);
             }
             break;
-*/
+
         case PROP_NAME: 
             {
                 //char *name = NULL;
                 //pylon_get_name(priv->pylon, &name);
-                g_value_set_string(value, "TestName");
+                g_value_set_string(value, "Pylon Camera");
                 //free(name);
             }
             break;

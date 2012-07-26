@@ -150,6 +150,41 @@ void pylon_camera_get_bit_depth(guint* depth, GError** error)
   }
 }
 
+void pylon_camera_get_roi(guint16* roi_x, guint16* roi_y, guint16* roi_width, guint16* roi_height, GError** error)
+{
+  g_assert(pGrabber);
+  g_assert(roi_x);
+  g_assert(roi_y);
+  g_assert(roi_width);
+  g_assert(roi_height);
+  try
+  {
+    GrabAPI::ROI roi = pGrabber->get_roi();
+    *roi_x = roi.x;
+    *roi_y = roi.y;
+    *roi_width = roi.width;
+    *roi_height = roi.height;
+  }
+  catch (const yat::Exception& e)
+  {
+    yat_exception_to_gerror(e, error);
+  }
+}
+
+void pylon_camera_set_roi(guint16 roi_x, guint16 roi_y, guint16 roi_width, guint16 roi_height, GError** error)
+{
+  g_assert(pGrabber);
+  try
+  {
+    GrabAPI::ROI roi(roi_x, roi_y, roi_width, roi_height);
+    pGrabber->set_roi(roi);
+  }
+  catch (const yat::Exception& e)
+  {
+    yat_exception_to_gerror(e, error);
+  }
+}
+
 void pylon_camera_start_acquision(GError** error)
 {
   g_assert(pGrabber);
