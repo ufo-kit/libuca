@@ -50,7 +50,9 @@ GQuark uca_pylon_camera_error_quark()
 }
 
 enum {
-    N_PROPERTIES = N_BASE_PROPERTIES
+    PROP_ROI_WIDTH_DEFAULT = N_BASE_PROPERTIES,
+    PROP_ROI_HEIGHT_DEFAULT,
+    N_PROPERTIES 
 };
 
 static gint base_overrideables[] = {
@@ -290,6 +292,16 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             }
             break;
 
+        case PROP_ROI_WIDTH_DEFAULT:
+            pylon_camera_get_sensor_size(&priv->width, &priv->height, &error);
+            g_value_set_uint(value, priv->width);
+            break;
+
+        case PROP_ROI_HEIGHT_DEFAULT:
+            pylon_camera_get_sensor_size(&priv->width, &priv->height, &error);
+            g_value_set_uint(value, priv->height);
+            break;
+
         case PROP_ROI_WIDTH_MULTIPLIER:
             g_value_set_uint(value, 1);
             break;
@@ -368,6 +380,49 @@ static void uca_pylon_camera_class_init(UcaPylonCameraClass *klass)
             "Name of the camera",
             "", G_PARAM_READABLE);
 
+    /*guint sensor_width = 0;
+    guint sensor_height = 0;
+    GError* error;
+    pylon_camera_get_sensor_size(&sensor_width, &sensor_height, &error);*/
+
+    pylon_properties[PROP_ROI_WIDTH_DEFAULT] =
+        g_param_spec_uint("roi-width-default",
+            "ROI width default value",
+            "ROI width default value",
+            0, G_MAXUINT, 0,
+            G_PARAM_READABLE);
+    pylon_properties[PROP_ROI_HEIGHT_DEFAULT] =
+        g_param_spec_uint("roi-height-default",
+            "ROI height default value",
+            "ROI height default value",
+            0, G_MAXUINT, 0,
+            G_PARAM_READABLE);
+    /*g_object_class_install_property(gobject_class, PROP_ROI_X, pylon_properties[PROP_ROI_X]);
+
+
+    pylon_properties[PROP_ROI_Y] =
+        g_param_spec_uint(uca_camera_props[PROP_ROI_Y],
+            "Vertical coordinate",
+            "Vertical coordinate",
+            0, G_MAXUINT, 0,
+            G_PARAM_READWRITE);
+    g_object_class_install_property(gobject_class, PROP_ROI_Y, pylon_properties[PROP_ROI_Y]);
+
+    pylon_properties[PROP_ROI_WIDTH] =
+        g_param_spec_uint(uca_camera_props[PROP_ROI_WIDTH],
+            "Width",
+            "Width of the region of interest",
+            1, G_MAXUINT, 500,
+            G_PARAM_READWRITE);
+    g_object_class_install_property(gobject_class, PROP_ROI_WIDTH, pylon_properties[PROP_ROI_WIDTH]);
+
+    pylon_properties[PROP_ROI_HEIGHT] =
+        g_param_spec_uint(uca_camera_props[PROP_ROI_HEIGHT],
+            "Height",
+            "Height of the region of interest",
+            1, G_MAXUINT, 100,
+            G_PARAM_READWRITE);
+    g_object_class_install_property(gobject_class, PROP_ROI_HEIGHT, pylon_properties[PROP_ROI_HEIGHT]); */
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, pylon_properties[id]);
