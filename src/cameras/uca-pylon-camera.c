@@ -58,17 +58,11 @@ static gint base_overrideables[] = {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
-//    PROP_SENSOR_HORIZONTAL_BINNING,
-//    PROP_SENSOR_HORIZONTAL_BINNINGS,
-//    PROP_SENSOR_VERTICAL_BINNING,
-//    PROP_SENSOR_VERTICAL_BINNINGS,
-//    PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
-//    PROP_HAS_STREAMING,
-//    PROP_HAS_CAMRAM_RECORDING,
     0
 };
 
@@ -180,6 +174,12 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
             }
             break;
 
+        case PROP_EXPOSURE_TIME:
+            {
+              pylon_camera_set_exposure_time(g_value_get_double(value), &error);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -253,6 +253,14 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             {
               pylon_get_roi(object, &error);
               g_value_set_uint(value, priv->roi_height);
+            }
+            break;
+
+        case PROP_EXPOSURE_TIME:
+            {
+              gdouble exp_time = 0.0;
+              pylon_camera_get_exposure_time(&exp_time, &error);
+              g_value_set_double(value, exp_time);
             }
             break;
 
