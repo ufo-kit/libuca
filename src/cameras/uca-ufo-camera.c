@@ -56,6 +56,7 @@ GQuark uca_ufo_camera_error_quark()
 
 enum {
     PROP_SENSOR_TEMPERATURE = N_BASE_PROPERTIES,
+    PROP_FPGA_TEMPERATURE,
     PROP_UFO_START,
     N_MAX_PROPERTIES = 512
 };
@@ -83,7 +84,7 @@ static gint base_overrideables[] = {
 
 typedef struct _RegisterInfo {
     gchar  *name;
-    guint   cached_value; 
+    guint   cached_value;
 } RegisterInfo;
 
 static GParamSpec *ufo_properties[N_MAX_PROPERTIES] = { NULL, };
@@ -155,7 +156,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
         gchar *prop_name;
         pcilib_register_description_t *reg;
         pcilib_register_value_t value;
-        
+
         reg = &model_description->registers[i];
 
         switch (reg->mode) {
@@ -193,7 +194,19 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
 
     bit_mode = read_register_value (handle, "bit_mode");
-    priv->n_bits = bit_mode == 0 ? 12 : 10;
+
+    switch (bit_mode) {
+        case 0:
+            priv->n_bits = 10;
+            break;
+        case 1:
+            priv->n_bits = 11;
+            break;
+        case 2:
+            priv->n_bits = 12;
+            break;
+    }
+
     priv->handle = handle;
 
     return camera;
@@ -298,7 +311,7 @@ static void uca_ufo_camera_set_property(GObject *object, guint property_id, cons
 
                 if (reg_info != NULL) {
                     pcilib_register_value_t reg_value;
-                    
+
                     reg_value = g_value_get_uint (value);
                     pcilib_write_register(priv->handle, NULL, reg_info->name, reg_value);
                     pcilib_read_register (priv->handle, NULL, reg_info->name, &reg_value);
@@ -318,10 +331,10 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
-        case PROP_SENSOR_WIDTH: 
+        case PROP_SENSOR_WIDTH:
             g_value_set_uint(value, SENSOR_WIDTH);
             break;
-        case PROP_SENSOR_HEIGHT: 
+        case PROP_SENSOR_HEIGHT:
             g_value_set_uint(value, SENSOR_HEIGHT);
             break;
         case PROP_SENSOR_BITDEPTH:
@@ -337,7 +350,24 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             g_value_set_float(value, 340.0);
             break;
         case PROP_SENSOR_TEMPERATURE:
-            g_value_set_double (value, 0.17537 * read_register_value (priv->handle, "cmosis_temperature") - 198.03733);
+            {
+                const double a = priv->n_bits == 10 ? 0.3 : 0.25;
+                const double b = priv->n_bits == 12 ? 1000 : 1200;
+                guint32 temperature;
+
+                temperature = read_register_value (priv->handle, "sensor_temperature");
+                g_value_set_double (value, a * temperature - b);
+            }
+            break;
+        case PROP_FPGA_TEMPERATURE:
+            {
+                const double a = 503.975 / 1024.0;
+                const double b = 273.15;
+                guint32 temperature;
+
+                temperature = read_register_value (priv->handle, "fpga_temperature");
+                g_value_set_double (value, a * temperature - b);
+            }
             break;
         case PROP_EXPOSURE_TIME:
             g_value_set_double (value, read_register_value (priv->handle, "exp_time") / EXPOSURE_TIME_SCALE);
@@ -366,7 +396,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_ROI_HEIGHT_MULTIPLIER:
             g_value_set_uint(value, 1);
             break;
-        case PROP_NAME: 
+        case PROP_NAME:
             g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");
             break;
         case PROP_TRIGGER_MODE:
@@ -375,7 +405,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             {
                 RegisterInfo *reg_info = g_hash_table_lookup (ufo_property_table, GINT_TO_POINTER (property_id));
 
-                if (reg_info != NULL) 
+                if (reg_info != NULL)
                     g_value_set_uint (value, reg_info->cached_value);
                 else
                     G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -414,8 +444,15 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
             -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
             G_PARAM_READABLE);
 
+    ufo_properties[PROP_FPGA_TEMPERATURE] =
+        g_param_spec_double("fpga-temperature",
+            "Temperature of the FPGA",
+            "Temperature of the FPGA in degree Celsius",
+            -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+            G_PARAM_READABLE);
+
     /*
-     * This automatic property installation includes the properties created 
+     * This automatic property installation includes the properties created
      * dynamically in uca_ufo_camera_new().
      */
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
