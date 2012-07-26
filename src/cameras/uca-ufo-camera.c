@@ -95,6 +95,7 @@ static GHashTable *ufo_property_table; /* maps from prop_id to RegisterInfo* */
 struct _UcaUfoCameraPrivate {
     pcilib_t *handle;
     guint     n_bits;
+    guint     bit_mode;
 };
 
 static void ignore_messages(const char *format, ...)
@@ -136,7 +137,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     pcilib_model_description_t *model_description;
     pcilib_t *handle = pcilib_open("/dev/fpga0", model);
     guint prop = PROP_UFO_START;
-    guint bit_mode;
+    guint adc_resolution;
 
     if (handle == NULL) {
         g_set_error(error, UCA_UFO_CAMERA_ERROR, UCA_UFO_CAMERA_ERROR_INIT,
@@ -193,9 +194,10 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     UcaUfoCamera *camera = g_object_new(UCA_TYPE_UFO_CAMERA, NULL);
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
 
-    bit_mode = read_register_value (handle, "bit_mode");
+    priv->bit_mode = read_register_value (handle, "bit_mode");
+    adc_resolution = read_register_value (handle, "adc_resolution");
 
-    switch (bit_mode) {
+    switch (adc_resolution) {
         case 0:
             priv->n_bits = 10;
             break;
@@ -351,8 +353,8 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_SENSOR_TEMPERATURE:
             {
-                const double a = priv->n_bits == 10 ? 0.3 : 0.25;
-                const double b = priv->n_bits == 12 ? 1000 : 1200;
+                const double a = priv->bit_mode == 0 ? 0.3 : 0.25;
+                const double b = priv->bit_mode == 0 ? 1000 : 1200;
                 guint32 temperature;
 
                 temperature = read_register_value (priv->handle, "sensor_temperature");
