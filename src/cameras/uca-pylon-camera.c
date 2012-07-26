@@ -58,11 +58,21 @@ static gint base_overrideables[] = {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
+    PROP_SENSOR_HORIZONTAL_BINNING,
+    PROP_SENSOR_HORIZONTAL_BINNINGS,
+    PROP_SENSOR_VERTICAL_BINNING,
+    PROP_SENSOR_VERTICAL_BINNINGS,
+    PROP_SENSOR_MAX_FRAME_RATE,
+    PROP_TRIGGER_MODE,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
+    PROP_ROI_WIDTH_MULTIPLIER,
+    PROP_ROI_HEIGHT_MULTIPLIER,
+    PROP_HAS_STREAMING,
+    PROP_HAS_CAMRAM_RECORDING,
     0
 };
 
@@ -78,6 +88,7 @@ struct _UcaPylonCameraPrivate {
     guint height;
     guint16 roi_x, roi_y;
     guint16 roi_width, roi_height;
+    GValueArray *binnings;
 };
 
 
@@ -146,6 +157,13 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
 
     switch (property_id) {
 
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+          /* intentional fall-through*/
+        case PROP_SENSOR_VERTICAL_BINNING:
+          /* intentional fall-through*/
+        case PROP_TRIGGER_MODE:
+          break;
+
         case PROP_ROI_X:
             {
               priv->roi_x = g_value_get_uint(value);
@@ -206,27 +224,43 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             g_print("pylon_get_property sensor height %d\n", priv->height);
             break;
 
-            /*
-        case PROP_SENSOR_MAX_FRAME_RATE:
-            g_value_set_float(value, priv->camera_description->max_frame_rate);
-            break;
-            */
-
         case PROP_SENSOR_BITDEPTH:
             pylon_camera_get_bit_depth(&priv->bit_depth, &error);
             g_value_set_uint(value, priv->bit_depth);
             g_print("pylon_get_property depth %d\n", priv->bit_depth);
             break;
 
-            /*
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+            g_value_set_uint(value, 1);
+            break;
+
+        case PROP_SENSOR_HORIZONTAL_BINNINGS:
+            g_value_set_boxed(value, priv->binnings);
+            break;
+
+        case PROP_SENSOR_VERTICAL_BINNING:
+            g_value_set_uint(value, 1);
+            break;
+
+        case PROP_SENSOR_VERTICAL_BINNINGS:
+            g_value_set_boxed(value, priv->binnings);
+            break;
+
+        case PROP_SENSOR_MAX_FRAME_RATE:
+            g_value_set_float(value, 0.0);
+            break;
+
+        case PROP_TRIGGER_MODE:
+            g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
+            break;
+
         case PROP_HAS_STREAMING:
-            g_value_set_boolean(value, TRUE);
+            g_value_set_boolean(value, FALSE);
             break;
 
         case PROP_HAS_CAMRAM_RECORDING:
-            g_value_set_boolean(value, priv->camera_description->has_camram);
+            g_value_set_boolean(value, FALSE);
             break;
-            */
 
         case PROP_ROI_X:
             {
@@ -256,6 +290,14 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             }
             break;
 
+        case PROP_ROI_WIDTH_MULTIPLIER:
+            g_value_set_uint(value, 1);
+            break;
+
+        case PROP_ROI_HEIGHT_MULTIPLIER:
+            g_value_set_uint(value, 1);
+            break;
+
         case PROP_EXPOSURE_TIME:
             {
               gdouble exp_time = 0.0;
@@ -281,6 +323,8 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
 
 static void uca_pylon_camera_finalize(GObject *object)
 {
+  UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
+  g_value_array_free(priv->binnings);
     /*UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
 
     if (priv->horizontal_binnings)
@@ -334,5 +378,12 @@ static void uca_pylon_camera_class_init(UcaPylonCameraClass *klass)
 static void uca_pylon_camera_init(UcaPylonCamera *self)
 {
     self->priv = UCA_PYLON_CAMERA_GET_PRIVATE(self);
+
+    /* binnings */
+    GValue val = {0};
+    g_value_init(&val, G_TYPE_UINT);
+    g_value_set_uint(&val, 1);
+    self->priv->binnings  = g_value_array_new(1);
+    g_value_array_append(self->priv->binnings, &val);
 }
 
