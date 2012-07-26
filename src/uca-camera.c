@@ -382,6 +382,11 @@ static UcaCamera *uca_camera_new_from_type(const gchar *type, GError **error)
         return UCA_CAMERA(uca_pco_camera_new(error));
 #endif
 
+#ifdef HAVE_PYLON_CAMERA
+    if (!g_strcmp0(type, "pylon"))
+        return UCA_CAMERA(uca_pylon_camera_new(error));
+#endif
+
 #ifdef HAVE_UFO_CAMERA
     if (!g_strcmp0(type, "ufo"))
         return UCA_CAMERA(uca_ufo_camera_new(error));
@@ -425,10 +430,6 @@ UcaCamera *uca_camera_new(const gchar *type, GError **error)
 
     camera = uca_camera_new_from_type(type, &tmp_error);
 
-#ifdef HAVE_PYLON_CAMERA
-    if (!g_strcmp0(type, "pylon"))
-        camera = UCA_CAMERA(uca_pylon_camera_new(&tmp_error));
-#endif
     if (tmp_error != NULL) {
         g_propagate_error(error, tmp_error);
         return NULL;
