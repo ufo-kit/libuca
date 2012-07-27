@@ -305,7 +305,7 @@ static void uca_ufo_camera_set_property(GObject *object, guint property_id, cons
         case PROP_EXPOSURE_TIME:
             {
                 pcilib_register_value_t reg_value = (pcilib_register_value_t) EXPOSURE_TIME_SCALE * g_value_get_double(value);
-                pcilib_write_register(priv->handle, NULL, "exp_time", reg_value);
+                pcilib_write_register(priv->handle, NULL, "cmosis_exp_time", reg_value);
             }
             break;
         case PROP_ROI_X:
@@ -380,7 +380,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             }
             break;
         case PROP_EXPOSURE_TIME:
-            g_value_set_double (value, read_register_value (priv->handle, "exp_time") / EXPOSURE_TIME_SCALE);
+            g_value_set_double (value, read_register_value (priv->handle, "cmosis_exp_time") / EXPOSURE_TIME_SCALE);
             break;
         case PROP_HAS_STREAMING:
             g_value_set_boolean(value, TRUE);
