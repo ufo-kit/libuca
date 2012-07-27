@@ -98,8 +98,16 @@ struct _UcaUfoCameraPrivate {
     guint     bit_mode;
 };
 
-static void ignore_messages(const char *format, ...)
+static void
+error_handler (const char *format, ...)
 {
+    va_list args;
+    gchar *message;
+
+    va_start (args, format);
+    message = g_strdup_vprintf (format, args);
+    g_warning ("%s", message);
+    va_end (args);
 }
 
 static guint
@@ -145,7 +153,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
         return NULL;
     }
 
-    pcilib_set_error_handler(&ignore_messages, &ignore_messages);
+    pcilib_set_error_handler(&error_handler, &error_handler);
 
     /* Generate properties from model description */
     model_description = pcilib_get_model_description(handle);
