@@ -358,7 +358,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
                 guint32 temperature;
 
                 temperature = read_register_value (priv->handle, "sensor_temperature");
-                g_value_set_double (value, a * temperature - b);
+                g_value_set_double (value, a * (temperature - b));
             }
             break;
         case PROP_FPGA_TEMPERATURE:
