@@ -52,6 +52,7 @@ GQuark uca_pylon_camera_error_quark()
 enum {
     PROP_ROI_WIDTH_DEFAULT = N_BASE_PROPERTIES,
     PROP_ROI_HEIGHT_DEFAULT,
+    PROP_GAIN,
     N_PROPERTIES 
 };
 
@@ -195,9 +196,11 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
             break;
 
         case PROP_EXPOSURE_TIME:
-            {
-              pylon_camera_set_exposure_time(g_value_get_double(value), &error);
-            }
+            pylon_camera_set_exposure_time(g_value_get_double(value), &error);
+            break;
+
+        case PROP_GAIN:
+            pylon_camera_set_gain(g_value_get_int(value), &error);
             break;
 
         default:
@@ -302,6 +305,14 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             g_value_set_uint(value, priv->height);
             break;
 
+        case PROP_GAIN:
+            {
+              gint gain=0;
+              pylon_camera_get_gain(&gain, &error);
+              g_value_set_int(value, gain);
+            }
+            break;
+
         case PROP_ROI_WIDTH_MULTIPLIER:
             g_value_set_uint(value, 1);
             break;
@@ -397,6 +408,12 @@ static void uca_pylon_camera_class_init(UcaPylonCameraClass *klass)
             "ROI height default value",
             0, G_MAXUINT, 0,
             G_PARAM_READABLE);
+    pylon_properties[PROP_GAIN] =
+        g_param_spec_int("gain",
+            "gain",
+            "gain",
+            0, G_MAXINT, 0,
+            G_PARAM_READWRITE);
     /*g_object_class_install_property(gobject_class, PROP_ROI_X, pylon_properties[PROP_ROI_X]);
 
 

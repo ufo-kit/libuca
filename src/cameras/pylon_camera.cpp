@@ -185,6 +185,34 @@ void pylon_camera_set_roi(guint16 roi_x, guint16 roi_y, guint16 roi_width, guint
   }
 }
 
+void pylon_camera_get_gain(gint* gain, GError** error)
+{
+  g_assert(pGrabber);
+  try
+  {
+    yat::Any gain_result;
+    pGrabber->get_gain(gain_result);
+    *gain = yat::any_cast<gint>(gain_result);
+  }
+  catch (const yat::Exception& e)
+  {
+    yat_exception_to_gerror(e, error);
+  }
+}
+
+void pylon_camera_set_gain(gint gain, GError** error)
+{
+  g_assert(pGrabber);
+  try
+  {
+    pGrabber->set_gain(yat::Any(gain));
+  }
+  catch (const yat::Exception& e)
+  {
+    yat_exception_to_gerror(e, error);
+  }
+}
+
 void pylon_camera_start_acquision(GError** error)
 {
   g_assert(pGrabber);

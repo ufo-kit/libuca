@@ -17,6 +17,9 @@ void pylon_camera_get_bit_depth(guint* depth, GError** error);
 void pylon_camera_get_roi(guint16* roi_x, guint16* roi_y, guint16* roi_width, guint16* roi_height, GError** error);
 void pylon_camera_set_roi(guint16 roi_x, guint16 roi_y, guint16 roi_width, guint16 roi_height, GError** error);
 
+void pylon_camera_get_gain(gint* gain, GError** error);
+void pylon_camera_set_gain(gint gain, GError** error);
+
 void pylon_camera_start_acquision(GError** error);
 void pylon_camera_stop_acquision(GError** error);
 void pylon_camera_grab(gpointer *data, GError** error);
