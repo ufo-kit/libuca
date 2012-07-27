@@ -259,15 +259,21 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
 {
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
-    const gsize size = SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16);
-    pcilib_event_id_t event_id;
+    pcilib_event_id_t   event_id;
     pcilib_event_info_t event_info;
-    size_t err = 0;
+    pcilib_timeout_t    timeout;
+    gdouble             exposure_time;
+    size_t err;
+
+    const gsize size = SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16);
 
     err = pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_TRIGGER);
 
-    err = pcilib_get_next_event(priv->handle, PCILIB_TIMEOUT_INFINITE, &event_id, sizeof(pcilib_event_info_t), &event_info);
+    g_object_get (G_OBJECT (camera), "exposure-time", &exposure_time, NULL);
+    timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
+
+    err = pcilib_get_next_event(priv->handle, timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_NEXT_EVENT);
 
     if (*data == NULL)
