@@ -76,6 +76,8 @@ static gint base_overrideables[] = {
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
+    PROP_ROI_WIDTH_MULTIPLIER,
+    PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     0
@@ -253,62 +255,52 @@ static void uca_pf_camera_get_property(GObject *object, guint property_id, GValu
         case PROP_SENSOR_WIDTH: 
             g_value_set_uint(value, 1280);
             break;
-
         case PROP_SENSOR_HEIGHT: 
             g_value_set_uint(value, 1024);
             break;
-
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint(value, 8);
             break;
-
         case PROP_SENSOR_HORIZONTAL_BINNING:
             break;
-
         case PROP_SENSOR_HORIZONTAL_BINNINGS:
             break;
-
         case PROP_SENSOR_VERTICAL_BINNING:
             break;
-
         case PROP_SENSOR_VERTICAL_BINNINGS:
             break;
-
         case PROP_SENSOR_MAX_FRAME_RATE:
             g_value_set_float(value, 488.0);
             break;
-
         case PROP_HAS_STREAMING:
             g_value_set_boolean(value, TRUE);
             break;
-
         case PROP_HAS_CAMRAM_RECORDING:
             g_value_set_boolean(value, FALSE);
             break;
-
         case PROP_EXPOSURE_TIME:
             break;
-
         case PROP_ROI_X:
             g_value_set_uint(value, 0);
             break;
-
         case PROP_ROI_Y:
             g_value_set_uint(value, 0);
             break;
-
         case PROP_ROI_WIDTH:
             g_value_set_uint(value, 1280);
             break;
-
         case PROP_ROI_HEIGHT:
             g_value_set_uint(value, 1024);
             break;
-
+        case PROP_ROI_WIDTH_MULTIPLIER:
+            g_value_set_uint(value, 1);
+            break;
+        case PROP_ROI_HEIGHT_MULTIPLIER:
+            g_value_set_uint(value, 1);
+            break;
         case PROP_NAME: 
             g_value_set_string(value, "Photon Focus MV2-D1280-640-CL");
             break;
-
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -317,6 +309,15 @@ static void uca_pf_camera_get_property(GObject *object, guint property_id, GValu
 
 static void uca_pf_camera_finalize(GObject *object)
 {
+    UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(object);
+
+    if (priv->fg) {
+        if (priv->fg_mem)
+            Fg_FreeMemEx(priv->fg, priv->fg_mem);
+
+        Fg_FreeGrabber(priv->fg);
+    }
+
     G_OBJECT_CLASS(uca_pf_camera_parent_class)->finalize(object);
 }
 
