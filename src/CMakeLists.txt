@@ -98,9 +98,9 @@ if (PYLON_FOUND)
         list(APPEND uca_SRCS cameras/uca-pylon-camera.c)
         list(APPEND uca_HDRS cameras/uca-pylon-camera.h)
         list(APPEND cameras "Pylon")
-        set(uca_LIBS ${uca_LIBS} ${PYLON_LIB})
+        set(uca_LIBS ${uca_LIBS} ${LIBPYLONCAM_LIBRARIES})
 
-        include_directories(${PYLON_INCLUDE_DIR})
+        include_directories(${LIBPYLONCAM_INCLUDEDIR})
   endif()
 
 endif()

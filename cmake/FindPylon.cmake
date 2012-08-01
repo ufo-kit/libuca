@@ -8,7 +8,9 @@
 # PYLON_LIB - pco library
 
 # check for environment variable PYLON_ROOT
-message("DEFINED PYLON ROOT $ENV{PYLON_ROOT}")
+find_package(YAT)
+find_package(PkgConfig)
+
 if (NOT "$ENV{PYLON_ROOT}" STREQUAL "")
   message("PYLON_ROOT=$ENV{PYLON_ROOT}")
   set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH}:$ENV{PYLON_ROOT}/lib")
@@ -16,16 +18,16 @@ if (NOT "$ENV{PYLON_ROOT}" STREQUAL "")
   set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH};$ENV{PYLON_ROOT}/genicam/bin/Linux64_x64")
   set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH};$ENV{PYLON_ROOT}/genicam/bin/Linux32_i86")
 
+  pkg_check_modules(LIBPYLONCAM pyloncam>=0.1 REQUIRED)
 
-  find_package(YAT)
+  find_library(YAT_LIB yat ${YAT_LIBRARY_DIRS})
   find_package(PackageHandleStandardArgs)
 
-  find_path(PYLON_INCLUDE_DIR libpyloncam/pylon_camera.h)
-  find_library(PYLON_LIB pyloncam)
+  find_package_handle_standard_args(PYLON DEFAULT_MSG LIBPYLONCAM_INCLUDEDIR LIBPYLONCAM_LIBRARIES)
 
-  message("INCLUDE ${PYLON_INCLUDE_DIR}")
-
-  find_package_handle_standard_args(PYLON DEFAULT_MSG PYLON_LIB PYLON_INCLUDE_DIR)
+  mark_as_advanced(
+    LIBPYLONCAM_INCLUDEDIR
+    LIBPYLONCAM_LIBRARIES)
 
 else()
   message("Environment variable PYLON_ROOT not found! => unable to build pylon camera support")

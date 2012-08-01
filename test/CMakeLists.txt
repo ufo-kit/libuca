@@ -36,7 +36,6 @@ if (HAVE_PYLON_CAMERA)
     set(PYLON_LIB_DIRS $ENV{PYLON_ROOT}/lib64 $ENV{PYLON_ROOT}/bin ${GENICAM_ROOT}/bin/Linux32_i86
       ${GENICAM_ROOT}/bin/Linux32_i86/GenApi/Generic)
   endif()
-  message("PYLON LIB DIRS ${PYLON_LIB_DIRS}")
   link_directories(${PYLON_LIB_DIRS})
 endif()
 
