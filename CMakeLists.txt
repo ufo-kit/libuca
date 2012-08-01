@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(uca)
-
-set(CMAKE_VERBOSE_MAKEFILE TRUE)
+project(uca C)
 
 set(TARNAME "libuca")
 set(UCA_VERSION_MAJOR "0")

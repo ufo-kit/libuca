@@ -16,13 +16,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/control.glade ${CMAKE_CURRENT_BINARY_
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_CURRENT_BINARY_DIR})
 
 # --- Build targets -----------------------------------------------------------
-#add_executable(enum enum.c)
-#add_executable(grab-async grab-async.c)
-#add_executable(benchmark benchmark.c)
-
-#target_link_libraries(enum uca)
-#target_link_libraries(grab-async uca)
-#target_link_libraries(benchmark uca)
 
 include_directories(
     ${GLIB2_INCLUDE_DIRS}
