@@ -33,6 +33,20 @@ include_directories(
 
 message("${CMAKE_CURRENT_SOURCE_DIR}")
 
+if (HAVE_PYLON_CAMERA)
+  set(GENICAM_ROOT $ENV{PYLON_ROOT}/genicam)
+  # check for 32/64 bit
+  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(PYLON_LIB_DIRS $ENV{PYLON_ROOT}/lib64 $ENV{PYLON_ROOT}/bin ${GENICAM_ROOT}/bin/Linux64_x64
+      ${GENICAM_ROOT}/bin/Linux64_x64/GenApi/Generic)
+  else()
+    set(PYLON_LIB_DIRS $ENV{PYLON_ROOT}/lib64 $ENV{PYLON_ROOT}/bin ${GENICAM_ROOT}/bin/Linux32_i86
+      ${GENICAM_ROOT}/bin/Linux32_i86/GenApi/Generic)
+  endif()
+  message("PYLON LIB DIRS ${PYLON_LIB_DIRS}")
+  link_directories(${PYLON_LIB_DIRS})
+endif()
+
 add_executable(grab grab.c)
 add_executable(grab-async grab-async.c)
 

@@ -15,7 +15,7 @@ set(cameras)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # --- Find camera interfaces
-#find_package(PCO)
+find_package(PCO)
 find_package(PF)
 find_package(IPE)
 find_package(Pylon)
@@ -96,13 +96,12 @@ if (PYLON_FOUND)
   option(HAVE_PYLON_CAMERA "Camera: Pylon based (Basler)" ON)
 
   if (HAVE_PYLON_CAMERA)
-        list(APPEND uca_SRCS cameras/uca-pylon-camera.c cameras/pylon_camera.cpp)
+        list(APPEND uca_SRCS cameras/uca-pylon-camera.c)
         list(APPEND uca_HDRS cameras/uca-pylon-camera.h)
         list(APPEND cameras "Pylon")
-        set(uca_LIBS ${uca_LIBS} ${PYLON_LIBS})
+        set(uca_LIBS ${uca_LIBS} ${PYLON_LIB})
 
-        include_directories(${PYLON_INCLUDE_DIRS})
-        link_directories(/opt/pylon/lib64)
+        include_directories(${PYLON_INCLUDE_DIR})
   endif()
 
 endif()

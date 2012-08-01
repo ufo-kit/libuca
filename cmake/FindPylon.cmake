@@ -3,45 +3,30 @@
 #
 # Defines
 #
-# PCO_FOUND - system has libpco
-# PCO_INCLUDE_DIRS - libpco include directory
-# PCO_LIBRARIES - pco library
+# PYLON_FOUND - system has libpco
+# PYLON_INCLUDE_DIR - libpco include directory
+# PYLON_LIB - pco library
 
-find_package(YAT)
+# check for environment variable PYLON_ROOT
+message("DEFINED PYLON ROOT $ENV{PYLON_ROOT}")
+if (NOT "$ENV{PYLON_ROOT}" STREQUAL "")
+  message("PYLON_ROOT=$ENV{PYLON_ROOT}")
+  set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH}:$ENV{PYLON_ROOT}/lib")
+  set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH};$ENV{PYLON_ROOT}/lib64")
+  set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH};$ENV{PYLON_ROOT}/genicam/bin/Linux64_x64")
+  set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH};$ENV{PYLON_ROOT}/genicam/bin/Linux32_i86")
 
-find_package(PackageHandleStandardArgs)
 
-find_path(PYLON_DIRS include/pylon/PylonBase.h HINTS /opt/pylon ENV PYLON_ROOT)
-set(GENICAM_ROOT ${PYLON_DIRS}/genicam)
-set(PYLON_INCLUDE_DIRS ${PYLON_DIRS}/include ${GENICAM_ROOT}/library/CPP/include)
+  find_package(YAT)
+  find_package(PackageHandleStandardArgs)
 
-# check for 32/64 bit
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(PYLON_LIB_DIRS ${PYLON_DIRS}/lib64 ${PYLON_DIRS}/bin ${GENICAM_ROOT}/bin/Linux64_x64
-     ${GENICAM_ROOT}/bin/Linux64_x64/GenApi/Generic)
+  find_path(PYLON_INCLUDE_DIR libpyloncam/pylon_camera.h)
+  find_library(PYLON_LIB pyloncam)
+
+  message("INCLUDE ${PYLON_INCLUDE_DIR}")
+
+  find_package_handle_standard_args(PYLON DEFAULT_MSG PYLON_LIB PYLON_INCLUDE_DIR)
+
 else()
-  set(PYLON_LIB_DIRS ${PYLON_DIRS}/lib64 ${PYLON_DIRS}/bin ${GENICAM_ROOT}/bin/Linux32_i86
-     ${GENICAM_ROOT}/bin/Linux32_i86/GenApi/Generic)
+  message("Environment variable PYLON_ROOT not found! => unable to build pylon camera support")
 endif()
-
-find_library(PYLONBASE_LIB pylonbase PATHS ${PYLON_LIB_DIRS})
-find_library(PYLONUTILITY_LIB pylonutility PATHS ${PYLON_LIB_DIRS})
-find_library(PYLONGIGESUPP_LIB pylongigesupp PATHS ${PYLON_LIB_DIRS})
-find_library(GENAPI_LIB GenApi_gcc40_v2_1 PATHS ${PYLON_LIB_DIRS})
-find_library(GCBASE_LIB GCBase_gcc40_v2_1 PATHS ${PYLON_LIB_DIRS})
-set (PYLON_LIBS ${PYLONBASE_LIB} 
-  ${PYLONUTILITY_LIB}
-  ${PYLONGIGESUPP_LIB}
-  ${GENAPI_LIB}
-  ${GCBASE_LIB}
-  ${YAT_LIB})
-
-find_package_handle_standard_args(PYLON DEFAULT_MSG PYLON_LIBS PYLON_INCLUDE_DIRS)
-
-find_package(PkgConfig)
-pkg_check_modules(BASLER_PYLON baslerpylon>=0.1.0 REQUIRED)
-MESSAGE(LIBRARY_DIRS ${BASLER_PYLON_LIBRARY_DIRS})
-find_library(BASLERPYLON_LIB baslerpylon PATHS ${BASLER_PYLON_LIBRARY_DIRS})
-
-set (PYLON_LIBS ${PYLON_LIBS} ${BASLERPYLON_LIB})
-

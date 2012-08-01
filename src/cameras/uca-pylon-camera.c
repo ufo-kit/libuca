@@ -18,9 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <libpyloncam/pylon_camera.h>
 #include "uca-camera.h"
 #include "uca-pylon-camera.h"
-#include "pylon_camera.h"
 
 
 /*#define HANDLE_PYLON_ERROR(err)                       \
