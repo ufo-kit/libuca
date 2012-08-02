@@ -48,7 +48,11 @@ target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 add_executable(grab_pylon grab_pylon.c)
 target_link_libraries(grab_pylon uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
-if (GTK2_FOUND)
+if (NOT DEFINED WITH_CONTROL_GUI)
+  set(WITH_CONTROL_GUI TRUE)
+endif()
+
+if (GTK2_FOUND AND WITH_CONTROL_GUI)
     include_directories(${GTK2_INCLUDE_DIRS})
 
     add_executable(control 
