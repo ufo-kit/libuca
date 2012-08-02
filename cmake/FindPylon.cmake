@@ -10,6 +10,7 @@
 # check for environment variable PYLON_ROOT
 find_package(YAT)
 find_package(PkgConfig)
+find_package(PackageHandleStandardArgs)
 
 if (NOT "$ENV{PYLON_ROOT}" STREQUAL "")
   message("PYLON_ROOT=$ENV{PYLON_ROOT}")
@@ -21,13 +22,18 @@ if (NOT "$ENV{PYLON_ROOT}" STREQUAL "")
   pkg_check_modules(LIBPYLONCAM pyloncam>=0.1 REQUIRED)
 
   find_library(YAT_LIB yat ${YAT_LIBRARY_DIRS})
-  find_package(PackageHandleStandardArgs)
 
   find_package_handle_standard_args(PYLON DEFAULT_MSG LIBPYLONCAM_INCLUDEDIR LIBPYLONCAM_LIBRARIES)
 
   mark_as_advanced(
     LIBPYLONCAM_INCLUDEDIR
     LIBPYLONCAM_LIBRARIES)
+  if (DEFINED LIBPYLONCAM_OTHER_PREFIX)
+    string(REPLACE ${LIBPYLONCAM_PREFIX} ${LIBPYLONCAM_OTHER_PREFIX}
+      LIBPYLONCAM_INCLUDEDIR ${LIBPYLONCAM_INCLUDEDIR})
+    string(REPLACE ${LIBPYLONCAM_PREFIX} ${LIBPYLONCAM_OTHER_PREFIX}
+      LIBPYLONCAM_LIBRARIES ${LIBPYLONCAM_LIBRARIES})
+  endif()
 
 else()
   message("Environment variable PYLON_ROOT not found! => unable to build pylon camera support")
