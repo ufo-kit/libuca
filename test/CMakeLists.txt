@@ -36,7 +36,7 @@ if (HAVE_PYLON_CAMERA)
     set(PYLON_LIB_DIRS $ENV{PYLON_ROOT}/lib64 $ENV{PYLON_ROOT}/bin ${GENICAM_ROOT}/bin/Linux32_i86
       ${GENICAM_ROOT}/bin/Linux32_i86/GenApi/Generic)
   endif()
-  link_directories(${PYLON_LIB_DIRS})
+  link_directories(${PYLON_LIB_DIRS} ${LIBPYLONCAM_LIBDIR})
 endif()
 
 add_executable(grab grab.c)
