@@ -101,6 +101,7 @@ if (PYLON_FOUND)
         set(uca_LIBS ${uca_LIBS} ${LIBPYLONCAM_LIBRARIES})
 
         include_directories(${LIBPYLONCAM_INCLUDEDIR})
+        link_directories(${LIBPYLONCAM_LIBDIR})
   endif()
 
 endif()
