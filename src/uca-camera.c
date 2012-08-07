@@ -40,6 +40,10 @@
 #include "cameras/uca-pf-camera.h"
 #endif
 
+#ifdef HAVE_DEXELA_CL
+#include "cameras/uca-dexela-camera.h"
+#endif
+
 #define UCA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_CAMERA, UcaCameraPrivate))
 
 G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
@@ -80,6 +84,9 @@ static gchar *uca_camera_types[] = {
 #endif
 #ifdef HAVE_PHOTON_FOCUS
         "pf",
+#endif
+#ifdef HAVE_DEXELA_CL
+		"dexela",
 #endif
         NULL
 };

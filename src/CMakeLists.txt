@@ -18,6 +18,7 @@ find_package(PCO)
 find_package(PF)
 find_package(IPE)
 find_package(Pylon)
+find_package(DEXELA)
 
 # --- Find frame grabber interfaces
 find_package(FgLib5)
@@ -103,7 +104,20 @@ if (PYLON_FOUND)
         include_directories(${LIBPYLONCAM_INCLUDEDIR})
         link_directories(${LIBPYLONCAM_LIBDIR})
   endif()
+endif()
 
+if (DEXELA_FOUND)
+    option(HAVE_DEXELA_CL "Camera: CameraLink-based dexela detector" ON)
+
+    if (HAVE_DEXELA_CL)
+        list(APPEND uca_SRCS cameras/uca-dexela-camera.c)
+        list(APPEND uca_HDRS cameras/uca-dexela-camera.h)
+        list(APPEND cameras "Ufo")
+
+        set(uca_LIBS ${uca_LIBS} ${DEXELA_LIBRARIES})
+
+        include_directories(${DEXELA_INCLUDE_DIRS})
+    endif()
 endif()
 
 if (HAVE_MOCK_CAMERA)
