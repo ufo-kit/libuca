@@ -2,8 +2,8 @@
 Buildroot: @UCA_BUILD_DIR@/_CPack_Packages/Linux/RPM/@CPACK_PACKAGE_FILE_NAME@
 Summary:        Abstract interface for different camera classes and frame grabber devices
 Name:           libuca
-Version:        0.6.0
-Release:        1
+Version:        @VERSION@
+Release:        @CPACK_PACKAGE_RELEASE@
 License:        unknown
 Group:          unknown
 Vendor:         Karlsruhe Institute of Technology/IPE
@@ -65,11 +65,13 @@ mv "@UCA_BUILD_DIR@/_CPack_Packages/Linux/RPM/tmpBBroot" $RPM_BUILD_ROOT
 @CMAKE_INSTALL_PREFIX@/include/uca/uca-pylon-camera.h
 @CMAKE_INSTALL_PREFIX@/include/uca/uca-camera.h
 @CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so
-@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so.6
-@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so.0.6
-@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/pkgconfig/uca.pc
+@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so.@UCA_VERSION_MINOR@
+@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so.@UCA_ABI_VERSION@
+@CMAKE_INSTALL_PREFIX@/lib/pkgconfig/uca.pc
 
 
 %changelog
+* Tue Aug 7 2012 Volker Kaiser <volker.kaiser@softwareschneiderei.de>
+using more variables in spec file
 * Tue Aug 2 2012 Volker Kaiser <volker.kaiser@softwareschneiderei.de>
 First package version

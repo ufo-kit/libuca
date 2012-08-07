@@ -17,6 +17,7 @@ set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set(PACKAGE_BUGREPORT "http://ufo.kit.edu/ufo/newticket")
 
 set(CPACK_GENERATOR "DEB;RPM;")
+set(CPACK_PACKAGE_RELEASE 2)
 set(CPACK_DEBIAN_PACKAGE_NAME "libuca")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Matthias Vogelgesang <matthias.vogelgesang@kit.edu>")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${UCA_DESCRIPTION})
