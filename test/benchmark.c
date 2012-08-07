@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include "uca-camera.h"
 
+typedef void (*GrabFrameFunc) (UcaCamera *camera, gpointer buffer, guint n_frames);
+
 static UcaCamera *camera = NULL;
 
 static void
@@ -81,6 +83,85 @@ log_handler (const gchar *log_domain, GLogLevelFlags log_level, const gchar *mes
 }
 
 static void
+grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames)
+{
+    GError *error = NULL;
+
+    uca_camera_start_recording (camera, &error);
+
+    for (guint i = 0; i < n_frames; i++) {
+        uca_camera_grab(camera, &buffer, &error);
+
+        if (error != NULL) {
+            g_warning ("Error grabbing frame %02i/%i: `%s'", i, n_frames, error->message);
+            g_error_free (error);
+            error = NULL;
+        }
+    }
+
+    uca_camera_stop_recording (camera, &error);
+}
+
+static void
+grab_callback (gpointer data, gpointer user_data)
+{
+    guint *n_acquired_frames = user_data;
+    *n_acquired_frames += 1;
+}
+
+static void
+grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames)
+{
+    GError *error = NULL;
+    guint n_acquired_frames = 0;
+
+    uca_camera_set_grab_func (camera, grab_callback, &n_acquired_frames);
+    uca_camera_start_recording (camera, &error);
+
+    /*
+     * Behold! Spinlooping is probably a bad idea but nowadays single core
+     * machines are relatively rare.
+     */
+    while (n_acquired_frames < n_frames)
+        ;
+
+    uca_camera_stop_recording (camera, &error);
+
+}
+
+static void
+benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, guint n_runs, guint n_frames, guint n_bytes)
+{
+    GTimer *timer;
+    gdouble fps;
+    gdouble bandwidth;
+    gdouble total_time = 0.0;
+    GError *error = NULL;
+
+    g_print ("%-10i%-10i", n_frames, n_runs);
+    timer = g_timer_new ();
+    g_assert_no_error (error);
+
+    for (guint run = 0; run < n_runs; run++) {
+        g_message ("Start run %i of %i", run, n_runs);
+        g_timer_start (timer);
+
+        func (camera, buffer, n_frames);
+
+        g_timer_stop (timer);
+        total_time += g_timer_elapsed (timer, NULL);
+    }
+
+    g_assert_no_error (error);
+
+    fps = n_runs * n_frames / total_time;
+    bandwidth = n_bytes * fps / 1024 / 1024;
+    g_print ("%-16.2f%-16.2f\n", fps, bandwidth);
+
+    g_timer_destroy (timer);
+}
+
+static void
 benchmark (UcaCamera *camera)
 {
     const guint n_runs = 3;
@@ -91,12 +172,10 @@ benchmark (UcaCamera *camera)
     guint   roi_width;
     guint   roi_height;
     guint   bits;
+    guint   n_bytes_per_pixel;
     guint   n_bytes;
-    gdouble total_time = 0.0;
     gdouble exposure = 0.001;
     gpointer buffer;
-    GTimer *timer;
-    GError *error = NULL;
 
     g_object_set (G_OBJECT (camera),
                   "exposure-time", exposure,
@@ -116,48 +195,28 @@ benchmark (UcaCamera *camera)
     g_print ("# ROI size: %ix%i\n", roi_width, roi_height);
     g_print ("# Exposure time: %fs\n", exposure);
 
-    g_print ("# %-10s%-10s%-16s%-16s\n", "n_frames", "n_runs", "frames/s", "MiB/s");
-    g_print ("  %-10i%-10i", n_frames, n_runs);
+    /* Synchronous frame acquisition */
+    g_print ("# %-10s%-10s%-10s%-16s%-16s\n", "type", "n_frames", "n_runs", "frames/s", "MiB/s");
+    g_print ("  %-10s", "sync");
 
     g_message ("Start synchronous benchmark");
 
-    n_bytes = bits > 8 ? 2 : 1;
-    buffer = g_malloc0(roi_width * roi_height * n_bytes);
-    timer = g_timer_new ();
-    uca_camera_start_recording (camera, &error);
+    n_bytes_per_pixel = bits > 8 ? 2 : 1;
+    n_bytes = roi_width * roi_height * n_bytes_per_pixel;
+    buffer = g_malloc0(n_bytes);
 
-    if (error == NULL) {
-        gdouble fps;
-        gdouble bandwidth;
+    benchmark_method (camera, buffer, grab_frames_sync, n_runs, n_frames, n_bytes);
 
-        for (guint run = 0; run < n_runs; run++) {
-            g_message ("Start run %i of %i", run, n_runs);
-            g_timer_start (timer);
+    /* Asynchronous frame acquisition */
+    g_object_set (G_OBJECT(camera),
+                 "transfer-asynchronously", TRUE,
+                 NULL);
 
-            for (guint i = 0; i < n_frames; i++) {
-                uca_camera_grab(camera, &buffer, &error);
+    g_message ("Start asynchronous benchmark");
+    g_print ("  %-10s", "async");
 
-                if (error != NULL) {
-                    g_warning ("Error grabbing frame %02i/%i: `%s'", i, n_frames, error->message);
-                    g_error_free (error);
-                    error = NULL;
-                }
-            }
+    benchmark_method (camera, buffer, grab_frames_async, n_runs, n_frames, n_bytes);
 
-            g_timer_stop (timer);
-            total_time += g_timer_elapsed (timer, NULL);
-        }
-
-        uca_camera_stop_recording (camera, &error);
-
-        fps = n_runs * n_frames / total_time;
-        bandwidth = roi_width * roi_height * n_bytes * fps / 1024 / 1024;
-        g_print ("%-16.2f%-16.2f\n", fps, bandwidth);
-    }
-    else
-        g_print ("%s\n", error->message);
-
-    g_timer_destroy (timer);
     g_free (buffer);
 }
 
