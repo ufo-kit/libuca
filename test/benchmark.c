@@ -57,13 +57,14 @@ static void
 log_handler (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user)
 {
     gsize       n_written;
-    GIOChannel *channel;
+    GError     *error = NULL;
+    GIOChannel *channel = user;
+
+#if GLIB_CHECK_VERSION(2, 26, 0)
     GTimeZone  *tz;
     GDateTime  *date_time;
     gchar      *new_message;
-    GError     *error = NULL;
 
-    channel = user;
     tz = g_time_zone_new_local ();
     date_time = g_date_time_new_now (tz);
 
@@ -75,6 +76,10 @@ log_handler (const gchar *log_domain, GLogLevelFlags log_level, const gchar *mes
 
     g_io_channel_write_chars (channel, new_message, strlen (new_message), &n_written, &error);
     g_assert_no_error (error);
+#else
+    g_io_channel_write_chars (channel, message, strlen (message), &n_written, &error);
+    g_assert_no_error (error);
+#endif
 
     g_io_channel_flush (channel, &error);
     g_assert_no_error (error);
