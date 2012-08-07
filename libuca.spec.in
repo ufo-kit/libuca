@@ -60,10 +60,7 @@ mv "@UCA_BUILD_DIR@/_CPack_Packages/Linux/RPM/tmpBBroot" $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-@CMAKE_INSTALL_PREFIX@/include/uca/uca-pco-camera.h
-@CMAKE_INSTALL_PREFIX@/include/uca/uca-mock-camera.h
-@CMAKE_INSTALL_PREFIX@/include/uca/uca-pylon-camera.h
-@CMAKE_INSTALL_PREFIX@/include/uca/uca-camera.h
+@CMAKE_INSTALL_PREFIX@/include/uca/*.h
 @CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so
 @CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so.@UCA_VERSION_MINOR@
 @CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so.@UCA_ABI_VERSION@
@@ -71,6 +68,8 @@ mv "@UCA_BUILD_DIR@/_CPack_Packages/Linux/RPM/tmpBBroot" $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Aug 7 2012 Volker Kaiser <volker.kaiser@softwareschneiderei.de>
+pack only existing header files
 * Tue Aug 7 2012 Volker Kaiser <volker.kaiser@softwareschneiderei.de>
 using more variables in spec file
 * Tue Aug 2 2012 Volker Kaiser <volker.kaiser@softwareschneiderei.de>
