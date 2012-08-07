@@ -17,7 +17,7 @@
 
 #include <glib-object.h>
 #include <signal.h>
-#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include "uca-camera.h"
 
@@ -26,7 +26,7 @@ static UcaCamera *camera = NULL;
 static void
 sigint_handler(int signal)
 {
-    printf ("Closing down libuca\n");
+    g_print ("Closing down libuca\n");
     uca_camera_stop_recording (camera, NULL);
     g_object_unref (camera);
     exit (signal);
@@ -49,6 +49,35 @@ print_usage (void)
 
     g_print ("\n");
     g_strfreev (types);
+}
+
+static void
+log_handler (const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user)
+{
+    gsize       n_written;
+    GIOChannel *channel;
+    GTimeZone  *tz;
+    GDateTime  *date_time;
+    gchar      *new_message;
+    GError     *error = NULL;
+
+    channel = user;
+    tz = g_time_zone_new_local ();
+    date_time = g_date_time_new_now (tz);
+
+    new_message = g_strdup_printf ("[%s] %s\n",
+                                   g_date_time_format (date_time, "%FT%H:%M:%S%z"), message);
+
+    g_time_zone_unref (tz);
+    g_date_time_unref (date_time);
+
+    g_io_channel_write_chars (channel, new_message, strlen (new_message), &n_written, &error);
+    g_assert_no_error (error);
+
+    g_io_channel_flush (channel, &error);
+    g_assert_no_error (error);
+
+    g_free (new_message);
 }
 
 static void
@@ -82,14 +111,15 @@ benchmark (UcaCamera *camera)
                   "exposure-time", &exposure,
                   NULL);
 
-    g_print ("# --- General information\n");
+    g_print ("# --- General information ---\n");
     g_print ("# Sensor size: %ix%i\n", sensor_width, sensor_height);
     g_print ("# ROI size: %ix%i\n", roi_width, roi_height);
     g_print ("# Exposure time: %fs\n", exposure);
 
-    g_print ("# --- Synchronous Benchmark\n");
     g_print ("# %-10s%-10s%-16s%-16s\n", "n_frames", "n_runs", "frames/s", "MiB/s");
     g_print ("  %-10i%-10i", n_frames, n_runs);
+
+    g_message ("Start synchronous benchmark");
 
     n_bytes = bits > 8 ? 2 : 1;
     buffer = g_malloc0(roi_width * roi_height * n_bytes);
@@ -101,10 +131,18 @@ benchmark (UcaCamera *camera)
         gdouble bandwidth;
 
         for (guint run = 0; run < n_runs; run++) {
+            g_message ("Start run %i of %i", run, n_runs);
             g_timer_start (timer);
 
-            for (guint i = 0; i < n_frames; i++)
+            for (guint i = 0; i < n_frames; i++) {
                 uca_camera_grab(camera, &buffer, &error);
+
+                if (error != NULL) {
+                    g_warning ("Error grabbing frame %02i/%i: `%s'", i, n_frames, error->message);
+                    g_error_free (error);
+                    error = NULL;
+                }
+            }
 
             g_timer_stop (timer);
             total_time += g_timer_elapsed (timer, NULL);
@@ -126,7 +164,9 @@ benchmark (UcaCamera *camera)
 int
 main (int argc, char *argv[])
 {
-    GError *error = NULL;
+    GIOChannel  *log_channel;
+    GError      *error = NULL;
+
     (void) signal (SIGINT, sigint_handler);
 
     if (argc < 2) {
@@ -134,17 +174,23 @@ main (int argc, char *argv[])
         return 1;
     }
 
+    log_channel = g_io_channel_new_file ("error.log", "a+", &error);
+    g_assert_no_error (error);
+    g_log_set_handler (NULL, G_LOG_LEVEL_MASK, log_handler, log_channel);
+
     g_type_init();
     camera = uca_camera_new(argv[1], &error);
 
     if (camera == NULL) {
-        g_print ("Error during initialization: %s\n", error->message);
+        g_error ("Initialization: %s", error->message);
         return 1;
     }
 
     benchmark (camera);
 
     g_object_unref (camera);
+    g_io_channel_shutdown (log_channel, TRUE, &error);
+    g_assert_no_error (error);
 
     return 0;
 }
