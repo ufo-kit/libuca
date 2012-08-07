@@ -93,9 +93,10 @@ static guint N_PROPERTIES;
 static GHashTable *ufo_property_table; /* maps from prop_id to RegisterInfo* */
 
 struct _UcaUfoCameraPrivate {
-    pcilib_t *handle;
-    guint     n_bits;
-    guint     bit_mode;
+    pcilib_t           *handle;
+    pcilib_timeout_t    timeout;
+    guint               n_bits;
+    guint               bit_mode;
 };
 
 static void
@@ -224,15 +225,23 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
 
 static void uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 {
+    UcaUfoCameraPrivate *priv;
+    gdouble exposure_time;
+    int     err;
+
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
-    UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
-    int err = pcilib_start(priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
+
+    priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
+    err = pcilib_start(priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_START_RECORDING);
 
     gboolean transfer_async = FALSE;
     g_object_get(G_OBJECT(camera),
             "transfer-asynchronously", &transfer_async,
+            "exposure-time", &exposure_time,
             NULL);
+
+    priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
 
     if (transfer_async) {
         pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
@@ -261,8 +270,6 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
     pcilib_event_id_t   event_id;
     pcilib_event_info_t event_info;
-    pcilib_timeout_t    timeout;
-    gdouble             exposure_time;
     size_t err;
 
     const gsize size = SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16);
@@ -270,10 +277,7 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     err = pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_TRIGGER);
 
-    g_object_get (G_OBJECT (camera), "exposure-time", &exposure_time, NULL);
-    timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
-
-    err = pcilib_get_next_event(priv->handle, timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
+    err = pcilib_get_next_event(priv->handle, priv->timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_NEXT_EVENT);
 
     if (*data == NULL)

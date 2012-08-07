@@ -174,7 +174,7 @@ benchmark (UcaCamera *camera)
     guint   bits;
     guint   n_bytes_per_pixel;
     guint   n_bytes;
-    gdouble exposure = 0.001;
+    gdouble exposure = 0.00001;
     gpointer buffer;
 
     g_object_set (G_OBJECT (camera),
