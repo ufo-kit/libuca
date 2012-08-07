@@ -18,6 +18,8 @@
 #include "uca-camera.h"
 #include "uca-dexela-camera.h"
 #include "uca-enums.h"
+#include "dexela_api.h"
+#include "dexela_lowlevel.h"
 
 #define UCA_DEXELA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_DEXELA_CAMERA, UcaDexelaCameraPrivate))
 
@@ -32,8 +34,7 @@ GQuark uca_pco_camera_error_quark()
 }
 
 enum {
-    PROP_SENSOR_EXTENDED = N_BASE_PROPERTIES,
-    N_PROPERTIES
+    N_PROPERTIES = N_BASE_PROPERTIES,
 };
 
 static gint base_overrideables[] = {
@@ -67,26 +68,29 @@ struct _UcaDexelaCameraPrivate {
 UcaDexelaCamera *uca_dexela_camera_new(GError **error)
 {
     UcaDexelaCamera *camera = g_object_new(UCA_TYPE_DEXELA_CAMERA, NULL);
-    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
+    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
     /*
-     * Here we override property ranges because we didn't know them at property
-     * installation time.
-     */
+    * Here we override property ranges because we didn't know them at property
+    * installation time.
+    */
     GObjectClass *camera_class = G_OBJECT_CLASS (UCA_CAMERA_GET_CLASS (camera));
+    // TODO implement error checking
+    openDetector();
+    initSerialConnection();
     return camera;
 }
 
 static void uca_dexela_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
+    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
-            {
-				// TODO set exposure time
-				
-			}
-            break;
+        {
+            // TODO set exposure time
+            
+        }
+        break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -95,13 +99,20 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
 
 static void uca_dexela_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
+    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
+        case PROP_NAME:
+        {
+            gchar* model = getModel();
+            g_value_set_string(value, g_strdup_printf("Dexela %s", model));
+            g_free(model);
+            break;
+        }
         case PROP_EXPOSURE_TIME:
             {
-				// TODO read exposure time
-			}
+                // TODO read exposure time
+            }
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -131,7 +142,7 @@ static void uca_dexela_camera_grab(UcaCamera *camera, gpointer *data, GError **e
 
 static void uca_dexela_camera_finalize(GObject *object)
 {
-    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
+    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
     G_OBJECT_CLASS(uca_dexela_camera_parent_class)->finalize(object);
 }
 
@@ -154,11 +165,11 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++) {
         g_object_class_install_property(gobject_class, id, dexela_properties[id]);
-	}
-    g_type_class_add_private(klass, sizeof(UcaDexelaCameraPrivate));
+    }
+    //g_type_class_add_private(klass, sizeof(UcaDexelaCameraPrivate));
 }
 
 static void uca_dexela_camera_init(UcaDexelaCamera *self)
 {
-    self->priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
+    //self->priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
 }

@@ -404,6 +404,11 @@ static UcaCamera *uca_camera_new_from_type(const gchar *type, GError **error)
         return UCA_CAMERA(uca_pf_camera_new(error));
 #endif
 
+#ifdef HAVE_DEXELA_CL
+    if (!g_strcmp0(type, "dexela"))
+        return UCA_CAMERA(uca_dexela_camera_new(error));
+#endif
+
     return NULL;
 }
 
