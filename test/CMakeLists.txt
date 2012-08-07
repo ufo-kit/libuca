@@ -27,7 +27,9 @@ message("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(grab grab.c)
 add_executable(grab-async grab-async.c)
+add_executable(benchmark benchmark.c)
 
+target_link_libraries(benchmark uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 

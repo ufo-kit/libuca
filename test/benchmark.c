@@ -15,87 +15,136 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
-#define __USE_BSD
-#include <unistd.h>
-#undef __USE_BSD
-#include <sys/time.h>
+#include <glib-object.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "uca-camera.h"
 
-#include "uca.h"
+static UcaCamera *camera = NULL;
 
-static __suseconds_t time_diff(struct timeval *start, struct timeval *stop)
+static void
+sigint_handler(int signal)
 {
-    return (stop->tv_sec - start->tv_sec)*1000000 + (stop->tv_usec - start->tv_usec);
+    printf ("Closing down libuca\n");
+    uca_camera_stop_recording (camera, NULL);
+    g_object_unref (camera);
+    exit (signal);
 }
 
-void grab_callback_raw(uint32_t image_number, void *buffer, void *meta_data, void *user)
+static void
+print_usage (void)
 {
-    uint32_t *count = (uint32_t *) user;
-    *count = image_number;
-}
+    gchar **types;
 
-void benchmark_cam(uca_camera *cam)
-{
-    char name[256];
-    uca_cam_get_property(cam, UCA_PROP_NAME, name, 256);
-    
-    uint32_t val = 5000;
-    uca_cam_set_property(cam, UCA_PROP_EXPOSURE, &val);
-    val = 0;
-    uca_cam_set_property(cam, UCA_PROP_DELAY, &val);
+    g_print ("Usage: benchmark (");
+    types = uca_camera_get_types ();
 
-    uint32_t width, height, bits;
-    uca_cam_get_property(cam, UCA_PROP_WIDTH, &width, 0);
-    uca_cam_get_property(cam, UCA_PROP_HEIGHT, &height, 0);
-    uca_cam_get_property(cam, UCA_PROP_BITDEPTH, &bits, 0);
-    int pixel_size = bits == 8 ? 1 : 2;
-
-    struct timeval start, stop;
-
-    for (int i = 0; i < 2; i++) {
-        char *buffer = (char *) malloc(width*height*pixel_size);
-        uca_cam_set_property(cam, UCA_PROP_HEIGHT, &height);
-        uca_cam_alloc(cam, 20);
-
-        /*
-         * Experiment 1: Grab n frames manually
-         */
-        gettimeofday(&start, NULL);
-        uca_cam_start_recording(cam);
-        for (int i = 0; i < 1000; i++)
-            uca_cam_grab(cam, (char *) buffer, NULL);
-            
-        uca_cam_stop_recording(cam);
-        gettimeofday(&stop, NULL);
-
-        float seconds = time_diff(&start, &stop) / 1000000.0;
-        printf("%f,%s;%i;%i;1;%.2f;%.2f\n", seconds,
-                name, width, height, 1000.0 / seconds, 
-                width*height*pixel_size*1000.0/ (1024*1024*seconds));
-
-        height /= 2;
-        free(buffer);
+    for (guint i = 0; types[i] != NULL; i++) {
+        if (types[i+1] == NULL)
+            g_print ("%s)", types[i]);
+        else
+            g_print ("%s | ", types[i]);
     }
+
+    g_print ("\n");
+    g_strfreev (types);
 }
 
-int main(int argc, char *argv[])
+static void
+benchmark (UcaCamera *camera)
 {
-    uca *u = uca_init(NULL);
-    if (u == NULL) {
-        printf("Couldn't find a camera\n");
+    const guint n_runs = 3;
+    const guint n_frames = 100;
+
+    guint   sensor_width;
+    guint   sensor_height;
+    guint   roi_width;
+    guint   roi_height;
+    guint   bits;
+    guint   n_bytes;
+    gdouble total_time = 0.0;
+    gdouble exposure = 0.001;
+    gpointer buffer;
+    GTimer *timer;
+    GError *error = NULL;
+
+    g_object_set (G_OBJECT (camera),
+                  "exposure-time", exposure,
+                  NULL);
+
+    g_object_get (G_OBJECT (camera),
+                  "sensor-width", &sensor_width,
+                  "sensor-height", &sensor_height,
+                  "sensor-bitdepth", &bits,
+                  "roi-width", &roi_width,
+                  "roi-height", &roi_height,
+                  "exposure-time", &exposure,
+                  NULL);
+
+    g_print ("# --- General information\n");
+    g_print ("# Sensor size: %ix%i\n", sensor_width, sensor_height);
+    g_print ("# ROI size: %ix%i\n", roi_width, roi_height);
+    g_print ("# Exposure time: %fs\n", exposure);
+
+    g_print ("# --- Synchronous Benchmark\n");
+    g_print ("# %-10s%-10s%-16s%-16s\n", "n_frames", "n_runs", "frames/s", "MiB/s");
+    g_print ("  %-10i%-10i", n_frames, n_runs);
+
+    n_bytes = bits > 8 ? 2 : 1;
+    buffer = g_malloc0(roi_width * roi_height * n_bytes);
+    timer = g_timer_new ();
+    uca_camera_start_recording (camera, &error);
+
+    if (error == NULL) {
+        gdouble fps;
+        gdouble bandwidth;
+
+        for (guint run = 0; run < n_runs; run++) {
+            g_timer_start (timer);
+
+            for (guint i = 0; i < n_frames; i++)
+                uca_camera_grab(camera, &buffer, &error);
+
+            g_timer_stop (timer);
+            total_time += g_timer_elapsed (timer, NULL);
+        }
+
+        uca_camera_stop_recording (camera, &error);
+
+        fps = n_runs * n_frames / total_time;
+        bandwidth = roi_width * roi_height * n_bytes * fps / 1024 / 1024;
+        g_print ("%-16.2f%-16.2f\n", fps, bandwidth);
+    }
+    else
+        g_print ("%s\n", error->message);
+
+    g_timer_destroy (timer);
+    g_free (buffer);
+}
+
+int
+main (int argc, char *argv[])
+{
+    GError *error = NULL;
+    (void) signal (SIGINT, sigint_handler);
+
+    if (argc < 2) {
+        print_usage();
         return 1;
     }
 
-    printf("# camera;width;height;experiment;frames-per-second;throughput in MB/s\n");
+    g_type_init();
+    camera = uca_camera_new(argv[1], &error);
 
-    /* take first camera */
-    uca_camera *cam = u->cameras;
-    while (cam != NULL) {
-        benchmark_cam(cam);
-        cam = cam->next;
+    if (camera == NULL) {
+        g_print ("Error during initialization: %s\n", error->message);
+        return 1;
     }
 
-    uca_destroy(u);
+    benchmark (camera);
+
+    g_object_unref (camera);
+
     return 0;
 }
