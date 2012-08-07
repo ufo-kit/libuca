@@ -96,7 +96,10 @@ struct _UcaUfoCameraPrivate {
     pcilib_t           *handle;
     pcilib_timeout_t    timeout;
     guint               n_bits;
-    guint               bit_mode;
+    enum {
+        FPGA_48MHZ = 0,
+        FPGA_40MHZ
+    }                   frequency;
 };
 
 static void
@@ -203,7 +206,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     UcaUfoCamera *camera = g_object_new(UCA_TYPE_UFO_CAMERA, NULL);
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
 
-    priv->bit_mode = read_register_value (handle, "bit_mode");
+    priv->frequency = read_register_value (handle, "bit_mode");
     adc_resolution = read_register_value (handle, "adc_resolution");
 
     switch (adc_resolution) {
@@ -307,14 +310,16 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_MAYBE_CORRUPTED);
 }
 
-static void uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+static void
+uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
             {
-                pcilib_register_value_t reg_value = (pcilib_register_value_t) EXPOSURE_TIME_SCALE * g_value_get_double(value);
+                const guint frequency = priv->frequency == FPGA_40MHZ ? 40 : 48;
+                pcilib_register_value_t reg_value = (pcilib_register_value_t) 129 / frequency * 1000 * 1000 * g_value_get_double(value);
                 pcilib_write_register(priv->handle, NULL, "cmosis_exp_time", reg_value);
             }
             break;
@@ -371,8 +376,8 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_SENSOR_TEMPERATURE:
             {
-                const double a = priv->bit_mode == 0 ? 0.3 : 0.25;
-                const double b = priv->bit_mode == 0 ? 1000 : 1200;
+                const double a = priv->frequency == FPGA_48MHZ ? 0.3 : 0.25;
+                const double b = priv->frequency == FPGA_48MHZ ? 1000 : 1200;
                 guint32 temperature;
 
                 temperature = read_register_value (priv->handle, "sensor_temperature");
@@ -390,7 +395,10 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             }
             break;
         case PROP_EXPOSURE_TIME:
-            g_value_set_double (value, read_register_value (priv->handle, "cmosis_exp_time") / EXPOSURE_TIME_SCALE);
+            {
+                const gdouble frequency = priv->frequency == FPGA_40MHZ ? 40.0 : 48.0;
+                g_value_set_double (value, read_register_value (priv->handle, "cmosis_exp_time") * 129 / frequency / 1000 / 1000 );
+            }
             break;
         case PROP_HAS_STREAMING:
             g_value_set_boolean(value, TRUE);
