@@ -144,10 +144,14 @@ set_target_properties(uca PROPERTIES
 target_link_libraries(uca
     ${uca_LIBS})
 
+if (NOT DEFINED WITH_REFERENCE)
+  set(WITH_REFERENCE TRUE)
+endif()
+
 
 # --- Build documentation -----------------------------------------------------
 pkg_check_modules(GTK_DOC gtk-doc)
-if(GTK_DOC_FOUND)
+if(GTK_DOC_FOUND AND WITH_REFERENCE)
     option(WITH_GTK_DOC "Build documentation" ON)
     if (WITH_GTK_DOC)
         set(docs_dir "${CMAKE_CURRENT_BINARY_DIR}")
@@ -229,7 +233,7 @@ if(GTK_DOC_FOUND)
 
         install(FILES ${reference_files} DESTINATION share/gtk-doc/html/uca)
     endif()
-endif(GTK_DOC_FOUND)
+endif(GTK_DOC_FOUND AND WITH_REFERENCE)
 
 
 # --- Install target ----------------------------------------------------------
@@ -277,5 +281,8 @@ set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_SOURCE_IGNORE_FILES ".git" "tags" ".bzr" ".swp")
 set(CPACK_SOURCE_PACKAGE_FILE_NAME "libuca-${UCA_VERSION_STRING}" CACHE INTERNAL "tarball basename")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${UCA_VERSION_STRING}-${CMAKE_SYSTEM_PROCESSOR}")
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../libuca.spec.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/../libuca.spec" @ONLY IMMEDIATE)
 
 include(CPack)
