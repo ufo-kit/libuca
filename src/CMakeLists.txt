@@ -160,18 +160,12 @@ set_target_properties(uca PROPERTIES
 target_link_libraries(uca
     ${uca_LIBS})
 
-if (NOT DEFINED WITH_REFERENCE)
-  set(WITH_REFERENCE TRUE)
-endif()
-
-
 # --- Build documentation -----------------------------------------------------
-if (NOT DEFINED WITH_REFERENCE)
-  set(WITH_REFERENCE TRUE)
-endif()
 pkg_check_modules(GTK_DOC gtk-doc)
-if(GTK_DOC_FOUND AND WITH_REFERENCE)
+
+if(GTK_DOC_FOUND)
     option(WITH_GTK_DOC "Build documentation" ON)
+
     if (WITH_GTK_DOC)
         set(docs_dir "${CMAKE_CURRENT_BINARY_DIR}")
         set(docs_out "${docs_dir}/reference")
@@ -248,11 +242,11 @@ if(GTK_DOC_FOUND AND WITH_REFERENCE)
             DEPENDS ${docs_out}/sgml.stamp ${docs_out}/uca-docs.xml
             WORKING_DIRECTORY ${docs_out})
 
-        add_custom_target(reference DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html.stamp)
+        add_custom_target(reference ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html.stamp)
 
         install(FILES ${reference_files} DESTINATION share/gtk-doc/html/uca)
     endif()
-endif(GTK_DOC_FOUND AND WITH_REFERENCE)
+endif()
 
 
 # --- Install target ----------------------------------------------------------
