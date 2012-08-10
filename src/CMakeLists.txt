@@ -17,6 +17,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 find_package(PCO)
 find_package(PF)
 find_package(IPE)
+find_package(Pylon)
 
 # --- Find frame grabber interfaces
 find_package(FgLib5)
@@ -90,6 +91,21 @@ if (IPE_FOUND)
     endif()
 endif()
 
+if (PYLON_FOUND)
+  option(HAVE_PYLON_CAMERA "Camera: Pylon based (Basler)" ON)
+
+  if (HAVE_PYLON_CAMERA)
+        list(APPEND uca_SRCS cameras/uca-pylon-camera.c)
+        list(APPEND uca_HDRS cameras/uca-pylon-camera.h)
+        list(APPEND cameras "Pylon")
+        set(uca_LIBS ${uca_LIBS} ${LIBPYLONCAM_LIBRARIES})
+
+        include_directories(${LIBPYLONCAM_INCLUDEDIR})
+        link_directories(${LIBPYLONCAM_LIBDIR})
+  endif()
+
+endif()
+
 if (HAVE_MOCK_CAMERA)
     list(APPEND uca_SRCS cameras/uca-mock-camera.c)
     list(APPEND uca_HDRS cameras/uca-mock-camera.h)
@@ -150,6 +166,9 @@ endif()
 
 
 # --- Build documentation -----------------------------------------------------
+if (NOT DEFINED WITH_REFERENCE)
+  set(WITH_REFERENCE TRUE)
+endif()
 pkg_check_modules(GTK_DOC gtk-doc)
 if(GTK_DOC_FOUND AND WITH_REFERENCE)
     option(WITH_GTK_DOC "Build documentation" ON)
@@ -229,7 +248,7 @@ if(GTK_DOC_FOUND AND WITH_REFERENCE)
             DEPENDS ${docs_out}/sgml.stamp ${docs_out}/uca-docs.xml
             WORKING_DIRECTORY ${docs_out})
 
-        add_custom_target(reference ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html.stamp)
+        add_custom_target(reference DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html.stamp)
 
         install(FILES ${reference_files} DESTINATION share/gtk-doc/html/uca)
     endif()
@@ -267,6 +286,8 @@ set(CPACK_PACKAGE_NAME "libuca")
 
 # --- Distro specific
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.3.6), libgcc1 (>= 1:4.1)")
+
+# this doesn't work when building RPMs on Jenkins
 set(CPACK_SET_DESTDIR ON)
 
 set(CPACK_PACKAGE_CONTACT "Matthias Vogelgesang")
@@ -283,6 +304,6 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME "libuca-${UCA_VERSION_STRING}" CACHE INTERNAL
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${UCA_VERSION_STRING}-${CMAKE_SYSTEM_PROCESSOR}")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../libuca.spec.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/../libuca.spec" @ONLY IMMEDIATE)
+               "${CMAKE_CURRENT_BINARY_DIR}/../libuca.spec" @ONLY IMMEDIATE)
 
 include(CPack)

@@ -16,6 +16,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/control.glade ${CMAKE_CURRENT_BINARY_
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_CURRENT_BINARY_DIR})
 
 # --- Build targets -----------------------------------------------------------
+
 include_directories(
     ${GLIB2_INCLUDE_DIRS}
     ${GOBJECT2_INCLUDE_DIRS}
@@ -25,6 +26,19 @@ include_directories(
 
 message("${CMAKE_CURRENT_SOURCE_DIR}")
 
+if (HAVE_PYLON_CAMERA)
+  set(GENICAM_ROOT $ENV{PYLON_ROOT}/genicam)
+  # check for 32/64 bit
+  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(PYLON_LIB_DIRS $ENV{PYLON_ROOT}/lib64 $ENV{PYLON_ROOT}/bin ${GENICAM_ROOT}/bin/Linux64_x64
+      ${GENICAM_ROOT}/bin/Linux64_x64/GenApi/Generic)
+  else()
+    set(PYLON_LIB_DIRS $ENV{PYLON_ROOT}/lib64 $ENV{PYLON_ROOT}/bin ${GENICAM_ROOT}/bin/Linux32_i86
+      ${GENICAM_ROOT}/bin/Linux32_i86/GenApi/Generic)
+  endif()
+  link_directories(${PYLON_LIB_DIRS} ${LIBPYLONCAM_LIBDIR})
+endif()
+
 add_executable(grab grab.c)
 add_executable(grab-async grab-async.c)
 add_executable(benchmark benchmark.c)
@@ -33,7 +47,14 @@ target_link_libraries(benchmark uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
-if (GTK2_FOUND)
+add_executable(grab_pylon grab_pylon.c)
+target_link_libraries(grab_pylon uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+
+if (NOT DEFINED WITH_CONTROL_GUI)
+  set(WITH_CONTROL_GUI TRUE)
+endif()
+
+if (GTK2_FOUND AND WITH_CONTROL_GUI)
     include_directories(${GTK2_INCLUDE_DIRS})
 
     add_executable(control 
