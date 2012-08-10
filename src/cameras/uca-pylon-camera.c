@@ -1,4 +1,4 @@
-/* Copyright (C) 2011, 2012 Matthias Vogelgesang <matthias.vogelgesang@kit.edu>
+/* Copyright (C) 2012 Volker Kaiser <volker.kaiser@softwareschneiderei>
    (Karlsruhe Institute of Technology)
 
    This library is free software; you can redistribute it and/or modify it
@@ -21,15 +21,6 @@
 #include <libpyloncam/pylon_camera.h>
 #include "uca-camera.h"
 #include "uca-pylon-camera.h"
-
-
-/*#define HANDLE_PYLON_ERROR(err)                       \
-    if ((err) != PYLON_NOERROR) {                     \
-        g_set_error(error, UCA_PYLON_CAMERA_ERROR,    \
-                UCA_PYLON_CAMERA_ERROR_LIBPYLON_GENERAL,\
-                "libpylon error %i", err);            \
-        return;                                     \
-    }*/
 
 #define UCA_PYLON_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PYLON_CAMERA, UcaPylonCameraPrivate))
 
@@ -79,7 +70,6 @@ static gint base_overrideables[] = {
     0
 };
 
-
 static GParamSpec *pylon_properties[N_PROPERTIES] = { NULL, };
 
 
@@ -109,21 +99,20 @@ static void pylon_set_roi(GObject *object, GError** error)
 
 UcaPylonCamera *uca_pylon_camera_new(GError **error)
 {
-  UcaPylonCamera *camera = g_object_new(UCA_TYPE_PYLON_CAMERA, NULL);
-  UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(camera);
+    UcaPylonCamera *camera = g_object_new(UCA_TYPE_PYLON_CAMERA, NULL);
+    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(camera);
 
-  pylon_camera_new("/usr/local/lib64", "141.52.111.110", error);
-  if (*error) {
-    g_print("Error when calling pylon_camera_new %s\n", (*error)->message);
-    return NULL;
-  }
+    pylon_camera_new("/usr/local/lib64", "141.52.111.110", error);
 
-  pylon_camera_get_sensor_size(&priv->width, &priv->height, error);
-  if (*error) {
-    g_print("Error when calling pylon_camera_get_sensor_size %s\n", (*error)->message);
-    return NULL;
-  }
-  return camera;
+    if (*error != NULL)
+        return NULL;
+
+    pylon_camera_get_sensor_size(&priv->width, &priv->height, error);
+
+    if (*error != NULL)
+        return NULL;
+
+    return camera;
 }
 
 static void uca_pylon_camera_start_recording(UcaCamera *camera, GError **error)
@@ -159,7 +148,6 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
     GError* error = NULL;
 
     switch (property_id) {
-
         case PROP_SENSOR_HORIZONTAL_BINNING:
           /* intentional fall-through*/
         case PROP_SENSOR_VERTICAL_BINNING:
@@ -168,36 +156,36 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
           break;
 
         case PROP_ROI_X:
-            {
+          {
               priv->roi_x = g_value_get_uint(value);
               pylon_set_roi(object, &error);
-            }
-            break;
+          }
+          break;
 
         case PROP_ROI_Y:
-            {
+          {
               priv->roi_y = g_value_get_uint(value);
               pylon_set_roi(object, &error);
-            }
-            break;
+          }
+          break;
 
         case PROP_ROI_WIDTH:
-            {
+          {
               priv->roi_width = g_value_get_uint(value);
               pylon_set_roi(object, &error);
-            }
-            break;
+          }
+          break;
 
         case PROP_ROI_HEIGHT:
-            {
+          {
               priv->roi_height = g_value_get_uint(value);
               pylon_set_roi(object, &error);
-            }
-            break;
+          }
+          break;
 
         case PROP_EXPOSURE_TIME:
-            pylon_camera_set_exposure_time(g_value_get_double(value), &error);
-            break;
+          pylon_camera_set_exposure_time(g_value_get_double(value), &error);
+          break;
 
         case PROP_GAIN:
             pylon_camera_set_gain(g_value_get_int(value), &error);
@@ -211,28 +199,23 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
 
 static void uca_pylon_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-  fprintf(stderr, "pylon_get_property\n");
     UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
     GError* error = NULL;
 
     switch (property_id) {
-
         case PROP_SENSOR_WIDTH:
             pylon_camera_get_sensor_size(&priv->width, &priv->height, &error);
             g_value_set_uint(value, priv->width);
-            g_print("pylon_get_property sensor width %d\n", priv->width);
             break;
 
         case PROP_SENSOR_HEIGHT:
             pylon_camera_get_sensor_size(&priv->width, &priv->height, &error);
             g_value_set_uint(value, priv->height);
-            g_print("pylon_get_property sensor height %d\n", priv->height);
             break;
 
         case PROP_SENSOR_BITDEPTH:
             pylon_camera_get_bit_depth(&priv->bit_depth, &error);
             g_value_set_uint(value, priv->bit_depth);
-            g_print("pylon_get_property depth %d\n", priv->bit_depth);
             break;
 
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -269,29 +252,29 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
 
         case PROP_ROI_X:
             {
-              pylon_get_roi(object, &error);
-              g_value_set_uint(value, priv->roi_x);
+                pylon_get_roi(object, &error);
+                g_value_set_uint(value, priv->roi_x);
             }
             break;
 
         case PROP_ROI_Y:
             {
-              pylon_get_roi(object, &error);
-              g_value_set_uint(value, priv->roi_y);
+                pylon_get_roi(object, &error);
+                g_value_set_uint(value, priv->roi_y);
             }
             break;
 
         case PROP_ROI_WIDTH:
             {
-              pylon_get_roi(object, &error);
-              g_value_set_uint(value, priv->roi_width);
+                pylon_get_roi(object, &error);
+                g_value_set_uint(value, priv->roi_width);
             }
             break;
 
         case PROP_ROI_HEIGHT:
             {
-              pylon_get_roi(object, &error);
-              g_value_set_uint(value, priv->roi_height);
+                pylon_get_roi(object, &error);
+                g_value_set_uint(value, priv->roi_height);
             }
             break;
 
@@ -307,9 +290,9 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
 
         case PROP_GAIN:
             {
-              gint gain=0;
-              pylon_camera_get_gain(&gain, &error);
-              g_value_set_int(value, gain);
+                gint gain=0;
+                pylon_camera_get_gain(&gain, &error);
+                g_value_set_int(value, gain);
             }
             break;
 
@@ -323,19 +306,14 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
 
         case PROP_EXPOSURE_TIME:
             {
-              gdouble exp_time = 0.0;
-              pylon_camera_get_exposure_time(&exp_time, &error);
-              g_value_set_double(value, exp_time);
+                gdouble exp_time = 0.0;
+                pylon_camera_get_exposure_time(&exp_time, &error);
+                g_value_set_double(value, exp_time);
             }
             break;
 
         case PROP_NAME:
-            {
-                //char *name = NULL;
-                //pylon_get_name(priv->pylon, &name);
-                g_value_set_string(value, "Pylon Camera");
-                //free(name);
-            }
+            g_value_set_string(value, "Pylon Camera");
             break;
 
         default:
@@ -346,26 +324,8 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
 
 static void uca_pylon_camera_finalize(GObject *object)
 {
-  UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
-  g_value_array_free(priv->binnings);
-    /*UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
-
-    if (priv->horizontal_binnings)
-        g_value_array_free(priv->horizontal_binnings);
-
-    if (priv->vertical_binnings)
-        g_value_array_free(priv->vertical_binnings);
-
-    if (priv->fg) {
-        if (priv->fg_mem)
-            Fg_FreeMem(priv->fg, priv->fg_port);
-
-        Fg_FreeGrabber(priv->fg);
-    }
-
-    if (priv->pylon)
-        pylon_destroy(priv->pylon);
-        */
+    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
+    g_value_array_free(priv->binnings);
 
     G_OBJECT_CLASS(uca_pylon_camera_parent_class)->finalize(object);
 }
@@ -391,55 +351,26 @@ static void uca_pylon_camera_class_init(UcaPylonCameraClass *klass)
             "Name of the camera",
             "", G_PARAM_READABLE);
 
-    /*guint sensor_width = 0;
-    guint sensor_height = 0;
-    GError* error;
-    pylon_camera_get_sensor_size(&sensor_width, &sensor_height, &error);*/
-
     pylon_properties[PROP_ROI_WIDTH_DEFAULT] =
         g_param_spec_uint("roi-width-default",
             "ROI width default value",
             "ROI width default value",
             0, G_MAXUINT, 0,
             G_PARAM_READABLE);
+
     pylon_properties[PROP_ROI_HEIGHT_DEFAULT] =
         g_param_spec_uint("roi-height-default",
             "ROI height default value",
             "ROI height default value",
             0, G_MAXUINT, 0,
             G_PARAM_READABLE);
+
     pylon_properties[PROP_GAIN] =
         g_param_spec_int("gain",
             "gain",
             "gain",
             0, G_MAXINT, 0,
             G_PARAM_READWRITE);
-    /*g_object_class_install_property(gobject_class, PROP_ROI_X, pylon_properties[PROP_ROI_X]);
-
-
-    pylon_properties[PROP_ROI_Y] =
-        g_param_spec_uint(uca_camera_props[PROP_ROI_Y],
-            "Vertical coordinate",
-            "Vertical coordinate",
-            0, G_MAXUINT, 0,
-            G_PARAM_READWRITE);
-    g_object_class_install_property(gobject_class, PROP_ROI_Y, pylon_properties[PROP_ROI_Y]);
-
-    pylon_properties[PROP_ROI_WIDTH] =
-        g_param_spec_uint(uca_camera_props[PROP_ROI_WIDTH],
-            "Width",
-            "Width of the region of interest",
-            1, G_MAXUINT, 500,
-            G_PARAM_READWRITE);
-    g_object_class_install_property(gobject_class, PROP_ROI_WIDTH, pylon_properties[PROP_ROI_WIDTH]);
-
-    pylon_properties[PROP_ROI_HEIGHT] =
-        g_param_spec_uint(uca_camera_props[PROP_ROI_HEIGHT],
-            "Height",
-            "Height of the region of interest",
-            1, G_MAXUINT, 100,
-            G_PARAM_READWRITE);
-    g_object_class_install_property(gobject_class, PROP_ROI_HEIGHT, pylon_properties[PROP_ROI_HEIGHT]); */
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, pylon_properties[id]);
