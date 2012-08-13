@@ -164,7 +164,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
     ufo_property_table = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_free);
 
     for (guint i = 0; model_description->registers[i].name != NULL; i++) {
-        GParamFlags flags;
+        GParamFlags flags = 0;
         RegisterInfo *reg_info;
         gchar *prop_name;
         pcilib_register_description_t *reg;
