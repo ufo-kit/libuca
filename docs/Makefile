@@ -1,5 +1,4 @@
 PANDOC=$(shell which pandoc)
-MD2PDF=$(shell which markdown2pdf)
 OPTS=-s --smart
 
 all: pdf html
@@ -12,7 +11,7 @@ clean:
 	rm -f manual.pdf manual.html
 
 manual.pdf: manual.md
-	$(MD2PDF) -o manual.pdf	manual.md
+	$(PANDOC) manual.md -o manual.pdf
 
 manual.html: manual.md
 	$(PANDOC) $(OPTS) manual.md -o manual.html
