@@ -216,9 +216,13 @@ In a similar way, properties are set with `g_object_set`:
 ~~~
 
 Several essential camera parameters _must_ be implemented by all cameras. To get
-a list of them consult the API reference for `UcaCamera`. For camera specific
-parameters you need to consult the corresponding API reference for
-`UfoFooCamera`.
+a list of them consult the API reference for [`UcaCamera`][ucacam-ref]. For
+camera specific parameters you need to consult the corresponding API reference
+for `UfoFooCamera`. The latest nightly built reference can be found
+[here][libuca-reference].
+
+[ucacam-ref]: http://ufo.kit.edu/extra/libuca/reference/UcaCamera.html#UcaCamera.properties
+[libuca-reference]: http://ufo.kit.edu/extra/libuca/reference/
 
 
 # Tools
