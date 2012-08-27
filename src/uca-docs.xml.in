@@ -18,30 +18,6 @@
     <title>Unified Camera Access</title>
         <xi:include href="xml/uca-camera.xml"/>
         ${_xml_doc_input}
-
-  </chapter>
-
-  <chapter id="howto-add-camera">
-      <title>How to add a new camera</title>
-
-      <para>
-          Adding a new camera involves three steps:
-          <itemizedlist>
-              <listitem><para>Subclass from <link linkend="UcaCamera">UcaCamera</link> and implement all necessary methods
-                  to start and stop recording, to grab frames and override and
-                  add properties that are special to your
-                  camera.</para></listitem>
-              <listitem><para>Adapt <filename>src/CMakeLists.txt</filename>, so
-                      that your dependencies are detected and your source files
-                      are added to the <literal>uca_SRCS</literal> CMake
-                      variable. Furthermore you must add an entry to
-                      <filename>src/config.h.in</filename> that reflects the
-                      CMake option variable</para></listitem>
-              <listitem><para>Change <filename>src/uca-camera.c</filename>
-                      and add a new (guarded) entry to the factory as well
-                      as necessary include files.</para></listitem>
-          </itemizedlist>
-      </para>
   </chapter>
 
   <index id="api-index-full">
