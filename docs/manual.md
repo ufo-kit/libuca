@@ -9,7 +9,8 @@ cameras used at the ANKA synchrotron.
 ## Installation
 
 Before installing `libuca` itself, you should install any drivers and SDKs
-needed to access the cameras you want to access through `libuca`.
+needed to access the cameras you want to access through `libuca`. Now you have
+two options: install pre-built packages or build from source.
 
 ## Building from source
 
@@ -227,6 +228,18 @@ for `UfoFooCamera`. The latest nightly built reference can be found
 
 [ucacam-ref]: http://ufo.kit.edu/extra/libuca/reference/UcaCamera.html#UcaCamera.properties
 [libuca-reference]: http://ufo.kit.edu/extra/libuca/reference/
+
+
+# Supported cameras
+
+The following cameras are supported:
+
+* pco.edge, pco.dimax, pco.4000 (all CameraLink) via [libpco][]. You need to
+  have the SiliconSoftware frame grabber SDK with the `menable` kernel module
+  installed.
+* PhotonFocus
+* Pylon
+* UFO Camera developed at KIT/IPE.
 
 
 # More API
