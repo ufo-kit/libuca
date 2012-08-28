@@ -52,9 +52,9 @@ p {
     margin-bottom: 24px;
 }
 
-p > code {
-    font-size: 0.8em;
-}
+/* p > code { */
+/*     font-size: 0.8em; */
+/* } */
 
 h1, h2, h3, h4, h5, h6 {
     margin-bottom: 24px;
@@ -94,11 +94,12 @@ h1 > a, h2 > a, h3 > a, h4 > a, h5 > a, h6 > a {
 
 pre {
     margin-bottom: 24px;
-    line-height: 1.3em;
+    line-height: 1.2em;
+    font-size: large;
 }
 
 code {
-    font-family: "Droid Sans Mono", monospace;
+    font-family: "Inconsolata", monospace;
 }
 
 ul, ol {

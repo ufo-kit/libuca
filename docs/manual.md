@@ -152,8 +152,12 @@ Compile this program with
 
     cc `pkg-config --cflags --libs libuca glib-2.0` foo.c -o foo
 
+Now, run `foo` and verify that no errors occur.
+
+
 [libpco]: http://ufo.kit.edu/repos/libpco.git/
 [gobject-references]: http://developer.gnome.org/gobject/stable/gobject-memory.html#gobject-memory-refcount
+
 
 ### Grabbing frames
 
@@ -209,7 +213,7 @@ In a similar way, properties are set with `g_object_set`:
     guint roi_width = 512;
     gdouble exposure_time = 0.001;
 
-    g_object_set (G_OBJECT(camera),
+    g_object_set (G_OBJECT (camera),
                   "roi-width", roi_width,
                   "exposure-time", exposure_time,
                   NULL);
@@ -223,6 +227,149 @@ for `UfoFooCamera`. The latest nightly built reference can be found
 
 [ucacam-ref]: http://ufo.kit.edu/extra/libuca/reference/UcaCamera.html#UcaCamera.properties
 [libuca-reference]: http://ufo.kit.edu/extra/libuca/reference/
+
+
+# More API
+
+In the [last section][], we had a quick glance over the basic API used to
+communicate with the camera. Now we will go into more detail.
+
+## Instantiating cameras
+
+We have already seen how to instantiate a camera object from a name. If you have
+more than one camera connected to a machine, you will most likely want the user
+decide which to use. To do so, you can enumerate all camera strings with
+`uca_camera_get_types`:
+
+~~~ {.c}
+    gchar **types;
+
+    types = uca_camera_get_types ();
+
+    for (guint i = 0; types[i] != NULL; i++)
+        g_print ("%s\n", types[i]);
+
+    /* free the string array */
+    g_strfreev (types);
+~~~
+
+If you _know_ which camera you want to use you can instantiate the sub-classed
+camera object directly. In this case we create a pco-based camera:
+
+~~~ {.c}
+#include <glib-object.h>
+#include <uca/uca-camera-pco.h>
+
+int
+main (int argc, char *argv[])
+{
+    UcaPcoCamera *camera;
+    GError *error = NULL;
+
+    g_type_init ();
+    camera = uca_pco_camera_new (&error);
+    g_object_unref (camera);
+    return 0;
+}
+~~~
+
+[last section]: #first-look-at-the-api
+
+
+## Errors
+
+All public API functions take a location of a pointer to a `GError` structure as
+a last argument. You can pass in a `NULL` value, in which case you cannot be
+notified about exceptional behavior. On the other hand, if you pass in a
+pointer to a `GError`, it must be initialized with `NULL` so that you do not
+accidentally overwrite and miss an error occurred earlier.
+
+Read more about `GError`s in the official GLib
+[documentation][GError].
+
+[GError]: http://developer.gnome.org/glib/stable/glib-Error-Reporting.html
+
+
+## Recording
+
+Recording frames is independent of actually grabbing them and is started with
+`uca_camera_start_recording`. You should always stop the recording with
+`ufo_camera_stop_recording` when you finished. When the recording has started,
+you can grab frames synchronously as described earlier. In this mode, a block to
+`uca_camera_grab` blocks until a frame is read from the camera. Grabbing might
+block indefinitely, when the camera is not functioning correctly or it is not
+triggered automatically.
+
+
+## Triggering
+
+`libuca` supports three trigger modes through the "trigger-mode" property:
+
+1. `UCA_CAMERA_TRIGGER_AUTO`: Exposure is triggered by the camera itself.
+2. `UCA_CAMERA_TRIGGER_INTERNAL`: Exposure is triggered via software.
+3. `UCA_CAMERA_TRIGGER_EXTERNAL`: Exposure is triggered by an external hardware
+   mechanism.
+
+With `UCA_CAMERA_TRIGGER_INTERNAL` you have to trigger with
+`uca_camera_trigger`:
+
+~~~ {.c}
+    /* thread A */
+    g_object_set (G_OBJECT (camera),
+                  "trigger-mode", UCA_CAMERA_TRIGGER_INTERNAL,
+                  NULL);
+
+    uca_camera_start_recording (camera, NULL);
+    uca_camera_grab (camera, &buffer, NULL);
+    uca_camera_stop_recording (camera, NULL);
+
+    /* thread B */
+    uca_camera_trigger (camera, NULL);
+~~~
+
+
+## Grabbing frames asynchronously
+
+In some applications, it might make sense to setup asynchronous frame
+acquisition, for which you will not be blocked by a call to `libuca`:
+
+~~~ {.c}
+static void
+callback (gpointer buffer, gpointer user_data)
+{
+    /*
+     * Do something useful with the buffer and the string we have got.
+     */
+}
+
+static void
+setup_async (UcaCamera *camera)
+{
+    gchar *s = g_strdup ("lorem ipsum");
+
+    g_object_set (G_OBJECT (camera),
+                  "transfer-asynchronously", TRUE,
+                  NULL);
+
+    uca_camera_set_grab_func (camera, callback, s);
+    uca_camera_start_recording (camera, NULL);
+
+    /*
+     * We will return here and `callback` will be called for each newo
+     * new frame.
+     */
+}
+~~~
+
+# Integrating new cameras
+
+A new camera is integrated by [sub-classing][] `UcaCamera` and implement all
+virtual methods. The simplest way is to take the `mock` camera and
+rename all occurences. Note, that if you class is going to be called `FooBar`,
+the upper case variant is `FOO_BAR` and the lower case variant is `foo_bar`.
+
+
+[sub-classing]: http://developer.gnome.org/gobject/stable/howto-gobject.html
 
 
 # Tools
@@ -262,4 +409,7 @@ grabbing time:
       sync      100       3         29848.98        8744.82
       async     100       3         15739.43        4611.16
 
-# Integrating a new camera
+
+# The GObject Tango device
+
+[TODO: Get more information from Volker Kaiser and/or Mihael Koep]
