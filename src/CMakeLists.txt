@@ -3,12 +3,15 @@ cmake_minimum_required(VERSION 2.8)
 # --- Set sources -------------------------------------------------------------
 set(uca_SRCS
     uca-camera.c
+    uca-plugin-manager.c
     )
 
 set(uca_HDRS
     uca-camera.h)
 
 set(cameras)
+
+set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
 
 # --- Find packages and libraries ---------------------------------------------
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
@@ -107,9 +110,12 @@ if (PYLON_FOUND)
 endif()
 
 if (HAVE_MOCK_CAMERA)
-    list(APPEND uca_SRCS cameras/uca-mock-camera.c)
-    list(APPEND uca_HDRS cameras/uca-mock-camera.h)
-    list(APPEND cameras "Mock")
+    add_library(ucamock SHARED cameras/uca-mock-camera.c)
+    #list(APPEND uca_SRCS cameras/uca-mock-camera.c)
+    ##list(APPEND uca_HDRS cameras/uca-mock-camera.h)
+    #list(APPEND cameras "Mock")
+    install(TARGETS ucamock
+        LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca)
 endif()
 
 # --- Generate enum file

@@ -36,51 +36,51 @@ if (HAVE_PYLON_CAMERA)
     link_directories(${PYLON_LIB_DIRS} ${LIBPYLONCAM_LIBDIR})
 endif()
 
-add_executable(grab grab.c)
-add_executable(grab-async grab-async.c)
+#add_executable(grab grab.c)
+#add_executable(grab-async grab-async.c)
 add_executable(benchmark benchmark.c)
 
 target_link_libraries(benchmark uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
-target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
-target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+#target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+#target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
-add_executable(grab_pylon grab_pylon.c)
-target_link_libraries(grab_pylon uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+#add_executable(grab_pylon grab_pylon.c)
+#target_link_libraries(grab_pylon uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+#
+#if (NOT DEFINED WITH_CONTROL_GUI)
+#    set(WITH_CONTROL_GUI TRUE)
+#endif()
+#
+#if (GTK2_FOUND AND WITH_CONTROL_GUI)
+#    include_directories(${GTK2_INCLUDE_DIRS})
+#
+#    add_executable(control 
+#        control.c 
+#        egg-property-cell-renderer.c
+#        egg-property-tree-view.c)
+#
+#    target_link_libraries(control uca
+#        ${GTK2_LIBRARIES} ${GTHREAD2_LIBRARIES})
+#
+#    install(TARGETS control
+#        RUNTIME DESTINATION bin)
+#
+#    install(FILES control.glade
+#        DESTINATION share/libuca)
+#endif()
 
-if (NOT DEFINED WITH_CONTROL_GUI)
-    set(WITH_CONTROL_GUI TRUE)
-endif()
+#if (HAVE_MOCK_CAMERA)
+#    add_executable(test-mock test-mock.c)
+#
+#    target_link_libraries(test-mock
+#        uca
+#        ${GLIB2_LIBRARIES}
+#        ${GOBJECT2_LIBRARIES})
+#
+#    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gtester.xsl
+#        ${CMAKE_CURRENT_BINARY_DIR}/gtester.xsl)
+#endif()
 
-if (GTK2_FOUND AND WITH_CONTROL_GUI)
-    include_directories(${GTK2_INCLUDE_DIRS})
-
-    add_executable(control 
-        control.c 
-        egg-property-cell-renderer.c
-        egg-property-tree-view.c)
-
-    target_link_libraries(control uca
-        ${GTK2_LIBRARIES} ${GTHREAD2_LIBRARIES})
-
-    install(TARGETS control
-        RUNTIME DESTINATION bin)
-
-    install(FILES control.glade
-        DESTINATION share/libuca)
-endif()
-
-if (HAVE_MOCK_CAMERA)
-    add_executable(test-mock test-mock.c)
-
-    target_link_libraries(test-mock
-        uca
-        ${GLIB2_LIBRARIES}
-        ${GOBJECT2_LIBRARIES})
-
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gtester.xsl
-        ${CMAKE_CURRENT_BINARY_DIR}/gtester.xsl)
-endif()
-
-add_executable(test-all test-all.c)
-target_link_libraries(test-all uca
-    ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+#add_executable(test-all test-all.c)
+#target_link_libraries(test-all uca
+#    ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})

@@ -20,25 +20,25 @@
 #include "uca-camera.h"
 #include "uca-enums.h"
 
-#ifdef HAVE_PCO_CL
-#include "cameras/uca-pco-camera.h"
-#endif
+/* #ifdef HAVE_PCO_CL */
+/* #include "cameras/uca-pco-camera.h" */
+/* #endif */
 
-#ifdef HAVE_PYLON_CAMERA
-#include "cameras/uca-pylon-camera.h"
-#endif
+/* #ifdef HAVE_PYLON_CAMERA */
+/* #include "cameras/uca-pylon-camera.h" */
+/* #endif */
 
-#ifdef HAVE_MOCK_CAMERA
-#include "cameras/uca-mock-camera.h"
-#endif
+/* #ifdef HAVE_MOCK_CAMERA */
+/* #include "cameras/uca-mock-camera.h" */
+/* #endif */
 
-#ifdef HAVE_UFO_CAMERA
-#include "cameras/uca-ufo-camera.h"
-#endif
+/* #ifdef HAVE_UFO_CAMERA */
+/* #include "cameras/uca-ufo-camera.h" */
+/* #endif */
 
-#ifdef HAVE_PHOTON_FOCUS
-#include "cameras/uca-pf-camera.h"
-#endif
+/* #ifdef HAVE_PHOTON_FOCUS */
+/* #include "cameras/uca-pf-camera.h" */
+/* #endif */
 
 #define UCA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_CAMERA, UcaCameraPrivate))
 
@@ -65,24 +65,24 @@ GQuark uca_camera_error_quark()
     return g_quark_from_static_string("uca-camera-error-quark");
 }
 
-static gchar *uca_camera_types[] = {
-#ifdef HAVE_PCO_CL
-        "pco",
-#endif
-#ifdef HAVE_PYLON_CAMERA
-        "pylon",
-#endif
-#ifdef HAVE_MOCK_CAMERA
-        "mock",
-#endif
-#ifdef HAVE_UFO_CAMERA
-        "ufo",
-#endif
-#ifdef HAVE_PHOTON_FOCUS
-        "pf",
-#endif
-        NULL
-};
+/* static gchar *uca_camera_types[] = { */
+/* #ifdef HAVE_PCO_CL */
+/*         "pco", */
+/* #endif */
+/* #ifdef HAVE_PYLON_CAMERA */
+/*         "pylon", */
+/* #endif */
+/* #ifdef HAVE_MOCK_CAMERA */
+/*         "mock", */
+/* #endif */
+/* #ifdef HAVE_UFO_CAMERA */
+/*         "ufo", */
+/* #endif */
+/* #ifdef HAVE_PHOTON_FOCUS */
+/*         "pf", */
+/* #endif */
+/*         NULL */
+/* }; */
 
 enum {
     LAST_SIGNAL
@@ -126,7 +126,8 @@ struct _UcaCameraPrivate {
     gboolean transfer_async;
 };
 
-static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+static void
+uca_camera_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
 
@@ -145,7 +146,8 @@ static void uca_camera_set_property(GObject *object, guint property_id, const GV
     }
 }
 
-static void uca_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+static void
+uca_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
 
@@ -167,7 +169,8 @@ static void uca_camera_get_property(GObject *object, guint property_id, GValue *
     }
 }
 
-static void uca_camera_class_init(UcaCameraClass *klass)
+static void
+uca_camera_class_init(UcaCameraClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_camera_set_property;
@@ -370,48 +373,48 @@ static void uca_camera_init(UcaCamera *camera)
      */
 }
 
-static UcaCamera *uca_camera_new_from_type(const gchar *type, GError **error)
-{
-#ifdef HAVE_MOCK_CAMERA
-    if (!g_strcmp0(type, "mock"))
-        return UCA_CAMERA(uca_mock_camera_new(error));
-#endif
+/* static UcaCamera *uca_camera_new_from_type(const gchar *type, GError **error) */
+/* { */
+/* #ifdef HAVE_MOCK_CAMERA */
+/*     if (!g_strcmp0(type, "mock")) */
+/*         return UCA_CAMERA(uca_mock_camera_new(error)); */
+/* #endif */
 
-#ifdef HAVE_PCO_CL
-    if (!g_strcmp0(type, "pco"))
-        return UCA_CAMERA(uca_pco_camera_new(error));
-#endif
+/* #ifdef HAVE_PCO_CL */
+/*     if (!g_strcmp0(type, "pco")) */
+/*         return UCA_CAMERA(uca_pco_camera_new(error)); */
+/* #endif */
 
-#ifdef HAVE_PYLON_CAMERA
-    if (!g_strcmp0(type, "pylon"))
-        return UCA_CAMERA(uca_pylon_camera_new(error));
-#endif
+/* #ifdef HAVE_PYLON_CAMERA */
+/*     if (!g_strcmp0(type, "pylon")) */
+/*         return UCA_CAMERA(uca_pylon_camera_new(error)); */
+/* #endif */
 
-#ifdef HAVE_UFO_CAMERA
-    if (!g_strcmp0(type, "ufo"))
-        return UCA_CAMERA(uca_ufo_camera_new(error));
-#endif
+/* #ifdef HAVE_UFO_CAMERA */
+/*     if (!g_strcmp0(type, "ufo")) */
+/*         return UCA_CAMERA(uca_ufo_camera_new(error)); */
+/* #endif */
 
-#ifdef HAVE_PHOTON_FOCUS
-    if (!g_strcmp0(type, "pf"))
-        return UCA_CAMERA(uca_pf_camera_new(error));
-#endif
+/* #ifdef HAVE_PHOTON_FOCUS */
+/*     if (!g_strcmp0(type, "pf")) */
+/*         return UCA_CAMERA(uca_pf_camera_new(error)); */
+/* #endif */
 
-    return NULL;
-}
+/*     return NULL; */
+/* } */
 
-/**
- * uca_camera_get_types:
- *
- * Enumerate all camera types that can be instantiated with uca_camera_new().
- *
- * Returns: An array of strings with camera types. The list should be freed with
- * g_strfreev().
- */
-gchar **uca_camera_get_types()
-{
-    return g_strdupv(uca_camera_types);
-}
+/* /** */
+/*  * uca_camera_get_types: */
+/*  * */
+/*  * Enumerate all camera types that can be instantiated with uca_camera_new(). */
+/*  * */
+/*  * Returns: An array of strings with camera types. The list should be freed with */
+/*  * g_strfreev(). */
+/*  *1/ */
+/* gchar **uca_camera_get_types() */
+/* { */
+/*     return g_strdupv(uca_camera_types); */
+/* } */
 
 /**
  * uca_camera_new:
@@ -423,26 +426,26 @@ gchar **uca_camera_get_types()
  *
  * Returns: A new #UcaCamera of the correct type or %NULL if type was not found
  */
-UcaCamera *uca_camera_new(const gchar *type, GError **error)
-{
-    UcaCamera *camera = NULL;
-    GError *tmp_error = NULL;
+/* UcaCamera *uca_camera_new(const gchar *type, GError **error) */
+/* { */
+/*     UcaCamera *camera = NULL; */
+/*     GError *tmp_error = NULL; */
 
-    camera = uca_camera_new_from_type(type, &tmp_error);
+/*     camera = uca_camera_new_from_type(type, &tmp_error); */
 
-    if (tmp_error != NULL) {
-        g_propagate_error(error, tmp_error);
-        return NULL;
-    }
+/*     if (tmp_error != NULL) { */
+/*         g_propagate_error(error, tmp_error); */
+/*         return NULL; */
+/*     } */
 
-    if ((tmp_error == NULL) && (camera == NULL)) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_FOUND,
-                "Camera type %s not found", type);
-        return NULL;
-    }
+/*     if ((tmp_error == NULL) && (camera == NULL)) { */
+/*         g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_FOUND, */
+/*                 "Camera type %s not found", type); */
+/*         return NULL; */
+/*     } */
 
-    return camera;
-}
+/*     return camera; */
+/* } */
 
 /**
  * uca_camera_start_recording:

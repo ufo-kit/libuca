@@ -1,6 +1,7 @@
 
 #include <glib.h>
 #include "uca-camera.h"
+#include "uca-plugin-manager.h"
 #include "cameras/uca-mock-camera.h"
 
 typedef struct {
@@ -160,6 +161,14 @@ static void test_signal(Fixture *fixture, gconstpointer data)
 int main(int argc, char *argv[])
 {
     g_type_init();
+
+    UcaPluginManager *manager = uca_plugin_manager_new ();
+    GList *list = uca_plugin_manager_get_available_cameras (manager);
+
+    g_list_free (list);
+
+    g_object_unref (manager);
+
     g_test_init(&argc, &argv, NULL);
     g_test_bug_base("http://ufo.kit.edu/ufo/ticket");
 
