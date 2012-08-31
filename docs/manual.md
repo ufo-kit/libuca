@@ -381,6 +381,31 @@ virtual methods. The simplest way is to take the `mock` camera and
 rename all occurences. Note, that if you class is going to be called `FooBar`,
 the upper case variant is `FOO_BAR` and the lower case variant is `foo_bar`.
 
+In order to fully implement a camera, you need to override at least the
+following virtual methods:
+
+* `start_recording`: Take suitable actions so that a subsequent call to
+  `grab` delivers an image or blocks until one is exposed.
+* `stop_recording`: Stop recording so that subsequent calls to `grab`
+  fail.
+* `grab`: Return an image from the camera or block until one is ready.
+
+## Asynchronous operation
+
+When the camera supports asynchronous acquisition and announces it with a true
+boolean value for `"transfer-asynchronously"`, a mechanism must be setup up
+during `start_recording` so that for each new frame the grab func callback is
+called.
+
+## Cameras with internal memory
+
+Cameras such as the pco.dimax record into their own on-board memory rather than
+streaming directly to the host PC. In this case, both `start_recording` and
+`stop_recording` initiate and end acquisition to the on-board memory. To
+initiate a data transfer, the host calls `start_readout` which must be suitably
+implemented. The actual data transfer happens either with `grab` or
+asynchronously.
+
 
 [sub-classing]: http://developer.gnome.org/gobject/stable/howto-gobject.html
 
