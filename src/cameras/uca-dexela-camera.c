@@ -108,13 +108,15 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
             break;
         }
         case PROP_EXPOSURE_TIME:
-            {
-                // TODO read exposure time
-            }
+        {
+            // TODO read exposure time
             break;
+        }
         default:
+        {
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
+        }
     }
 }
 
