@@ -25,9 +25,9 @@
 G_DEFINE_TYPE(UcaDexelaCamera, uca_dexela_camera, UCA_TYPE_CAMERA)
 /**
  * UcaDexelaCameraError:
- * @UCA_DEXELA_CAMERA_ERROR_LIBPCO_INIT: Initializing libdexela failed
+ * @UCA_DEXELA_CAMERA_ERROR_LIBDEXELA_INIT: Initializing libdexela failed
  */
-GQuark uca_pco_camera_error_quark()
+GQuark uca_dexela_camera_error_quark()
 {
     return g_quark_from_static_string("uca-dexela-camera-error-quark");
 }
