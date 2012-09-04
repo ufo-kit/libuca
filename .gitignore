@@ -3,3 +3,6 @@ CMake*
 *.cmake
 Makefile
 src/libuca.so*
+test/
+libuca.spec
+src/config.h
