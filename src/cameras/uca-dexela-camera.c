@@ -87,7 +87,6 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
         case PROP_EXPOSURE_TIME:
         {
             // TODO set exposure time
-            
         }
         break;
         default:
