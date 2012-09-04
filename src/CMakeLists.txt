@@ -264,7 +264,12 @@ endif()
 
 
 # --- Install target ----------------------------------------------------------
-set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
+# check for 64 bit
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(LIB_INSTALL_DIR "lib64")
+else()
+  set(LIB_INSTALL_DIR "lib")
+endif()
 
 install(TARGETS uca
     LIBRARY DESTINATION ${LIB_INSTALL_DIR})
