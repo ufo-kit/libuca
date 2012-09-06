@@ -79,22 +79,6 @@ UcaDexelaCamera *uca_dexela_camera_new(GError **error)
     return camera;
 }
 
-static void uca_dexela_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
-{
-    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
-
-    switch (property_id) {
-        case PROP_EXPOSURE_TIME:
-        {
-            // TODO set exposure time
-        }
-        break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-            return;
-    }
-}
-
 static void uca_dexela_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
@@ -109,7 +93,7 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         }
         case PROP_EXPOSURE_TIME:
         {
-            // TODO read exposure time
+            g_value_set_double(value, getExposureTimeMicros() / 10e6d);
             break;
         }
         default:
@@ -120,24 +104,46 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
     }
 }
 
+static void uca_dexela_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+{
+    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
+
+    switch (property_id) {
+        case PROP_EXPOSURE_TIME:
+        {
+            const gdouble exposureTimeInSeconds = g_value_get_double(value);
+            setExposureTimeMicros(exposureTimeInSeconds * 10e6d);
+        }
+        break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            return;
+    }
+}
+
 static void uca_dexela_camera_start_recording(UcaCamera *camera, GError **error)
 {
+    g_debug("start recording called");
 }
 
 static void uca_dexela_camera_stop_recording(UcaCamera *camera, GError **error)
 {
+    g_debug("stop recording called");
 }
 
 static void uca_dexela_camera_start_readout(UcaCamera *camera, GError **error)
 {
+    g_debug("start readout called");
 }
 
 static void uca_dexela_camera_trigger(UcaCamera *camera, GError **error)
 {
+    g_debug("trigger called");
 }
 
 static void uca_dexela_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
+    g_debug("grab called");
 }
 
 static void uca_dexela_camera_finalize(GObject *object)
@@ -160,9 +166,9 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
     camera_class->trigger = uca_dexela_camera_trigger;
     camera_class->grab = uca_dexela_camera_grab;
 
-    for (guint i = 0; base_overrideables[i] != 0; i++)
+    for (guint i = 0; base_overrideables[i] != 0; i++) {
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
-
+    }
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++) {
         g_object_class_install_property(gobject_class, id, dexela_properties[id]);
     }
