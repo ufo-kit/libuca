@@ -33,7 +33,8 @@ GQuark uca_dexela_camera_error_quark()
 }
 
 enum {
-    N_PROPERTIES = N_BASE_PROPERTIES,
+    PROP_GAIN_MODE = N_BASE_PROPERTIES,
+    N_PROPERTIES
 };
 
 static gint base_overrideables[] = {
@@ -173,6 +174,10 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
             g_value_set_boxed(value, priv->binnings);
             break;
         }
+        case PROP_SENSOR_MAX_FRAME_RATE:
+            // TODO: we do not know how to compute the correct value, so just return 0 for now
+            g_value_set_float(value, 0.0f);
+            break;
         default:
         {
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -266,6 +271,11 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
     for (guint i = 0; base_overrideables[i] != 0; i++) {
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
     }
+    dexela_properties[PROP_GAIN_MODE] = 
+        g_param_spec_uint("gain-mode",
+            "High or Low Full Well",
+            "High (1) or Low (0) Full Well",
+            0, 1, 0, G_PARAM_READWRITE);
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++) {
         g_object_class_install_property(gobject_class, id, dexela_properties[id]);
     }
