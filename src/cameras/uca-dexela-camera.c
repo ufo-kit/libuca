@@ -61,13 +61,45 @@ static gint base_overrideables[] = {
 
 static GParamSpec *dexela_properties[N_PROPERTIES] = { NULL, };
 
+static const gdouble MICROS_TO_SECONDS_FACTOR = 10e6d;
+
 struct _UcaDexelaCameraPrivate {
+    GValueArray *binnings;
 };
+
+/**
+ * Hardcode possible binnings for now
+ */
+static void fill_binnings(UcaDexelaCameraPrivate *priv)
+{
+    GValue val = {0};
+    g_value_init(&val, G_TYPE_UINT);
+
+    priv->binnings = g_value_array_new(3);
+    g_value_set_uint(&val, 1);
+    g_value_array_append(priv->binnings, &val);
+    g_value_set_uint(&val, 2);
+    g_value_array_append(priv->binnings, &val);
+    g_value_set_uint(&val, 4);
+    g_value_array_append(priv->binnings, &val);
+}
+
+static gboolean is_binning_allowed(UcaDexelaCameraPrivate *priv, guint binning)
+{
+    for (int i = 0; i < priv->binnings->n_values; i++) {
+        guint allowedBinning = g_value_get_uint(g_value_array_get_nth(priv->binnings, i));
+        if (binning == allowedBinning) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 
 UcaDexelaCamera *uca_dexela_camera_new(GError **error)
 {
     UcaDexelaCamera *camera = g_object_new(UCA_TYPE_DEXELA_CAMERA, NULL);
-    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
+    fill_binnings(priv);
     /*
     * Here we override property ranges because we didn't know them at property
     * installation time.
@@ -81,7 +113,7 @@ UcaDexelaCamera *uca_dexela_camera_new(GError **error)
 
 static void uca_dexela_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
         case PROP_NAME:
@@ -93,7 +125,52 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         }
         case PROP_EXPOSURE_TIME:
         {
-            g_value_set_double(value, getExposureTimeMicros() / 10e6d);
+            g_value_set_double(value, getExposureTimeMicros() / MICROS_TO_SECONDS_FACTOR);
+            break;
+        }
+        case PROP_HAS_CAMRAM_RECORDING:
+        {
+            g_value_set_boolean(value, FALSE);
+            break;
+        }
+        case PROP_HAS_STREAMING:
+        {
+            g_value_set_boolean(value, FALSE);
+            break;
+        }
+        case PROP_SENSOR_BITDEPTH:
+        {
+            g_value_set_uint(value, getBitDepth());
+            break;
+        }
+        case PROP_SENSOR_WIDTH:
+        {
+            g_value_set_uint(value, getWidth());
+            break;
+        }
+        case PROP_SENSOR_HEIGHT:
+        {
+            g_value_set_uint(value, getHeight());
+            break;
+        }
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+        {
+            g_value_set_uint(value, getBinningModeHorizontal());
+            break;
+        }
+        case PROP_SENSOR_HORIZONTAL_BINNINGS:
+        {
+            g_value_set_boxed(value, priv->binnings);
+            break;
+        }
+        case PROP_SENSOR_VERTICAL_BINNING:
+        {
+            g_value_set_uint(value, getBinningModeVertical());
+            break;
+        }
+        case PROP_SENSOR_VERTICAL_BINNINGS:
+        {
+            g_value_set_boxed(value, priv->binnings);
             break;
         }
         default:
@@ -106,15 +183,35 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
 
 static void uca_dexela_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
 
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
         {
             const gdouble exposureTimeInSeconds = g_value_get_double(value);
-            setExposureTimeMicros(exposureTimeInSeconds * 10e6d);
+            setExposureTimeMicros(exposureTimeInSeconds * MICROS_TO_SECONDS_FACTOR);
+            break;
         }
-        break;
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+        {
+            const guint horizontalBinning = g_value_get_uint(value);
+            if (!is_binning_allowed(priv, horizontalBinning)) {
+                g_warning("Tried to set illegal horizontal binning: %d", horizontalBinning);
+                return;
+            }
+            setBinningMode(horizontalBinning, getBinningModeVertical());
+            break;
+        }
+        case PROP_SENSOR_VERTICAL_BINNING:
+        {
+            const guint verticalBinning = g_value_get_uint(value);
+            if (!is_binning_allowed(priv, verticalBinning)) {
+                g_warning("Tried to set illegal vertical binning: %d", verticalBinning);
+                return;
+            }
+            setBinningMode(getBinningModeHorizontal(), verticalBinning);
+            break;
+        }
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -172,10 +269,10 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++) {
         g_object_class_install_property(gobject_class, id, dexela_properties[id]);
     }
-    //g_type_class_add_private(klass, sizeof(UcaDexelaCameraPrivate));
+    g_type_class_add_private(klass, sizeof(UcaDexelaCameraPrivate));
 }
 
 static void uca_dexela_camera_init(UcaDexelaCamera *self)
 {
-    //self->priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
+    self->priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
 }
