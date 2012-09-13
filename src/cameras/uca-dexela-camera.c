@@ -85,6 +85,41 @@ static void fill_binnings(UcaDexelaCameraPrivate *priv)
     g_value_array_append(priv->binnings, &val);
 }
 
+static void map_dexela_trigger_mode_to_uca(GValue* value, TriggerMode mode)
+{
+    if (mode == SOFTWARE) {
+        g_value_set_enum(value, UCA_CAMERA_TRIGGER_INTERNAL);
+        return;
+    }
+    if (mode == EDGE) {
+        g_value_set_enum(value, UCA_CAMERA_TRIGGER_EXTERNAL);
+        return;
+    }
+    // XXX: this mapping is only a hack/guess
+    if (mode == DURATION) {
+        g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
+        return;
+    }
+    g_warning("Unsupported dexela trigger mode: %d", mode);
+}
+
+static void set_trigger_mode(UcaCameraTrigger mode)
+{
+    if (mode == UCA_CAMERA_TRIGGER_INTERNAL) {
+        setTriggerMode(SOFTWARE);
+        return;
+    }
+    if (mode == UCA_CAMERA_TRIGGER_EXTERNAL) {
+        setTriggerMode(EDGE);
+        return;
+    }
+    if (mode == UCA_CAMERA_TRIGGER_AUTO) {
+        setTriggerMode(DURATION);
+        return;
+    }
+    g_warning("Unsupported uca trigger mode: %d", mode);
+}
+
 static gboolean is_binning_allowed(UcaDexelaCameraPrivate *priv, guint binning)
 {
     for (int i = 0; i < priv->binnings->n_values; i++) {
@@ -175,9 +210,21 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
             break;
         }
         case PROP_SENSOR_MAX_FRAME_RATE:
+        {
             // TODO: we do not know how to compute the correct value, so just return 0 for now
             g_value_set_float(value, 0.0f);
             break;
+        }
+        case PROP_GAIN_MODE:
+        {
+            g_value_set_uint(value, getGain());
+            break;
+        }
+        case PROP_TRIGGER_MODE:
+        {
+            map_dexela_trigger_mode_to_uca(value, getTriggerMode());
+            break;
+        }
         default:
         {
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -215,6 +262,25 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 return;
             }
             setBinningMode(getBinningModeHorizontal(), verticalBinning);
+            break;
+        }
+        case PROP_GAIN_MODE:
+        {
+            const guint gain = g_value_get_uint(value);
+            if (gain == 0) {
+                setGain(LOW);
+                return;
+            }
+            if (gain == 1) {
+                setGain(HIGH);
+                return;
+            }
+            g_warning("Illegal attempt to set gain: %d", gain);
+            break;
+        }
+        case PROP_TRIGGER_MODE:
+        {
+            set_trigger_mode(g_value_get_enum(value));
             break;
         }
         default:
