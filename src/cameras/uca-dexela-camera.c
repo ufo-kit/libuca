@@ -110,15 +110,15 @@ static void map_dexela_trigger_mode_to_uca(GValue* value, TriggerMode mode)
 static void set_trigger_mode(UcaCameraTrigger mode)
 {
     if (mode == UCA_CAMERA_TRIGGER_INTERNAL) {
-        setTriggerMode(SOFTWARE);
+        dexela_set_trigger_mode(SOFTWARE);
         return;
     }
     if (mode == UCA_CAMERA_TRIGGER_EXTERNAL) {
-        setTriggerMode(EDGE);
+        dexela_set_trigger_mode(EDGE);
         return;
     }
     if (mode == UCA_CAMERA_TRIGGER_AUTO) {
-        setTriggerMode(DURATION);
+        dexela_set_trigger_mode(DURATION);
         return;
     }
     g_warning("Unsupported uca trigger mode: %d", mode);
@@ -146,11 +146,11 @@ UcaDexelaCamera *uca_dexela_camera_new(GError **error)
     */
     GObjectClass *camera_class = G_OBJECT_CLASS (UCA_CAMERA_GET_CLASS (camera));
     // TODO implement error checking
-    openDetector("/usr/share/dexela/dexela-1207_32.fmt");
-    initSerialConnection();
-    priv->bits = getBitDepth();
-    priv->width = getWidth();
-    priv->height = getHeight();
+    dexela_open_detector("/usr/share/dexela/dexela-1207_32.fmt");
+    dexela_init_serial_connection();
+    priv->bits = dexela_get_bit_depth();
+    priv->width = dexela_get_width();
+    priv->height = dexela_get_height();
     priv->num_bytes = 2;
     return camera;
 }
@@ -162,14 +162,14 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
     switch (property_id) {
         case PROP_NAME:
         {
-            gchar* model = getModel();
+            gchar* model = dexela_get_model();
             g_value_set_string(value, g_strdup_printf("Dexela %s", model));
             g_free(model);
             break;
         }
         case PROP_EXPOSURE_TIME:
         {
-            g_value_set_double(value, getExposureTimeMicros() / MICROS_TO_SECONDS_FACTOR);
+            g_value_set_double(value, dexela_get_exposure_time_micros() / MICROS_TO_SECONDS_FACTOR);
             break;
         }
         case PROP_HAS_CAMRAM_RECORDING:
@@ -199,7 +199,7 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
         {
-            g_value_set_uint(value, getBinningModeHorizontal());
+            g_value_set_uint(value, dexela_get_binning_mode_horizontal());
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNINGS:
@@ -209,7 +209,7 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         }
         case PROP_SENSOR_VERTICAL_BINNING:
         {
-            g_value_set_uint(value, getBinningModeVertical());
+            g_value_set_uint(value, dexela_get_binning_mode_vertical());
             break;
         }
         case PROP_SENSOR_VERTICAL_BINNINGS:
@@ -225,12 +225,12 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         }
         case PROP_GAIN_MODE:
         {
-            g_value_set_uint(value, getGain());
+            g_value_set_uint(value, dexela_get_gain());
             break;
         }
         case PROP_TRIGGER_MODE:
         {
-            map_dexela_trigger_mode_to_uca(value, getTriggerMode());
+            map_dexela_trigger_mode_to_uca(value, dexela_get_trigger_mode());
             break;
         }
         default:
@@ -249,7 +249,7 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
         case PROP_EXPOSURE_TIME:
         {
             const gdouble exposureTimeInSeconds = g_value_get_double(value);
-            setExposureTimeMicros(exposureTimeInSeconds * MICROS_TO_SECONDS_FACTOR);
+            dexela_set_exposure_time_micros(exposureTimeInSeconds * MICROS_TO_SECONDS_FACTOR);
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -259,7 +259,7 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 g_warning("Tried to set illegal horizontal binning: %d", horizontalBinning);
                 return;
             }
-            setBinningMode(horizontalBinning, getBinningModeVertical());
+            dexela_set_binning_mode(horizontalBinning, dexela_get_binning_mode_vertical());
             break;
         }
         case PROP_SENSOR_VERTICAL_BINNING:
@@ -269,18 +269,18 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 g_warning("Tried to set illegal vertical binning: %d", verticalBinning);
                 return;
             }
-            setBinningMode(getBinningModeHorizontal(), verticalBinning);
+            dexela_set_binning_mode(dexela_get_binning_mode_horizontal(), verticalBinning);
             break;
         }
         case PROP_GAIN_MODE:
         {
             const guint gain = g_value_get_uint(value);
             if (gain == 0) {
-                setGain(LOW);
+                dexela_set_gain(LOW);
                 return;
             }
             if (gain == 1) {
-                setGain(HIGH);
+                dexela_set_gain(HIGH);
                 return;
             }
             g_warning("Illegal attempt to set gain: %d", gain);
