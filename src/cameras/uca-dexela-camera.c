@@ -66,6 +66,10 @@ static const gdouble MICROS_TO_SECONDS_FACTOR = 10e6d;
 
 struct _UcaDexelaCameraPrivate {
     GValueArray *binnings;
+    guint width;
+    guint height;
+    guint bits;
+    gsize num_bytes;
 };
 
 /**
@@ -144,6 +148,10 @@ UcaDexelaCamera *uca_dexela_camera_new(GError **error)
     // TODO implement error checking
     openDetector("/usr/share/dexela/dexela-1207_32.fmt");
     initSerialConnection();
+    priv->bits = getBitDepth();
+    priv->width = getWidth();
+    priv->height = getHeight();
+    priv->num_bytes = 2;
     return camera;
 }
 
@@ -176,17 +184,17 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         }
         case PROP_SENSOR_BITDEPTH:
         {
-            g_value_set_uint(value, getBitDepth());
+            g_value_set_uint(value, priv->bits);
             break;
         }
         case PROP_SENSOR_WIDTH:
         {
-            g_value_set_uint(value, getWidth());
+            g_value_set_uint(value, priv->width);
             break;
         }
         case PROP_SENSOR_HEIGHT:
         {
-            g_value_set_uint(value, getHeight());
+            g_value_set_uint(value, priv->height);
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -292,31 +300,35 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
 static void uca_dexela_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_debug("start recording called");
+    dexela_start_acquisition();
 }
 
 static void uca_dexela_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_debug("stop recording called");
-}
-
-static void uca_dexela_camera_start_readout(UcaCamera *camera, GError **error)
-{
-    g_debug("start readout called");
-}
-
-static void uca_dexela_camera_trigger(UcaCamera *camera, GError **error)
-{
-    g_debug("trigger called");
+    dexela_stop_acquisition();
 }
 
 static void uca_dexela_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_debug("grab called");
+    g_return_if_fail(UCA_IS_DEXELA_CAMERA(camera));
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
+    g_debug("Data-pointer: %p, %p", data, *data);
+    if (*data == NULL) {
+        g_debug("Allocating buffer");
+        *data = g_malloc0(priv->width * priv->height * priv->num_bytes);
+    }
+    // TODO: fetch image from libdexela
+    // TODO: copy to the data buffer
+    memcpy((gchar *) *data, dexela_grab(), priv->width * priv->height * priv->num_bytes);
 }
 
 static void uca_dexela_camera_finalize(GObject *object)
 {
-    //UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
+    g_value_array_free(priv->binnings);
+
     G_OBJECT_CLASS(uca_dexela_camera_parent_class)->finalize(object);
 }
 
@@ -330,8 +342,6 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
     UcaCameraClass *camera_class = UCA_CAMERA_CLASS(klass);
     camera_class->start_recording = uca_dexela_camera_start_recording;
     camera_class->stop_recording = uca_dexela_camera_stop_recording;
-    camera_class->start_readout = uca_dexela_camera_start_readout;
-    camera_class->trigger = uca_dexela_camera_trigger;
     camera_class->grab = uca_dexela_camera_grab;
 
     for (guint i = 0; base_overrideables[i] != 0; i++) {
