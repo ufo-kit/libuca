@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <string.h>
 #include "uca-camera.h"
 #include "uca-dexela-camera.h"
 #include "uca-enums.h"
@@ -194,6 +195,18 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         }
         case PROP_SENSOR_HEIGHT:
         {
+            g_value_set_uint(value, priv->height);
+            break;
+        }
+        case PROP_ROI_WIDTH:
+        {
+            // use full frame for now
+            g_value_set_uint(value, priv->width);
+            break;
+        }
+        case PROP_ROI_HEIGHT:
+        {
+            // use full frame for now
             g_value_set_uint(value, priv->height);
             break;
         }
