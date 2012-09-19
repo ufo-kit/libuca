@@ -38,16 +38,14 @@ sigint_handler(int signal)
 static void
 print_usage (void)
 {
-    /* gchar **types; */
     GList *types;
     UcaPluginManager *manager;
 
     manager = uca_plugin_manager_new ();
     g_print ("Usage: benchmark [");
-    /* types = uca_camera_get_types (); */
     types = uca_plugin_manager_get_available_cameras (manager);
 
-    if (g_list_length (types) == 0) {
+    if (types == NULL) {
         g_print ("] -- no camera plugin found\n");
         return;
     }

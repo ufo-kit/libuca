@@ -86,7 +86,9 @@ get_camera_names_from_directory (const gchar *path)
 
             if (g_match_info_matches (match_info)) {
                 gchar *word = g_match_info_fetch (match_info, 1);
-                result = g_list_append (result, word);
+
+                if (word != NULL)
+                    result = g_list_append (result, word);
             }
 
             name = g_dir_read_name (dir);
@@ -100,7 +102,7 @@ GList *
 uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
 {
     UcaPluginManagerPrivate *priv;
-    GList *camera_names;
+    GList *camera_names = NULL;
 
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager), NULL);
 
