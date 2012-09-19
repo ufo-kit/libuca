@@ -7,7 +7,8 @@ set(uca_SRCS
     )
 
 set(uca_HDRS
-    uca-camera.h)
+    uca-camera.h
+    uca-plugin-manager.h)
 
 set(cameras)
 
