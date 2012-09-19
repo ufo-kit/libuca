@@ -21,6 +21,8 @@
 #include <glib-object.h>
 #include "uca-camera.h"
 
+G_BEGIN_DECLS
+
 #define UCA_TYPE_UFO_CAMERA             (uca_ufo_camera_get_type())
 #define UCA_UFO_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_UFO_CAMERA, UcaUfoCamera))
 #define UCA_IS_UFO_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_UFO_CAMERA))
@@ -70,5 +72,7 @@ struct _UcaUfoCameraClass {
 UcaUfoCamera *uca_ufo_camera_new(GError **error);
 
 GType uca_ufo_camera_get_type(void);
+
+G_END_DECLS
 
 #endif

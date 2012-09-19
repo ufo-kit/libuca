@@ -21,6 +21,8 @@
 #include <glib-object.h>
 #include "uca-camera.h"
 
+G_BEGIN_DECLS
+
 #define UCA_TYPE_MOCK_CAMERA             (uca_mock_camera_get_type())
 #define UCA_MOCK_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_MOCK_CAMERA, UcaMockCamera))
 #define UCA_IS_MOCK_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_MOCK_CAMERA))
@@ -59,5 +61,7 @@ struct _UcaMockCameraClass {
 UcaMockCamera *uca_mock_camera_new(GError **error);
 
 GType uca_mock_camera_get_type(void);
+
+G_END_DECLS
 
 #endif

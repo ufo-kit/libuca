@@ -21,6 +21,8 @@
 #include <glib-object.h>
 #include "uca-camera.h"
 
+G_BEGIN_DECLS
+
 #define UCA_TYPE_PCO_CAMERA             (uca_pco_camera_get_type())
 #define UCA_PCO_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCamera))
 #define UCA_IS_PCO_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_PCO_CAMERA))
@@ -85,5 +87,7 @@ struct _UcaPcoCameraClass {
 UcaPcoCamera *uca_pco_camera_new(GError **error);
 
 GType uca_pco_camera_get_type(void);
+
+G_END_DECLS
 
 #endif

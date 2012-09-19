@@ -21,6 +21,8 @@
 #include <glib-object.h>
 #include "uca-camera.h"
 
+G_BEGIN_DECLS
+
 #define UCA_TYPE_PF_CAMERA             (uca_pf_camera_get_type())
 #define UCA_PF_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_PF_CAMERA, UcaPfCamera))
 #define UCA_IS_PF_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_PF_CAMERA))
@@ -68,5 +70,7 @@ struct _UcaPfCameraClass {
 UcaPfCamera *uca_pf_camera_new(GError **error);
 
 GType uca_pf_camera_get_type(void);
+
+G_END_DECLS
 
 #endif
