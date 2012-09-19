@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gmodule.h>
 #include <string.h>
 #include "uca-mock-camera.h"
 
@@ -156,20 +157,6 @@ static void print_current_frame(UcaMockCameraPrivate *priv, gchar *buffer)
     }
 }
 
-/**
- * uca_mock_camera_new:
- * @error: Location for error
- *
- * Create a new #UcaMockCamera object.
- *
- * Returns: A newly created #UcaMockCamera object
- */
-UcaMockCamera *uca_mock_camera_new(GError **error)
-{
-    UcaMockCamera *camera = g_object_new(UCA_TYPE_MOCK_CAMERA, NULL);
-    return camera;
-}
-
 static gpointer mock_grab_func(gpointer data)
 {
     UcaMockCamera *mock_camera = UCA_MOCK_CAMERA(data);
@@ -208,7 +195,7 @@ static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
     if (transfer_async) {
         GError *tmp_error = NULL;
         priv->thread_running = TRUE;
-        priv->grab_thread = g_thread_create(mock_grab_func, camera, TRUE, &tmp_error); 
+        priv->grab_thread = g_thread_create(mock_grab_func, camera, TRUE, &tmp_error);
 
         if (tmp_error != NULL) {
             priv->thread_running = FALSE;
@@ -232,7 +219,7 @@ static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
             NULL);
 
     if (transfer_async) {
-        priv->thread_running = FALSE;    
+        priv->thread_running = FALSE;
         g_thread_join(priv->grab_thread);
     }
 }
@@ -358,7 +345,7 @@ static void uca_mock_camera_finalize(GObject *object)
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
     if (priv->thread_running) {
-        priv->thread_running = FALSE;    
+        priv->thread_running = FALSE;
         g_thread_join(priv->grab_thread);
     }
 
@@ -383,7 +370,7 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
     for (guint i = 0; mock_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, mock_overrideables[i], uca_camera_props[mock_overrideables[i]]);
 
-    mock_properties[PROP_FRAMERATE] = 
+    mock_properties[PROP_FRAMERATE] =
         g_param_spec_float("frame-rate",
                 "Frame rate",
                 "Number of frames per second that are taken",
@@ -412,4 +399,11 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     g_value_init(&val, G_TYPE_UINT);
     g_value_set_uint(&val, 1);
     g_value_array_append(self->priv->binnings, &val);
+}
+
+G_MODULE_EXPORT UcaCamera *
+uca_camera_impl_new (GError **error)
+{
+    UcaCamera *camera = UCA_CAMERA (g_object_new (UCA_TYPE_MOCK_CAMERA, NULL));
+    return camera;
 }

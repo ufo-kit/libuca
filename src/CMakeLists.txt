@@ -31,10 +31,25 @@ find_package(PkgConfig)
 find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
 pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
+pkg_check_modules(GMODULE2 gmodule-2.0>=2.24 REQUIRED)
+
+include_directories(
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/cameras
+    ${GLIB2_INCLUDE_DIRS}
+    ${GOBJECT2_INCLUDE_DIRS})
+
+# --- Configure step
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 set(uca_LIBS
-    ${GLIB2_LIBRARIES} 
-    ${GOBJECT2_LIBRARIES})
+    ${GLIB2_LIBRARIES}
+    ${GOBJECT2_LIBRARIES}
+    ${GMODULE2_LIBRARIES})
+
+set(uca_enum_hdrs uca-camera.h)
 
 # --- Build options -----------------------------------------------------------
 option(HAVE_MOCK_CAMERA "Camera: Dummy" ON)
@@ -45,18 +60,20 @@ if (PF_FOUND)
     option(HAVE_PHOTON_FOCUS "Camera: Photon Focus MV2-D1280-640-CL-8" ON)
 
     if (HAVE_PHOTON_FOCUS AND CLSERME4_FOUND AND FGLIB5_FOUND)
-        list(APPEND uca_SRCS cameras/uca-pf-camera.c)
-        list(APPEND uca_HDRS cameras/uca-pf-camera.h)
-        list(APPEND cameras "Pf")
+        list(APPEND uca_enum_hdrs cameras/uca-pf-camera.h)
 
-        set(uca_LIBS ${uca_LIBS} 
-            ${CLSERME4_LIBRARY} 
-            ${FGLIB5_LIBRARY} 
-            ${PF_LIBRARIES})
-
-        include_directories(${PF_INCLUDE_DIRS}
+        include_directories(
+            ${PF_INCLUDE_DIRS}
             ${CLSERME4_INCLUDE_DIR}
             ${FGLIB5_INCLUDE_DIR})
+
+        add_library(ucapf SHARED cameras/uca-pf-camera.c)
+
+        target_link_libraries(ucapf
+            ${uca_LIBS}
+            ${CLSERME4_LIBRARY}
+            ${FGLIB5_LIBRARY}
+            ${PF_LIBRARIES})
     endif()
 endif()
 
@@ -64,19 +81,23 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
     option(HAVE_PCO_CL "Camera: CameraLink-based pco" ON)
 
     if (HAVE_PCO_CL)
-        list(APPEND uca_SRCS cameras/uca-pco-camera.c)
-        list(APPEND uca_HDRS cameras/uca-pco-camera.h)
-        list(APPEND cameras "Pco")
-
-        set(uca_LIBS ${uca_LIBS}
-            ${PCO_LIBRARIES}
-            ${CLSERME4_LIBRARY}
-            ${FGLIB5_LIBRARY})
+        list(APPEND uca_enum_hdrs cameras/uca-pco-camera.h)
 
         include_directories(
             ${PCO_INCLUDE_DIRS}
             ${CLSERME4_INCLUDE_DIR}
             ${FGLIB5_INCLUDE_DIR})
+
+        add_library(ucapco SHARED cameras/uca-pco-camera.c)
+
+        target_link_libraries(ucapco
+            ${uca_LIBS}
+            ${PCO_LIBRARIES}
+            ${CLSERME4_LIBRARY}
+            ${FGLIB5_LIBRARY})
+
+        install(TARGETS ucapco
+            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca)
     endif()
 endif()
 
@@ -84,13 +105,18 @@ if (IPE_FOUND)
     option(HAVE_UFO_CAMERA "Camera: Custom based on Xilinx FPGA" ON)
 
     if (HAVE_UFO_CAMERA)
-        list(APPEND uca_SRCS cameras/uca-ufo-camera.c)
-        list(APPEND uca_HDRS cameras/uca-ufo-camera.h)
-        list(APPEND cameras "Ufo")
-
-        set(uca_LIBS ${uca_LIBS} ${IPE_LIBRARIES})
+        list(APPEND uca_enum_hdrs cameras/uca-ufo-camera.h)
 
         include_directories(${IPE_INCLUDE_DIRS})
+
+        add_library(ucaufo SHARED cameras/uca-ufo-camera.c)
+        target_link_libraries(ucaufo
+            ${uca_LIBS}
+            ${IPE_LIBRARIES}
+            )
+
+        install(TARGETS ucaufo
+            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca)
     endif()
 endif()
 
@@ -111,9 +137,6 @@ endif()
 
 if (HAVE_MOCK_CAMERA)
     add_library(ucamock SHARED cameras/uca-mock-camera.c)
-    #list(APPEND uca_SRCS cameras/uca-mock-camera.c)
-    ##list(APPEND uca_HDRS cameras/uca-mock-camera.h)
-    #list(APPEND cameras "Mock")
     install(TARGETS ucamock
         LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca)
 endif()
@@ -124,9 +147,9 @@ add_custom_command(
     COMMAND ${GLIB2_MKENUMS}
     ARGS
         --template uca-enums.h.template
-        ${uca_HDRS} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
+        ${uca_enum_hdrs} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${uca_HDRS} 
+    DEPENDS ${uca_enum_hdrs}
             ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums.h.template)
 
 add_custom_command(
@@ -134,29 +157,18 @@ add_custom_command(
     COMMAND ${GLIB2_MKENUMS}
     ARGS
         --template uca-enums.c.template
-        ${uca_HDRS} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c
+        ${uca_enum_hdrs} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${uca_HDRS} 
+    DEPENDS ${uca_enum_hdrs}
             ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
             ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums.c.template
     )
 
-# --- Configure step
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
-    ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
-include_directories(
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/cameras
-    ${GLIB2_INCLUDE_DIRS}
-    ${GOBJECT2_INCLUDE_DIRS})
-
 # --- Build target ------------------------------------------------------------
 add_definitions("-std=c99 -Wall")
 
-add_library(uca SHARED 
-    ${uca_SRCS} 
+add_library(uca SHARED
+    ${uca_SRCS}
     ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)
 
 set_target_properties(uca PROPERTIES
@@ -177,7 +189,7 @@ if(GTK_DOC_FOUND)
         set(docs_out "${docs_dir}/reference")
         file(MAKE_DIRECTORY ${docs_out})
 
-        set(reference_files 
+        set(reference_files
             "${docs_out}/index.html"
             "${docs_out}/api-index-full.html"
             "${docs_out}/ch01.html"
@@ -261,7 +273,7 @@ set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
 install(TARGETS uca
     LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
-install(FILES ${uca_HDRS} 
+install(FILES ${uca_HDRS}
     DESTINATION include/uca)
 
 # --- install pkg-config file

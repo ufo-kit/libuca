@@ -36,12 +36,12 @@ if (HAVE_PYLON_CAMERA)
     link_directories(${PYLON_LIB_DIRS} ${LIBPYLONCAM_LIBDIR})
 endif()
 
-#add_executable(grab grab.c)
+add_executable(grab grab.c)
 #add_executable(grab-async grab-async.c)
 add_executable(benchmark benchmark.c)
 
 target_link_libraries(benchmark uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
-#target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 #target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
 #add_executable(grab_pylon grab_pylon.c)

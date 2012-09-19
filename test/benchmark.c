@@ -42,7 +42,7 @@ print_usage (void)
     UcaPluginManager *manager;
 
     manager = uca_plugin_manager_new ();
-    g_print ("Usage: benchmark [");
+    g_print ("Usage: benchmark [ ");
     types = uca_plugin_manager_get_available_cameras (manager);
 
     if (types == NULL) {
@@ -52,10 +52,11 @@ print_usage (void)
 
     for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
         gchar *name = (gchar *) it->data;
-        g_print ("`%s' ", name);
+        if (g_list_next (it) == NULL)
+            g_print ("%s ]\n", name);
+        else
+            g_print ("%s, ", name);
     }
-
-    g_print ("]\n");
 }
 
 static void

@@ -23,6 +23,10 @@ struct _UcaPluginManagerPrivate {
     GList *search_paths;
 };
 
+static const gchar *MODULE_PATTERN = "libuca([A-Za-z]+)";
+
+typedef UcaCamera * (*GetCameraFunc) (GError **error);
+
 /**
  * UcaPluginManagerError:
  * @UCA_PLUGIN_MANAGER_ERROR_MODULE_NOT_FOUND: The module could not be found
@@ -70,30 +74,24 @@ uca_plugin_manager_add_path (UcaPluginManager   *manager,
 }
 
 static GList *
-get_camera_names_from_directory (const gchar *path)
+get_camera_module_paths (const gchar *path)
 {
-    static const gchar *pattern_string = "libuca([A-Za-z]+)";
-    GRegex *pattern; 
+    GRegex *pattern;
     GDir *dir;
     GList *result = NULL;
-    
-    pattern = g_regex_new (pattern_string, 0, 0, NULL);
+
+    pattern = g_regex_new (MODULE_PATTERN, 0, 0, NULL);
     dir = g_dir_open (path, 0, NULL);
 
     if (dir != NULL) {
         GMatchInfo *match_info = NULL;
-        const gchar *name = g_dir_read_name (dir); 
+        const gchar *name = g_dir_read_name (dir);
 
         while (name != NULL) {
-            g_regex_match (pattern, name, 0, &match_info);
+            if (g_regex_match (pattern, name, 0, &match_info))
+                result = g_list_append (result, g_build_filename (path, name, NULL));
 
-            if (g_match_info_matches (match_info)) {
-                gchar *word = g_match_info_fetch (match_info, 1);
-
-                if (word != NULL)
-                    result = g_list_append (result, word);
-            }
-
+            g_match_info_free (match_info);
             name = g_dir_read_name (dir);
         }
     }
@@ -101,22 +99,80 @@ get_camera_names_from_directory (const gchar *path)
     return result;
 }
 
+static GList *
+scan_search_paths (GList *search_paths)
+{
+    GList *camera_paths = NULL;
+
+    for (GList *it = g_list_first (search_paths); it != NULL; it = g_list_next (it)) {
+        camera_paths = g_list_concat (camera_paths,
+                                      get_camera_module_paths ((const gchar*) it->data));
+    }
+
+    return camera_paths;
+}
+
+static void
+transform_camera_module_path_to_name (gchar *path, GList **result)
+{
+    GRegex *pattern;
+    GMatchInfo *match_info;
+
+    pattern = g_regex_new (MODULE_PATTERN, 0, 0, NULL);
+    g_regex_match (pattern, path, 0, &match_info);
+
+    *result = g_list_append (*result, g_match_info_fetch (match_info, 1));
+    g_match_info_free (match_info);
+}
+
+static void
+g_list_free_full (GList *list)
+{
+    g_list_foreach (list, (GFunc) g_free, NULL);
+    g_list_free (list);
+}
+
 GList *
 uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
 {
     UcaPluginManagerPrivate *priv;
+    GList *camera_paths;
     GList *camera_names = NULL;
 
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager), NULL);
 
     priv = manager->priv;
+    camera_paths = scan_search_paths (priv->search_paths);
 
-    for (GList *it = g_list_first (priv->search_paths); it != NULL; it = g_list_next (it)) {
-        camera_names = g_list_concat (camera_names,
-                                      get_camera_names_from_directory ((const gchar*) it->data));
-    }
+    g_list_foreach (camera_paths, (GFunc) transform_camera_module_path_to_name, &camera_names);
+    g_list_free_full (camera_paths);
 
     return camera_names;
+}
+
+static gchar *
+find_camera_module_path (GList *search_paths, const gchar *name)
+{
+    gchar *result = NULL;
+    GList *paths;
+
+    paths = scan_search_paths (search_paths);
+
+    for (GList *it = g_list_first (paths); it != NULL; it = g_list_next (it)) {
+        gchar *path = (gchar *) it->data;
+        gchar *basename = g_path_get_basename ((gchar *) path);
+
+        if (g_strrstr (basename, name)) {
+            result = g_strdup (path);
+            g_free (basename);
+            break;
+        }
+
+        g_free (basename);
+    }
+
+    g_list_free_full (paths);
+    return result;
 }
 
 UcaCamera *
@@ -124,82 +180,57 @@ uca_plugin_manager_new_camera (UcaPluginManager   *manager,
                                const gchar        *name,
                                GError            **error)
 {
-    return NULL;
+    UcaPluginManagerPrivate *priv;
+    UcaCamera *camera;
+    GModule *module;
+    GetCameraFunc *func;
+    gchar *module_path;
+    GError *tmp_error = NULL;
+
+    const gchar *symbol_name = "uca_camera_impl_new";
+
+    g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
+
+    priv = manager->priv;
+    module_path = find_camera_module_path (priv->search_paths, name);
+
+    if (module_path == NULL) {
+        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_NOT_FOUND,
+                "Camera module `%s' not found", name);
+        return NULL;
+    }
+
+    module = g_module_open (module_path, G_MODULE_BIND_LAZY);
+    g_free (module_path);
+
+    if (!module) {
+        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_OPEN,
+                     "Camera module `%s' could not be opened: %s", name, g_module_error ());
+        return NULL;
+    }
+
+    func = g_malloc0 (sizeof (GetCameraFunc));
+
+    if (!g_module_symbol (module, symbol_name, (gpointer *) func)) {
+        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_SYMBOL_NOT_FOUND,
+                     "%s", g_module_error ());
+        g_free (func);
+
+        if (!g_module_close (module))
+            g_warning ("%s", g_module_error ());
+
+        return NULL;
+    }
+
+    camera = (*func) (&tmp_error);
+
+    if (tmp_error != NULL) {
+        g_propagate_error (error, tmp_error);
+        return NULL;
+    }
+
+    return camera;
 }
-
-/**
- * uca_plugin_manager_get_filter:
- * @manager: A #UcaPluginManager
- * @name: Name of the plugin.
- * @error: return location for a GError or %NULL
- *
- * Load a #UcaFilter module and return an instance. The shared object name must
- * be * constructed as "libfilter@name.so".
- *
- * Returns: (transfer none) (allow-none): #UcaFilter or %NULL if module cannot be found
- *
- * Since: 0.2, the error parameter is available
- */
-/* UcaFilter * */
-/* uca_plugin_manager_get_filter (UcaPluginManager *manager, const gchar *name, GError **error) */
-/* { */
-/*     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL); */
-/*     UcaPluginManagerPrivate *priv = UCA_PLUGIN_MANAGER_GET_PRIVATE (manager); */
-/*     UcaFilter *filter; */
-/*     GetFilterFunc *func = NULL; */
-/*     GModule *module = NULL; */
-/*     gchar *module_name = NULL; */
-/*     const gchar *entry_symbol_name = "uca_filter_plugin_new"; */
-
-/*     func = g_hash_table_lookup (priv->filter_funcs, name); */
-
-/*     if (func == NULL) { */
-/*         module_name = g_strdup_printf ("libucafilter%s.so", name); */
-/*         gchar *path = plugin_manager_get_path (priv, module_name); */
-
-/*         if (path == NULL) { */
-/*             g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_NOT_FOUND, */
-/*                     "Module %s not found", module_name); */
-/*             goto handle_error; */
-/*         } */
-
-/*         module = g_module_open (path, G_MODULE_BIND_LAZY); */
-/*         g_free (path); */
-
-/*         if (!module) { */
-/*             g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_OPEN, */
-/*                     "Module %s could not be opened: %s", module_name, g_module_error ()); */
-/*             goto handle_error; */
-/*         } */
-
-/*         func = g_malloc0 (sizeof (GetFilterFunc)); */
-
-/*         if (!g_module_symbol (module, entry_symbol_name, (gpointer *) func)) { */
-/*             g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_SYMBOL_NOT_FOUND, */
-/*                     "%s is not exported by module %s: %s", entry_symbol_name, module_name, g_module_error ()); */
-/*             g_free (func); */
-
-/*             if (!g_module_close (module)) */
-/*                 g_warning ("%s", g_module_error ()); */
-
-/*             goto handle_error; */
-/*         } */
-
-/*         priv->modules = g_slist_append (priv->modules, module); */
-/*         g_hash_table_insert (priv->filter_funcs, g_strdup (name), func); */
-/*         g_free (module_name); */
-/*     } */
-
-/*     filter = (*func) (); */
-/*     uca_filter_set_plugin_name (filter, name); */
-/*     g_message ("UcaPluginManager: Created %s-%p", name, (gpointer) filter); */
-
-/*     return filter; */
-
-/* handle_error: */
-/*     g_free (module_name); */
-/*     return NULL; */
-/* } */
 
 static void
 uca_plugin_manager_get_property (GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
