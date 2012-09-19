@@ -8,6 +8,9 @@
  * instantiated with uca_plugin_manager_get_filter() with a one-to-one mapping
  * between filter name xyz and module name libfilterxyz.so. Any errors are
  * reported as one of #UcaPluginManagerError codes.
+ *
+ * By default, any path listed in the %UCA_CAMERA_PATH environment variable is
+ * added to the search path.
  */
 #include <gmodule.h>
 #include "uca-plugin-manager.h"
@@ -251,9 +254,15 @@ static void
 uca_plugin_manager_init (UcaPluginManager *manager)
 {
     UcaPluginManagerPrivate *priv;
+    const gchar *uca_camera_path;
 
     manager->priv = priv = UCA_PLUGIN_MANAGER_GET_PRIVATE (manager);
     priv->search_paths = NULL;
+
+    uca_camera_path = g_getenv ("UCA_CAMERA_PATH");
+
+    if (uca_camera_path != NULL)
+        uca_plugin_manager_add_path (manager, uca_camera_path);
 
     uca_plugin_manager_add_path (manager, "/usr/lib/uca");
     uca_plugin_manager_add_path (manager, "/usr/lib64/uca");
