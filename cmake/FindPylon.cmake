@@ -13,8 +13,6 @@ find_package(PkgConfig)
 find_package(PackageHandleStandardArgs)
 
 if (NOT "$ENV{PYLON_ROOT}" STREQUAL "")
-  message("PYLON_ROOT=$ENV{PYLON_ROOT}")
-
   find_library(YAT_LIB yat ${YAT_LIBRARY_DIRS})
 
   pkg_check_modules(LIBPYLONCAM pyloncam>=0.1)
@@ -34,7 +32,4 @@ if (NOT "$ENV{PYLON_ROOT}" STREQUAL "")
     LIBPYLONCAM_INCLUDEDIR
     LIBPYLONCAM_LIBRARIES
     LIBPYLONCAM_LIBDIR)
-
-else()
-  message("Environment variable PYLON_ROOT not found! => unable to build pylon camera support")
 endif()

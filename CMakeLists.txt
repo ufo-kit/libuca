@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 project(uca C)
 
 set(TARNAME "libuca")
-set(UCA_VERSION_MAJOR "0")
-set(UCA_VERSION_MINOR "6")
-set(UCA_VERSION_PATCH "0")
+set(UCA_VERSION_MAJOR "1")
+set(UCA_VERSION_MINOR "1")
+set(UCA_VERSION_PATCH "0-dev")
 set(UCA_DESCRIPTION "Unified Camera Access")
 
 set(UCA_VERSION_STRING "${UCA_VERSION_MAJOR}.${UCA_VERSION_MINOR}.${UCA_VERSION_PATCH}")
