@@ -4,13 +4,16 @@
  * @Title: UcaPluginManager
  *
  * The plugin manager opens shared object modules searched for in locations
- * specified with uca_plugin_manager_add_paths(). An #UcaFilter can be
- * instantiated with uca_plugin_manager_get_filter() with a one-to-one mapping
- * between filter name xyz and module name libfilterxyz.so. Any errors are
- * reported as one of #UcaPluginManagerError codes.
+ * specified with uca_plugin_manager_add_path(). A #UcaCamera can be
+ * instantiated with uca_plugin_manager_new_camera() with a one-to-one mapping
+ * between filter name xyz and module name libucaxyz.so. Any errors are reported
+ * as one of #UcaPluginManagerError codes. To get a list of available camera
+ * names call uca_plugin_manager_get_available_cameras().
  *
  * By default, any path listed in the %UCA_CAMERA_PATH environment variable is
  * added to the search path.
+ *
+ * @Since: 1.1
  */
 #include <gmodule.h>
 #include "uca-plugin-manager.h"
@@ -58,6 +61,13 @@ uca_plugin_manager_new ()
     return UCA_PLUGIN_MANAGER (g_object_new (UCA_TYPE_PLUGIN_MANAGER, NULL));
 }
 
+/**
+ * uca_plugin_manager_add_path:
+ * @manager: A #UcaPluginManager
+ * @path: Path to look for camera modules
+ *
+ * Add a search path to the plugin manager.
+ */
 void
 uca_plugin_manager_add_path (UcaPluginManager   *manager,
                              const gchar        *path)
@@ -132,6 +142,15 @@ g_list_free_full (GList *list)
     g_list_free (list);
 }
 
+/**
+ * uca_plugin_manager_get_available_cameras:
+ *
+ * @manager: A #UcaPluginManager
+ *
+ * Return: A list with strings of available camera names. You have to free the
+ * individual strings with g_list_foreach(list, (GFunc) g_free, NULL) and the
+ * list itself with g_list_free.
+ */
 GList *
 uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
 {
@@ -175,6 +194,12 @@ find_camera_module_path (GList *search_paths, const gchar *name)
     return result;
 }
 
+/**
+ * uca_plugin_manager_new_camera:
+ * @manager: A #UcaPluginManager
+ * @name: Name of the camera module, that maps to libuca<name>.so
+ * @error: Location for a #GError
+ */
 UcaCamera *
 uca_plugin_manager_new_camera (UcaPluginManager   *manager,
                                const gchar        *name,
