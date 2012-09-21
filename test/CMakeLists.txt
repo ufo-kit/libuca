@@ -47,10 +47,6 @@ target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 #add_executable(grab_pylon grab_pylon.c)
 #target_link_libraries(grab_pylon uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 #
-#if (NOT DEFINED WITH_CONTROL_GUI)
-#    set(WITH_CONTROL_GUI TRUE)
-#endif()
-#
 if (GTK2_FOUND)
     include_directories(${GTK2_INCLUDE_DIRS})
 
@@ -69,17 +65,17 @@ if (GTK2_FOUND)
         DESTINATION share/libuca)
 endif()
 
-#if (HAVE_MOCK_CAMERA)
-#    add_executable(test-mock test-mock.c)
-#
-#    target_link_libraries(test-mock
-#        uca
-#        ${GLIB2_LIBRARIES}
-#        ${GOBJECT2_LIBRARIES})
-#
-#    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gtester.xsl
-#        ${CMAKE_CURRENT_BINARY_DIR}/gtester.xsl)
-#endif()
+if (HAVE_MOCK_CAMERA)
+    add_executable(test-mock test-mock.c)
+
+    target_link_libraries(test-mock
+        uca
+        ${GLIB2_LIBRARIES}
+        ${GOBJECT2_LIBRARIES})
+
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gtester.xsl
+        ${CMAKE_CURRENT_BINARY_DIR}/gtester.xsl)
+endif()
 
 #add_executable(test-all test-all.c)
 #target_link_libraries(test-all uca
