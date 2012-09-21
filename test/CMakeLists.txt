@@ -10,10 +10,7 @@ pkg_check_modules(GTHREAD2 gthread-2.0)
 pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
 
-#include_directories(${CMAKE_SOURCE_DIR}/src)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/control.glade ${CMAKE_CURRENT_BINARY_DIR})
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_CURRENT_BINARY_DIR})
 
 # --- Build targets -----------------------------------------------------------
 include_directories(
@@ -44,14 +41,7 @@ target_link_libraries(benchmark uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
-add_executable(grab_pylon grab_pylon.c)
-target_link_libraries(grab_pylon uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
-
-if (NOT DEFINED WITH_CONTROL_GUI)
-    set(WITH_CONTROL_GUI TRUE)
-endif()
-
-if (GTK2_FOUND AND WITH_CONTROL_GUI)
+if (GTK2_FOUND)
     include_directories(${GTK2_INCLUDE_DIRS})
 
     add_executable(control 
@@ -81,6 +71,6 @@ if (HAVE_MOCK_CAMERA)
         ${CMAKE_CURRENT_BINARY_DIR}/gtester.xsl)
 endif()
 
-add_executable(test-all test-all.c)
-target_link_libraries(test-all uca
-    ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+#add_executable(test-all test-all.c)
+#target_link_libraries(test-all uca
+#    ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})

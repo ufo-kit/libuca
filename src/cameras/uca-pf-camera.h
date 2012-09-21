@@ -67,8 +67,6 @@ struct _UcaPfCameraClass {
     UcaCameraClass parent;
 };
 
-UcaPfCamera *uca_pf_camera_new(GError **error);
-
 GType uca_pf_camera_get_type(void);
 
 G_END_DECLS

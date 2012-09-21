@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gmodule.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -143,7 +144,8 @@ static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info,
     return PCILIB_STREAMING_CONTINUE;
 }
 
-UcaUfoCamera *uca_ufo_camera_new(GError **error)
+G_MODULE_EXPORT UcaCamera *
+uca_camera_impl_new (GError **error)
 {
     pcilib_model_t model = PCILIB_MODEL_DETECT;
     pcilib_model_description_t *model_description;
@@ -223,7 +225,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
 
     priv->handle = handle;
 
-    return camera;
+    return UCA_CAMERA (camera);
 }
 
 static void uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)

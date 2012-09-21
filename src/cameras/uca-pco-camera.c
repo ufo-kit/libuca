@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gmodule.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -50,7 +51,7 @@
                 "libpco error %x", err);            \
         return;                                     \
     }
-    
+
 #define UCA_PCO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCameraPrivate))
 
 G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
@@ -186,7 +187,7 @@ struct _UcaPcoCameraPrivate {
     guint current_image;
 };
 
-static pco_cl_map_entry pco_cl_map[] = { 
+static pco_cl_map_entry pco_cl_map[] = {
     { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
     { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE  },
     { CAMERATYPE_PCO_DIMAX_STD,  "libFullAreaGray16.so", FG_CL_SINGLETAP_8_BIT,     FG_GRAY16, 1279.0f, TRUE  },
@@ -200,7 +201,7 @@ static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
     while (entry->camera_type != 0) {
         if (entry->camera_type == camera_type)
             return entry;
-        entry++; 
+        entry++;
     }
 
     return NULL;
@@ -212,8 +213,8 @@ static guint fill_binnings(UcaPcoCameraPrivate *priv)
     uint16_t *vertical = NULL;
     guint num_horizontal, num_vertical;
 
-    guint err = pco_get_possible_binnings(priv->pco, 
-            &horizontal, &num_horizontal, 
+    guint err = pco_get_possible_binnings(priv->pco,
+            &horizontal, &num_horizontal,
             &vertical, &num_vertical);
 
     GValue val = {0};
@@ -246,7 +247,7 @@ static void fill_pixelrates(UcaPcoCameraPrivate *priv, guint32 rates[4], gint nu
     priv->pixelrates = g_value_array_new(num_rates);
 
     for (gint i = 0; i < num_rates; i++) {
-        g_value_set_uint(&val, (guint) rates[i]); 
+        g_value_set_uint(&val, (guint) rates[i]);
         g_value_array_append(priv->pixelrates, &val);
     }
 }
@@ -313,93 +314,6 @@ static gdouble get_suitable_timebase(gdouble time)
     if (time * 1e9 >= 1.0)
         return TIMEBASE_NS;
     return TIMEBASE_INVALID;
-}
-
-UcaPcoCamera *uca_pco_camera_new(GError **error)
-{
-    pco_handle pco = pco_init();
-
-    if (pco == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_INIT,
-                "Initializing libpco failed");
-        return NULL;
-    }
-
-    UcaPcoCamera *camera = g_object_new(UCA_TYPE_PCO_CAMERA, NULL);
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
-    priv->pco = pco;
-
-    pco_get_resolution(priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
-    pco_get_binning(priv->pco, &priv->binning_h, &priv->binning_v);
-    pco_set_storage_mode(pco, STORAGE_MODE_RECORDER);
-    pco_set_auto_transfer(pco, 1);
-
-    guint16 roi[4];
-    pco_get_roi(priv->pco, roi);
-    pco_get_roi_steps(priv->pco, &priv->roi_horizontal_steps, &priv->roi_vertical_steps);
-
-    priv->roi_x = roi[0] - 1;
-    priv->roi_y = roi[1] - 1;
-    priv->roi_width = roi[2] - roi[0] + 1;
-    priv->roi_height = roi[3] - roi[1] + 1;
-
-    guint16 camera_type, camera_subtype;
-    pco_get_camera_type(priv->pco, &camera_type, &camera_subtype);
-    pco_cl_map_entry *map_entry = get_pco_cl_map_entry(camera_type);
-    priv->camera_description = map_entry;
-
-    if (map_entry == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
-                "Camera type is not supported");
-        g_object_unref(camera);
-        return NULL;
-    }
-
-    priv->fg_port = PORT_A;
-    priv->fg = Fg_Init(map_entry->so_file, priv->fg_port);
-
-    if (priv->fg == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
-                "%s", Fg_getLastErrorDescription(priv->fg));
-        g_object_unref(camera);
-        return NULL;
-    }
-
-    const guint32 fg_height = priv->height;
-    const guint32 fg_width = camera_type == CAMERATYPE_PCO_EDGE ? priv->width * 2 : priv->width;
-
-    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &map_entry->cl_format, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &fg_width, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &fg_height, priv->fg_port);
-
-    int val = FREE_RUN;
-    FG_TRY_PARAM(priv->fg, camera, FG_TRIGGERMODE, &val, priv->fg_port);
-
-    fill_binnings(priv);
-
-    /*
-     * Here we override property ranges because we didn't know them at property
-     * installation time.
-     */
-    GObjectClass *camera_class = G_OBJECT_CLASS (UCA_CAMERA_GET_CLASS (camera));
-    property_override_default_guint_value (camera_class, "roi-width", priv->width);
-    property_override_default_guint_value (camera_class, "roi-height", priv->height);
-
-    guint32 rates[4] = {0};
-    gint num_rates = 0;
-
-    if (pco_get_available_pixelrates(priv->pco, rates, &num_rates) == PCO_NOERROR) {
-        GObjectClass *pco_camera_class = G_OBJECT_CLASS (UCA_PCO_CAMERA_GET_CLASS (camera));
-
-        fill_pixelrates(priv, rates, num_rates);
-        property_override_default_guint_value (pco_camera_class, "sensor-pixelrate", rates[0]);
-    }
-
-    override_temperature_range (priv);
-    override_maximum_adcs (priv);
-
-    return camera;
 }
 
 static int fg_callback(frameindex_t frame, struct fg_apc_data *apc)
@@ -506,7 +420,7 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
             Fg_FreeMemEx(priv->fg, priv->fg_mem);
 
         const guint num_buffers = 2;
-        priv->fg_mem = Fg_AllocMemEx(priv->fg, 
+        priv->fg_mem = Fg_AllocMemEx(priv->fg,
                 num_buffers * priv->frame_width * priv->frame_height * sizeof(uint16_t), num_buffers);
 
         if (priv->fg_mem == NULL) {
@@ -557,9 +471,9 @@ static void uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
-    /* 
+    /*
      * TODO: Check if readout mode is possible. This is not the case for the
-     * edge. 
+     * edge.
      */
 
     guint err = pco_get_active_segment(priv->pco, &priv->active_segment);
@@ -582,7 +496,7 @@ static void uca_pco_camera_trigger(UcaCamera *camera, GError **error)
 
     if (!success)
         g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,
-                "Could not trigger frame acquisition"); 
+                "Could not trigger frame acquisition");
 }
 
 static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
@@ -611,7 +525,7 @@ static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
 
     pco_request_image(priv->pco);
     priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame+1, priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
-    
+
     if (priv->last_frame <= 0) {
         guint err = FG_OK + 1;
         FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
@@ -620,7 +534,7 @@ static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     guint16 *frame = Fg_getImagePtrEx(priv->fg, priv->last_frame, priv->fg_port, priv->fg_mem);
 
     if (*data == NULL)
-        *data = g_malloc0(priv->frame_width * priv->frame_height * priv->num_bytes); 
+        *data = g_malloc0(priv->frame_width * priv->frame_height * priv->num_bytes);
 
     if (priv->camera_description->camera_type == CAMERATYPE_PCO_EDGE)
         pco_get_reorder_func(priv->pco)((guint16 *) *data, frame, priv->frame_width, priv->frame_height);
@@ -635,7 +549,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
     switch (property_id) {
         case PROP_SENSOR_EXTENDED:
             {
-                guint16 format = g_value_get_boolean (value) ? SENSORFORMAT_EXTENDED : SENSORFORMAT_STANDARD; 
+                guint16 format = g_value_get_boolean (value) ? SENSORFORMAT_EXTENDED : SENSORFORMAT_STANDARD;
                 pco_set_sensor_format(priv->pco, format);
             }
             break;
@@ -651,7 +565,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
         case PROP_ROI_WIDTH:
             {
                 guint width = g_value_get_uint(value);
-                
+
                 if (width % priv->roi_horizontal_steps)
                     g_warning("ROI width %i is not a multiple of %i", width, priv->roi_horizontal_steps);
                 else
@@ -662,7 +576,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
         case PROP_ROI_HEIGHT:
             {
                 guint height = g_value_get_uint(value);
-                
+
                 if (height % priv->roi_vertical_steps)
                     g_warning("ROI height %i is not a multiple of %i", height, priv->roi_vertical_steps);
                 else
@@ -681,7 +595,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
         case PROP_EXPOSURE_TIME:
             {
                 const gdouble time = g_value_get_double(value);
-                 
+
                 if (priv->exposure_timebase == TIMEBASE_INVALID)
                     read_timebase(priv);
 
@@ -692,7 +606,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                 guint16 suitable_timebase = get_suitable_timebase(time);
 
                 if (suitable_timebase == TIMEBASE_INVALID) {
-                    g_warning("Cannot set such a small exposure time"); 
+                    g_warning("Cannot set such a small exposure time");
                 }
                 else {
                     if (suitable_timebase != priv->exposure_timebase) {
@@ -712,7 +626,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
         case PROP_DELAY_TIME:
             {
                 const gdouble time = g_value_get_double(value);
-                 
+
                 if (priv->delay_timebase == TIMEBASE_INVALID)
                     read_timebase(priv);
 
@@ -733,7 +647,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                             g_warning("Cannot set zero delay time");
                     }
                     else
-                        g_warning("Cannot set such a small exposure time"); 
+                        g_warning("Cannot set such a small exposure time");
                 }
                 else {
                     if (suitable_timebase != priv->delay_timebase) {
@@ -752,7 +666,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
 
         case PROP_SENSOR_ADCS:
             {
-                const guint num_adcs = g_value_get_uint(value); 
+                const guint num_adcs = g_value_get_uint(value);
                 if (pco_set_adc_mode(priv->pco, num_adcs) != PCO_NOERROR)
                     g_warning("Cannot set the number of ADCs per pixel\n");
             }
@@ -765,7 +679,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
 
                 for (guint i = 0; i < priv->pixelrates->n_values; i++) {
                     if (g_value_get_uint(g_value_array_get_nth(priv->pixelrates, i)) == desired_pixel_rate) {
-                        pixel_rate = desired_pixel_rate;    
+                        pixel_rate = desired_pixel_rate;
                         break;
                     }
                 }
@@ -792,7 +706,7 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
 
         case PROP_COOLING_POINT:
             {
-                int16_t temperature = (int16_t) g_value_get_int(value); 
+                int16_t temperature = (int16_t) g_value_get_int(value);
                 pco_set_cooling_temperature(priv->pco, temperature);
             }
             break;
@@ -856,11 +770,11 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
         case PROP_TIMESTAMP_MODE:
             {
                 guint16 modes[] = {
-                    TIMESTAMP_MODE_OFF,             /* 0 */ 
-                    TIMESTAMP_MODE_BINARY,          /* 1 = 1 << 0 */ 
-                    TIMESTAMP_MODE_ASCII,           /* 2 = 1 << 1 */ 
-                    TIMESTAMP_MODE_BINARYANDASCII,  /* 3 = 1 << 0 | 1 << 1 */ 
-                }; 
+                    TIMESTAMP_MODE_OFF,             /* 0 */
+                    TIMESTAMP_MODE_BINARY,          /* 1 = 1 << 0 */
+                    TIMESTAMP_MODE_ASCII,           /* 2 = 1 << 1 */
+                    TIMESTAMP_MODE_BINARYANDASCII,  /* 3 = 1 << 0 | 1 << 1 */
+                };
                 pco_set_timestamp_mode(priv->pco, modes[g_value_get_flags(value)]);
             }
             break;
@@ -878,25 +792,25 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
     switch (property_id) {
         case PROP_SENSOR_EXTENDED:
             {
-                guint16 format; 
+                guint16 format;
                 pco_get_sensor_format(priv->pco, &format);
                 g_value_set_boolean(value, format == SENSORFORMAT_EXTENDED);
             }
             break;
 
-        case PROP_SENSOR_WIDTH: 
+        case PROP_SENSOR_WIDTH:
             g_value_set_uint(value, priv->width);
             break;
 
-        case PROP_SENSOR_HEIGHT: 
+        case PROP_SENSOR_HEIGHT:
             g_value_set_uint(value, priv->height);
             break;
 
-        case PROP_SENSOR_WIDTH_EXTENDED: 
+        case PROP_SENSOR_WIDTH_EXTENDED:
             g_value_set_uint(value, priv->width_ex < priv->width ? priv->width : priv->width_ex);
             break;
 
-        case PROP_SENSOR_HEIGHT_EXTENDED: 
+        case PROP_SENSOR_HEIGHT_EXTENDED:
             g_value_set_uint(value, priv->height_ex < priv->height ? priv->height : priv->height_ex);
             break;
 
@@ -926,7 +840,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_SENSOR_TEMPERATURE:
             {
-                gint32 ccd, camera, power;                 
+                gint32 ccd, camera, power;
                 pco_get_temperature(priv->pco, &ccd, &camera, &power);
                 g_value_set_double(value, ccd / 10.0);
             }
@@ -938,7 +852,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                  * Up to now, the ADC mode corresponds directly to the number of
                  * ADCs in use.
                  */
-                pco_adc_mode mode; 
+                pco_adc_mode mode;
                 if (pco_get_adc_mode(priv->pco, &mode) != PCO_NOERROR)
                     g_warning("Cannot read number of ADCs per pixel");
                 g_value_set_uint(value, mode);
@@ -958,7 +872,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_SENSOR_PIXELRATE:
             {
-                guint32 pixelrate; 
+                guint32 pixelrate;
                 pco_get_pixelrate(priv->pco, &pixelrate);
                 g_value_set_uint(value, pixelrate);
             }
@@ -1048,7 +962,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_TRIGGER_MODE:
             {
-                guint16 mode;                 
+                guint16 mode;
                 pco_get_trigger_mode(priv->pco, &mode);
 
                 switch (mode) {
@@ -1091,7 +1005,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
             g_value_set_uint(value, priv->roi_vertical_steps);
             break;
 
-        case PROP_NAME: 
+        case PROP_NAME:
             {
                 gchar *name = NULL;
                 pco_get_name(priv->pco, &name);
@@ -1102,7 +1016,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_COOLING_POINT:
             {
-                int16_t temperature; 
+                int16_t temperature;
                 if (pco_get_cooling_temperature(priv->pco, &temperature) != PCO_NOERROR)
                     g_warning("Cannot read cooling temperature\n");
                 g_value_set_int(value, temperature);
@@ -1140,7 +1054,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
 
         case PROP_TIMESTAMP_MODE:
             {
-                guint16 mode; 
+                guint16 mode;
                 pco_get_timestamp_mode(priv->pco, &mode);
 
                 switch (mode) {
@@ -1151,7 +1065,7 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                         g_value_set_flags(value, UCA_PCO_CAMERA_TIMESTAMP_BINARY);
                         break;
                     case TIMESTAMP_MODE_BINARYANDASCII:
-                        g_value_set_flags(value, 
+                        g_value_set_flags(value,
                                 UCA_PCO_CAMERA_TIMESTAMP_BINARY | UCA_PCO_CAMERA_TIMESTAMP_ASCII);
                         break;
                     case TIMESTAMP_MODE_ASCII:
@@ -1220,20 +1134,20 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
      * #UcaPcoCamera:sensor-height-extended to query the resolution of the
      * larger area.
      */
-    pco_properties[PROP_SENSOR_EXTENDED] = 
+    pco_properties[PROP_SENSOR_EXTENDED] =
         g_param_spec_boolean("sensor-extended",
             "Use extended sensor format",
             "Use extended sensor format",
             FALSE, G_PARAM_READWRITE);
 
-    pco_properties[PROP_SENSOR_WIDTH_EXTENDED] = 
+    pco_properties[PROP_SENSOR_WIDTH_EXTENDED] =
         g_param_spec_uint("sensor-width-extended",
             "Width of extended sensor",
             "Width of the extended sensor in pixels",
             1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
-    pco_properties[PROP_SENSOR_HEIGHT_EXTENDED] = 
+    pco_properties[PROP_SENSOR_HEIGHT_EXTENDED] =
         g_param_spec_uint("sensor-height-extended",
             "Height of extended sensor",
             "Height of the extended sensor in pixels",
@@ -1248,21 +1162,21 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
      * #UcaPcoCamera:sensor-pixelrates property. Any other value will be
      * rejected by the camera.
      */
-    pco_properties[PROP_SENSOR_PIXELRATE] = 
+    pco_properties[PROP_SENSOR_PIXELRATE] =
         g_param_spec_uint("sensor-pixelrate",
             "Pixel rate",
             "Pixel rate",
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
 
-    pco_properties[PROP_SENSOR_PIXELRATES] = 
+    pco_properties[PROP_SENSOR_PIXELRATES] =
         g_param_spec_value_array("sensor-pixelrates",
             "Array of possible sensor pixel rates",
             "Array of possible sensor pixel rates",
             pco_properties[PROP_SENSOR_PIXELRATE],
             G_PARAM_READABLE);
 
-    pco_properties[PROP_NAME] = 
+    pco_properties[PROP_NAME] =
         g_param_spec_string("name",
             "Name of the camera",
             "Name of the camera",
@@ -1275,38 +1189,38 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
             G_PARAM_READABLE);
 
-    pco_properties[PROP_HAS_DOUBLE_IMAGE_MODE] = 
+    pco_properties[PROP_HAS_DOUBLE_IMAGE_MODE] =
         g_param_spec_boolean("has-double-image-mode",
             "Is double image mode supported by this model",
             "Is double image mode supported by this model",
             FALSE, G_PARAM_READABLE);
 
-    pco_properties[PROP_DOUBLE_IMAGE_MODE] = 
+    pco_properties[PROP_DOUBLE_IMAGE_MODE] =
         g_param_spec_boolean("double-image-mode",
             "Use double image mode",
             "Use double image mode",
             FALSE, G_PARAM_READWRITE);
 
-    pco_properties[PROP_OFFSET_MODE] = 
+    pco_properties[PROP_OFFSET_MODE] =
         g_param_spec_boolean("offset-mode",
             "Use offset mode",
             "Use offset mode",
             FALSE, G_PARAM_READWRITE);
 
-    pco_properties[PROP_RECORD_MODE] = 
-        g_param_spec_enum("record-mode", 
+    pco_properties[PROP_RECORD_MODE] =
+        g_param_spec_enum("record-mode",
             "Record mode",
             "Record mode",
             UCA_TYPE_PCO_CAMERA_RECORD_MODE, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE,
             G_PARAM_READWRITE);
 
-    pco_properties[PROP_ACQUIRE_MODE] = 
-        g_param_spec_enum("acquire-mode", 
+    pco_properties[PROP_ACQUIRE_MODE] =
+        g_param_spec_enum("acquire-mode",
             "Acquire mode",
             "Acquire mode",
             UCA_TYPE_PCO_CAMERA_ACQUIRE_MODE, UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO,
             G_PARAM_READWRITE);
-    
+
     pco_properties[PROP_DELAY_TIME] =
         g_param_spec_double("delay-time",
             "Delay time",
@@ -1314,7 +1228,7 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             0.0, G_MAXDOUBLE, 0.0,
             G_PARAM_READWRITE);
 
-    pco_properties[PROP_NOISE_FILTER] = 
+    pco_properties[PROP_NOISE_FILTER] =
         g_param_spec_boolean("noise-filter",
             "Noise filter",
             "Noise filter",
@@ -1327,42 +1241,42 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
      * the camera and just don't know the cooling range. We override these
      * values in #uca_pco_camera_new().
      */
-    pco_properties[PROP_COOLING_POINT] = 
+    pco_properties[PROP_COOLING_POINT] =
         g_param_spec_int("cooling-point",
             "Cooling point of the camera",
             "Cooling point of the camera in degree celsius",
             0, 10, 5, G_PARAM_READWRITE);
 
-    pco_properties[PROP_COOLING_POINT_MIN] = 
+    pco_properties[PROP_COOLING_POINT_MIN] =
         g_param_spec_int("cooling-point-min",
             "Minimum cooling point",
             "Minimum cooling point in degree celsius",
             G_MININT, G_MAXINT, 0, G_PARAM_READABLE);
 
-    pco_properties[PROP_COOLING_POINT_MAX] = 
+    pco_properties[PROP_COOLING_POINT_MAX] =
         g_param_spec_int("cooling-point-max",
             "Maximum cooling point",
             "Maximum cooling point in degree celsius",
             G_MININT, G_MAXINT, 0, G_PARAM_READABLE);
 
-    pco_properties[PROP_COOLING_POINT_DEFAULT] = 
+    pco_properties[PROP_COOLING_POINT_DEFAULT] =
         g_param_spec_int("cooling-point-default",
             "Default cooling point",
             "Default cooling point in degree celsius",
             G_MININT, G_MAXINT, 0, G_PARAM_READABLE);
-    
-    pco_properties[PROP_SENSOR_ADCS] = 
+
+    pco_properties[PROP_SENSOR_ADCS] =
         g_param_spec_uint("sensor-adcs",
             "Number of ADCs to use",
             "Number of ADCs to use",
-            1, 2, 1, 
+            1, 2, 1,
             G_PARAM_READWRITE);
 
-    pco_properties[PROP_SENSOR_MAX_ADCS] = 
+    pco_properties[PROP_SENSOR_MAX_ADCS] =
         g_param_spec_uint("sensor-max-adcs",
             "Maximum number of ADCs",
             "Maximum number of ADCs that can be set with \"sensor-adcs\"",
-            1, G_MAXUINT, 1, 
+            1, G_MAXUINT, 1,
             G_PARAM_READABLE);
 
     pco_properties[PROP_TIMESTAMP_MODE] =
@@ -1393,4 +1307,92 @@ static void uca_pco_camera_init(UcaPcoCamera *self)
 
     self->priv->delay_timebase = TIMEBASE_INVALID;
     self->priv->exposure_timebase = TIMEBASE_INVALID;
+}
+
+G_MODULE_EXPORT UcaCamera *
+uca_camera_impl_new (GError **error)
+{
+    pco_handle pco = pco_init();
+
+    if (pco == NULL) {
+        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_INIT,
+                "Initializing libpco failed");
+        return NULL;
+    }
+
+    UcaPcoCamera *camera = g_object_new(UCA_TYPE_PCO_CAMERA, NULL);
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+    priv->pco = pco;
+
+    pco_get_resolution(priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
+    pco_get_binning(priv->pco, &priv->binning_h, &priv->binning_v);
+    pco_set_storage_mode(pco, STORAGE_MODE_RECORDER);
+    pco_set_auto_transfer(pco, 1);
+
+    guint16 roi[4];
+    pco_get_roi(priv->pco, roi);
+    pco_get_roi_steps(priv->pco, &priv->roi_horizontal_steps, &priv->roi_vertical_steps);
+
+    priv->roi_x = roi[0] - 1;
+    priv->roi_y = roi[1] - 1;
+    priv->roi_width = roi[2] - roi[0] + 1;
+    priv->roi_height = roi[3] - roi[1] + 1;
+
+    guint16 camera_type, camera_subtype;
+    pco_get_camera_type(priv->pco, &camera_type, &camera_subtype);
+    pco_cl_map_entry *map_entry = get_pco_cl_map_entry(camera_type);
+    priv->camera_description = map_entry;
+
+    if (map_entry == NULL) {
+        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
+                "Camera type is not supported");
+        g_object_unref(camera);
+        return NULL;
+    }
+
+    priv->fg_port = PORT_A;
+    priv->fg = Fg_Init(map_entry->so_file, priv->fg_port);
+
+    if (priv->fg == NULL) {
+        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
+                "%s", Fg_getLastErrorDescription(priv->fg));
+        g_object_unref(camera);
+        return NULL;
+    }
+
+    const guint32 fg_height = priv->height;
+    const guint32 fg_width = camera_type == CAMERATYPE_PCO_EDGE ? priv->width * 2 : priv->width;
+
+    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &map_entry->cl_format, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &fg_width, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &fg_height, priv->fg_port);
+
+    int val = FREE_RUN;
+    FG_TRY_PARAM(priv->fg, camera, FG_TRIGGERMODE, &val, priv->fg_port);
+
+    fill_binnings(priv);
+
+    /*
+     * Here we override property ranges because we didn't know them at property
+     * installation time.
+     */
+    GObjectClass *camera_class = G_OBJECT_CLASS (UCA_CAMERA_GET_CLASS (camera));
+    property_override_default_guint_value (camera_class, "roi-width", priv->width);
+    property_override_default_guint_value (camera_class, "roi-height", priv->height);
+
+    guint32 rates[4] = {0};
+    gint num_rates = 0;
+
+    if (pco_get_available_pixelrates(priv->pco, rates, &num_rates) == PCO_NOERROR) {
+        GObjectClass *pco_camera_class = G_OBJECT_CLASS (UCA_PCO_CAMERA_GET_CLASS (camera));
+
+        fill_pixelrates(priv, rates, num_rates);
+        property_override_default_guint_value (pco_camera_class, "sensor-pixelrate", rates[0]);
+    }
+
+    override_temperature_range (priv);
+    override_maximum_adcs (priv);
+
+    return UCA_CAMERA (camera);
 }

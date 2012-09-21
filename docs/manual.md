@@ -107,6 +107,7 @@ necessary header files:
 
 ~~~ {.c}
 #include <glib-object.h>
+#include <uca-plugin-manager.h>
 #include <uca-camera.h>
 ~~~
 
@@ -116,6 +117,7 @@ Then you need to setup the type system:
 int
 main (int argc, char *argv[])
 {
+    UcaPluginManager *manager;
     UcaCamera *camera;
     GError *error = NULL; /* this _must_ be set to NULL */
 
@@ -124,10 +126,12 @@ main (int argc, char *argv[])
 
 Now you can instantiate new camera _objects_. Each camera is identified by a
 human-readable string, in this case we want to access any pco camera that is
-supported by [libpco][]:
+supported by [libpco][]. To instantiate a camera we have to create a plugin
+manager first:
 
 ~~~ {.c}
-    camera = uca_camera_new ("pco", &error);
+    manager = uca_plugin_manager_new ();
+    camera = uca_plugin_manager_new_camera (manager, "pco", &error);
 ~~~
 
 Errors are indicated with a returned value `NULL` and `error` set to a value
@@ -252,38 +256,19 @@ communicate with the camera. Now we will go into more detail.
 We have already seen how to instantiate a camera object from a name. If you have
 more than one camera connected to a machine, you will most likely want the user
 decide which to use. To do so, you can enumerate all camera strings with
-`uca_camera_get_types`:
+`uca_plugin_manager_get_available_cameras`:
 
 ~~~ {.c}
-    gchar **types;
+    GList *types;
 
-    types = uca_camera_get_types ();
+    types = uca_camera_get_available_cameras (manager);
 
-    for (guint i = 0; types[i] != NULL; i++)
-        g_print ("%s\n", types[i]);
+    for (GList *it = g_list_first; it != NULL; it = g_list_next (it))
+        g_print ("%s\n", (gchar *) it->data);
 
-    /* free the string array */
-    g_strfreev (types);
-~~~
-
-If you _know_ which camera you want to use you can instantiate the sub-classed
-camera object directly. In this case we create a pco-based camera:
-
-~~~ {.c}
-#include <glib-object.h>
-#include <uca/uca-camera-pco.h>
-
-int
-main (int argc, char *argv[])
-{
-    UcaPcoCamera *camera;
-    GError *error = NULL;
-
-    g_type_init ();
-    camera = uca_pco_camera_new (&error);
-    g_object_unref (camera);
-    return 0;
-}
+    /* free the strings and the list */
+    g_list_foreach (types, (GFunc) g_free, NULL);
+    g_list_free (types);
 ~~~
 
 [last section]: #first-look-at-the-api

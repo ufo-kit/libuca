@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "uca-camera.h"
+#include "uca-plugin-manager.h"
 
 typedef void (*GrabFrameFunc) (UcaCamera *camera, gpointer buffer, guint n_frames);
 
@@ -37,20 +38,25 @@ sigint_handler(int signal)
 static void
 print_usage (void)
 {
-    gchar **types;
+    GList *types;
+    UcaPluginManager *manager;
 
-    g_print ("Usage: benchmark (");
-    types = uca_camera_get_types ();
+    manager = uca_plugin_manager_new ();
+    g_print ("Usage: benchmark [ ");
+    types = uca_plugin_manager_get_available_cameras (manager);
 
-    for (guint i = 0; types[i] != NULL; i++) {
-        if (types[i+1] == NULL)
-            g_print ("%s)", types[i]);
-        else
-            g_print ("%s | ", types[i]);
+    if (types == NULL) {
+        g_print ("] -- no camera plugin found\n");
+        return;
     }
 
-    g_print ("\n");
-    g_strfreev (types);
+    for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
+        gchar *name = (gchar *) it->data;
+        if (g_list_next (it) == NULL)
+            g_print ("%s ]\n", name);
+        else
+            g_print ("%s, ", name);
+    }
 }
 
 static void
@@ -227,10 +233,12 @@ benchmark (UcaCamera *camera)
 int
 main (int argc, char *argv[])
 {
+    UcaPluginManager *manager;
     GIOChannel  *log_channel;
     GError      *error = NULL;
 
     (void) signal (SIGINT, sigint_handler);
+    g_type_init();
 
     if (argc < 2) {
         print_usage();
@@ -241,8 +249,8 @@ main (int argc, char *argv[])
     g_assert_no_error (error);
     g_log_set_handler (NULL, G_LOG_LEVEL_MASK, log_handler, log_channel);
 
-    g_type_init();
-    camera = uca_camera_new(argv[1], &error);
+    manager = uca_plugin_manager_new ();
+    camera = uca_plugin_manager_new_camera (manager, argv[1], &error);
 
     if (camera == NULL) {
         g_error ("Initialization: %s", error->message);
