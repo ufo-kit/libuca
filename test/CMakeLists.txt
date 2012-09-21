@@ -10,10 +10,7 @@ pkg_check_modules(GTHREAD2 gthread-2.0)
 pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
 
-#include_directories(${CMAKE_SOURCE_DIR}/src)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/control.glade ${CMAKE_CURRENT_BINARY_DIR})
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py ${CMAKE_CURRENT_BINARY_DIR})
 
 # --- Build targets -----------------------------------------------------------
 include_directories(
@@ -37,16 +34,13 @@ if (HAVE_PYLON_CAMERA)
 endif()
 
 add_executable(grab grab.c)
-#add_executable(grab-async grab-async.c)
+add_executable(grab-async grab-async.c)
 add_executable(benchmark benchmark.c)
 
 target_link_libraries(benchmark uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
-#target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
-#add_executable(grab_pylon grab_pylon.c)
-#target_link_libraries(grab_pylon uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
-#
 if (GTK2_FOUND)
     include_directories(${GTK2_INCLUDE_DIRS})
 
