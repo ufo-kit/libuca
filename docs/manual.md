@@ -245,6 +245,12 @@ The following cameras are supported:
 * Pylon
 * UFO Camera developed at KIT/IPE.
 
+## Property documentation
+
+* [mock][mock-doc]
+
+[mock-doc]: mock.html
+
 
 # More API
 

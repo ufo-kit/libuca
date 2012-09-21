@@ -126,6 +126,10 @@ ul, ol {
     margin-bottom: 24px;
 }
 
+ul#toc {
+    list-style-type: none;
+}
+
 li + li {
     margin-top: 0.1em;
 }
