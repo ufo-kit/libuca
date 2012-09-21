@@ -136,7 +136,7 @@ transform_camera_module_path_to_name (gchar *path, GList **result)
 }
 
 static void
-g_list_free_full (GList *list)
+list_free_full (GList *list)
 {
     g_list_foreach (list, (GFunc) g_free, NULL);
     g_list_free (list);
@@ -164,7 +164,7 @@ uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
     camera_paths = scan_search_paths (priv->search_paths);
 
     g_list_foreach (camera_paths, (GFunc) transform_camera_module_path_to_name, &camera_names);
-    g_list_free_full (camera_paths);
+    list_free_full (camera_paths);
 
     return camera_names;
 }
@@ -190,7 +190,7 @@ find_camera_module_path (GList *search_paths, const gchar *name)
         g_free (basename);
     }
 
-    g_list_free_full (paths);
+    list_free_full (paths);
     return result;
 }
 
