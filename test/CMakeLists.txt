@@ -51,23 +51,23 @@ target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 #    set(WITH_CONTROL_GUI TRUE)
 #endif()
 #
-#if (GTK2_FOUND AND WITH_CONTROL_GUI)
-#    include_directories(${GTK2_INCLUDE_DIRS})
-#
-#    add_executable(control 
-#        control.c 
-#        egg-property-cell-renderer.c
-#        egg-property-tree-view.c)
-#
-#    target_link_libraries(control uca
-#        ${GTK2_LIBRARIES} ${GTHREAD2_LIBRARIES})
-#
-#    install(TARGETS control
-#        RUNTIME DESTINATION bin)
-#
-#    install(FILES control.glade
-#        DESTINATION share/libuca)
-#endif()
+if (GTK2_FOUND)
+    include_directories(${GTK2_INCLUDE_DIRS})
+
+    add_executable(control 
+        control.c 
+        egg-property-cell-renderer.c
+        egg-property-tree-view.c)
+
+    target_link_libraries(control uca
+        ${GTK2_LIBRARIES} ${GTHREAD2_LIBRARIES})
+
+    install(TARGETS control
+        RUNTIME DESTINATION bin)
+
+    install(FILES control.glade
+        DESTINATION share/libuca)
+endif()
 
 #if (HAVE_MOCK_CAMERA)
 #    add_executable(test-mock test-mock.c)
