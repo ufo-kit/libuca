@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "uca-plugin-manager.h"
 #include "uca-camera.h"
 
 #define handle_error(errno) {if ((errno) != UCA_NO_ERROR) printf("error at <%s:%i>\n", \
@@ -33,19 +34,45 @@ typedef struct {
 
 static UcaCamera *camera = NULL;
 
-static void sigint_handler(int signal)
+static void
+sigint_handler (int signal)
 {
-    printf("Closing down libuca\n");
-    uca_camera_stop_recording(camera, NULL);
-    g_object_unref(camera);
-    exit(signal);
+    printf ("Closing down libuca\n");
+    uca_camera_stop_recording (camera, NULL);
+    g_object_unref (camera);
+    exit (signal);
 }
 
-static void test_synchronous_operation(UcaCamera *camera)
+static void
+print_usage (void)
+{
+    GList *types;
+    UcaPluginManager *manager;
+
+    manager = uca_plugin_manager_new ();
+    g_print ("Usage: benchmark [ ");
+    types = uca_plugin_manager_get_available_cameras (manager);
+
+    if (types == NULL) {
+        g_print ("] -- no camera plugin found\n");
+        return;
+    }
+
+    for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
+        gchar *name = (gchar *) it->data;
+        if (g_list_next (it) == NULL)
+            g_print ("%s ]\n", name);
+        else
+            g_print ("%s, ", name);
+    }
+}
+
+static void
+test_synchronous_operation (UcaCamera *camera)
 {
     GError *error = NULL;
     guint width, height, bits;
-    g_object_get(G_OBJECT(camera),
+    g_object_get (G_OBJECT (camera),
             "sensor-width", &width,
             "sensor-height", &height,
             "sensor-bitdepth", &bits,
@@ -56,41 +83,43 @@ static void test_synchronous_operation(UcaCamera *camera)
     const guint n_trials = 10000;
     gpointer buffer = g_malloc0(size);
 
-    uca_camera_start_recording(camera, &error);
-    GTimer *timer = g_timer_new();
+    uca_camera_start_recording (camera, &error);
+    GTimer *timer = g_timer_new ();
 
     for (guint n = 0; n < n_trials; n++)
-        uca_camera_grab(camera, &buffer, &error);
+        uca_camera_grab (camera, &buffer, &error);
 
-    gdouble total_time = g_timer_elapsed(timer, NULL);
-    g_timer_stop(timer);
+    gdouble total_time = g_timer_elapsed (timer, NULL);
+    g_timer_stop (timer);
 
-    g_print("Synchronous data transfer\n");
-    g_print(" Bandwidth: %3.2f MB/s\n", size * n_trials / 1024. / 1024. / total_time);
-    g_print(" Throughput: %3.2f frames/s\n", n_trials / total_time);
+    g_print ("Synchronous data transfer\n");
+    g_print (" Bandwidth: %3.2f MB/s\n", size * n_trials / 1024. / 1024. / total_time);
+    g_print (" Throughput: %3.2f frames/s\n", n_trials / total_time);
 
-    uca_camera_stop_recording(camera, &error);
-    g_free(buffer);
-    g_timer_destroy(timer);
+    uca_camera_stop_recording (camera, &error);
+    g_free (buffer);
+    g_timer_destroy (timer);
 }
 
-static void grab_func(gpointer data, gpointer user_data)
+static void
+grab_func (gpointer data, gpointer user_data)
 {
     static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
     thread_data *d = (thread_data *) user_data;
-    g_memmove(d->destination, data, d->size);
-    g_static_mutex_lock(&mutex);
+    g_memmove (d->destination, data, d->size);
+    g_static_mutex_lock (&mutex);
     d->counter++;
-    g_static_mutex_unlock(&mutex);
+    g_static_mutex_unlock (&mutex);
 }
 
-static void test_asynchronous_operation(UcaCamera *camera)
+static void
+test_asynchronous_operation (UcaCamera *camera)
 {
     GError *error = NULL;
     guint width, height, bits;
 
-    g_object_get(G_OBJECT(camera),
+    g_object_get (G_OBJECT (camera),
             "sensor-width", &width,
             "sensor-height", &height,
             "sensor-bitdepth", &bits,
@@ -104,40 +133,49 @@ static void test_asynchronous_operation(UcaCamera *camera)
         .destination = g_malloc0(width * height * pixel_size)
     };
 
-    g_object_set(G_OBJECT(camera),
+    g_object_set (G_OBJECT (camera),
             "transfer-asynchronously", TRUE,
             NULL);
 
-    uca_camera_set_grab_func(camera, &grab_func, &d);
-    uca_camera_start_recording(camera, &error);
-    g_usleep(G_USEC_PER_SEC);
-    uca_camera_stop_recording(camera, &error);
+    uca_camera_set_grab_func (camera, &grab_func, &d);
+    uca_camera_start_recording (camera, &error);
+    g_usleep (G_USEC_PER_SEC);
+    uca_camera_stop_recording (camera, &error);
 
-    g_print("Asynchronous data transfer\n");
-    g_print(" Bandwidth: %3.2f MB/s\n", d.size * d.counter / 1024. / 1024.);
-    g_print(" Throughput: %i frames/s\n", d.counter);
+    g_print ("Asynchronous data transfer\n");
+    g_print (" Bandwidth: %3.2f MB/s\n", d.size * d.counter / 1024. / 1024.);
+    g_print (" Throughput: %i frames/s\n", d.counter);
 
-    g_free(d.destination);
+    g_free (d.destination);
 }
 
-int main(int argc, char *argv[])
+int
+main (int argc, char *argv[])
 {
+    UcaPluginManager *manager;
     GError *error = NULL;
-    (void) signal(SIGINT, sigint_handler);
+    (void) signal (SIGINT, sigint_handler);
 
-    g_type_init();
-    camera = uca_camera_new("mock", &error);
-
-    if (camera == NULL) {
-        g_print("Couldn't initialize camera\n");
+    g_type_init ();
+    if (argc < 2) {
+        print_usage ();
         return 1;
     }
 
-    test_synchronous_operation(camera);
-    g_print("\n");
-    test_asynchronous_operation(camera);
+    manager = uca_plugin_manager_new ();
+    camera = uca_plugin_manager_new_camera (manager, argv[1], &error);
 
-    g_object_unref(camera);
+    if (camera == NULL) {
+        g_print ("Error during initialization: %s\n", error->message);
+        return 1;
+    }
+
+    test_synchronous_operation (camera);
+    g_print ("\n");
+    test_asynchronous_operation (camera);
+
+    g_object_unref (camera);
+    g_object_unref (manager);
 
     return error != NULL ? 1 : 0;
 }

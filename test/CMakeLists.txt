@@ -36,10 +36,12 @@ endif()
 add_executable(grab grab.c)
 add_executable(grab-async grab-async.c)
 add_executable(benchmark benchmark.c)
+add_executable(perf perf-overhead.c)
 
 target_link_libraries(benchmark uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 target_link_libraries(grab-async uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
+target_link_libraries(perf uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
 if (GTK2_FOUND)
     include_directories(${GTK2_INCLUDE_DIRS})
