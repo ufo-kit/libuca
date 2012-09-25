@@ -303,7 +303,8 @@ uca_camera_class_init(UcaCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaCameraPrivate));
 }
 
-static void uca_camera_init(UcaCamera *camera)
+static void
+uca_camera_init(UcaCamera *camera)
 {
     camera->grab_func = NULL;
 
@@ -343,38 +344,47 @@ static void uca_camera_init(UcaCamera *camera)
  * #UcaCameraGrabFunc callback is set, frames are automatically transfered to
  * the client program, otherwise you must use uca_camera_grab().
  */
-void uca_camera_start_recording(UcaCamera *camera, GError **error)
+void
+uca_camera_start_recording (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    GError *tmp_error = NULL;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA (camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->start_recording != NULL);
+    klass = UCA_CAMERA_GET_CLASS (camera);
+
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->start_recording != NULL);
+
+    g_static_mutex_lock (&mutex);
 
     if (camera->priv->is_recording) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
                 "Camera is already recording");
-        return;
+        goto start_recording_unlock;
     }
 
     if (camera->priv->transfer_async && (camera->grab_func == NULL)) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NO_GRAB_FUNC,
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NO_GRAB_FUNC,
                 "No grab callback function set");
-        return;
+        goto start_recording_unlock;
     }
 
-    GError *tmp_error = NULL;
     (*klass->start_recording)(camera, &tmp_error);
 
     if (tmp_error == NULL) {
         camera->priv->is_readout = FALSE;
         camera->priv->is_recording = TRUE;
         /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-        g_object_notify(G_OBJECT(camera), "is-recording");
+        g_object_notify (G_OBJECT (camera), "is-recording");
     }
     else
-        g_propagate_error(error, tmp_error);
+        g_propagate_error (error, tmp_error);
+
+start_recording_unlock:
+    g_static_mutex_unlock (&mutex);
 }
 
 /**
@@ -384,32 +394,41 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
  *
  * Stop recording.
  */
-void uca_camera_stop_recording(UcaCamera *camera, GError **error)
+void
+uca_camera_stop_recording (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA (camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->stop_recording != NULL);
+    klass = UCA_CAMERA_GET_CLASS (camera);
+
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->stop_recording != NULL);
+
+    g_static_mutex_lock (&mutex);
 
     if (!camera->priv->is_recording) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
-                "Camera is not recording");
-        return;
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
+                     "Camera is not recording");
+    }
+    else {
+        GError *tmp_error = NULL;
+
+        (*klass->stop_recording)(camera, &tmp_error);
+
+        if (tmp_error == NULL) {
+            camera->priv->is_readout = FALSE;
+            camera->priv->is_recording = FALSE;
+            /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
+            g_object_notify (G_OBJECT (camera), "is-recording");
+        }
+        else
+            g_propagate_error (error, tmp_error);
     }
 
-    GError *tmp_error = NULL;
-    (*klass->stop_recording)(camera, &tmp_error);
-
-    if (tmp_error == NULL) {
-        camera->priv->is_readout = FALSE;
-        camera->priv->is_recording = FALSE;
-        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-        g_object_notify(G_OBJECT(camera), "is-recording");
-    }
-    else
-        g_propagate_error(error, tmp_error);
+    g_static_mutex_unlock (&mutex);
 }
 
 /**
@@ -422,31 +441,40 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
  * uca_camera_stop_recording(). Frames have to be picked up with
  * ufo_camera_grab().
  */
-void uca_camera_start_readout(UcaCamera *camera, GError **error)
+void
+uca_camera_start_readout (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA(camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->start_readout != NULL);
+    klass = UCA_CAMERA_GET_CLASS(camera);
+
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->start_readout != NULL);
+
+    g_static_mutex_lock (&mutex);
 
     if (camera->priv->is_recording) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                "Camera is still recording");
-        return;
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                     "Camera is still recording");
+    }
+    else {
+        GError *tmp_error = NULL;
+
+        (*klass->start_readout) (camera, &tmp_error);
+
+        if (tmp_error == NULL) {
+            camera->priv->is_readout = TRUE;
+            /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
+            g_object_notify (G_OBJECT (camera), "is-readout");
+        }
+        else
+            g_propagate_error (error, tmp_error);
     }
 
-    GError *tmp_error = NULL;
-    (*klass->start_readout)(camera, &tmp_error);
-
-    if (tmp_error == NULL) {
-        camera->priv->is_readout = TRUE;
-        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-        g_object_notify(G_OBJECT(camera), "is-readout");
-    }
-    else
-        g_propagate_error(error, tmp_error);
+    g_static_mutex_unlock (&mutex);
 }
 
 /**
@@ -473,22 +501,27 @@ void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointe
  * You must have called uca_camera_start_recording() before, otherwise you will
  * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
  */
-void uca_camera_trigger(UcaCamera *camera, GError **error)
+void
+uca_camera_trigger (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA (camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->trigger != NULL);
+    klass = UCA_CAMERA_GET_CLASS (camera);
 
-    if (!camera->priv->is_recording) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
-                "Camera is not recording");
-        return;
-    }
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->trigger != NULL);
 
-    (*klass->trigger)(camera, error);
+    g_static_mutex_lock (&mutex);
+
+    if (!camera->priv->is_recording)
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is not recording");
+    else
+        (*klass->trigger) (camera, error);
+
+    g_static_mutex_unlock (&mutex);
 }
 
 /**
@@ -505,22 +538,27 @@ void uca_camera_trigger(UcaCamera *camera, GError **error)
  * You must have called uca_camera_start_recording() before, otherwise you will
  * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
  */
-void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+void
+uca_camera_grab (UcaCamera *camera, gpointer *data, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA(camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->grab != NULL);
-    g_return_if_fail(data != NULL);
+    klass = UCA_CAMERA_GET_CLASS (camera);
 
-    if (!camera->priv->is_recording && !camera->priv->is_readout) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
-                "Camera is neither recording nor in readout mode");
-        return;
-    }
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->grab != NULL);
+    g_return_if_fail (data != NULL);
 
-    (*klass->grab)(camera, data, error);
+    g_static_mutex_lock (&mutex);
+
+    if (!camera->priv->is_recording && !camera->priv->is_readout)
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is neither recording nor in readout mode");
+    else
+        (*klass->grab) (camera, data, error);
+
+    g_static_mutex_unlock (&mutex);
 }
 
