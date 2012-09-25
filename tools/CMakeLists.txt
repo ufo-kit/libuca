@@ -16,9 +16,21 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     )
 
-add_executable(gen-doc gen-doc.c)
+set(libs uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 
-target_link_libraries(gen-doc uca 
-    ${GLIB2_LIBRARIES}
-    ${GOBJECT2_LIBRARIES}
-    )
+add_executable(gen-doc gen-doc.c)
+target_link_libraries(gen-doc ${libs})
+
+add_executable(grab grab.c)
+target_link_libraries(grab ${libs})
+
+add_executable(grab-async grab-async.c)
+target_link_libraries(grab-async ${libs})
+
+add_executable(benchmark benchmark.c)
+target_link_libraries(benchmark ${libs})
+
+add_executable(perf perf-overhead.c)
+target_link_libraries(perf ${libs})
+
+add_subdirectory(gui)

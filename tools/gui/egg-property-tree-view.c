@@ -111,4 +111,3 @@ egg_property_tree_view_init (EggPropertyTreeView *tree_view)
     tree_view->priv = priv = EGG_PROPERTY_TREE_VIEW_GET_PRIVATE (tree_view);
     priv->list_store = gtk_list_store_new (N_COLUMNS, G_TYPE_STRING, G_TYPE_BOOLEAN, GTK_TYPE_ADJUSTMENT);
 }
-

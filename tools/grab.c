@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
     g_free(name);
 
     g_print("Sensor: %ix%i px\n", sensor_width, sensor_height);
-    g_print("ROI: %ix%i @ (%i, %i), steps: %i, %i\n", 
+    g_print("ROI: %ix%i @ (%i, %i), steps: %i, %i\n",
             roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier);
 
     const int pixel_size = bits == 8 ? 1 : 2;

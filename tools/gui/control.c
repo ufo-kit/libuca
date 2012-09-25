@@ -55,7 +55,7 @@ enum {
     COLUMN_EDITABLE,
     NUM_COLUMNS
 };
-    
+
 static UcaPluginManager *plugin_manager;
 
 static void
