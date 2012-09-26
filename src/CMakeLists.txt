@@ -174,7 +174,7 @@ add_library(uca SHARED
 
 set_target_properties(uca PROPERTIES
       VERSION ${UCA_ABI_VERSION}
-      SOVERSION ${UCA_VERSION_MINOR})
+      SOVERSION ${UCA_VERSION_MAJOR})
 
 target_link_libraries(uca
     ${uca_LIBS})
