@@ -1,0 +1,22 @@
+#!/bin/bash
+
+FROM=$1
+TO=$2
+OUTPUT=$3
+
+echo "## Changes from $FROM to $TO
+" >> tmp
+git log --pretty=format:'* [%h](http://ufo.kit.edu/repos/libuca.git/commit/?id=%h): %s' $FROM..$TO >> tmp
+
+echo "
+" >> tmp
+
+if [ -f "$OUTPUT" ]
+then
+    cat tmp $OUTPUT > tmp_md
+    rm $OUTPUT
+    mv tmp_md $OUTPUT
+    rm tmp
+else
+    mv tmp $OUTPUT
+fi

@@ -442,3 +442,6 @@ grabbing time:
 # The GObject Tango device
 
 [TODO: Get more information from Volker Kaiser and/or Mihael Koep]
+
+
+# Changes
