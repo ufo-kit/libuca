@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+project(uca C)
 
 # --- Set sources -------------------------------------------------------------
 set(uca_SRCS
@@ -10,147 +11,15 @@ set(uca_HDRS
     uca-camera.h
     uca-plugin-manager.h)
 
-set(cameras)
-
-set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
-
-# --- Find packages and libraries ---------------------------------------------
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-
-# --- Find camera interfaces
-find_package(PCO)
-find_package(PF)
-find_package(IPE)
-find_package(Pylon)
-
-# --- Find frame grabber interfaces
-find_package(FgLib5)
-find_package(ClSerMe4)
-
-# --- Miscellanous packages
-find_package(PkgConfig)
-find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
-pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
-pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
-pkg_check_modules(GMODULE2 gmodule-2.0>=2.24 REQUIRED)
-
-include_directories(
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/cameras
-    ${GLIB2_INCLUDE_DIRS}
-    ${GOBJECT2_INCLUDE_DIRS})
-
-# --- Configure step
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
-    ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
-set(uca_LIBS
-    ${GLIB2_LIBRARIES}
-    ${GOBJECT2_LIBRARIES}
-    ${GMODULE2_LIBRARIES})
-
-set(uca_enum_hdrs uca-camera.h)
-
-# --- Build options -----------------------------------------------------------
-option(HAVE_MOCK_CAMERA "Camera: Dummy" ON)
-
-
-# --- Add sources if camera/framegrabber access sources are available ---------
-if (PF_FOUND)
-    option(HAVE_PHOTON_FOCUS "Camera: Photon Focus MV2-D1280-640-CL-8" ON)
-
-    if (HAVE_PHOTON_FOCUS AND CLSERME4_FOUND AND FGLIB5_FOUND)
-        list(APPEND uca_enum_hdrs cameras/uca-pf-camera.h)
-
-        include_directories(
-            ${PF_INCLUDE_DIRS}
-            ${CLSERME4_INCLUDE_DIR}
-            ${FGLIB5_INCLUDE_DIR})
-
-        add_library(ucapf SHARED cameras/uca-pf-camera.c)
-
-        target_link_libraries(ucapf
-            ${uca_LIBS}
-            ${CLSERME4_LIBRARY}
-            ${FGLIB5_LIBRARY}
-            ${PF_LIBRARIES})
-    endif()
-endif()
-
-if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
-    option(HAVE_PCO_CL "Camera: CameraLink-based pco" ON)
-
-    if (HAVE_PCO_CL)
-        list(APPEND uca_enum_hdrs cameras/uca-pco-camera.h)
-
-        include_directories(
-            ${PCO_INCLUDE_DIRS}
-            ${CLSERME4_INCLUDE_DIR}
-            ${FGLIB5_INCLUDE_DIR})
-
-        add_library(ucapco SHARED cameras/uca-pco-camera.c)
-
-        target_link_libraries(ucapco
-            ${uca_LIBS}
-            ${PCO_LIBRARIES}
-            ${CLSERME4_LIBRARY}
-            ${FGLIB5_LIBRARY})
-
-        install(TARGETS ucapco
-            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca)
-    endif()
-endif()
-
-if (IPE_FOUND)
-    option(HAVE_UFO_CAMERA "Camera: Custom based on Xilinx FPGA" ON)
-
-    if (HAVE_UFO_CAMERA)
-        list(APPEND uca_enum_hdrs cameras/uca-ufo-camera.h)
-
-        include_directories(${IPE_INCLUDE_DIRS})
-
-        add_library(ucaufo SHARED cameras/uca-ufo-camera.c)
-        target_link_libraries(ucaufo
-            ${uca_LIBS}
-            ${IPE_LIBRARIES}
-            )
-
-        install(TARGETS ucaufo
-            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca)
-    endif()
-endif()
-
-if (PYLON_FOUND)
-  option(HAVE_PYLON_CAMERA "Camera: Pylon based (Basler)" ON)
-
-  if (HAVE_PYLON_CAMERA)
-        list(APPEND uca_SRCS cameras/uca-pylon-camera.c)
-        list(APPEND uca_HDRS cameras/uca-pylon-camera.h)
-        list(APPEND cameras "Pylon")
-        set(uca_LIBS ${uca_LIBS} ${LIBPYLONCAM_LIBRARIES})
-
-        include_directories(${LIBPYLONCAM_INCLUDEDIR})
-        link_directories(${LIBPYLONCAM_LIBDIR})
-  endif()
-
-endif()
-
-if (HAVE_MOCK_CAMERA)
-    add_library(ucamock SHARED cameras/uca-mock-camera.c)
-    install(TARGETS ucamock
-        LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca)
-endif()
-
 # --- Generate enum file
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
     COMMAND ${GLIB2_MKENUMS}
     ARGS
         --template uca-enums.h.template
-        ${uca_enum_hdrs} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
+        ${UCA_ENUM_HDRS} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${uca_enum_hdrs}
+    DEPENDS ${UCA_ENUM_HDRS}
             ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums.h.template)
 
 add_custom_command(
@@ -158,15 +27,34 @@ add_custom_command(
     COMMAND ${GLIB2_MKENUMS}
     ARGS
         --template uca-enums.c.template
-        ${uca_enum_hdrs} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c
+        ${UCA_ENUM_HDRS} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${uca_enum_hdrs}
+    DEPENDS ${UCA_ENUM_HDRS}
             ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
             ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums.c.template
     )
 
+
+# --- Configure ---------------------------------------------------------------
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
+set(prefix      ${CMAKE_INSTALL_PREFIX})
+if (CI_INSTALL_PREFIX)
+    set(prefix  ${CI_INSTALL_PREFIX})
+endif()
+
+set(exec_prefix "\${prefix}")
+set(libdir      ${prefix}/${LIB_INSTALL_DIR})
+set(includedir  "\${prefix}/include")
+set(VERSION     ${UCA_VERSION_STRING})
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uca.pc.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/uca.pc" @ONLY IMMEDIATE)
+
+
 # --- Build target ------------------------------------------------------------
-add_definitions("-std=c99 -Wall")
 
 add_library(uca SHARED
     ${uca_SRCS}
@@ -176,8 +64,8 @@ set_target_properties(uca PROPERTIES
       VERSION ${UCA_ABI_VERSION}
       SOVERSION ${UCA_VERSION_MAJOR})
 
-target_link_libraries(uca
-    ${uca_LIBS})
+target_link_libraries(uca ${UCA_DEPS})
+
 
 # --- Build documentation -----------------------------------------------------
 pkg_check_modules(GTK_DOC gtk-doc)
@@ -269,36 +157,25 @@ endif()
 
 
 # --- Install target ----------------------------------------------------------
-set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
 
 install(TARGETS uca
-    LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+        LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+        COMPONENT libraries)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc
+        DESTINATION lib/pkgconfig
+        COMPONENT libraries)
 
 install(FILES ${uca_HDRS}
-    DESTINATION include/uca)
+        DESTINATION include/uca
+        COMPONENT headers)
 
-# --- install pkg-config file
-set(prefix      ${CMAKE_INSTALL_PREFIX})
-if (CI_INSTALL_PREFIX)
-    set(prefix  ${CI_INSTALL_PREFIX})
-endif()
 
-set(exec_prefix "\${prefix}")
-set(libdir      ${prefix}/${LIB_INSTALL_DIR})
-set(includedir  "\${prefix}/include")
-set(VERSION     ${UCA_VERSION_STRING})
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uca.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/uca.pc" @ONLY IMMEDIATE)
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc DESTINATION lib/pkgconfig)
-
+# --- Generate package description --------------------------------------------
 
 set(CPACK_PACKAGE_DESCRIPTION "Unified Camera Access library")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Abstract interface for different camera classes and frame grabber devices")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GObject-based library for accessing scientific cameras")
 set(CPACK_PACKAGE_NAME "libuca")
-
-# --- Distro specific
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.3.6), libgcc1 (>= 1:4.1)")
 
 # this doesn't work when building RPMs on Jenkins
 set(CPACK_SET_DESTDIR ON)
@@ -310,13 +187,12 @@ set(CPACK_PACKAGE_VERSION_MINOR ${UCA_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${UCA_VERSION_PATCH})
 set(VERSION ${UCA_VERSION_STRING})
 
-set(CPACK_GENERATOR "DEB;RPM;")
+set(CPACK_GENERATOR "RPM;")
+
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_SOURCE_IGNORE_FILES ".git" "tags" ".bzr" ".swp")
 set(CPACK_SOURCE_PACKAGE_FILE_NAME "libuca-${UCA_VERSION_STRING}" CACHE INTERNAL "tarball basename")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${UCA_VERSION_STRING}-${CMAKE_SYSTEM_PROCESSOR}")
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../libuca.spec.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/../libuca.spec" @ONLY IMMEDIATE)
 
 include(CPack)
