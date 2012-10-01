@@ -13,6 +13,7 @@ FIND_PATH(CLSERME4_INCLUDE_DIR clser.h
 	${SISODIR4}/include
 	${SISODIRME4}/include
 	${CMAKE_INSTALL_PREFIX}/include
+    "/opt/siso/include"
 )
 
 INCLUDE(SisoLibDir)
@@ -26,6 +27,7 @@ FIND_LIBRARY(CLSERME4_LIBRARY NAMES clserme4 clsersisome4
 	$ENV{CLSERME4}
 	${LIB_DIRS}
 	${CMAKE_INSTALL_PREFIX}/lib
+    "/opt/siso/lib"
 )
 
 IF(CLSERME4_INCLUDE_DIR AND CLSERME4_LIBRARY)
