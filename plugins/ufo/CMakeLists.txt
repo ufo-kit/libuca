@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(ucaufo)
+project(ucaufo C)
 
 find_package(IPE)
 

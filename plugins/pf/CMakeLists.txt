@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(ucapf)
+project(ucapf C)
 
 find_package(PF)
 find_package(FgLib5)

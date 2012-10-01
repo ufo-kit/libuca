@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
-project(ucapylon)
+project(ucapylon C)
 
-find_package(Pylon)
 
 if (PYLON_FOUND)
     set(UCA_CAMERA_NAME "pylon")

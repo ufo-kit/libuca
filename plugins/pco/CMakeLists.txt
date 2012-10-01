@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(ucapco)
+project(ucapco C)
 
 find_package(PCO)
 find_package(FgLib5)
