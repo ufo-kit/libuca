@@ -12,7 +12,18 @@ Before installing `libuca` itself, you should install any drivers and SDKs
 needed to access the cameras you want to access through `libuca`. Now you have
 two options: install pre-built packages or build from source.
 
-## Building from source
+### Installing packages
+
+Packages for the core library and all plugins are currently provided for
+openSUSE. To install them run `zypper`:
+
+    sudo zypper in libuca-x.y.z-x86_64.rpm
+    sudo zypper in uca-plugin-*.rpm
+
+To install development files such as headers, you have to install the
+`libuca-x.y.z-devel.rpm` package.
+
+### Building from source
 
 Building the library and installing from source is simple and straightforward.
 Make sure you have
@@ -38,7 +49,8 @@ repository][repo], you also need Git:
 
 [repo]: http://ufo.kit.edu/repos/libuca.git/
 
-### Fetching the sources
+
+#### Fetching the sources
 
 Untar the distribution
 
@@ -54,7 +66,7 @@ and create a new, empty build directory inside:
     mkdir build
 
 
-### Configuring and building
+#### Configuring and building
 
 Now you need to create the Makefile with CMake. Go into the build directory and
 point CMake to the `libuca` top-level directory:
@@ -86,7 +98,7 @@ latter that 64 should be appended to any library paths. This is necessary on
 Linux distributions that expect 64-bit libraries in `/usr[/local]/lib64`.
 
 
-### Building this manual
+#### Building this manual
 
 Make sure you have [Pandoc][] installed. With Debian/Ubuntu this can be achieved
 with
@@ -366,6 +378,37 @@ setup_async (UcaCamera *camera)
      */
 }
 ~~~
+
+
+# Bindings
+
+Since version 1.1, libuca generates GObject introspection meta data if
+`g-ir-scanner` and `g-ir-compiler` can be found. When the XML description
+`Uca-x.y.gir` and the typelib `Uca-x.y.typelib` are installed, GI-aware
+languages can access libuca and create and modify cameras, for example in
+Python:
+
+~~~ {.python}
+from gi.repository import Uca
+
+pm = Uca.PluginManager()
+
+# List all cameras
+print(pm.get_available_cameras())
+
+# Load a camera
+cam = pm.get_camera('pco')
+
+# You can read and write properties in two ways
+cam.set_properties(exposure_time=0.05)
+cam.props.roi_width = 1024
+~~~
+
+Note, that the naming of classes and properties depends on the GI implementation
+of the target language. For example with Python, the namespace prefix `uca_`
+becomes the module name `Uca` and dashes separating property names become
+underscores.
+
 
 # Integrating new cameras
 
