@@ -110,24 +110,31 @@ struct _UcaCameraClass {
     GObjectClass parent;
 
     void (*start_recording) (UcaCamera *camera, GError **error);
-    void (*stop_recording) (UcaCamera *camera, GError **error);
-    void (*start_readout) (UcaCamera *camera, GError **error);
-    void (*trigger) (UcaCamera *camera, GError **error);
-    void (*grab) (UcaCamera *camera, gpointer *data, GError **error);
+    void (*stop_recording)  (UcaCamera *camera, GError **error);
+    void (*start_readout)   (UcaCamera *camera, GError **error);
+    void (*trigger)         (UcaCamera *camera, GError **error);
+    void (*grab)            (UcaCamera *camera, gpointer *data, GError **error);
 
     void (*recording_started) (UcaCamera *camera);
     void (*recording_stopped) (UcaCamera *camera);
 };
 
-gchar **uca_camera_get_types();
-UcaCamera *uca_camera_new(const gchar *type, GError **error);
-
-void uca_camera_start_recording(UcaCamera *camera, GError **error);
-void uca_camera_stop_recording(UcaCamera *camera, GError **error);
-void uca_camera_start_readout(UcaCamera *camera, GError **error);
-void uca_camera_trigger(UcaCamera *camera, GError **error);
-void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error);
-void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data);
+UcaCamera * uca_camera_new              (const gchar        *type,
+                                         GError            **error);
+void        uca_camera_start_recording  (UcaCamera          *camera,
+                                         GError            **error);
+void        uca_camera_stop_recording   (UcaCamera          *camera,
+                                         GError            **error);
+void        uca_camera_start_readout    (UcaCamera          *camera,
+                                         GError            **error);
+void        uca_camera_trigger          (UcaCamera          *camera,
+                                         GError            **error);
+void        uca_camera_grab             (UcaCamera          *camera,
+                                         gpointer           *data,
+                                         GError            **error);
+void        uca_camera_set_grab_func    (UcaCamera          *camera,
+                                         UcaCameraGrabFunc   func,
+                                         gpointer            user_data);
 
 GType uca_camera_get_type(void);
 
