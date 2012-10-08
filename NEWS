@@ -18,6 +18,12 @@ looks in pre- and user-defined directories for DSOs that match
 The plugin manager adds a dependency on GModule (pkg-config package
 `gmodule-2.0`) that is part of GLib.
 
+Minor changes
+-------------
+
+- It is now possible to generate GObject introspection meta data to bind libuca
+  to all languages that support GObject introspection.
+
 
 Changes in libuca 1.0 aka 0.6
 =============================
@@ -33,7 +39,6 @@ Most of the ideas and approaches of libuca 0.5 have been transfered. However,
 instead of trying to initialize each camera first and having the user decide
 what to use, the user must now determine the used camera at compile time or use
 the factory pattern to delegate this to run-time. 
-
 
 Tango Wrapper
 -------------
