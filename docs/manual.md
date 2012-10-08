@@ -247,8 +247,10 @@ The following cameras are supported:
 
 ## Property documentation
 
+* [Basic camera properties][base-doc]
 * [mock][mock-doc]
 
+[base-doc]: base.html
 [mock-doc]: mock.html
 
 

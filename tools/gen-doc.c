@@ -124,25 +124,29 @@ int main(int argc, char *argv[])
 {
     UcaPluginManager *manager;
     UcaCamera *camera;
+    gchar *name;
     GError *error = NULL;
 
     g_type_init();
+    manager = uca_plugin_manager_new ();
 
     if (argc < 2) {
+        name = g_strdup ("Basic camera");
+        camera = g_object_new (UCA_TYPE_CAMERA, NULL);
+    }
+    else {
+        name = argv[1];
+        camera = uca_plugin_manager_new_camera (manager, name, &error);
+    }
+
+    if (camera == NULL) {
+        g_print("Error during initialization: %s\n", error->message);
         print_usage();
         return 1;
     }
 
-    manager = uca_plugin_manager_new ();
-    camera = uca_plugin_manager_new_camera (manager, argv[1], &error);
-
-    if (camera == NULL) {
-        g_print("Error during initialization: %s\n", error->message);
-        return 1;
-    }
-
-    g_print (html_header, argv[1]);
-    g_print ("<div id=\"header\"><h1 class=\"title\">Property documentation of %s</h1>", argv[1]);
+    g_print (html_header, name);
+    g_print ("<div id=\"header\"><h1 class=\"title\">Property documentation of %s</h1>", name);
     print_properties (camera);
     g_print ("%s\n", html_footer);
 
