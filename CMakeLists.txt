@@ -33,6 +33,7 @@ set(UCA_ENUM_HDRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/uca-camera.h
     ${CMAKE_CURRENT_SOURCE_DIR}/plugins/pco/uca-pco-camera.h)
 
+
 # ---  Common configuration ---------------------------------------------------
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in

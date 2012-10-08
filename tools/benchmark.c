@@ -250,7 +250,7 @@ main (int argc, char *argv[])
     g_log_set_handler (NULL, G_LOG_LEVEL_MASK, log_handler, log_channel);
 
     manager = uca_plugin_manager_new ();
-    camera = uca_plugin_manager_new_camera (manager, argv[1], &error);
+    camera = uca_plugin_manager_get_camera (manager, argv[1], &error);
 
     if (camera == NULL) {
         g_error ("Initialization: %s", error->message);

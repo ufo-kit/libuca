@@ -207,7 +207,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     static ThreadData td;
 
     GError *error = NULL;
-    UcaCamera *camera = uca_plugin_manager_new_camera (plugin_manager, camera_name, &error);
+    UcaCamera *camera = uca_plugin_manager_get_camera (plugin_manager, camera_name, &error);
 
     if ((camera == NULL) || (error != NULL)) {
         g_error ("%s\n", error->message);

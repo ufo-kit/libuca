@@ -49,9 +49,7 @@ uca_plugin_manager_error_quark (void)
  * uca_plugin_manager_new:
  * @config: (allow-none): A #UcaConfiguration object or %NULL.
  *
- * Create a plugin manager object to instantiate filter objects. When a config
- * object is passed to the constructor, its search-path property is added to the
- * internal search paths.
+ * Create a plugin manager object to instantiate camera objects.
  *
  * Return value: A new plugin manager object.
  */
@@ -147,9 +145,10 @@ list_free_full (GList *list)
  *
  * @manager: A #UcaPluginManager
  *
- * Return: A list with strings of available camera names. You have to free the
- * individual strings with g_list_foreach(list, (GFunc) g_free, NULL) and the
- * list itself with g_list_free.
+ * Returns: (element-type utf8) (transfer full): A list with strings of
+ * available camera names. You have to free the individual strings with
+ * g_list_foreach(list, (GFunc) g_free, NULL) and the list itself with
+ * g_list_free.
  */
 GList *
 uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
@@ -201,7 +200,7 @@ find_camera_module_path (GList *search_paths, const gchar *name)
  * @error: Location for a #GError
  */
 UcaCamera *
-uca_plugin_manager_new_camera (UcaPluginManager   *manager,
+uca_plugin_manager_get_camera (UcaPluginManager   *manager,
                                const gchar        *name,
                                GError            **error)
 {

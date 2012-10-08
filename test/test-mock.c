@@ -16,7 +16,7 @@ fixture_setup (Fixture *fixture, gconstpointer data)
     fixture->manager = uca_plugin_manager_new ();
     uca_plugin_manager_add_path (fixture->manager, "./src");
 
-    fixture->camera = uca_plugin_manager_new_camera (fixture->manager, "mock", &error);
+    fixture->camera = uca_plugin_manager_get_camera (fixture->manager, "mock", &error);
     g_assert (error == NULL);
     g_assert (fixture->camera);
 }
@@ -39,7 +39,7 @@ static void
 test_factory (Fixture *fixture, gconstpointer data)
 {
     GError *error = NULL;
-    UcaCamera *camera = uca_plugin_manager_new_camera (fixture->manager, "fox994m3a0yxmy", &error);
+    UcaCamera *camera = uca_plugin_manager_get_camera (fixture->manager, "fox994m3a0yxmy", &error);
     g_assert_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_NOT_FOUND);
     g_assert (camera == NULL);
 }

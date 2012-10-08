@@ -13,7 +13,7 @@ looks in pre- and user-defined directories for DSOs that match
     UcaCamera *camera;
 
     manager = uca_plugin_manager_new ();
-    camera = uca_plugin_manager_new_camera (manager, "foo", &error);
+    camera = uca_plugin_manager_get_camera (manager, "foo", &error);
 
 The plugin manager adds a dependency on GModule (pkg-config package
 `gmodule-2.0`) that is part of GLib.

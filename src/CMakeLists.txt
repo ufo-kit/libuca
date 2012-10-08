@@ -37,6 +37,9 @@ add_custom_command(
 
 # --- Configure ---------------------------------------------------------------
 
+find_program(INTROSPECTION_SCANNER "g-ir-scanner")
+find_program(INTROSPECTION_COMPILER "g-ir-compiler")
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
@@ -67,7 +70,51 @@ set_target_properties(uca PROPERTIES
 target_link_libraries(uca ${UCA_DEPS})
 
 
+# --- Build introspection files -----------------------------------------------
+
+if (INTROSPECTION_SCANNER AND INTROSPECTION_COMPILER)
+    option(WITH_GIR "Build introspection files" ON)
+
+    if (WITH_GIR)
+        set(GIR_PREFIX "Uca-${UCA_ABI_VERSION}")
+        set(GIR_XML "${GIR_PREFIX}.gir")
+        set(GIR_TYPELIB "${GIR_PREFIX}.typelib")
+        set(_gir_input)
+
+        foreach(_src ${uca_SRCS} ${uca_HDRS})
+            list(APPEND _gir_input "${CMAKE_CURRENT_SOURCE_DIR}/${_src}")
+        endforeach()
+
+        add_custom_command(OUTPUT ${GIR_XML}
+            COMMAND ${INTROSPECTION_SCANNER}
+                    --namespace=Uca
+                    --nsversion=${UCA_ABI_VERSION}
+                    --library=uca
+                    --no-libtool
+                    --include=GObject-2.0
+                    --include=GModule-2.0
+                    --output ${GIR_XML}
+                    --warn-all
+                    ${_gir_input}
+            DEPENDS ${uca_SRCS}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+        add_custom_command(OUTPUT ${GIR_TYPELIB}
+            COMMAND ${INTROSPECTION_COMPILER}
+                    -o ${GIR_TYPELIB}
+                    ${GIR_XML}
+            DEPENDS ${GIR_XML}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+        add_custom_target(gir ALL DEPENDS ${GIR_XML} ${GIR_TYPELIB})
+        add_dependencies(gir uca)
+
+    endif()
+endif()
+
+
 # --- Build documentation -----------------------------------------------------
+
 pkg_check_modules(GTK_DOC gtk-doc)
 
 if(GTK_DOC_FOUND)
@@ -169,6 +216,16 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc
 install(FILES ${uca_HDRS}
         DESTINATION include/uca
         COMPONENT headers)
+
+if(WITH_GIR)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${GIR_XML}
+            DESTINATION share/gir-1.0
+            COMPONENT libraries)
+
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${GIR_TYPELIB}
+            DESTINATION ${LIB_INSTALL_DIR}/girepository-1.0
+            COMPONENT libraries)
+endif()
 
 
 # --- Generate package description --------------------------------------------

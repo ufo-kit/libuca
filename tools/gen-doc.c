@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
     }
     else {
         name = argv[1];
-        camera = uca_plugin_manager_new_camera (manager, name, &error);
+        camera = uca_plugin_manager_get_camera (manager, name, &error);
     }
 
     if (camera == NULL) {
