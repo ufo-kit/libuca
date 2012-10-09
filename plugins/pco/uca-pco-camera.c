@@ -77,6 +77,7 @@ G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
  * @UCA_PCO_CAMERA_TIMESTAMP_BINARY: Embed a BCD-coded timestamp in the first
  *     bytes
  * @UCA_PCO_CAMERA_TIMESTAMP_ASCII: Embed a visible ASCII timestamp in the image
+ * @UCA_PCO_CAMERA_TIMESTAMP_BOTH: Embed both types of timestamps
  */
 
 /**
@@ -769,13 +770,14 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
 
         case PROP_TIMESTAMP_MODE:
             {
-                guint16 modes[] = {
-                    TIMESTAMP_MODE_OFF,             /* 0 */
-                    TIMESTAMP_MODE_BINARY,          /* 1 = 1 << 0 */
-                    TIMESTAMP_MODE_ASCII,           /* 2 = 1 << 1 */
-                    TIMESTAMP_MODE_BINARYANDASCII,  /* 3 = 1 << 0 | 1 << 1 */
+                guint16 table[] = {
+                    TIMESTAMP_MODE_OFF,
+                    TIMESTAMP_MODE_BINARY,
+                    TIMESTAMP_MODE_BINARYANDASCII,
+                    TIMESTAMP_MODE_ASCII,
                 };
-                pco_set_timestamp_mode(priv->pco, modes[g_value_get_flags(value)]);
+
+                pco_set_timestamp_mode(priv->pco, table[g_value_get_flags(value)]);
             }
             break;
 
@@ -1055,23 +1057,15 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
         case PROP_TIMESTAMP_MODE:
             {
                 guint16 mode;
-                pco_get_timestamp_mode(priv->pco, &mode);
+                UcaPcoCameraTimestamp table[] = {
+                    UCA_PCO_CAMERA_TIMESTAMP_NONE,
+                    UCA_PCO_CAMERA_TIMESTAMP_BINARY,
+                    UCA_PCO_CAMERA_TIMESTAMP_BOTH,
+                    UCA_PCO_CAMERA_TIMESTAMP_ASCII
+                };
 
-                switch (mode) {
-                    case TIMESTAMP_MODE_OFF:
-                        g_value_set_flags(value, UCA_PCO_CAMERA_TIMESTAMP_NONE);
-                        break;
-                    case TIMESTAMP_MODE_BINARY:
-                        g_value_set_flags(value, UCA_PCO_CAMERA_TIMESTAMP_BINARY);
-                        break;
-                    case TIMESTAMP_MODE_BINARYANDASCII:
-                        g_value_set_flags(value,
-                                UCA_PCO_CAMERA_TIMESTAMP_BINARY | UCA_PCO_CAMERA_TIMESTAMP_ASCII);
-                        break;
-                    case TIMESTAMP_MODE_ASCII:
-                        g_value_set_flags(value, UCA_PCO_CAMERA_TIMESTAMP_ASCII);
-                        break;
-                }
+                pco_get_timestamp_mode(priv->pco, &mode);
+                g_value_set_enum (value, table[mode]);
             }
             break;
 
@@ -1280,7 +1274,7 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             G_PARAM_READABLE);
 
     pco_properties[PROP_TIMESTAMP_MODE] =
-        g_param_spec_flags("timestamp-mode",
+        g_param_spec_enum("timestamp-mode",
             "Timestamp mode",
             "Timestamp mode",
             UCA_TYPE_PCO_CAMERA_TIMESTAMP, UCA_PCO_CAMERA_TIMESTAMP_NONE,
