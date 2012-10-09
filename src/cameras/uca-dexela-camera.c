@@ -64,7 +64,7 @@ static gint base_overrideables[] = {
 
 static GParamSpec *dexela_properties[N_PROPERTIES] = { NULL, };
 
-static const gdouble MICROS_TO_SECONDS_FACTOR = 10e6d;
+static const gdouble MICROS_TO_SECONDS_FACTOR = 1e6d;
 
 struct _UcaDexelaCameraPrivate {
     GValueArray *binnings;
@@ -268,7 +268,7 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
         case PROP_EXPOSURE_TIME:
         {
             const gdouble exposureTimeInSeconds = g_value_get_double(value);
-            dexela_set_exposure_time_micros(exposureTimeInSeconds * MICROS_TO_SECONDS_FACTOR);
+            dexela_set_exposure_time_micros((gint) (exposureTimeInSeconds * MICROS_TO_SECONDS_FACTOR));
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -342,12 +342,10 @@ static void uca_dexela_camera_grab(UcaCamera *camera, gpointer *data, GError **e
     g_debug("grab called");
     g_return_if_fail(UCA_IS_DEXELA_CAMERA(camera));
     UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
-    g_debug("Data-pointer: %p, %p", data, *data);
     if (*data == NULL) {
         g_debug("Allocating buffer");
         *data = g_malloc0(priv->width * priv->height * priv->num_bytes);
     }
-    // TODO: fetch image from libdexela
     // TODO: copy to the data buffer
     memcpy((gchar *) *data, dexela_grab(), priv->width * priv->height * priv->num_bytes);
 }
