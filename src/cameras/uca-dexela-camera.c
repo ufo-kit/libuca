@@ -35,6 +35,7 @@ GQuark uca_dexela_camera_error_quark()
 
 enum {
     PROP_GAIN_MODE = N_BASE_PROPERTIES,
+    PROP_TEST_MODE,
     N_PROPERTIES
 };
 
@@ -241,6 +242,11 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
             g_value_set_uint(value, dexela_get_gain());
             break;
         }
+        case PROP_TEST_MODE:
+        {
+            g_value_set_boolean(value, dexela_get_control_register() & 1);
+            break;
+        }
         case PROP_TRIGGER_MODE:
         {
             map_dexela_trigger_mode_to_uca(value, dexela_get_trigger_mode());
@@ -297,6 +303,15 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 return;
             }
             g_warning("Illegal attempt to set gain: %d", gain);
+            break;
+        }
+        case PROP_TEST_MODE:
+        {
+            if (g_value_get_boolean(value)) {
+                dexela_set_control_register(dexela_get_control_register() | 1);
+                return;
+            }
+            dexela_set_control_register(dexela_get_control_register() & 0xFFFE);
             break;
         }
         case PROP_TRIGGER_MODE:
@@ -365,6 +380,11 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
             "High or Low Full Well",
             "High (1) or Low (0) Full Well",
             0, 1, 0, G_PARAM_READWRITE);
+    dexela_properties[PROP_TEST_MODE] = 
+        g_param_spec_boolean("test-mode",
+            "Enable or disable test mode",
+            "Enable (true) or disable (false) test mode",
+            FALSE, G_PARAM_READWRITE);
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++) {
         g_object_class_install_property(gobject_class, id, dexela_properties[id]);
     }
