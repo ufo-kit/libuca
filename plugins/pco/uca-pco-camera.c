@@ -129,6 +129,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_EXPOSURE_TIME,
+    PROP_FRAMES_PER_SECOND,
     PROP_TRIGGER_MODE,
     PROP_ROI_X,
     PROP_ROI_Y,
@@ -208,7 +209,8 @@ static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
     return NULL;
 }
 
-static guint fill_binnings(UcaPcoCameraPrivate *priv)
+static guint
+fill_binnings(UcaPcoCameraPrivate *priv)
 {
     uint16_t *horizontal = NULL;
     uint16_t *vertical = NULL;
@@ -241,7 +243,8 @@ static guint fill_binnings(UcaPcoCameraPrivate *priv)
     return err;
 }
 
-static void fill_pixelrates(UcaPcoCameraPrivate *priv, guint32 rates[4], gint num_rates)
+static void
+fill_pixelrates(UcaPcoCameraPrivate *priv, guint32 rates[4], gint num_rates)
 {
     GValue val = {0};
     g_value_init(&val, G_TYPE_UINT);
@@ -253,7 +256,8 @@ static void fill_pixelrates(UcaPcoCameraPrivate *priv, guint32 rates[4], gint nu
     }
 }
 
-static guint override_temperature_range(UcaPcoCameraPrivate *priv)
+static guint
+override_temperature_range(UcaPcoCameraPrivate *priv)
 {
     int16_t default_temp, min_temp, max_temp;
     guint err = pco_get_cooling_range(priv->pco, &default_temp, &min_temp, &max_temp);
@@ -270,7 +274,8 @@ static guint override_temperature_range(UcaPcoCameraPrivate *priv)
     return err;
 }
 
-static void property_override_default_guint_value (GObjectClass *oclass, const gchar *property_name, guint new_default)
+static void
+property_override_default_guint_value (GObjectClass *oclass, const gchar *property_name, guint new_default)
 {
     GParamSpecUInt *pspec = G_PARAM_SPEC_UINT (g_object_class_find_property (oclass, property_name));
 
@@ -280,13 +285,15 @@ static void property_override_default_guint_value (GObjectClass *oclass, const g
         g_warning ("pspec for %s not found\n", property_name);
 }
 
-static void override_maximum_adcs(UcaPcoCameraPrivate *priv)
+static void
+override_maximum_adcs(UcaPcoCameraPrivate *priv)
 {
     GParamSpecInt *spec = (GParamSpecInt *) pco_properties[PROP_SENSOR_ADCS];
     spec->maximum = pco_get_maximum_number_of_adcs(priv->pco);
 }
 
-static gdouble convert_timebase(guint16 timebase)
+static gdouble
+convert_timebase(guint16 timebase)
 {
     switch (timebase) {
         case TIMEBASE_NS:
@@ -301,12 +308,14 @@ static gdouble convert_timebase(guint16 timebase)
     return 1e-3;
 }
 
-static void read_timebase(UcaPcoCameraPrivate *priv)
+static void
+read_timebase(UcaPcoCameraPrivate *priv)
 {
     pco_get_timebase(priv->pco, &priv->delay_timebase, &priv->exposure_timebase);
 }
 
-static gdouble get_suitable_timebase(gdouble time)
+static gdouble
+get_suitable_timebase(gdouble time)
 {
     if (time * 1e3 >= 1.0)
         return TIMEBASE_MS;
@@ -317,7 +326,24 @@ static gdouble get_suitable_timebase(gdouble time)
     return TIMEBASE_INVALID;
 }
 
-static int fg_callback(frameindex_t frame, struct fg_apc_data *apc)
+static gdouble
+get_internal_delay (UcaPcoCamera *camera)
+{
+    if (camera->priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD) {
+        gdouble sensor_rate;
+        g_object_get (camera, "sensor-rate", &sensor_rate, NULL);
+
+        if (sensor_rate == 55000000.0)
+            return 0.000079;
+        else if (sensor_rate == 62500000.0)
+            return 0.000069;
+    }
+
+    return 0.0;
+}
+
+static int
+fg_callback(frameindex_t frame, struct fg_apc_data *apc)
 {
     UcaCamera *camera = UCA_CAMERA(apc);
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
@@ -333,7 +359,8 @@ static int fg_callback(frameindex_t frame, struct fg_apc_data *apc)
     return 0;
 }
 
-static gboolean setup_fg_callback(UcaCamera *camera)
+static gboolean
+setup_fg_callback(UcaCamera *camera)
 {
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     struct FgApcControl ctrl;
@@ -353,7 +380,8 @@ static gboolean setup_fg_callback(UcaCamera *camera)
     return Fg_registerApcHandler(priv->fg, priv->fg_port, &ctrl, FG_APC_CONTROL_BASIC) == FG_OK;
 }
 
-static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
+static void
+uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     guint err = PCO_NOERROR;
@@ -451,7 +479,8 @@ static void uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
     FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
 
-static void uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
+static void
+uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
@@ -467,7 +496,8 @@ static void uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
         g_warning(" Unable to unblock all\n");
 }
 
-static void uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
+static void
+uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
@@ -486,7 +516,8 @@ static void uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
     priv->current_image = 1;
 }
 
-static void uca_pco_camera_trigger(UcaCamera *camera, GError **error)
+static void
+uca_pco_camera_trigger(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
@@ -500,7 +531,8 @@ static void uca_pco_camera_trigger(UcaCamera *camera, GError **error)
                 "Could not trigger frame acquisition");
 }
 
-static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static void
+uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     static const gint MAX_TIMEOUT = G_MAXINT;
 
@@ -543,7 +575,8 @@ static void uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
         memcpy((gchar *) *data, (gchar *) frame, priv->frame_width * priv->frame_height * priv->num_bytes);
 }
 
-static void uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+static void
+uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
 
@@ -621,6 +654,29 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
                     if (pco_set_exposure_time(priv->pco, timesteps) != PCO_NOERROR)
                         g_warning("Cannot set exposure time");
                 }
+            }
+            break;
+
+        case PROP_FRAMES_PER_SECOND:
+            {
+                gdouble n_frames_per_second;
+                gdouble exposure_time;
+                gdouble delay;
+
+                /*
+                 * We want to expose n frames in one second, each frame takes
+                 * exposure time + delay time. Thus we have
+                 *
+                 *   1s = n * (t_exp + t_delay) <=> t_exp = 1s/n - t_delay.
+                 */
+                delay = get_internal_delay (UCA_PCO_CAMERA (object));
+                n_frames_per_second = g_value_get_double (value);
+                exposure_time = 1.0 / n_frames_per_second - delay;
+
+                if (exposure_time <= 0.0)
+                    g_warning ("Too many frames per second requested.");
+                else
+                    g_object_set (object, "exposure-time", exposure_time, NULL);
             }
             break;
 
@@ -787,7 +843,8 @@ static void uca_pco_camera_set_property(GObject *object, guint property_id, cons
     }
 }
 
-static void uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+static void
+uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
 
@@ -889,6 +946,17 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
                     read_timebase(priv);
 
                 g_value_set_double(value, convert_timebase(priv->exposure_timebase) * exposure_time);
+            }
+            break;
+
+        case PROP_FRAMES_PER_SECOND:
+            {
+                gdouble exposure_time;
+                gdouble delay;
+
+                delay = get_internal_delay (UCA_PCO_CAMERA (object));
+                g_object_get (object, "exposure-time", &exposure_time, NULL);
+                g_value_set_double (value, 1.0 / (exposure_time + delay));
             }
             break;
 
@@ -1075,7 +1143,8 @@ static void uca_pco_camera_get_property(GObject *object, guint property_id, GVal
     }
 }
 
-static void uca_pco_camera_finalize(GObject *object)
+static void
+uca_pco_camera_finalize(GObject *object)
 {
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
 
@@ -1103,7 +1172,8 @@ static void uca_pco_camera_finalize(GObject *object)
     G_OBJECT_CLASS(uca_pco_camera_parent_class)->finalize(object);
 }
 
-static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
+static void
+uca_pco_camera_class_init(UcaPcoCameraClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_pco_camera_set_property;
@@ -1286,7 +1356,8 @@ static void uca_pco_camera_class_init(UcaPcoCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaPcoCameraPrivate));
 }
 
-static void uca_pco_camera_init(UcaPcoCamera *self)
+static void
+uca_pco_camera_init(UcaPcoCamera *self)
 {
     self->priv = UCA_PCO_CAMERA_GET_PRIVATE(self);
     self->priv->fg = NULL;

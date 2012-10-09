@@ -66,6 +66,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "sensor-max-frame-rate",
     "trigger-mode",
     "exposure-time",
+    "frames-per-second",
     "roi-x0",
     "roi-y0",
     "roi-width",
@@ -102,6 +103,15 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
             priv->transfer_async = g_value_get_boolean(value);
             break;
 
+        case PROP_FRAMES_PER_SECOND:
+            {
+                gdouble frames_per_second;
+
+                frames_per_second = g_value_get_double (value);
+                g_object_set (object, "exposure-time", 1. / frames_per_second, NULL);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
@@ -123,6 +133,15 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
 
         case PROP_TRANSFER_ASYNCHRONOUSLY:
             g_value_set_boolean(value, priv->transfer_async);
+            break;
+
+        case PROP_FRAMES_PER_SECOND:
+            {
+                gdouble exposure_time; 
+
+                g_object_get (object, "exposure-time", &exposure_time, NULL);
+                g_value_set_double (value, 1. / exposure_time);
+            }
             break;
 
         default:
@@ -264,6 +283,13 @@ uca_camera_class_init(UcaCameraClass *klass)
         g_param_spec_double(uca_camera_props[PROP_EXPOSURE_TIME],
             "Exposure time in seconds",
             "Exposure time in seconds",
+            0.0, G_MAXDOUBLE, 1.0,
+            G_PARAM_READWRITE);
+
+    camera_properties[PROP_FRAMES_PER_SECOND] =
+        g_param_spec_double(uca_camera_props[PROP_FRAMES_PER_SECOND],
+            "Frames per second",
+            "Frames per second",
             0.0, G_MAXDOUBLE, 1.0,
             G_PARAM_READWRITE);
 

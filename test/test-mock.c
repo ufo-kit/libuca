@@ -149,6 +149,26 @@ test_base_properties (Fixture *fixture, gconstpointer data)
 }
 
 static void
+test_fps_property (Fixture *fixture, gconstpointer data)
+{
+    gdouble frames_per_second;
+    gdouble exposure_time = 0.5;
+
+    g_object_set (G_OBJECT (fixture->camera),
+                  "exposure-time", exposure_time,
+                  NULL);
+    g_object_get (G_OBJECT (fixture->camera),
+                  "frames-per-second", &frames_per_second,
+                  NULL);
+
+    /*
+     * The mock camera does not override the "frames-per-second" property, so we
+     * check the implementation from the base camera.
+     */
+    g_assert_cmpfloat (frames_per_second, ==, 1.0 / exposure_time);
+}
+
+static void
 test_binnings_properties (Fixture *fixture, gconstpointer data)
 {
     UcaCamera *camera = UCA_CAMERA (fixture->camera);
@@ -189,6 +209,7 @@ int main (int argc, char *argv[])
     g_test_add ("/properties/base", Fixture, NULL, fixture_setup, test_base_properties, fixture_teardown);
     g_test_add ("/properties/recording", Fixture, NULL, fixture_setup, test_recording_property, fixture_teardown);
     g_test_add ("/properties/binnings", Fixture, NULL, fixture_setup, test_binnings_properties, fixture_teardown);
+    g_test_add ("/properties/frames-per-second", Fixture, NULL, fixture_setup, test_fps_property, fixture_teardown);
     g_test_add ("/signal", Fixture, NULL, fixture_setup, test_signal, fixture_teardown);
 
     return g_test_run ();
