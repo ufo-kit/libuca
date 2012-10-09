@@ -37,7 +37,6 @@ typedef struct {
     guchar *buffer, *pixels;
     GdkPixbuf *pixbuf;
     GtkWidget *image;
-    GtkTreeModel *property_model;
     UcaCamera *camera;
 
     GtkStatusbar *statusbar;
@@ -242,7 +241,6 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.statusbar_context_id = gtk_statusbar_get_context_id (td.statusbar, "Recording Information");
     td.store = FALSE;
     td.camera = camera;
-    td.property_model = GTK_TREE_MODEL (gtk_builder_get_object (builder, "camera-properties"));
 
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
     g_signal_connect (gtk_builder_get_object (builder, "toolbutton_run"),
