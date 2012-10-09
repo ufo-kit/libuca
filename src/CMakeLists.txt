@@ -130,24 +130,13 @@ if(GTK_DOC_FOUND)
             "${docs_out}/api-index-full.html"
             "${docs_out}/ch01.html"
             "${docs_out}/UcaCamera.html"
+            "${docs_out}/UcaPluginManager.html"
             "${docs_out}/style.css"
             "${docs_out}/uca.devhelp2"
             "${docs_out}/home.png"
             "${docs_out}/left.png"
             "${docs_out}/right.png"
             "${docs_out}/up.png")
-
-        # Put in uca-docs.xml and uca.types all cameras that are built
-        set(_xml_doc_input)
-        set(_types_input)
-        foreach (_cam ${cameras})
-            # add camera to the installed documentation
-            list(APPEND reference_files "${docs_out}/Uca${_cam}Camera.html")
-
-            string(TOLOWER ${_cam} _cam)
-            set(_xml_doc_input "${_xml_doc_input}\n<xi:include href=\"xml/uca-${_cam}-camera.xml\"/>")
-            set(_types_input "${_types_input}\nuca_${_cam}_camera_get_type")
-        endforeach()
 
         configure_file(${CMAKE_CURRENT_SOURCE_DIR}/uca-docs.xml.in
             ${docs_out}/uca-docs.xml)

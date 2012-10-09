@@ -1,3 +1,20 @@
+/* Copyright (C) 2012 Matthias Vogelgesang <matthias.vogelgesang@kit.edu>
+   (Karlsruhe Institute of Technology)
+
+   This library is free software; you can redistribute it and/or modify it
+   under the terms of the GNU Lesser General Public License as published by the
+   Free Software Foundation; either version 2.1 of the License, or (at your
+   option) any later version.
+
+   This library is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+   FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+   details.
+
+   You should have received a copy of the GNU Lesser General Public License along
+   with this library; if not, write to the Free Software Foundation, Inc., 51
+   Franklin St, Fifth Floor, Boston, MA 02110, USA */
+
 /**
  * SECTION:uca-plugin-manager
  * @Short_description: Load an #UcaFilter from a shared object
@@ -47,7 +64,6 @@ uca_plugin_manager_error_quark (void)
 
 /**
  * uca_plugin_manager_new:
- * @config: (allow-none): A #UcaConfiguration object or %NULL.
  *
  * Create a plugin manager object to instantiate camera objects.
  *
@@ -142,10 +158,9 @@ list_free_full (GList *list)
 
 /**
  * uca_plugin_manager_get_available_cameras:
- *
  * @manager: A #UcaPluginManager
  *
- * Returns: (element-type utf8) (transfer full): A list with strings of
+ * Return value: (element-type utf8) (transfer full): A list with strings of
  * available camera names. You have to free the individual strings with
  * g_list_foreach(list, (GFunc) g_free, NULL) and the list itself with
  * g_list_free.

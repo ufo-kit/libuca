@@ -15,6 +15,14 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+/**
+ * SECTION:uca-camera
+ * @Short_description: Base class representing a camera
+ * @Title: UcaCamera
+ *
+ * UcaCamera is the base camera from which a real hardware camera derives from.
+ */
+
 #include <glib.h>
 #include "config.h"
 #include "uca-camera.h"
@@ -28,7 +36,7 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  * UcaCameraTrigger:
  * @UCA_CAMERA_TRIGGER_AUTO: Trigger automatically
  * @UCA_CAMERA_TRIGGER_EXTERNAL: Trigger from an external source
- * @UCA_CAMERA_TRIGGER_INTERNAL: Trigger internally from software using
+ * @UCA_CAMERA_TRIGGER_SOFTWARE: Trigger from software using
  *      #uca_camera_trigger
  */
 

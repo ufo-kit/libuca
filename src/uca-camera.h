@@ -42,7 +42,7 @@ typedef enum {
 
 typedef enum {
     UCA_CAMERA_TRIGGER_AUTO,
-    UCA_CAMERA_TRIGGER_INTERNAL,
+    UCA_CAMERA_TRIGGER_SOFTWARE,
     UCA_CAMERA_TRIGGER_EXTERNAL
 } UcaCameraTrigger;
 

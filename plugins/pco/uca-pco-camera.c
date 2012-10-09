@@ -807,7 +807,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                     case UCA_CAMERA_TRIGGER_AUTO:
                         pco_set_trigger_mode(priv->pco, TRIGGER_MODE_AUTOTRIGGER);
                         break;
-                    case UCA_CAMERA_TRIGGER_INTERNAL:
+                    case UCA_CAMERA_TRIGGER_SOFTWARE:
                         pco_set_trigger_mode(priv->pco, TRIGGER_MODE_SOFTWARETRIGGER);
                         break;
                     case UCA_CAMERA_TRIGGER_EXTERNAL:
@@ -1040,7 +1040,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
                         g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
                         break;
                     case TRIGGER_MODE_SOFTWARETRIGGER:
-                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_INTERNAL);
+                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_SOFTWARE);
                         break;
                     case TRIGGER_MODE_EXTERNALTRIGGER:
                         g_value_set_enum(value, UCA_CAMERA_TRIGGER_EXTERNAL);
