@@ -393,6 +393,7 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     self->priv->frame_rate = self->priv->max_frame_rate = 100000.0f;
     self->priv->grab_thread = NULL;
     self->priv->current_frame = 0;
+    self->priv->exposure_time = 0.05;
 
     self->priv->binnings = g_value_array_new(1);
     GValue val = {0};
