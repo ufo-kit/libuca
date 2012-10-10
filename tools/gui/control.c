@@ -31,21 +31,22 @@
 
 
 typedef struct {
-    gboolean running;
-    gboolean store;
+    UcaCamera   *camera;
+    GdkPixbuf   *pixbuf;
+    GtkWidget   *image;
+    GtkWidget   *start_button;
+    GtkWidget   *stop_button;
+    GtkWidget   *record_button;
 
-    guchar *buffer, *pixels;
-    GdkPixbuf *pixbuf;
-    GtkWidget *image;
-    UcaCamera *camera;
+    guchar      *buffer;
+    guchar      *pixels;
+    gboolean     running;
+    gboolean     store;
 
-    GtkStatusbar *statusbar;
-    guint statusbar_context_id;
-
-    int timestamp;
-    int width;
-    int height;
-    int pixel_size;
+    int          timestamp;
+    int          width;
+    int          height;
+    int          pixel_size;
 } ThreadData;
 
 enum {
@@ -145,16 +146,22 @@ on_destroy (GtkWidget *widget, gpointer data)
 }
 
 static void
-on_toolbutton_run_clicked (GtkWidget *widget, gpointer args)
+set_tool_button_state (ThreadData *data)
+{
+    gtk_widget_set_sensitive (data->start_button, !data->running);
+    gtk_widget_set_sensitive (data->stop_button, data->running);
+    gtk_widget_set_sensitive (data->record_button, !data->running);
+}
+
+static void
+on_start_button_clicked (GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
-
-    if (data->running)
-        return;
-
     GError *error = NULL;
+
     data->running = TRUE;
 
+    set_tool_button_state (data);
     uca_camera_start_recording (data->camera, &error);
 
     if (error != NULL) {
@@ -169,12 +176,15 @@ on_toolbutton_run_clicked (GtkWidget *widget, gpointer args)
 }
 
 static void
-on_toolbutton_stop_clicked (GtkWidget *widget, gpointer args)
+on_stop_button_clicked (GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
+    GError *error = NULL;
+
     data->running = FALSE;
     data->store = FALSE;
-    GError *error = NULL;
+
+    set_tool_button_state (data);
     uca_camera_stop_recording (data->camera, &error);
 
     if (error != NULL)
@@ -182,22 +192,20 @@ on_toolbutton_stop_clicked (GtkWidget *widget, gpointer args)
 }
 
 static void
-on_toolbutton_record_clicked (GtkWidget *widget, gpointer args)
+on_record_button_clicked (GtkWidget *widget, gpointer args)
 {
     ThreadData *data = (ThreadData *) args;
-    data->timestamp = (int) time (0);
-    data->store = TRUE;
     GError *error = NULL;
 
-    gtk_statusbar_push (data->statusbar, data->statusbar_context_id, "Recording...");
+    data->timestamp = (int) time (0);
+    data->store = TRUE;
+    data->running = TRUE;
 
-    if (data->running != TRUE) {
-        data->running = TRUE;
-        uca_camera_start_recording (data->camera, &error);
+    set_tool_button_state (data);
+    uca_camera_start_recording (data->camera, &error);
 
-        if (!g_thread_create (grab_thread, data, FALSE, &error))
-            g_printerr ("Failed to create thread: %s\n", error->message);
-    }
+    if (!g_thread_create (grab_thread, data, FALSE, &error))
+        g_printerr ("Failed to create thread: %s\n", error->message);
 }
 
 static void
@@ -215,10 +223,10 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     guint bits_per_sample;
     g_object_get (camera,
-            "roi-width", &td.width,
-            "roi-height", &td.height,
-            "sensor-bitdepth", &bits_per_sample,
-            NULL);
+                  "roi-width", &td.width,
+                  "roi-height", &td.height,
+                  "sensor-bitdepth", &bits_per_sample,
+                  NULL);
 
     GtkWidget *window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
     GtkWidget *image = GTK_WIDGET (gtk_builder_get_object (builder, "image"));
@@ -237,18 +245,19 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.buffer = (guchar *) g_malloc (td.pixel_size * td.width * td.height);
     td.pixels = gdk_pixbuf_get_pixels (pixbuf);
     td.running = FALSE;
-    td.statusbar = GTK_STATUSBAR (gtk_builder_get_object (builder, "statusbar"));
-    td.statusbar_context_id = gtk_statusbar_get_context_id (td.statusbar, "Recording Information");
     td.store = FALSE;
     td.camera = camera;
 
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
-    g_signal_connect (gtk_builder_get_object (builder, "toolbutton_run"),
-            "clicked", G_CALLBACK (on_toolbutton_run_clicked), &td);
-    g_signal_connect (gtk_builder_get_object (builder, "toolbutton_stop"),
-            "clicked", G_CALLBACK (on_toolbutton_stop_clicked), &td);
-    g_signal_connect (gtk_builder_get_object (builder, "toolbutton_record"),
-            "clicked", G_CALLBACK (on_toolbutton_record_clicked), &td);
+
+    td.start_button = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
+    td.stop_button = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
+    td.record_button = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
+    set_tool_button_state (&td);
+
+    g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
+    g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
+    g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);
 
     gtk_widget_show (image);
     gtk_widget_show (window);
@@ -295,7 +304,7 @@ create_choice_window (GtkBuilder *builder)
     GtkWidget *choice_window = GTK_WIDGET (gtk_builder_get_object (builder, "choice-window"));
     GtkTreeView *treeview = GTK_TREE_VIEW (gtk_builder_get_object (builder, "treeview-cameras"));
     GtkListStore *list_store = GTK_LIST_STORE (gtk_builder_get_object (builder, "camera-types"));
-    GtkButton *proceed_button = GTK_BUTTON (gtk_builder_get_object (builder, "button-proceed"));
+    GtkButton *proceed_button = GTK_BUTTON (gtk_builder_get_object (builder, "proceed-button"));
     GtkTreeIter iter;
 
     for (GList *it = g_list_first (camera_types); it != NULL; it = g_list_next (it)) {

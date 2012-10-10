@@ -117,7 +117,7 @@
           <object class="GtkToolbar" id="toolbar">
             <property name="visible">True</property>
             <child>
-              <object class="GtkToolButton" id="toolbutton_run">
+              <object class="GtkToolButton" id="start-button">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">Run</property>
                 <property name="use_underline">True</property>
@@ -129,7 +129,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToolButton" id="toolbutton_record">
+              <object class="GtkToolButton" id="record-button">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">Record</property>
                 <property name="use_underline">True</property>
@@ -141,7 +141,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToolButton" id="toolbutton_stop">
+              <object class="GtkToolButton" id="stop-button">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">Stop</property>
                 <property name="use_underline">True</property>
@@ -208,16 +208,6 @@
             <property name="position">2</property>
           </packing>
         </child>
-        <child>
-          <object class="GtkStatusbar" id="statusbar">
-            <property name="visible">True</property>
-            <property name="spacing">2</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="position">3</property>
-          </packing>
-        </child>
       </object>
     </child>
   </object>
@@ -271,7 +261,7 @@
             <property name="spacing">6</property>
             <property name="layout_style">end</property>
             <child>
-              <object class="GtkButton" id="button-cancel">
+              <object class="GtkButton" id="cancel-button">
                 <property name="label">gtk-quit</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -286,7 +276,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="button-proceed">
+              <object class="GtkButton" id="proceed-button">
                 <property name="label">gtk-ok</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
