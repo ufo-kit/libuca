@@ -37,7 +37,6 @@ static const gint mock_overrideables[] = {
     PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
-    PROP_TRIGGER_MODE,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
@@ -300,9 +299,6 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
             break;
         case PROP_EXPOSURE_TIME:
             g_value_set_double(value, priv->exposure_time);
-            break;
-        case PROP_TRIGGER_MODE:
-            g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
             break;
         case PROP_ROI_X:
             g_value_set_uint(value, priv->roi_x);

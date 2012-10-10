@@ -48,6 +48,11 @@ struct _EggHistogramViewClass
 
 GType         egg_histogram_view_get_type (void);
 GtkWidget   * egg_histogram_view_new      (void);
+void          egg_histogram_view_set_data (EggHistogramView *view,
+                                           gpointer          data,
+                                           guint             n_elements,
+                                           guint             n_bits,
+                                           guint             n_bins);
 
 G_END_DECLS
 

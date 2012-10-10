@@ -132,15 +132,19 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
 
     switch (property_id) {
         case PROP_IS_RECORDING:
-            g_value_set_boolean(value, priv->is_recording);
+            g_value_set_boolean (value, priv->is_recording);
             break;
 
         case PROP_IS_READOUT:
-            g_value_set_boolean(value, priv->is_readout);
+            g_value_set_boolean (value, priv->is_readout);
             break;
 
         case PROP_TRANSFER_ASYNCHRONOUSLY:
-            g_value_set_boolean(value, priv->transfer_async);
+            g_value_set_boolean (value, priv->transfer_async);
+            break;
+
+        case PROP_TRIGGER_MODE:
+            g_value_set_enum (value, UCA_CAMERA_TRIGGER_AUTO);
             break;
 
         case PROP_FRAMES_PER_SECOND:

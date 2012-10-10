@@ -234,6 +234,7 @@ static void uca_pf_camera_get_property(GObject *object, guint property_id, GValu
             g_value_set_boolean(value, FALSE);
             break;
         case PROP_EXPOSURE_TIME:
+            g_value_set_double(value, 1. / 488.0);
             break;
         case PROP_ROI_X:
             g_value_set_uint(value, 0);

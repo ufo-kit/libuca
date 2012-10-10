@@ -28,6 +28,7 @@
 #include "uca-camera.h"
 #include "uca-plugin-manager.h"
 #include "egg-property-tree-view.h"
+#include "egg-histogram-view.h"
 
 
 typedef struct {
@@ -37,6 +38,8 @@ typedef struct {
     GtkWidget   *start_button;
     GtkWidget   *stop_button;
     GtkWidget   *record_button;
+    GtkWidget   *histogram_view;
+    GtkToggleButton *histogram_button;
 
     guchar      *buffer;
     guchar      *pixels;
@@ -49,14 +52,8 @@ typedef struct {
     int          pixel_size;
 } ThreadData;
 
-enum {
-    COLUMN_NAME = 0,
-    COLUMN_VALUE,
-    COLUMN_EDITABLE,
-    NUM_COLUMNS
-};
-
 static UcaPluginManager *plugin_manager;
+
 
 static void
 convert_8bit_to_rgb (guchar *output, guchar *input, int width, int height)
@@ -106,7 +103,7 @@ grab_thread (void *args)
         uca_camera_grab (data->camera, (gpointer) &data->buffer, NULL);
 
         if (data->store) {
-            snprintf (filename, FILENAME_MAX, "frame-%i-%08i.raw", data->timestamp, counter++);
+            snprintf (filename, FILENAME_MAX, "frame-%i-%08i.raw", data->timestamp, counter);
             FILE *fp = fopen (filename, "wb");
             fwrite (data->buffer, data->width*data->height, data->pixel_size, fp);
             fclose (fp);
@@ -121,11 +118,18 @@ grab_thread (void *args)
         }
 
         gdk_threads_enter ();
+
         gdk_flush ();
         gtk_image_clear (GTK_IMAGE (data->image));
         gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
         gtk_widget_queue_draw_area (data->image, 0, 0, data->width, data->height);
+
+        if (gtk_toggle_button_get_active (data->histogram_button))
+            gtk_widget_queue_draw (data->histogram_view);
+
         gdk_threads_leave ();
+
+        counter++;
     }
     return NULL;
 }
@@ -211,6 +215,12 @@ on_record_button_clicked (GtkWidget *widget, gpointer args)
 static void
 create_main_window (GtkBuilder *builder, const gchar* camera_name)
 {
+    GtkWidget *window;
+    GtkWidget *image;
+    GtkWidget *property_tree_view;
+    GdkPixbuf *pixbuf;
+    GtkBox    *histogram_box;
+    GtkContainer *scrolled_property_window;
     static ThreadData td;
 
     GError *error = NULL;
@@ -228,15 +238,12 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
                   "sensor-bitdepth", &bits_per_sample,
                   NULL);
 
-    GtkWidget *window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
-    GtkWidget *image = GTK_WIDGET (gtk_builder_get_object (builder, "image"));
-    GtkWidget *property_tree_view = egg_property_tree_view_new (G_OBJECT (camera));
-    GtkContainer *scrolled_property_window = GTK_CONTAINER (gtk_builder_get_object (builder, "scrolledwindow2"));
-
+    property_tree_view = egg_property_tree_view_new (G_OBJECT (camera));
+    scrolled_property_window = GTK_CONTAINER (gtk_builder_get_object (builder, "scrolledwindow2"));
     gtk_container_add (scrolled_property_window, property_tree_view);
-    gtk_widget_show_all (GTK_WIDGET (scrolled_property_window));
 
-    GdkPixbuf *pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, td.width, td.height);
+    image = GTK_WIDGET (gtk_builder_get_object (builder, "image"));
+    pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, td.width, td.height);
     gtk_image_set_from_pixbuf (GTK_IMAGE (image), pixbuf);
 
     td.pixel_size = bits_per_sample > 8 ? 2 : 1;
@@ -247,7 +254,14 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.running = FALSE;
     td.store = FALSE;
     td.camera = camera;
+    td.histogram_view = egg_histogram_view_new ();
+    td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
 
+    histogram_box = GTK_BOX (gtk_builder_get_object (builder, "histogram-box"));
+    gtk_box_pack_start (histogram_box, td.histogram_view, TRUE, TRUE, 6);
+    egg_histogram_view_set_data (EGG_HISTOGRAM_VIEW (td.histogram_view), td.buffer, td.width * td.height, bits_per_sample, 256);
+
+    window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
 
     td.start_button = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
@@ -259,8 +273,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
     g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);
 
-    gtk_widget_show (image);
-    gtk_widget_show (window);
+    gtk_widget_show_all (window);
 }
 
 static void
