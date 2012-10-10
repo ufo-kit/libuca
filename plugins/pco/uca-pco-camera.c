@@ -381,6 +381,16 @@ setup_fg_callback(UcaCamera *camera)
 }
 
 static void
+check_pco_property_error (guint err, guint property_id)
+{
+    if (err != PCO_NOERROR) {
+        g_warning ("Call to libpco failed with error code %x for property `%s'",
+                   err, 
+                   pco_properties[property_id]->name);
+    }
+}
+
+static void
 uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
@@ -579,12 +589,13 @@ static void
 uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
+    guint err = PCO_NOERROR;
 
     switch (property_id) {
         case PROP_SENSOR_EXTENDED:
             {
                 guint16 format = g_value_get_boolean (value) ? SENSORFORMAT_EXTENDED : SENSORFORMAT_STANDARD;
-                pco_set_sensor_format(priv->pco, format);
+                err = pco_set_sensor_format(priv->pco, format);
             }
             break;
 
@@ -645,14 +656,13 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                 else {
                     if (suitable_timebase != priv->exposure_timebase) {
                         priv->exposure_timebase = suitable_timebase;
-                        if (pco_set_timebase(priv->pco, priv->delay_timebase, suitable_timebase) != PCO_NOERROR)
-                            g_warning("Cannot set exposure time base");
+                        err = pco_set_timebase(priv->pco, priv->delay_timebase, suitable_timebase);
+                        break;
                     }
 
                     gdouble timebase = convert_timebase(suitable_timebase);
                     guint32 timesteps = time / timebase;
-                    if (pco_set_exposure_time(priv->pco, timesteps) != PCO_NOERROR)
-                        g_warning("Cannot set exposure time");
+                    err = pco_set_exposure_time(priv->pco, timesteps);
                 }
             }
             break;
@@ -700,8 +710,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                          * can set the 0 seconds in whatever time base that is
                          * currently active.
                          */
-                        if (pco_set_delay_time(priv->pco, 0) != PCO_NOERROR)
-                            g_warning("Cannot set zero delay time");
+                        err = pco_set_delay_time(priv->pco, 0);
                     }
                     else
                         g_warning("Cannot set such a small exposure time");
@@ -709,14 +718,12 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                 else {
                     if (suitable_timebase != priv->delay_timebase) {
                         priv->delay_timebase = suitable_timebase;
-                        if (pco_set_timebase(priv->pco, suitable_timebase, priv->exposure_timebase) != PCO_NOERROR)
-                            g_warning("Cannot set delay time base");
+                        err = pco_set_timebase(priv->pco, suitable_timebase, priv->exposure_timebase);
                     }
 
                     gdouble timebase = convert_timebase(suitable_timebase);
                     guint32 timesteps = time / timebase;
-                    if (pco_set_delay_time(priv->pco, timesteps) != PCO_NOERROR)
-                        g_warning("Cannot set delay time");
+                    err = pco_set_delay_time(priv->pco, timesteps);
                 }
             }
             break;
@@ -724,8 +731,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
         case PROP_SENSOR_ADCS:
             {
                 const guint num_adcs = g_value_get_uint(value);
-                if (pco_set_adc_mode(priv->pco, num_adcs) != PCO_NOERROR)
-                    g_warning("Cannot set the number of ADCs per pixel\n");
+                err = pco_set_adc_mode(priv->pco, num_adcs);
             }
             break;
 
@@ -742,8 +748,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                 }
 
                 if (pixel_rate != 0) {
-                    if (pco_set_pixelrate(priv->pco, pixel_rate) != PCO_NOERROR)
-                        g_warning("Cannot set pixel rate");
+                    err = pco_set_pixelrate(priv->pco, pixel_rate);
                 }
                 else
                     g_warning("%i Hz is not possible. Please check the \"sensor-pixelrates\" property", desired_pixel_rate);
@@ -754,17 +759,17 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
             if (!pco_is_double_image_mode_available(priv->pco))
                 g_warning("Double image mode is not available on this pco model");
             else
-                pco_set_double_image_mode(priv->pco, g_value_get_boolean(value));
+                err = pco_set_double_image_mode(priv->pco, g_value_get_boolean(value));
             break;
 
         case PROP_OFFSET_MODE:
-            pco_set_offset_mode(priv->pco, g_value_get_boolean(value));
+            err = pco_set_offset_mode(priv->pco, g_value_get_boolean(value));
             break;
 
         case PROP_COOLING_POINT:
             {
                 int16_t temperature = (int16_t) g_value_get_int(value);
-                pco_set_cooling_temperature(priv->pco, temperature);
+                err = pco_set_cooling_temperature(priv->pco, temperature);
             }
             break;
 
@@ -774,9 +779,9 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                 UcaPcoCameraRecordMode mode = (UcaPcoCameraRecordMode) g_value_get_enum(value);
 
                 if (mode == UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE)
-                    pco_set_record_mode(priv->pco, RECORDER_SUBMODE_SEQUENCE);
+                    err = pco_set_record_mode(priv->pco, RECORDER_SUBMODE_SEQUENCE);
                 else if (mode == UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER)
-                    pco_set_record_mode(priv->pco, RECORDER_SUBMODE_RINGBUFFER);
+                    err = pco_set_record_mode(priv->pco, RECORDER_SUBMODE_RINGBUFFER);
                 else
                     g_warning("Unknown record mode");
             }
@@ -785,7 +790,6 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
         case PROP_ACQUIRE_MODE:
             {
                 UcaPcoCameraAcquireMode mode = (UcaPcoCameraAcquireMode) g_value_get_enum(value);
-                unsigned int err = PCO_NOERROR;
 
                 if (mode == UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO)
                     err = pco_set_acquire_mode(priv->pco, ACQUIRE_MODE_AUTO);
@@ -793,9 +797,6 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                     err = pco_set_acquire_mode(priv->pco, ACQUIRE_MODE_EXTERNAL);
                 else
                     g_warning("Unknown acquire mode");
-
-                if (err != PCO_NOERROR)
-                    g_warning("Cannot set acquire mode");
             }
             break;
 
@@ -805,13 +806,13 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
 
                 switch (trigger_mode) {
                     case UCA_CAMERA_TRIGGER_AUTO:
-                        pco_set_trigger_mode(priv->pco, TRIGGER_MODE_AUTOTRIGGER);
+                        err = pco_set_trigger_mode(priv->pco, TRIGGER_MODE_AUTOTRIGGER);
                         break;
                     case UCA_CAMERA_TRIGGER_SOFTWARE:
-                        pco_set_trigger_mode(priv->pco, TRIGGER_MODE_SOFTWARETRIGGER);
+                        err = pco_set_trigger_mode(priv->pco, TRIGGER_MODE_SOFTWARETRIGGER);
                         break;
                     case UCA_CAMERA_TRIGGER_EXTERNAL:
-                        pco_set_trigger_mode(priv->pco, TRIGGER_MODE_EXTERNALTRIGGER);
+                        err = pco_set_trigger_mode(priv->pco, TRIGGER_MODE_EXTERNALTRIGGER);
                         break;
                 }
             }
@@ -820,7 +821,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
         case PROP_NOISE_FILTER:
             {
                 guint16 filter_mode = g_value_get_boolean(value) ? NOISE_FILTER_MODE_ON : NOISE_FILTER_MODE_OFF;
-                pco_set_noise_filter_mode(priv->pco, filter_mode);
+                err = pco_set_noise_filter_mode(priv->pco, filter_mode);
             }
             break;
 
@@ -833,7 +834,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                     TIMESTAMP_MODE_ASCII,
                 };
 
-                pco_set_timestamp_mode(priv->pco, table[g_value_get_flags(value)]);
+                err = pco_set_timestamp_mode(priv->pco, table[g_value_get_flags(value)]);
             }
             break;
 
@@ -841,18 +842,21 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
     }
+
+    check_pco_property_error (err, property_id);
 }
 
 static void
 uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
+    guint err = PCO_NOERROR;
 
     switch (property_id) {
         case PROP_SENSOR_EXTENDED:
             {
                 guint16 format;
-                pco_get_sensor_format(priv->pco, &format);
+                err = pco_get_sensor_format(priv->pco, &format);
                 g_value_set_boolean(value, format == SENSORFORMAT_EXTENDED);
             }
             break;
@@ -900,7 +904,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_SENSOR_TEMPERATURE:
             {
                 gint32 ccd, camera, power;
-                pco_get_temperature(priv->pco, &ccd, &camera, &power);
+                err = pco_get_temperature(priv->pco, &ccd, &camera, &power);
                 g_value_set_double(value, ccd / 10.0);
             }
             break;
@@ -912,8 +916,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
                  * ADCs in use.
                  */
                 pco_adc_mode mode;
-                if (pco_get_adc_mode(priv->pco, &mode) != PCO_NOERROR)
-                    g_warning("Cannot read number of ADCs per pixel");
+                err = pco_get_adc_mode(priv->pco, &mode);
                 g_value_set_uint(value, mode);
             }
             break;
@@ -932,7 +935,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_SENSOR_PIXELRATE:
             {
                 guint32 pixelrate;
-                pco_get_pixelrate(priv->pco, &pixelrate);
+                err = pco_get_pixelrate(priv->pco, &pixelrate);
                 g_value_set_uint(value, pixelrate);
             }
             break;
@@ -940,7 +943,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_EXPOSURE_TIME:
             {
                 uint32_t exposure_time;
-                pco_get_exposure_time(priv->pco, &exposure_time);
+                err = pco_get_exposure_time(priv->pco, &exposure_time);
 
                 if (priv->exposure_timebase == TIMEBASE_INVALID)
                     read_timebase(priv);
@@ -963,7 +966,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_DELAY_TIME:
             {
                 uint32_t delay_time;
-                pco_get_delay_time(priv->pco, &delay_time);
+                err = pco_get_delay_time(priv->pco, &delay_time);
 
                 if (priv->delay_timebase == TIMEBASE_INVALID)
                     read_timebase(priv);
@@ -981,7 +984,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
                 g_warning("Double image mode is not available on this pco model");
             else {
                 bool on;
-                pco_get_double_image_mode(priv->pco, &on);
+                err = pco_get_double_image_mode(priv->pco, &on);
                 g_value_set_boolean(value, on);
             }
             break;
@@ -989,7 +992,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_OFFSET_MODE:
             {
                 bool on;
-                pco_get_offset_mode(priv->pco, &on);
+                err = pco_get_offset_mode(priv->pco, &on);
                 g_value_set_boolean(value, on);
             }
             break;
@@ -1005,7 +1008,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_RECORD_MODE:
             {
                 guint16 mode;
-                pco_get_record_mode(priv->pco, &mode);
+                err = pco_get_record_mode(priv->pco, &mode);
 
                 if (mode == RECORDER_SUBMODE_SEQUENCE)
                     g_value_set_enum(value, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE);
@@ -1019,7 +1022,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_ACQUIRE_MODE:
             {
                 guint16 mode;
-                pco_get_acquire_mode(priv->pco, &mode);
+                err = pco_get_acquire_mode(priv->pco, &mode);
 
                 if (mode == ACQUIRE_MODE_AUTO)
                     g_value_set_enum(value, UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO);
@@ -1033,7 +1036,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_TRIGGER_MODE:
             {
                 guint16 mode;
-                pco_get_trigger_mode(priv->pco, &mode);
+                err = pco_get_trigger_mode(priv->pco, &mode);
 
                 switch (mode) {
                     case TRIGGER_MODE_AUTOTRIGGER:
@@ -1078,8 +1081,8 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_NAME:
             {
                 gchar *name = NULL;
-                pco_get_name(priv->pco, &name);
-                g_value_set_string(value, name);
+                err = pco_get_name (priv->pco, &name);
+                g_value_set_string (value, name);
                 g_free(name);
             }
             break;
@@ -1087,8 +1090,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_COOLING_POINT:
             {
                 int16_t temperature;
-                if (pco_get_cooling_temperature(priv->pco, &temperature) != PCO_NOERROR)
-                    g_warning("Cannot read cooling temperature\n");
+                err = pco_get_cooling_temperature(priv->pco, &temperature);
                 g_value_set_int(value, temperature);
             }
             break;
@@ -1117,7 +1119,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_NOISE_FILTER:
             {
                 guint16 mode;
-                pco_get_noise_filter_mode(priv->pco, &mode);
+                err = pco_get_noise_filter_mode(priv->pco, &mode);
                 g_value_set_boolean(value, mode != NOISE_FILTER_MODE_OFF);
             }
             break;
@@ -1132,15 +1134,17 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
                     UCA_PCO_CAMERA_TIMESTAMP_ASCII
                 };
 
-                pco_get_timestamp_mode(priv->pco, &mode);
+                err = pco_get_timestamp_mode (priv->pco, &mode);
                 g_value_set_enum (value, table[mode]);
             }
             break;
 
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-            break;
+            return;
     }
+
+    check_pco_property_error (err, property_id);
 }
 
 static void
