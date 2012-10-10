@@ -331,7 +331,7 @@ get_internal_delay (UcaPcoCamera *camera)
 {
     if (camera->priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD) {
         gdouble sensor_rate;
-        g_object_get (camera, "sensor-rate", &sensor_rate, NULL);
+        g_object_get (camera, "sensor-pixelrate", &sensor_rate, NULL);
 
         if (sensor_rate == 55000000.0)
             return 0.000079;
