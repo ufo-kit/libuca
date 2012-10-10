@@ -26,7 +26,8 @@ if (GTK2_FOUND)
     add_executable(control
         control.c
         egg-property-cell-renderer.c
-        egg-property-tree-view.c)
+        egg-property-tree-view.c
+        egg-histogram-view.c)
 
     target_link_libraries(control uca
         ${GTK2_LIBRARIES} ${GTHREAD2_LIBRARIES})
