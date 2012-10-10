@@ -834,7 +834,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                     TIMESTAMP_MODE_ASCII,
                 };
 
-                err = pco_set_timestamp_mode(priv->pco, table[g_value_get_flags(value)]);
+                err = pco_set_timestamp_mode(priv->pco, table[g_value_get_enum(value)]);
             }
             break;
 
