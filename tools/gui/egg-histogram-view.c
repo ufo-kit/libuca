@@ -305,11 +305,11 @@ egg_histogram_view_button_release (GtkWidget *widget,
 {
     EggHistogramView *view;
     EggHistogramViewPrivate *priv;
-    GtkAllocation allocation;
-    gint width;
+    /* GtkAllocation allocation; */
+    /* gint width; */
 
-    gtk_widget_get_allocation (widget, &allocation);
-    width  = allocation.width - 2 * BORDER;
+    /* gtk_widget_get_allocation (widget, &allocation); */
+    /* width  = allocation.width - 2 * BORDER; */
 
     view = EGG_HISTOGRAM_VIEW (widget);
     priv = view->priv;
