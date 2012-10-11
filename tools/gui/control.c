@@ -19,10 +19,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <errno.h>
+#include <math.h>
 
 #include "config.h"
 #include "uca-camera.h"
@@ -56,39 +53,28 @@ static UcaPluginManager *plugin_manager;
 
 
 static void
-convert_8bit_to_rgb (guchar *output, guchar *input, int width, int height)
+convert_8bit_to_rgb (guchar *output, guchar *input, gint width, gint height, gdouble min, gdouble max)
 {
+    gdouble factor = 255.0 / (max - min);
+
     for (int i = 0, j = 0; i < width*height; i++) {
-        output[j++] = input[i];
-        output[j++] = input[i];
-        output[j++] = input[i];
+        guchar val = (guchar) ((input[i] - min) * factor);
+        output[j++] = val;
+        output[j++] = val;
+        output[j++] = val;
     }
 }
 
 static void
-convert_16bit_to_rgb (guchar *output, guchar *input, int width, int height)
+convert_16bit_to_rgb (guchar *output, guchar *input, gint width, gint height, gdouble min, gdouble max)
 {
-    guint16 *in = (guint16 *) input;
-    guint16 min = G_MAXUINT16, max = 0;
-    gfloat spread = 0.0f;
+    gdouble factor = 255.0 / (max - min);
 
-    for (int i = 0; i < width * height; i++) {
-        guint16 v = in[i];
-        if (v < min)
-            min = v;
-        if (v > max)
-            max = v;
-    }
-
-    spread = (gfloat) max - min;
-
-    if (spread > 0.0f) {
-        for (int i = 0, j = 0; i < width*height; i++) {
-            guchar val = (guint8) (((in[i] - min) / spread) * 255.0f);
-            output[j++] = val;
-            output[j++] = val;
-            output[j++] = val;
-        }
+    for (int i = 0, j = 0; i < width*height; i++) {
+        guchar val = (guint8) ((input[i] - min) * factor);
+        output[j++] = val;
+        output[j++] = val;
+        output[j++] = val;
     }
 }
 
@@ -100,6 +86,9 @@ grab_thread (void *args)
     gint counter = 0;
 
     while (data->running) {
+        gdouble min_value;
+        gdouble max_value;
+
         uca_camera_grab (data->camera, (gpointer) &data->buffer, NULL);
 
         if (data->store) {
@@ -111,11 +100,12 @@ grab_thread (void *args)
 
         /* FIXME: We should actually check if this is really a new frame and
          * just do nothing if it is an already displayed one. */
+        egg_histogram_get_visible_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min_value, &max_value);
+
         if (data->pixel_size == 1)
-            convert_8bit_to_rgb (data->pixels, data->buffer, data->width, data->height);
-        else if (data->pixel_size == 2) {
-            convert_16bit_to_rgb (data->pixels, data->buffer, data->width, data->height);
-        }
+            convert_8bit_to_rgb (data->pixels, data->buffer, data->width, data->height, min_value, max_value);
+        else if (data->pixel_size == 2)
+            convert_16bit_to_rgb (data->pixels, data->buffer, data->width, data->height, min_value, max_value);
 
         gdk_threads_enter ();
 
@@ -221,6 +211,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     GdkPixbuf *pixbuf;
     GtkBox    *histogram_box;
     GtkContainer *scrolled_property_window;
+    GtkAdjustment *max_bin_adjustment;
     static ThreadData td;
 
     GError *error = NULL;
@@ -259,7 +250,8 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     histogram_box = GTK_BOX (gtk_builder_get_object (builder, "histogram-box"));
     gtk_box_pack_start (histogram_box, td.histogram_view, TRUE, TRUE, 6);
-    egg_histogram_view_set_data (EGG_HISTOGRAM_VIEW (td.histogram_view), td.buffer, td.width * td.height, bits_per_sample, 256);
+    egg_histogram_view_set_data (EGG_HISTOGRAM_VIEW (td.histogram_view),
+                                 td.buffer, td.width * td.height, bits_per_sample, 256);
 
     window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
@@ -268,6 +260,16 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.stop_button = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
     td.record_button = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
     set_tool_button_state (&td);
+
+    g_object_bind_property (gtk_builder_get_object (builder, "min_bin_value_adjustment"), "value",
+                            td.histogram_view, "minimum-bin-value",
+                            G_BINDING_DEFAULT);
+
+    max_bin_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "max_bin_value_adjustment"));
+    gtk_adjustment_set_value (max_bin_adjustment, pow (2, bits_per_sample) - 1);
+    g_object_bind_property (max_bin_adjustment, "value",
+                            td.histogram_view, "maximum-bin-value",
+                            G_BINDING_DEFAULT);
 
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);

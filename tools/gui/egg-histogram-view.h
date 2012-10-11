@@ -53,6 +53,10 @@ void          egg_histogram_view_set_data (EggHistogramView *view,
                                            guint             n_elements,
                                            guint             n_bits,
                                            guint             n_bins);
+void          egg_histogram_get_visible_range
+                                          (EggHistogramView *view,
+                                           gdouble          *min,
+                                           gdouble          *max);
 
 G_END_DECLS
 

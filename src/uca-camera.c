@@ -128,7 +128,7 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
 static void
 uca_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-    UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
+    UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE (object);
 
     switch (property_id) {
         case PROP_IS_RECORDING:
