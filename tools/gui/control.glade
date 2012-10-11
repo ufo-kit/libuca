@@ -181,8 +181,6 @@
                         <property name="resize_mode">queue</property>
                         <child>
                           <object class="GtkImage" id="image">
-                            <property name="width_request">640</property>
-                            <property name="height_request">480</property>
                             <property name="visible">True</property>
                             <property name="stock">gtk-missing-image</property>
                           </object>
