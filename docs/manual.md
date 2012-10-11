@@ -143,7 +143,7 @@ manager first:
 
 ~~~ {.c}
     manager = uca_plugin_manager_new ();
-    camera = uca_plugin_manager_new_camera (manager, "pco", &error);
+    camera = uca_plugin_manager_get_camera (manager, "pco", &error);
 ~~~
 
 Errors are indicated with a returned value `NULL` and `error` set to a value
