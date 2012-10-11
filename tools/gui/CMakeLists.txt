@@ -30,7 +30,9 @@ if (GTK2_FOUND)
         egg-histogram-view.c)
 
     target_link_libraries(control uca
-        ${GTK2_LIBRARIES} ${GTHREAD2_LIBRARIES})
+        ${GTK2_LIBRARIES} 
+        ${GTHREAD2_LIBRARIES}
+        m)
 
     install(TARGETS control
         RUNTIME DESTINATION bin)
