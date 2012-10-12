@@ -191,7 +191,7 @@ on_frame_slider_changed (GtkAdjustment *adjustment, gpointer user_data)
     if (data->state == IDLE) {
         gpointer buffer;
         gint index;
-         
+
         index = (gint) gtk_adjustment_get_value (adjustment);
         buffer = ring_buffer_get_pointer (data->buffer, index);
         convert_grayscale_to_rgb (data, buffer);
@@ -205,7 +205,6 @@ on_start_button_clicked (GtkWidget *widget, gpointer args)
     ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
 
-    set_tool_button_state (data);
     uca_camera_start_recording (data->camera, &error);
 
     if (error != NULL) {
@@ -213,12 +212,14 @@ on_start_button_clicked (GtkWidget *widget, gpointer args)
         return;
     }
 
+    data->state = RUNNING;
+    set_tool_button_state (data);
+
     if (!g_thread_create (preview_frames, data, FALSE, &error)) {
         g_printerr ("Failed to create thread: %s\n", error->message);
-        return;
+        data->state = IDLE;
+        set_tool_button_state (data);
     }
-
-    data->state = RUNNING;
 }
 
 static void
@@ -242,14 +243,21 @@ on_record_button_clicked (GtkWidget *widget, gpointer args)
     ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
 
-    data->timestamp = (int) time (0);
-    data->state = RECORDING;
-
-    set_tool_button_state (data);
     uca_camera_start_recording (data->camera, &error);
 
-    if (!g_thread_create (record_frames, data, FALSE, &error))
+    if (error != NULL) {
+        g_printerr ("Failed to start recording: %s\n", error->message);
+    }
+
+    data->timestamp = (int) time (0);
+    data->state = RECORDING;
+    set_tool_button_state (data);
+
+    if (!g_thread_create (record_frames, data, FALSE, &error)) {
         g_printerr ("Failed to create thread: %s\n", error->message);
+        data->state = IDLE;
+        set_tool_button_state (data);
+    }
 }
 
 static void
@@ -434,7 +442,7 @@ main (int argc, char *argv[])
     g_option_context_add_main_entries (context, entries, NULL);
     g_option_context_add_group (context, gtk_get_option_group (TRUE));
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
-        g_print ("Option parsing failed: %s\n", error->message); 
+        g_print ("Option parsing failed: %s\n", error->message);
         return 1;
     }
 
