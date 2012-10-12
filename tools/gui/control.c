@@ -205,8 +205,6 @@ on_start_button_clicked (GtkWidget *widget, gpointer args)
     ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
 
-    data->state = RUNNING;
-
     set_tool_button_state (data);
     uca_camera_start_recording (data->camera, &error);
 
@@ -219,6 +217,8 @@ on_start_button_clicked (GtkWidget *widget, gpointer args)
         g_printerr ("Failed to create thread: %s\n", error->message);
         return;
     }
+
+    data->state = RUNNING;
 }
 
 static void
