@@ -143,7 +143,7 @@ compute_histogram (EggHistogramViewPrivate *priv)
             }
         }
     }
-    else if (priv->n_bits == 16) {
+    else {
         guint16 *data = (guint16 *) priv->data;
 
         for (guint i = 0; i < priv->n_elements; i++) {
@@ -155,8 +155,6 @@ compute_histogram (EggHistogramViewPrivate *priv)
             }
         }
     }
-    else
-        g_warning ("%i number of bits unsupported", priv->n_bits);
 }
 
 static void
