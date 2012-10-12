@@ -22,11 +22,17 @@
 #include <math.h>
 
 #include "config.h"
+#include "ring-buffer.h"
 #include "uca-camera.h"
 #include "uca-plugin-manager.h"
 #include "egg-property-tree-view.h"
 #include "egg-histogram-view.h"
 
+typedef enum {
+    IDLE,
+    RUNNING,
+    RECORDING
+} State;
 
 typedef struct {
     UcaCamera   *camera;
@@ -35,13 +41,14 @@ typedef struct {
     GtkWidget   *start_button;
     GtkWidget   *stop_button;
     GtkWidget   *record_button;
-    GtkWidget   *histogram_view;
-    GtkToggleButton *histogram_button;
 
-    guchar      *buffer;
+    GtkWidget       *histogram_view;
+    GtkToggleButton *histogram_button;
+    GtkAdjustment   *frame_slider;
+
+    RingBuffer  *buffer;
     guchar      *pixels;
-    gboolean     running;
-    gboolean     store;
+    State        state;
 
     int          timestamp;
     int          width;
@@ -53,74 +60,97 @@ static UcaPluginManager *plugin_manager;
 
 
 static void
-convert_8bit_to_rgb (guchar *output, guchar *input, gint width, gint height, gdouble min, gdouble max)
+convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
 {
-    gdouble factor = 255.0 / (max - min);
+    gdouble min;
+    gdouble max;
+    gdouble factor;
+    guint8 *output;
 
-    for (int i = 0, j = 0; i < width*height; i++) {
-        guchar val = (guchar) ((input[i] - min) * factor);
-        output[j++] = val;
-        output[j++] = val;
-        output[j++] = val;
+    egg_histogram_get_visible_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
+    factor = 255.0 / (max - min);
+    output = data->pixels;
+
+    if (data->pixel_size == 1) {
+        guint8 *input = (guint8 *) buffer;
+
+        for (int i = 0, j = 0; i < data->width * data->height; i++) {
+            guchar val = (guchar) ((input[i] - min) * factor);
+            output[j++] = val;
+            output[j++] = val;
+            output[j++] = val;
+        }
+    }
+    else if (data->pixel_size == 2) {
+        guint16 *input = (guint16 *) buffer;
+
+        for (int i = 0, j = 0; i < data->width * data->height; i++) {
+            guchar val = (guint8) ((input[i] - min) * factor);
+            output[j++] = val;
+            output[j++] = val;
+            output[j++] = val;
+        }
     }
 }
 
 static void
-convert_16bit_to_rgb (guchar *output, guchar *input, gint width, gint height, gdouble min, gdouble max)
+update_pixbuf (ThreadData *data)
 {
-    gdouble factor = 255.0 / (max - min);
+    gdk_flush ();
+    gtk_image_clear (GTK_IMAGE (data->image));
+    gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
+    gtk_widget_queue_draw_area (data->image, 0, 0, data->width, data->height);
 
-    for (int i = 0, j = 0; i < width*height; i++) {
-        guchar val = (guint8) ((input[i] - min) * factor);
-        output[j++] = val;
-        output[j++] = val;
-        output[j++] = val;
-    }
+    if (gtk_toggle_button_get_active (data->histogram_button))
+        gtk_widget_queue_draw (data->histogram_view);
 }
 
-static void *
-grab_thread (void *args)
+static gpointer
+preview_frames (void *args)
 {
     ThreadData *data = (ThreadData *) args;
-    gchar filename[FILENAME_MAX] = {0,};
     gint counter = 0;
 
-    while (data->running) {
-        gdouble min_value;
-        gdouble max_value;
+    while (data->state == RUNNING) {
+        gpointer buffer;
 
-        uca_camera_grab (data->camera, (gpointer) &data->buffer, NULL);
-
-        if (data->store) {
-            snprintf (filename, FILENAME_MAX, "frame-%i-%08i.raw", data->timestamp, counter);
-            FILE *fp = fopen (filename, "wb");
-            fwrite (data->buffer, data->width*data->height, data->pixel_size, fp);
-            fclose (fp);
-        }
-
-        /* FIXME: We should actually check if this is really a new frame and
-         * just do nothing if it is an already displayed one. */
-        egg_histogram_get_visible_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min_value, &max_value);
-
-        if (data->pixel_size == 1)
-            convert_8bit_to_rgb (data->pixels, data->buffer, data->width, data->height, min_value, max_value);
-        else if (data->pixel_size == 2)
-            convert_16bit_to_rgb (data->pixels, data->buffer, data->width, data->height, min_value, max_value);
+        buffer = ring_buffer_get_current_pointer (data->buffer);
+        uca_camera_grab (data->camera, &buffer, NULL);
+        convert_grayscale_to_rgb (data, buffer);
 
         gdk_threads_enter ();
-
-        gdk_flush ();
-        gtk_image_clear (GTK_IMAGE (data->image));
-        gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
-        gtk_widget_queue_draw_area (data->image, 0, 0, data->width, data->height);
-
-        if (gtk_toggle_button_get_active (data->histogram_button))
-            gtk_widget_queue_draw (data->histogram_view);
-
+        update_pixbuf (data);
         gdk_threads_leave ();
 
         counter++;
     }
+    return NULL;
+}
+
+static gpointer
+record_frames (gpointer args)
+{
+    ThreadData *data;
+    gpointer buffer;
+    guint n_frames = 0;
+
+    data = (ThreadData *) args;
+    ring_buffer_reset (data->buffer);
+
+    while (data->state == RECORDING) {
+        buffer = ring_buffer_get_current_pointer (data->buffer);
+        uca_camera_grab (data->camera, &buffer, NULL);
+        ring_buffer_proceed (data->buffer);
+        n_frames++;
+    }
+
+    n_frames = ring_buffer_get_num_blocks (data->buffer);
+
+    gdk_threads_enter ();
+    gtk_adjustment_set_upper (data->frame_slider, n_frames - 1);
+    gtk_adjustment_set_value (data->frame_slider, n_frames - 1);
+    gdk_threads_leave ();
+
     return NULL;
 }
 
@@ -134,17 +164,39 @@ void
 on_destroy (GtkWidget *widget, gpointer data)
 {
     ThreadData *td = (ThreadData *) data;
-    td->running = FALSE;
+
+    td->state = IDLE;
     g_object_unref (td->camera);
+    ring_buffer_free (td->buffer);
+
     gtk_main_quit ();
 }
 
 static void
 set_tool_button_state (ThreadData *data)
 {
-    gtk_widget_set_sensitive (data->start_button, !data->running);
-    gtk_widget_set_sensitive (data->stop_button, data->running);
-    gtk_widget_set_sensitive (data->record_button, !data->running);
+    gtk_widget_set_sensitive (data->start_button,
+                              data->state == IDLE);
+    gtk_widget_set_sensitive (data->stop_button,
+                              data->state == RUNNING || data->state == RECORDING);
+    gtk_widget_set_sensitive (data->record_button,
+                              data->state == IDLE);
+}
+
+static void
+on_frame_slider_changed (GtkAdjustment *adjustment, gpointer user_data)
+{
+    ThreadData *data = (ThreadData *) user_data;
+
+    if (data->state == IDLE) {
+        gpointer buffer;
+        gint index;
+         
+        index = (gint) gtk_adjustment_get_value (adjustment);
+        buffer = ring_buffer_get_pointer (data->buffer, index);
+        convert_grayscale_to_rgb (data, buffer);
+        update_pixbuf (data);
+    }
 }
 
 static void
@@ -153,7 +205,7 @@ on_start_button_clicked (GtkWidget *widget, gpointer args)
     ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
 
-    data->running = TRUE;
+    data->state = RUNNING;
 
     set_tool_button_state (data);
     uca_camera_start_recording (data->camera, &error);
@@ -163,7 +215,7 @@ on_start_button_clicked (GtkWidget *widget, gpointer args)
         return;
     }
 
-    if (!g_thread_create (grab_thread, data, FALSE, &error)) {
+    if (!g_thread_create (preview_frames, data, FALSE, &error)) {
         g_printerr ("Failed to create thread: %s\n", error->message);
         return;
     }
@@ -175,8 +227,7 @@ on_stop_button_clicked (GtkWidget *widget, gpointer args)
     ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
 
-    data->running = FALSE;
-    data->store = FALSE;
+    data->state = IDLE;
 
     set_tool_button_state (data);
     uca_camera_stop_recording (data->camera, &error);
@@ -192,13 +243,12 @@ on_record_button_clicked (GtkWidget *widget, gpointer args)
     GError *error = NULL;
 
     data->timestamp = (int) time (0);
-    data->store = TRUE;
-    data->running = TRUE;
+    data->state = RECORDING;
 
     set_tool_button_state (data);
     uca_camera_start_recording (data->camera, &error);
 
-    if (!g_thread_create (grab_thread, data, FALSE, &error))
+    if (!g_thread_create (record_frames, data, FALSE, &error))
         g_printerr ("Failed to create thread: %s\n", error->message);
 }
 
@@ -240,18 +290,19 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.pixel_size = bits_per_sample > 8 ? 2 : 1;
     td.image  = image;
     td.pixbuf = pixbuf;
-    td.buffer = (guchar *) g_malloc (td.pixel_size * td.width * td.height);
+    td.buffer = ring_buffer_new (td.pixel_size * td.width * td.height, 256);
     td.pixels = gdk_pixbuf_get_pixels (pixbuf);
-    td.running = FALSE;
-    td.store = FALSE;
+    td.state  = IDLE;
     td.camera = camera;
     td.histogram_view = egg_histogram_view_new ();
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
+    td.frame_slider = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
 
     histogram_box = GTK_BOX (gtk_builder_get_object (builder, "histogram-box"));
     gtk_box_pack_start (histogram_box, td.histogram_view, TRUE, TRUE, 6);
     egg_histogram_view_set_data (EGG_HISTOGRAM_VIEW (td.histogram_view),
-                                 td.buffer, td.width * td.height, bits_per_sample, 256);
+                                 ring_buffer_get_current_pointer (td.buffer),                      
+                                 td.width * td.height, bits_per_sample, 256);
 
     window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
@@ -261,16 +312,17 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.record_button = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
     set_tool_button_state (&td);
 
-    g_object_bind_property (gtk_builder_get_object (builder, "min_bin_value_adjustment"), "value",
+    g_object_bind_property (gtk_builder_get_object (builder, "min-bin-value-adjustment"), "value",
                             td.histogram_view, "minimum-bin-value",
                             G_BINDING_DEFAULT);
 
-    max_bin_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "max_bin_value_adjustment"));
+    max_bin_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "max-bin-value-adjustment"));
     gtk_adjustment_set_value (max_bin_adjustment, pow (2, bits_per_sample) - 1);
     g_object_bind_property (max_bin_adjustment, "value",
                             td.histogram_view, "maximum-bin-value",
                             G_BINDING_DEFAULT);
 
+    g_signal_connect (td.frame_slider, "value-changed", G_CALLBACK (on_frame_slider_changed), &td);
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
     g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);

@@ -146,9 +146,10 @@ static void print_number(gchar *buffer, guint number, guint x, guint y, guint wi
 static void print_current_frame(UcaMockCameraPrivate *priv, gchar *buffer)
 {
     guint number = priv->current_frame;
-    guint divisor = 100000000;
+    guint divisor = 10000000;
     int x = 10;
-    while (divisor > 1) {
+
+    while (divisor > 0) {
         print_number(buffer, number / divisor, x, 10, priv->width);
         number = number % divisor;
         divisor = divisor / 10;

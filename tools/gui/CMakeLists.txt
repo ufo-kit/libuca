@@ -25,6 +25,7 @@ if (GTK2_FOUND)
 
     add_executable(control
         control.c
+        ring-buffer.c
         egg-property-cell-renderer.c
         egg-property-tree-view.c
         egg-histogram-view.c)

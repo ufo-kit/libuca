@@ -230,7 +230,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="invisible_char">•</property>
-                                <property name="adjustment">min_bin_value_adjustment</property>
+                                <property name="adjustment">min-bin-value-adjustment</property>
                               </object>
                               <packing>
                                 <property name="left_attach">1</property>
@@ -260,7 +260,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="invisible_char">•</property>
-                                <property name="adjustment">max_bin_value_adjustment</property>
+                                <property name="adjustment">max-bin-value-adjustment</property>
                               </object>
                               <packing>
                                 <property name="left_attach">1</property>
@@ -306,6 +306,27 @@
                         <property name="label" translatable="yes">Histogram</property>
                       </object>
                       <packing>
+                        <property name="tab_fill">False</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkHScale" id="hscale1">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="adjustment">frames-adjustment</property>
+                        <property name="digits">0</property>
+                      </object>
+                      <packing>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child type="tab">
+                      <object class="GtkLabel" id="label4">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">Preview</property>
+                      </object>
+                      <packing>
+                        <property name="position">1</property>
                         <property name="tab_fill">False</property>
                       </packing>
                     </child>
@@ -425,14 +446,18 @@
       </object>
     </child>
   </object>
-  <object class="GtkAdjustment" id="min_bin_value_adjustment">
+  <object class="GtkAdjustment" id="min-bin-value-adjustment">
     <property name="upper">65535</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
-  <object class="GtkAdjustment" id="max_bin_value_adjustment">
+  <object class="GtkAdjustment" id="max-bin-value-adjustment">
     <property name="value">256</property>
     <property name="upper">65535</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="frames-adjustment">
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
