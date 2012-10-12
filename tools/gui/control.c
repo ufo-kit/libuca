@@ -57,7 +57,7 @@ typedef struct {
 } ThreadData;
 
 static UcaPluginManager *plugin_manager;
-
+static gsize mem_size = 2048;
 
 static void
 convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
@@ -255,69 +255,86 @@ on_record_button_clicked (GtkWidget *widget, gpointer args)
 static void
 create_main_window (GtkBuilder *builder, const gchar* camera_name)
 {
+    static ThreadData td;
+    UcaCamera *camera;
     GtkWidget *window;
     GtkWidget *image;
+    GtkWidget *histogram_view;
     GtkWidget *property_tree_view;
     GdkPixbuf *pixbuf;
     GtkBox    *histogram_box;
-    GtkContainer *scrolled_property_window;
+    GtkContainer *property_window;
     GtkAdjustment *max_bin_adjustment;
-    static ThreadData td;
+    RingBuffer *ring_buffer;
+    gsize image_size;
+    guint n_frames;
+    guint bits_per_sample;
+    guint pixel_size;
+    guint width, height;
+    GError  *error = NULL;
 
-    GError *error = NULL;
-    UcaCamera *camera = uca_plugin_manager_get_camera (plugin_manager, camera_name, &error);
+    camera = uca_plugin_manager_get_camera (plugin_manager, camera_name, &error);
 
     if ((camera == NULL) || (error != NULL)) {
         g_error ("%s\n", error->message);
         gtk_main_quit ();
     }
 
-    guint bits_per_sample;
     g_object_get (camera,
-                  "roi-width", &td.width,
-                  "roi-height", &td.height,
+                  "roi-width", &width,
+                  "roi-height", &height,
                   "sensor-bitdepth", &bits_per_sample,
                   NULL);
 
-    property_tree_view = egg_property_tree_view_new (G_OBJECT (camera));
-    scrolled_property_window = GTK_CONTAINER (gtk_builder_get_object (builder, "scrolledwindow2"));
-    gtk_container_add (scrolled_property_window, property_tree_view);
+    histogram_view      = egg_histogram_view_new ();
+    property_tree_view  = egg_property_tree_view_new (G_OBJECT (camera));
+    property_window     = GTK_CONTAINER (gtk_builder_get_object (builder, "property-window"));
+    image               = GTK_WIDGET (gtk_builder_get_object (builder, "image"));
+    histogram_box       = GTK_BOX (gtk_builder_get_object (builder, "histogram-box"));
+    window              = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
+    max_bin_adjustment  = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "max-bin-value-adjustment"));
 
-    image = GTK_WIDGET (gtk_builder_get_object (builder, "image"));
-    pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, td.width, td.height);
+    td.start_button     = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
+    td.stop_button      = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
+    td.record_button    = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
+    td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
+    td.frame_slider     = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
+
+    /* Set initial data */
+    pixel_size  = bits_per_sample > 8 ? 2 : 1;
+    image_size  = pixel_size * width * height;
+    n_frames    = mem_size * 1024 * 1024 / image_size;
+    ring_buffer = ring_buffer_new (image_size, n_frames);
+
+    set_tool_button_state (&td);
+
+    egg_histogram_view_set_data (EGG_HISTOGRAM_VIEW (histogram_view),
+                                 ring_buffer_get_current_pointer (ring_buffer),
+                                 width * height, bits_per_sample, 256);
+
+    pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, width, height);
     gtk_image_set_from_pixbuf (GTK_IMAGE (image), pixbuf);
 
-    td.pixel_size = bits_per_sample > 8 ? 2 : 1;
+    gtk_adjustment_set_value (max_bin_adjustment, pow (2, bits_per_sample) - 1);
+
+    g_message ("Allocated memory for %d frames", n_frames);
+
+    td.pixel_size = pixel_size;
     td.image  = image;
     td.pixbuf = pixbuf;
-    td.buffer = ring_buffer_new (td.pixel_size * td.width * td.height, 256);
+    td.buffer = ring_buffer;
     td.pixels = gdk_pixbuf_get_pixels (pixbuf);
     td.state  = IDLE;
     td.camera = camera;
-    td.histogram_view = egg_histogram_view_new ();
-    td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
-    td.frame_slider = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
+    td.width  = width;
+    td.height = height;
+    td.histogram_view = histogram_view;
 
-    histogram_box = GTK_BOX (gtk_builder_get_object (builder, "histogram-box"));
-    gtk_box_pack_start (histogram_box, td.histogram_view, TRUE, TRUE, 6);
-    egg_histogram_view_set_data (EGG_HISTOGRAM_VIEW (td.histogram_view),
-                                 ring_buffer_get_current_pointer (td.buffer),                      
-                                 td.width * td.height, bits_per_sample, 256);
-
-    window = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
-    g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
-
-    td.start_button = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
-    td.stop_button = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
-    td.record_button = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
-    set_tool_button_state (&td);
-
+    /* Hook up signals */
     g_object_bind_property (gtk_builder_get_object (builder, "min-bin-value-adjustment"), "value",
                             td.histogram_view, "minimum-bin-value",
                             G_BINDING_DEFAULT);
 
-    max_bin_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "max-bin-value-adjustment"));
-    gtk_adjustment_set_value (max_bin_adjustment, pow (2, bits_per_sample) - 1);
     g_object_bind_property (max_bin_adjustment, "value",
                             td.histogram_view, "maximum-bin-value",
                             G_BINDING_DEFAULT);
@@ -326,6 +343,11 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
     g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);
+    g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
+
+    /* Layout */
+    gtk_container_add (property_window, property_tree_view);
+    gtk_box_pack_start (histogram_box, td.histogram_view, TRUE, TRUE, 6);
 
     gtk_widget_show_all (window);
 }
@@ -398,16 +420,32 @@ create_choice_window (GtkBuilder *builder)
 int
 main (int argc, char *argv[])
 {
+    GtkBuilder *builder;
+    GOptionContext *context;
     GError *error = NULL;
+
+    static GOptionEntry entries[] =
+    {
+        { "mem-size", 'm', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_INT, &mem_size, "Memory in megabytes to allocate for frame storage", "M" },
+        { NULL }
+    };
+
+    context = g_option_context_new ("- control libuca cameras");
+    g_option_context_add_main_entries (context, entries, NULL);
+    g_option_context_add_group (context, gtk_get_option_group (TRUE));
+    if (!g_option_context_parse (context, &argc, &argv, &error)) {
+        g_print ("Option parsing failed: %s\n", error->message); 
+        return 1;
+    }
 
     g_thread_init (NULL);
     gdk_threads_init ();
     gtk_init (&argc, &argv);
 
-    GtkBuilder *builder = gtk_builder_new ();
+    builder = gtk_builder_new ();
 
     if (!gtk_builder_add_from_file (builder, CONTROL_GLADE_PATH, &error)) {
-        g_print ("Error: %s\n", error->message);
+        g_print ("Could not load UI file: %s\n", error->message);
         return 1;
     }
 

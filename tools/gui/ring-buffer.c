@@ -13,7 +13,7 @@ ring_buffer_new (gsize block_size,
     buffer->n_blocks_total = n_blocks;
     buffer->n_blocks_used = 0;
     buffer->start_index = 0;
-    buffer->data = g_malloc0 (n_blocks * buffer->block_size);
+    buffer->data = g_malloc0_n (n_blocks, block_size);
 
     return buffer;
 }
