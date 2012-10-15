@@ -10,7 +10,7 @@ typedef struct {
     gsize    block_size;
     guint    n_blocks_total;
     guint    n_blocks_used;
-    guint    start_index;
+    guint    current_index;
 } RingBuffer;
 
 RingBuffer * ring_buffer_new                  (gsize       block_size,

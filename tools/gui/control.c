@@ -79,6 +79,9 @@ convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
             output[j++] = val;
             output[j++] = val;
             output[j++] = val;
+            /* if (i < 10) { */
+            /*     g_print ("%i->%i ", input[i], val); */
+            /* } */
         }
     }
     else if (data->pixel_size == 2) {
@@ -161,13 +164,11 @@ on_delete_event (GtkWidget *widget, GdkEvent *event, gpointer data)
 }
 
 void
-on_destroy (GtkWidget *widget, gpointer data)
+on_destroy (GtkWidget *widget, ThreadData *data)
 {
-    ThreadData *td = (ThreadData *) data;
-
-    td->state = IDLE;
-    g_object_unref (td->camera);
-    ring_buffer_free (td->buffer);
+    data->state = IDLE;
+    g_object_unref (data->camera);
+    ring_buffer_free (data->buffer);
 
     gtk_main_quit ();
 }
@@ -184,25 +185,27 @@ set_tool_button_state (ThreadData *data)
 }
 
 static void
-on_frame_slider_changed (GtkAdjustment *adjustment, gpointer user_data)
+update_current_frame (ThreadData *data)
 {
-    ThreadData *data = (ThreadData *) user_data;
+    gpointer buffer;
+    gint index;
 
-    if (data->state == IDLE) {
-        gpointer buffer;
-        gint index;
-
-        index = (gint) gtk_adjustment_get_value (adjustment);
-        buffer = ring_buffer_get_pointer (data->buffer, index);
-        convert_grayscale_to_rgb (data, buffer);
-        update_pixbuf (data);
-    }
+    index = (gint) gtk_adjustment_get_value (data->frame_slider);
+    buffer = ring_buffer_get_pointer (data->buffer, index);
+    convert_grayscale_to_rgb (data, buffer);
+    update_pixbuf (data);
 }
 
 static void
-on_start_button_clicked (GtkWidget *widget, gpointer args)
+on_frame_slider_changed (GtkAdjustment *adjustment, ThreadData *data)
 {
-    ThreadData *data = (ThreadData *) args;
+    if (data->state == IDLE)
+        update_current_frame (data);
+}
+
+static void
+on_start_button_clicked (GtkWidget *widget, ThreadData *data)
+{
     GError *error = NULL;
 
     uca_camera_start_recording (data->camera, &error);
@@ -223,13 +226,11 @@ on_start_button_clicked (GtkWidget *widget, gpointer args)
 }
 
 static void
-on_stop_button_clicked (GtkWidget *widget, gpointer args)
+on_stop_button_clicked (GtkWidget *widget, ThreadData *data)
 {
-    ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
 
     data->state = IDLE;
-
     set_tool_button_state (data);
     uca_camera_stop_recording (data->camera, &error);
 
@@ -238,9 +239,8 @@ on_stop_button_clicked (GtkWidget *widget, gpointer args)
 }
 
 static void
-on_record_button_clicked (GtkWidget *widget, gpointer args)
+on_record_button_clicked (GtkWidget *widget, ThreadData *data)
 {
-    ThreadData *data = (ThreadData *) args;
     GError *error = NULL;
 
     uca_camera_start_recording (data->camera, &error);
@@ -258,6 +258,13 @@ on_record_button_clicked (GtkWidget *widget, gpointer args)
         data->state = IDLE;
         set_tool_button_state (data);
     }
+}
+
+static void
+on_histogram_changed (EggHistogramView *view, ThreadData *data)
+{
+    if (data->state == IDLE)
+        update_current_frame (data);
 }
 
 static void
@@ -351,6 +358,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
     g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);
+    g_signal_connect (histogram_view, "changed", G_CALLBACK (on_histogram_changed), &td);
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
 
     /* Layout */

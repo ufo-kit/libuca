@@ -44,6 +44,9 @@ struct _EggHistogramView
 struct _EggHistogramViewClass
 {
     GtkDrawingAreaClass      parent_class;
+
+    /* signals */
+    void (* changed) (EggHistogramView *view);
 };
 
 GType         egg_histogram_view_get_type (void);

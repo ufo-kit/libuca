@@ -55,7 +55,15 @@ enum
     N_PROPERTIES
 };
 
+enum
+{
+    CHANGED,
+    LAST_SIGNAL
+};
+
 static GParamSpec *egg_histogram_view_properties[N_PROPERTIES] = { NULL, };
+
+static guint egg_histogram_view_signals[LAST_SIGNAL] = { 0 };
 
 
 GtkWidget *
@@ -253,7 +261,7 @@ egg_histogram_view_expose (GtkWidget *widget,
     cairo_rectangle (cr, BORDER, BORDER, priv->min_border + 0.5, height - 1);
     cairo_fill (cr);
 
-    cairo_rectangle (cr, priv->max_border + 0.5, BORDER, width - priv->min_border - 0.5, height - 1);
+    cairo_rectangle (cr, priv->max_border + 0.5, BORDER, width - priv->max_border + 0.5, height - 1);
     cairo_fill (cr);
 
     /* Draw spikes */
@@ -393,9 +401,14 @@ egg_histogram_view_motion_notify (GtkWidget *widget,
     priv = view->priv;
 
     if (priv->grabbing) {
-        *priv->grabbed = event->x;
+        GtkAllocation allocation;
 
-        gtk_widget_queue_draw (widget);
+        gtk_widget_get_allocation (widget, &allocation);
+
+        if ((event->x + BORDER > 0) && (event->x + BORDER < allocation.width)) {
+            *priv->grabbed = event->x;
+            gtk_widget_queue_draw (widget);
+        }
     }
     else {
         if (is_on_border (priv, event->x))
@@ -416,6 +429,7 @@ egg_histogram_view_button_release (GtkWidget *widget,
     view = EGG_HISTOGRAM_VIEW (widget);
     set_cursor_type (view, GDK_ARROW);
     view->priv->grabbing = FALSE;
+    g_signal_emit (widget, egg_histogram_view_signals[CHANGED], 0);
 
     return TRUE;
 }
@@ -472,6 +486,15 @@ egg_histogram_view_class_init (EggHistogramViewClass *klass)
 
     g_object_class_install_property (object_class, PROP_MINIMUM_BIN_VALUE, egg_histogram_view_properties[PROP_MINIMUM_BIN_VALUE]);
     g_object_class_install_property (object_class, PROP_MAXIMUM_BIN_VALUE, egg_histogram_view_properties[PROP_MAXIMUM_BIN_VALUE]);
+
+    egg_histogram_view_signals[CHANGED] =
+        g_signal_new ("changed",
+                      G_OBJECT_CLASS_TYPE (klass),
+                      G_SIGNAL_RUN_FIRST | G_SIGNAL_NO_RECURSE,
+                      G_STRUCT_OFFSET (EggHistogramViewClass, changed),
+                      NULL, NULL,
+                      g_cclosure_marshal_VOID__VOID,
+                      G_TYPE_NONE, 0);
 
     g_type_class_add_private (klass, sizeof (EggHistogramViewPrivate));
 }
