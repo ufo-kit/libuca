@@ -41,6 +41,7 @@ typedef struct {
     GtkWidget   *start_button;
     GtkWidget   *stop_button;
     GtkWidget   *record_button;
+    GtkComboBox *zoom_box;
 
     GtkWidget       *histogram_view;
     GtkToggleButton *histogram_button;
@@ -48,12 +49,13 @@ typedef struct {
 
     RingBuffer  *buffer;
     guchar      *pixels;
+    gint         display_width, display_height;
+    gdouble      zoom_factor;
     State        state;
 
-    int          timestamp;
-    int          width;
-    int          height;
-    int          pixel_size;
+    gint         timestamp;
+    gint         width, height;
+    gint         pixel_size;
 } ThreadData;
 
 static UcaPluginManager *plugin_manager;
@@ -66,32 +68,42 @@ convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
     gdouble max;
     gdouble factor;
     guint8 *output;
+    gint i = 0;
+    gint stride;
 
     egg_histogram_get_visible_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
     factor = 255.0 / (max - min);
     output = data->pixels;
+    stride = (gint) 1 / data->zoom_factor;
 
     if (data->pixel_size == 1) {
         guint8 *input = (guint8 *) buffer;
 
-        for (int i = 0, j = 0; i < data->width * data->height; i++) {
-            guchar val = (guchar) ((input[i] - min) * factor);
-            output[j++] = val;
-            output[j++] = val;
-            output[j++] = val;
-            /* if (i < 10) { */
-            /*     g_print ("%i->%i ", input[i], val); */
-            /* } */
+        for (gint y = 0; y < data->display_height; y++) {
+            gint offset = y * stride * data->width;
+
+            for (gint x = 0; x < data->display_width; x++, offset += stride) {
+                guchar val = (guchar) ((input[offset] - min) * factor);
+
+                output[i++] = val;
+                output[i++] = val;
+                output[i++] = val;
+            } 
         }
     }
     else if (data->pixel_size == 2) {
         guint16 *input = (guint16 *) buffer;
 
-        for (int i = 0, j = 0; i < data->width * data->height; i++) {
-            guchar val = (guint8) ((input[i] - min) * factor);
-            output[j++] = val;
-            output[j++] = val;
-            output[j++] = val;
+        for (gint y = 0; y < data->display_height; y++) {
+            gint offset = y * stride * data->width;
+
+            for (gint x = 0; x < data->display_width; x++, offset += stride) {
+                guchar val = (guchar) ((input[offset] - min) * factor);
+
+                output[i++] = val;
+                output[i++] = val;
+                output[i++] = val;
+            } 
         }
     }
 }
@@ -100,12 +112,22 @@ static void
 update_pixbuf (ThreadData *data)
 {
     gdk_flush ();
-    gtk_image_clear (GTK_IMAGE (data->image));
     gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
-    gtk_widget_queue_draw_area (data->image, 0, 0, data->width, data->height);
+    gtk_widget_queue_draw_area (data->image, 0, 0, data->display_width, data->display_height);
 
     if (gtk_toggle_button_get_active (data->histogram_button))
         gtk_widget_queue_draw (data->histogram_view);
+}
+
+static void
+update_pixbuf_dimensions (ThreadData *data)
+{
+    if (data->pixbuf != NULL)
+        g_object_unref (data->pixbuf);
+
+    data->pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, data->display_width, data->display_height);
+    data->pixels = gdk_pixbuf_get_pixels (data->pixbuf);
+    gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
 }
 
 static gpointer
@@ -181,6 +203,8 @@ set_tool_button_state (ThreadData *data)
     gtk_widget_set_sensitive (data->stop_button,
                               data->state == RUNNING || data->state == RECORDING);
     gtk_widget_set_sensitive (data->record_button,
+                              data->state == IDLE);
+    gtk_widget_set_sensitive (GTK_WIDGET (data->zoom_box),
                               data->state == IDLE);
 }
 
@@ -268,6 +292,28 @@ on_histogram_changed (EggHistogramView *view, ThreadData *data)
 }
 
 static void
+on_zoom_changed (GtkComboBox *widget, ThreadData *data)
+{
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+    gdouble factor;
+
+    enum {
+        DISPLAY_COLUMN,
+        FACTOR_COLUMN
+    };
+
+    model = gtk_combo_box_get_model (widget);
+    gtk_combo_box_get_active_iter (widget, &iter);
+    gtk_tree_model_get (model, &iter, FACTOR_COLUMN, &factor, -1);
+
+    data->display_width = (gint) data->width * factor;
+    data->display_height = (gint) data->height * factor;
+    data->zoom_factor = factor;
+    update_pixbuf_dimensions (data);
+}
+
+static void
 create_main_window (GtkBuilder *builder, const gchar* camera_name)
 {
     static ThreadData td;
@@ -278,9 +324,9 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     GtkWidget *property_tree_view;
     GdkPixbuf *pixbuf;
     GtkBox    *histogram_box;
-    GtkContainer *property_window;
-    GtkAdjustment *max_bin_adjustment;
-    RingBuffer *ring_buffer;
+    GtkContainer    *property_window;
+    GtkAdjustment   *max_bin_adjustment;
+    RingBuffer      *ring_buffer;
     gsize image_size;
     guint n_frames;
     guint bits_per_sample;
@@ -309,6 +355,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     window              = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
     max_bin_adjustment  = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "max-bin-value-adjustment"));
 
+    td.zoom_box         = GTK_COMBO_BOX (gtk_builder_get_object (builder, "zoom-box"));
     td.start_button     = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
     td.stop_button      = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
     td.record_button    = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
@@ -336,14 +383,17 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     td.pixel_size = pixel_size;
     td.image  = image;
-    td.pixbuf = pixbuf;
+    td.pixbuf = NULL;
+    td.pixels = NULL;
     td.buffer = ring_buffer;
-    td.pixels = gdk_pixbuf_get_pixels (pixbuf);
     td.state  = IDLE;
     td.camera = camera;
-    td.width  = width;
-    td.height = height;
+    td.width  = td.display_width = width;
+    td.height = td.display_height = height;
+    td.zoom_factor = 1.0;
     td.histogram_view = histogram_view;
+
+    update_pixbuf_dimensions (&td);
 
     /* Hook up signals */
     g_object_bind_property (gtk_builder_get_object (builder, "min-bin-value-adjustment"), "value",
@@ -358,6 +408,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
     g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);
+    g_signal_connect (td.zoom_box, "changed", G_CALLBACK (on_zoom_changed), &td);
     g_signal_connect (histogram_view, "changed", G_CALLBACK (on_histogram_changed), &td);
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
 
