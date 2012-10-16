@@ -1363,6 +1363,8 @@ uca_pco_camera_class_init(UcaPcoCameraClass *klass)
 static void
 uca_pco_camera_init(UcaPcoCamera *self)
 {
+    UcaCamera *camera;
+
     self->priv = UCA_PCO_CAMERA_GET_PRIVATE(self);
     self->priv->fg = NULL;
     self->priv->fg_mem = NULL;
@@ -1376,6 +1378,18 @@ uca_pco_camera_init(UcaPcoCamera *self)
 
     self->priv->delay_timebase = TIMEBASE_INVALID;
     self->priv->exposure_timebase = TIMEBASE_INVALID;
+
+    camera = UCA_CAMERA (self);
+    uca_camera_register_unit (camera, "sensor-width-extended", UCA_UNIT_PIXEL);
+    uca_camera_register_unit (camera, "sensor-height-extended", UCA_UNIT_PIXEL);
+    uca_camera_register_unit (camera, "temperature", UCA_UNIT_DEGREE_CELSIUS);
+    uca_camera_register_unit (camera, "cooling-point", UCA_UNIT_DEGREE_CELSIUS);
+    uca_camera_register_unit (camera, "cooling-point-min", UCA_UNIT_DEGREE_CELSIUS);
+    uca_camera_register_unit (camera, "cooling-point-max", UCA_UNIT_DEGREE_CELSIUS);
+    uca_camera_register_unit (camera, "cooling-point-default", UCA_UNIT_DEGREE_CELSIUS);
+    uca_camera_register_unit (camera, "sensor-adcs", UCA_UNIT_COUNT);
+    uca_camera_register_unit (camera, "sensor-max-adcs", UCA_UNIT_COUNT);
+    uca_camera_register_unit (camera, "delay-time", UCA_UNIT_SECOND);
 }
 
 G_MODULE_EXPORT UcaCamera *

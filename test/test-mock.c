@@ -171,8 +171,12 @@ test_fps_property (Fixture *fixture, gconstpointer data)
 static void
 test_property_units (Fixture *fixture, gconstpointer data)
 {
+    /* Default camera properties */
     g_assert (uca_camera_get_unit (fixture->camera, "sensor-width") == UCA_UNIT_PIXEL);
     g_assert (uca_camera_get_unit (fixture->camera, "name") == UCA_UNIT_NA);
+
+    /* Mock-specific properties */
+    g_assert (uca_camera_get_unit (fixture->camera, "frame-rate") == UCA_UNIT_COUNT);
 }
 
 static void

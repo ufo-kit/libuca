@@ -397,6 +397,8 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     g_value_init(&val, G_TYPE_UINT);
     g_value_set_uint(&val, 1);
     g_value_array_append(self->priv->binnings, &val);
+
+    uca_camera_register_unit (UCA_CAMERA (self), "frame-rate", UCA_UNIT_COUNT);
 }
 
 G_MODULE_EXPORT UcaCamera *

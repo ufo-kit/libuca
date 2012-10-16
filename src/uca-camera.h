@@ -54,6 +54,7 @@ typedef enum {
     UCA_UNIT_METER,
     UCA_UNIT_SECOND,
     UCA_UNIT_PIXEL,
+    UCA_UNIT_DEGREE_CELSIUS,
     UCA_UNIT_COUNT
 } UcaUnit;
 

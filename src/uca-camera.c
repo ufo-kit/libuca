@@ -56,10 +56,11 @@ GQuark uca_camera_error_quark()
 /**
  * UcaUnit:
  * @UCA_UNIT_NA: Not applicable
- * @UCA_UNIT_METER: SI meter
- * @UCA_UNIT_SECOND: SI second
+ * @UCA_UNIT_METER: Length in SI meter
+ * @UCA_UNIT_SECOND: Time in SI second
  * @UCA_UNIT_PIXEL: Number of pixels in one dimension
- * @UCA_UNIT_COUNT: Number
+ * @UCA_UNIT_DEGREE_CELSIUS: Temperature in degree Celsius
+ * @UCA_UNIT_COUNT: Generic number
  *
  * Units should be registered by camera implementations using
  * uca_camera_register_unit() and can be queried by client programs with
