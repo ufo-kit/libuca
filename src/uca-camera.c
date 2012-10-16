@@ -50,7 +50,25 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  */
 GQuark uca_camera_error_quark()
 {
-    return g_quark_from_static_string("uca-camera-error-quark");
+    return g_quark_from_static_string ("uca-camera-error-quark");
+}
+
+/**
+ * UcaUnit:
+ * @UCA_UNIT_NA: Not applicable
+ * @UCA_UNIT_METER: SI meter
+ * @UCA_UNIT_SECOND: SI second
+ * @UCA_UNIT_PIXEL: Number of pixels in one dimension
+ * @UCA_UNIT_COUNT: Number
+ *
+ * Units should be registered by camera implementations using
+ * uca_camera_register_unit() and can be queried by client programs with
+ * uca_camera_get_unit().
+ */
+
+GQuark uca_unit_quark ()
+{
+    return g_quark_from_static_string ("uca-unit-quark");
 }
 
 enum {
@@ -95,6 +113,12 @@ struct _UcaCameraPrivate {
     gboolean is_readout;
     gboolean transfer_async;
 };
+
+static void
+uca_camera_set_property_unit (GParamSpec *pspec, UcaUnit unit)
+{
+    g_param_spec_set_qdata (pspec, UCA_UNIT_QUARK, GINT_TO_POINTER (unit));
+}
 
 static void
 uca_camera_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
@@ -149,7 +173,7 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
 
         case PROP_FRAMES_PER_SECOND:
             {
-                gdouble exposure_time; 
+                gdouble exposure_time;
 
                 g_object_get (object, "exposure-time", &exposure_time, NULL);
                 g_value_set_double (value, 1. / exposure_time);
@@ -162,11 +186,18 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
 }
 
 static void
-uca_camera_class_init(UcaCameraClass *klass)
+uca_camera_finalize (GObject *object)
+{
+    G_OBJECT_CLASS (uca_camera_parent_class)->finalize (object);
+}
+
+static void
+uca_camera_class_init (UcaCameraClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_camera_set_property;
     gobject_class->get_property = uca_camera_get_property;
+    gobject_class->finalize = uca_camera_finalize;
 
     klass->start_recording = NULL;
     klass->stop_recording = NULL;
@@ -342,7 +373,7 @@ uca_camera_class_init(UcaCameraClass *klass)
 }
 
 static void
-uca_camera_init(UcaCamera *camera)
+uca_camera_init (UcaCamera *camera)
 {
     camera->grab_func = NULL;
 
@@ -351,26 +382,20 @@ uca_camera_init(UcaCamera *camera)
     camera->priv->is_readout = FALSE;
     camera->priv->transfer_async = FALSE;
 
-    /*
-     * This here would be the best place to instantiate the tango server object,
-     * along these lines:
-     *
-     * // I'd prefer if you expose a single C method, so we don't have to
-     * // compile uca-camera.c with g++
-     * tango_handle = tango_server_new(camera);
-     *
-     * void tango_server_new(UcaCamera *camera)
-     * {
-     *     // Do whatever is necessary. In the end you will have some kind of
-     *     // Tango object t which needs to somehow hook up to the properties. A
-     *     // list of all available properties can be enumerated with
-     *     // g_object_class_list_properties(G_OBJECT_CLASS(camera),
-     *     //     &n_properties);
-     *
-     *     // For setting/getting properties, use g_object_get/set_property() or
-     *     // g_object_get/set() whatever is more suitable.
-     * }
-     */
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_WIDTH], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HEIGHT], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_BITDEPTH], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HORIZONTAL_BINNING], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_VERTICAL_BINNING], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_MAX_FRAME_RATE], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_EXPOSURE_TIME], UCA_UNIT_SECOND);
+    uca_camera_set_property_unit (camera_properties[PROP_FRAMES_PER_SECOND], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_X], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_Y], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH_MULTIPLIER], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT_MULTIPLIER], UCA_UNIT_COUNT);
 }
 
 /**
@@ -523,7 +548,8 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
  *
  * Set the grab function that is called whenever a frame is readily transfered.
  */
-void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data)
+void
+uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data)
 {
     camera->grab_func = func;
     camera->user_data = user_data;
@@ -598,5 +624,69 @@ uca_camera_grab (UcaCamera *camera, gpointer *data, GError **error)
         (*klass->grab) (camera, data, error);
 
     g_static_mutex_unlock (&mutex);
+}
+
+/**
+ * uca_camera_register_unit:
+ * @camera: A #UcaCamera object
+ * @prop_name: Name of a property
+ * @unit: #UcaUnit
+ *
+ * Associates @prop_name of @camera with a specific @unit.
+ *
+ * Since: 1.1
+ */
+void
+uca_camera_register_unit (UcaCamera *camera,
+                          const gchar *prop_name,
+                          UcaUnit unit)
+{
+    UcaCameraClass *klass;
+    GObjectClass *oclass;
+    GParamSpec *pspec;
+
+    klass  = UCA_CAMERA_GET_CLASS (camera);
+    oclass = G_OBJECT_CLASS (klass);
+    pspec  = g_object_class_find_property (oclass, prop_name);
+
+    if (pspec == NULL) {
+        g_warning ("Camera does not have property `%s'", prop_name);
+        return;
+    }
+
+    uca_camera_set_property_unit (pspec, unit);
+}
+
+/**
+ * uca_camera_get_unit:
+ * @camera: A #UcaCamera object
+ * @prop_name: Name of a property
+ *
+ * Returns the unit associated with @prop_name of @camera.
+ *
+ * Returns: A #UcaUnit value associated with @prop_name. If there is none, the
+ * value will be #UCA_UNIT_NA.
+ * Since: 1.1
+ */
+UcaUnit
+uca_camera_get_unit (UcaCamera *camera,
+                     const gchar *prop_name)
+{
+    UcaCameraClass *klass;
+    GObjectClass *oclass;
+    GParamSpec *pspec;
+    gpointer data;
+
+    klass  = UCA_CAMERA_GET_CLASS (camera);
+    oclass = G_OBJECT_CLASS (klass);
+    pspec  = g_object_class_find_property (oclass, prop_name);
+
+    if (pspec == NULL) {
+        g_warning ("Camera does not have property `%s'", prop_name);
+        return UCA_UNIT_NA;
+    }
+
+    data = g_param_spec_get_qdata (pspec, UCA_UNIT_QUARK);
+    return data == NULL ? UCA_UNIT_NA : GPOINTER_TO_INT (data);
 }
 

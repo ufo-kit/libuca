@@ -169,6 +169,13 @@ test_fps_property (Fixture *fixture, gconstpointer data)
 }
 
 static void
+test_property_units (Fixture *fixture, gconstpointer data)
+{
+    g_assert (uca_camera_get_unit (fixture->camera, "sensor-width") == UCA_UNIT_PIXEL);
+    g_assert (uca_camera_get_unit (fixture->camera, "name") == UCA_UNIT_NA);
+}
+
+static void
 test_binnings_properties (Fixture *fixture, gconstpointer data)
 {
     UcaCamera *camera = UCA_CAMERA (fixture->camera);
@@ -210,6 +217,7 @@ int main (int argc, char *argv[])
     g_test_add ("/properties/recording", Fixture, NULL, fixture_setup, test_recording_property, fixture_teardown);
     g_test_add ("/properties/binnings", Fixture, NULL, fixture_setup, test_binnings_properties, fixture_teardown);
     g_test_add ("/properties/frames-per-second", Fixture, NULL, fixture_setup, test_fps_property, fixture_teardown);
+    g_test_add ("/properties/units", Fixture, NULL, fixture_setup, test_property_units, fixture_teardown);
     g_test_add ("/signal", Fixture, NULL, fixture_setup, test_signal, fixture_teardown);
 
     return g_test_run ();

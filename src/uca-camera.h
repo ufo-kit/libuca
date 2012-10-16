@@ -29,8 +29,11 @@ G_BEGIN_DECLS
 #define UCA_IS_CAMERA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), UCA_TYPE_CAMERA))
 #define UCA_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_CAMERA, UcaCameraClass))
 
-#define UCA_CAMERA_ERROR uca_camera_error_quark()
+#define UCA_CAMERA_ERROR    uca_camera_error_quark()
+#define UCA_UNIT_QUARK      uca_unit_quark()
+
 GQuark uca_camera_error_quark(void);
+GQuark uca_unit_quark(void);
 
 typedef enum {
     UCA_CAMERA_ERROR_NOT_FOUND,
@@ -45,6 +48,14 @@ typedef enum {
     UCA_CAMERA_TRIGGER_SOFTWARE,
     UCA_CAMERA_TRIGGER_EXTERNAL
 } UcaCameraTrigger;
+
+typedef enum {
+    UCA_UNIT_NA,
+    UCA_UNIT_METER,
+    UCA_UNIT_SECOND,
+    UCA_UNIT_PIXEL,
+    UCA_UNIT_COUNT
+} UcaUnit;
 
 typedef struct _UcaCamera           UcaCamera;
 typedef struct _UcaCameraClass      UcaCameraClass;
@@ -136,6 +147,11 @@ void        uca_camera_grab             (UcaCamera          *camera,
 void        uca_camera_set_grab_func    (UcaCamera          *camera,
                                          UcaCameraGrabFunc   func,
                                          gpointer            user_data);
+void        uca_camera_register_unit    (UcaCamera          *camera,
+                                         const gchar        *prop_name,
+                                         UcaUnit             unit);
+UcaUnit     uca_camera_get_unit         (UcaCamera          *camera,
+                                         const gchar        *prop_name);
 
 GType uca_camera_get_type(void);
 
