@@ -36,6 +36,7 @@ typedef enum {
 
 typedef struct {
     UcaCamera   *camera;
+    GtkWidget   *main_window;
     GdkPixbuf   *pixbuf;
     GtkWidget   *image;
     GtkWidget   *start_button;
@@ -300,10 +301,14 @@ download_frames (ThreadData *data)
 {
     gpointer buffer;
     guint n_frames;
+    guint current_frame = 1;
     GError *error = NULL;
 
     g_object_get (data->camera, "recorded-frames", &n_frames, NULL);
-    g_print ("recorded %i frames\n", n_frames);
+    gdk_threads_enter ();
+    gtk_widget_set_sensitive (data->download_close_button, FALSE);
+    gtk_adjustment_set_upper (data->download_adjustment, n_frames);
+    gdk_threads_leave ();
 
     uca_camera_start_readout (data->camera, &error);
 
@@ -318,6 +323,9 @@ download_frames (ThreadData *data)
         buffer = ring_buffer_get_current_pointer (data->buffer);
         uca_camera_grab (data->camera, &buffer, &error);
         ring_buffer_proceed (data->buffer);
+        gdk_threads_enter ();
+        gtk_adjustment_set_value (data->download_adjustment, current_frame++);
+        gdk_threads_leave ();
     }
 
     if (error->code == UCA_CAMERA_ERROR_END_OF_STREAM) {
@@ -337,6 +345,10 @@ download_frames (ThreadData *data)
     if (error != NULL)
         g_printerr ("Failed to stop reading out of camera memory: %s\n", error->message);
 
+    gdk_threads_enter ();
+    gtk_widget_set_sensitive (data->download_close_button, TRUE);
+    gdk_threads_leave ();
+
     return NULL;
 }
 
@@ -349,9 +361,13 @@ on_download_button_clicked (GtkWidget *widget, ThreadData *data)
         g_printerr ("Failed to create thread: %s\n", error->message);
     }
 
+    gtk_widget_set_sensitive (data->main_window, FALSE);
     gtk_window_set_modal (GTK_WINDOW (data->download_dialog), TRUE);
     gtk_dialog_run (data->download_dialog);
+    gtk_widget_hide (GTK_WIDGET (data->download_dialog));
     gtk_window_set_modal (GTK_WINDOW (data->download_dialog), FALSE);
+    gtk_widget_set_sensitive (data->main_window, TRUE);
+    gtk_window_set_modal (GTK_WINDOW (data->download_dialog), TRUE);
 }
 
 static void
@@ -435,6 +451,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     td.download_dialog  = GTK_DIALOG (gtk_builder_get_object (builder, "download-dialog"));
     td.download_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "download-adjustment"));
+    td.download_close_button = GTK_WIDGET (gtk_builder_get_object (builder, "download-close-button"));
 
     /* Set initial data */
     pixel_size  = bits_per_sample > 8 ? 2 : 1;
@@ -465,6 +482,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.zoom_factor = 1.0;
     td.histogram_view = histogram_view;
     td.data_in_camram = FALSE;
+    td.main_window = window;
 
     update_pixbuf_dimensions (&td);
     set_tool_button_state (&td);

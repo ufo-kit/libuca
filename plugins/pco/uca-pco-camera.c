@@ -506,7 +506,11 @@ uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
     if (err == FG_INVALID_PARAMETER)
         g_warning(" Unable to unblock all\n");
 
+    err = pco_get_active_segment(priv->pco, &priv->active_segment);
+    HANDLE_PCO_ERROR(err);
+
     err = pco_get_num_images(priv->pco, priv->active_segment, &priv->num_recorded_images);
+    g_print ("images: %i\n", priv->num_recorded_images);
     HANDLE_PCO_ERROR(err);
 }
 
