@@ -44,6 +44,11 @@ typedef struct {
     GtkWidget   *download_button;
     GtkComboBox *zoom_box;
 
+    GtkDialog       *download_dialog;
+    GtkProgressBar  *download_progressbar;
+    GtkWidget       *download_close_button;
+    GtkAdjustment   *download_adjustment;
+
     GtkWidget       *histogram_view;
     GtkToggleButton *histogram_button;
     GtkAdjustment   *frame_slider;
@@ -290,17 +295,21 @@ on_record_button_clicked (GtkWidget *widget, ThreadData *data)
     }
 }
 
-static void
-on_download_button_clicked (GtkWidget *widget, ThreadData *data)
+static gpointer
+download_frames (ThreadData *data)
 {
     gpointer buffer;
+    guint n_frames;
     GError *error = NULL;
+
+    g_object_get (data->camera, "recorded-frames", &n_frames, NULL);
+    g_print ("recorded %i frames\n", n_frames);
 
     uca_camera_start_readout (data->camera, &error);
 
     if (error != NULL) {
         g_printerr ("Failed to start read out of camera memory: %s\n", error->message);
-        return;
+        return NULL;
     }
 
     ring_buffer_reset (data->buffer);
@@ -327,6 +336,22 @@ on_download_button_clicked (GtkWidget *widget, ThreadData *data)
 
     if (error != NULL)
         g_printerr ("Failed to stop reading out of camera memory: %s\n", error->message);
+
+    return NULL;
+}
+
+static void
+on_download_button_clicked (GtkWidget *widget, ThreadData *data)
+{
+    GError *error = NULL;
+
+    if (!g_thread_create ((GThreadFunc) download_frames, data, FALSE, &error)) {
+        g_printerr ("Failed to create thread: %s\n", error->message);
+    }
+
+    gtk_window_set_modal (GTK_WINDOW (data->download_dialog), TRUE);
+    gtk_dialog_run (data->download_dialog);
+    gtk_window_set_modal (GTK_WINDOW (data->download_dialog), FALSE);
 }
 
 static void
@@ -407,6 +432,9 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
     td.frame_slider     = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
+
+    td.download_dialog  = GTK_DIALOG (gtk_builder_get_object (builder, "download-dialog"));
+    td.download_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "download-adjustment"));
 
     /* Set initial data */
     pixel_size  = bits_per_sample > 8 ? 2 : 1;
