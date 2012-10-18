@@ -103,6 +103,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "roi-height-multiplier",
     "has-streaming",
     "has-camram-recording",
+    "recorded-frames",
     "transfer-asynchronously",
     "is-recording",
     "is-readout"
@@ -180,6 +181,10 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
                 g_object_get (object, "exposure-time", &exposure_time, NULL);
                 g_value_set_double (value, 1. / exposure_time);
             }
+            break;
+
+        case PROP_RECORDED_FRAMES:
+            g_value_set_uint (value, 0);
             break;
 
         default:
@@ -350,6 +355,20 @@ uca_camera_class_init (UcaCameraClass *klass)
             "Is the camera able to record the data in-camera",
             FALSE, G_PARAM_READABLE);
 
+    /**
+     * UcaCamera:recorded-frames
+     *
+     * Number of frames that are recorded into internal camera memory.
+     *
+     * Since: 1.1
+     */
+    camera_properties[PROP_RECORDED_FRAMES] =
+        g_param_spec_uint(uca_camera_props[PROP_RECORDED_FRAMES],
+            "Number of frames recorded into internal camera memory",
+            "Number of frames recorded into internal camera memory",
+            0, G_MAXUINT, 0,
+            G_PARAM_READABLE);
+
     camera_properties[PROP_TRANSFER_ASYNCHRONOUSLY] =
         g_param_spec_boolean(uca_camera_props[PROP_TRANSFER_ASYNCHRONOUSLY],
             "Specify whether data should be transfered asynchronously",
@@ -398,6 +417,7 @@ uca_camera_init (UcaCamera *camera)
     uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH_MULTIPLIER], UCA_UNIT_COUNT);
     uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT_MULTIPLIER], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_RECORDED_FRAMES], UCA_UNIT_COUNT);
 }
 
 /**

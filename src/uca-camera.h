@@ -85,6 +85,7 @@ enum {
     PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
+    PROP_RECORDED_FRAMES,
 
     /* These properties are handled internally */
     PROP_TRANSFER_ASYNCHRONOUSLY,

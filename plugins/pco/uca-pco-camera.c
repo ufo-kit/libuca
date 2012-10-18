@@ -139,6 +139,7 @@ static gint base_overrideables[] = {
     PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
+    PROP_RECORDED_FRAMES,
     0
 };
 
@@ -504,6 +505,9 @@ uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
     err = Fg_setStatusEx(priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
     if (err == FG_INVALID_PARAMETER)
         g_warning(" Unable to unblock all\n");
+
+    err = pco_get_num_images(priv->pco, priv->active_segment, &priv->num_recorded_images);
+    HANDLE_PCO_ERROR(err);
 }
 
 static void
@@ -1024,6 +1028,10 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
             g_value_set_boolean(value, priv->camera_description->has_camram);
             break;
 
+        case PROP_RECORDED_FRAMES:
+            g_value_set_uint(value, priv->num_recorded_images);
+            break;
+
         case PROP_RECORD_MODE:
             {
                 guint16 mode;
@@ -1440,6 +1448,7 @@ uca_camera_impl_new (GError **error)
     priv->roi_y = roi[1] - 1;
     priv->roi_width = roi[2] - roi[0] + 1;
     priv->roi_height = roi[3] - roi[1] + 1;
+    priv->num_recorded_images = 0;
 
     guint16 camera_type, camera_subtype;
     pco_get_camera_type(priv->pco, &camera_type, &camera_subtype);
