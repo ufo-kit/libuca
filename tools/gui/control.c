@@ -538,7 +538,7 @@ main (int argc, char *argv[])
 
     static GOptionEntry entries[] =
     {
-        { "mem-size", 'm', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_INT, &mem_size, "Memory in megabytes to allocate for frame storage", "M" },
+        { "mem-size", 'm', 0, G_OPTION_ARG_INT, &mem_size, "Memory in megabytes to allocate for frame storage", "M" },
         { NULL }
     };
 
