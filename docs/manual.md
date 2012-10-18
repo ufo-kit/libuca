@@ -260,9 +260,11 @@ The following cameras are supported:
 ## Property documentation
 
 * [Basic camera properties][base-doc]
+* [pco][pco-doc]
 * [mock][mock-doc]
 
 [base-doc]: base.html
+[pco-doc]: pco.html
 [mock-doc]: mock.html
 
 
