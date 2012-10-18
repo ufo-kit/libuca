@@ -311,15 +311,19 @@ on_download_button_clicked (GtkWidget *widget, ThreadData *data)
         ring_buffer_proceed (data->buffer);
     }
 
-    if (error->code != UCA_CAMERA_ERROR_END_OF_STREAM) {
+    if (error->code == UCA_CAMERA_ERROR_END_OF_STREAM) {
         guint n_frames = ring_buffer_get_num_blocks (data->buffer);
 
         gtk_adjustment_set_upper (data->frame_slider, n_frames - 1);
         gtk_adjustment_set_value (data->frame_slider, n_frames - 1);
     }
-    else {
+    else
         g_printerr ("Error while reading out frames: %s\n", error->message);
-    }
+
+    uca_camera_stop_readout (data->camera, &error);
+
+    if (error != NULL)
+        g_printerr ("Failed to stop reading out of camera memory: %s\n", error->message);
 }
 
 static void

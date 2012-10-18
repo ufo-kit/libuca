@@ -23,6 +23,8 @@ Minor changes
 
 - It is now possible to generate GObject introspection meta data to bind libuca
   to all languages that support GObject introspection.
+- Added uca_camera_stop_readout() to cleanup after using
+  uca_camera_start_readout().
 
 
 Changes in libuca 1.0 aka 0.6

@@ -385,7 +385,7 @@ check_pco_property_error (guint err, guint property_id)
 {
     if (err != PCO_NOERROR) {
         g_warning ("Call to libpco failed with error code %x for property `%s'",
-                   err, 
+                   err,
                    pco_properties[property_id]->name);
     }
 }
@@ -523,7 +523,25 @@ uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
     err = pco_get_num_images(priv->pco, priv->active_segment, &priv->num_recorded_images);
     HANDLE_PCO_ERROR(err);
 
+    err = Fg_AcquireEx(priv->fg, priv->fg_port, GRAB_INFINITE, ACQ_STANDARD, priv->fg_mem);
+    FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
+
+    priv->last_frame = 0;
     priv->current_image = 1;
+}
+
+static void
+uca_pco_camera_stop_readout(UcaCamera *camera, GError **error)
+{
+    g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+    guint err = Fg_stopAcquireEx(priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
+    FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
+
+    err = Fg_setStatusEx(priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
+    if (err == FG_INVALID_PARAMETER)
+        g_warning(" Unable to unblock all\n");
 }
 
 static void
@@ -568,7 +586,7 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
     }
 
     pco_request_image(priv->pco);
-    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame+1, priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
+    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame + 1, priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
 
     if (priv->last_frame <= 0) {
         guint err = FG_OK + 1;
@@ -1189,6 +1207,7 @@ uca_pco_camera_class_init(UcaPcoCameraClass *klass)
     camera_class->start_recording = uca_pco_camera_start_recording;
     camera_class->stop_recording = uca_pco_camera_stop_recording;
     camera_class->start_readout = uca_pco_camera_start_readout;
+    camera_class->stop_readout = uca_pco_camera_stop_readout;
     camera_class->trigger = uca_pco_camera_trigger;
     camera_class->grab = uca_pco_camera_grab;
 
@@ -1383,7 +1402,7 @@ uca_pco_camera_init(UcaPcoCamera *self)
     camera = UCA_CAMERA (self);
     uca_camera_register_unit (camera, "sensor-width-extended", UCA_UNIT_PIXEL);
     uca_camera_register_unit (camera, "sensor-height-extended", UCA_UNIT_PIXEL);
-    uca_camera_register_unit (camera, "temperature", UCA_UNIT_DEGREE_CELSIUS);
+    uca_camera_register_unit (camera, "sensor-temperature", UCA_UNIT_DEGREE_CELSIUS);
     uca_camera_register_unit (camera, "cooling-point", UCA_UNIT_DEGREE_CELSIUS);
     uca_camera_register_unit (camera, "cooling-point-min", UCA_UNIT_DEGREE_CELSIUS);
     uca_camera_register_unit (camera, "cooling-point-max", UCA_UNIT_DEGREE_CELSIUS);

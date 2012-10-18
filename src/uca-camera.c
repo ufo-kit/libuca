@@ -543,6 +543,50 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
 }
 
 /**
+ * uca_camera_stop_readout:
+ * @camera: A #UcaCamera object
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Stop reading out frames.
+ *
+ * Since: 1.1
+ */
+void
+uca_camera_stop_readout (UcaCamera *camera, GError **error)
+{
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+
+    g_return_if_fail (UCA_IS_CAMERA(camera));
+
+    klass = UCA_CAMERA_GET_CLASS(camera);
+
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->start_readout != NULL);
+
+    g_static_mutex_lock (&mutex);
+
+    if (camera->priv->is_recording) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                     "Camera is still recording");
+    }
+    else {
+        GError *tmp_error = NULL;
+
+        (*klass->stop_readout) (camera, &tmp_error);
+
+        if (tmp_error == NULL) {
+            camera->priv->is_readout = FALSE;
+            g_object_notify (G_OBJECT (camera), "is-readout");
+        }
+        else
+            g_propagate_error (error, tmp_error);
+    }
+
+    g_static_mutex_unlock (&mutex);
+}
+
+/**
  * uca_camera_set_grab_func:
  * @camera: A #UcaCamera object
  * @func: A #UcaCameraGrabFunc callback function
