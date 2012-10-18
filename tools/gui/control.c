@@ -41,6 +41,7 @@ typedef struct {
     GtkWidget   *start_button;
     GtkWidget   *stop_button;
     GtkWidget   *record_button;
+    GtkWidget   *download_button;
     GtkComboBox *zoom_box;
 
     GtkWidget       *histogram_view;
@@ -52,6 +53,7 @@ typedef struct {
     gint         display_width, display_height;
     gdouble      zoom_factor;
     State        state;
+    gboolean     data_in_camram;
 
     gint         timestamp;
     gint         width, height;
@@ -88,7 +90,7 @@ convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
                 output[i++] = val;
                 output[i++] = val;
                 output[i++] = val;
-            } 
+            }
         }
     }
     else if (data->pixel_size == 2) {
@@ -103,7 +105,7 @@ convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
                 output[i++] = val;
                 output[i++] = val;
                 output[i++] = val;
-            } 
+            }
         }
     }
 }
@@ -204,6 +206,8 @@ set_tool_button_state (ThreadData *data)
                               data->state == RUNNING || data->state == RECORDING);
     gtk_widget_set_sensitive (data->record_button,
                               data->state == IDLE);
+    gtk_widget_set_sensitive (data->download_button,
+                              data->data_in_camram);
     gtk_widget_set_sensitive (GTK_WIDGET (data->zoom_box),
                               data->state == IDLE);
 }
@@ -254,12 +258,14 @@ on_stop_button_clicked (GtkWidget *widget, ThreadData *data)
 {
     GError *error = NULL;
 
+    g_object_get (data->camera, "has-camram-recording", &data->data_in_camram, NULL);
     data->state = IDLE;
     set_tool_button_state (data);
     uca_camera_stop_recording (data->camera, &error);
 
     if (error != NULL)
         g_printerr ("Failed to stop: %s\n", error->message);
+
 }
 
 static void
@@ -281,6 +287,38 @@ on_record_button_clicked (GtkWidget *widget, ThreadData *data)
         g_printerr ("Failed to create thread: %s\n", error->message);
         data->state = IDLE;
         set_tool_button_state (data);
+    }
+}
+
+static void
+on_download_button_clicked (GtkWidget *widget, ThreadData *data)
+{
+    gpointer buffer;
+    GError *error = NULL;
+
+    uca_camera_start_readout (data->camera, &error);
+
+    if (error != NULL) {
+        g_printerr ("Failed to start read out of camera memory: %s\n", error->message);
+        return;
+    }
+
+    ring_buffer_reset (data->buffer);
+
+    while (error == NULL) {
+        buffer = ring_buffer_get_current_pointer (data->buffer);
+        uca_camera_grab (data->camera, &buffer, &error);
+        ring_buffer_proceed (data->buffer);
+    }
+
+    if (error->code != UCA_CAMERA_ERROR_END_OF_STREAM) {
+        guint n_frames = ring_buffer_get_num_blocks (data->buffer);
+
+        gtk_adjustment_set_upper (data->frame_slider, n_frames - 1);
+        gtk_adjustment_set_value (data->frame_slider, n_frames - 1);
+    }
+    else {
+        g_printerr ("Error while reading out frames: %s\n", error->message);
     }
 }
 
@@ -359,6 +397,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.start_button     = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
     td.stop_button      = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
     td.record_button    = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
+    td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
     td.frame_slider     = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
 
@@ -367,8 +406,6 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     image_size  = pixel_size * width * height;
     n_frames    = mem_size * 1024 * 1024 / image_size;
     ring_buffer = ring_buffer_new (image_size, n_frames);
-
-    set_tool_button_state (&td);
 
     egg_histogram_view_set_data (EGG_HISTOGRAM_VIEW (histogram_view),
                                  ring_buffer_get_current_pointer (ring_buffer),
@@ -392,8 +429,10 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.height = td.display_height = height;
     td.zoom_factor = 1.0;
     td.histogram_view = histogram_view;
+    td.data_in_camram = FALSE;
 
     update_pixbuf_dimensions (&td);
+    set_tool_button_state (&td);
 
     /* Hook up signals */
     g_object_bind_property (gtk_builder_get_object (builder, "min-bin-value-adjustment"), "value",
@@ -408,6 +447,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
     g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);
+    g_signal_connect (td.download_button, "clicked", G_CALLBACK (on_download_button_clicked), &td);
     g_signal_connect (td.zoom_box, "changed", G_CALLBACK (on_zoom_changed), &td);
     g_signal_connect (histogram_view, "changed", G_CALLBACK (on_histogram_changed), &td);
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);

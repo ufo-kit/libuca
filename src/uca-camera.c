@@ -47,6 +47,7 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  * @UCA_CAMERA_ERROR_NOT_RECORDING: Camera is not recording
  * @UCA_CAMERA_ERROR_NO_GRAB_FUNC: No grab callback was set
  * @UCA_CAMERA_ERROR_NOT_IMPLEMENTED: Virtual function is not implemented
+ * @UCA_CAMERA_ERROR_END_OF_STREAM: Data stream has ended.
  */
 GQuark uca_camera_error_quark()
 {
@@ -602,6 +603,10 @@ uca_camera_trigger (UcaCamera *camera, GError **error)
  *
  * You must have called uca_camera_start_recording() before, otherwise you will
  * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
+ *
+ * If *data is %NULL after returning from uca_camera_grab() and error is also
+ * %NULL, the data stream has ended. For example, with cameras that support
+ * in-camera memory, all frames have been transfered.
  */
 void
 uca_camera_grab (UcaCamera *camera, gpointer *data, GError **error)

@@ -152,6 +152,18 @@
                 <property name="homogeneous">True</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkToolButton" id="download-button">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Download</property>
+                <property name="use_underline">True</property>
+                <property name="icon_name">network-receive</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>

@@ -554,7 +554,8 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 
     if (is_readout) {
         if (priv->current_image == priv->num_recorded_images) {
-            *data = NULL;
+            g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
+                         "End of data stream");
             return;
         }
 
