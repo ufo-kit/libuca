@@ -320,6 +320,7 @@ on_download_button_clicked (GtkWidget *widget, ThreadData *data)
     else
         g_printerr ("Error while reading out frames: %s\n", error->message);
 
+    g_error_free (error);
     uca_camera_stop_readout (data->camera, &error);
 
     if (error != NULL)
