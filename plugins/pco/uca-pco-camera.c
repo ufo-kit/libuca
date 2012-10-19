@@ -512,6 +512,8 @@ uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
 static void
 uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
 {
+    guint err;
+
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
