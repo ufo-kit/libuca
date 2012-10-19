@@ -209,10 +209,14 @@ find_camera_module_path (GList *search_paths, const gchar *name)
 }
 
 /**
- * uca_plugin_manager_new_camera:
+ * uca_plugin_manager_get_camera:
  * @manager: A #UcaPluginManager
  * @name: Name of the camera module, that maps to libuca<name>.so
  * @error: Location for a #GError
+ *
+ * Create a new camera instance with camera @name.
+ *
+ * Returns: (transfer full): A new #UcaCamera object.
  */
 UcaCamera *
 uca_plugin_manager_get_camera (UcaPluginManager   *manager,
