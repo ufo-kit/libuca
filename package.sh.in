@@ -1,0 +1,7 @@
+cpack -D CPACK_INSTALL_CMAKE_PROJECTS="${CMAKE_CURRENT_BINARY_DIR}/;Project;libraries;/"
+cpack -D CPACK_INSTALL_CMAKE_PROJECTS="${CMAKE_CURRENT_BINARY_DIR}/;Project;headers;/" -D CPACK_PACKAGE_FILE_NAME="libuca-${UCA_VERSION_MAJOR}.${UCA_VERSION_MINOR}.${UCA_VERSION_PATCH}-devel"
+
+# Build packages for all available cameras
+for shell_script in `find -name 'package-plugin-*.sh'`; do
+    sh $shell_script
+done

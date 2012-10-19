@@ -10,6 +10,7 @@ FIND_PATH(FGLIB5_INCLUDE_DIR fgrab_define.h
 	"${CMAKE_INSTALL_PREFIX}/include"
 	"${SISODIR5}/include"
 	"[HKEY_LOCAL_MACHINE\\SOFTWARE\\Silicon Software GmbH\\Runtime5;Info]/include"
+    "/opt/siso/include"
 )
 
 INCLUDE(SisoLibDir)
@@ -23,6 +24,7 @@ FIND_LIBRARY(FGLIB5_LIBRARY NAMES fglib5
 	${LIB_DIRS}
 	"[HKEY_LOCAL_MACHINE\\SOFTWARE\\Silicon Software GmbH\\Runtime5;Info]/lib/${COMPILER_LIB_DIR}"
 	"[HKEY_LOCAL_MACHINE\\SOFTWARE\\Silicon Software GmbH\\Runtime5;Info]/lib"
+    "/opt/siso/lib"
 )
 
 IF(FGLIB5_INCLUDE_DIR AND FGLIB5_LIBRARY)

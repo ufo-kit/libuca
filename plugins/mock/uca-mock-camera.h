@@ -58,8 +58,6 @@ struct _UcaMockCameraClass {
     UcaCameraClass parent;
 };
 
-UcaMockCamera *uca_mock_camera_new(GError **error);
-
 GType uca_mock_camera_get_type(void);
 
 G_END_DECLS

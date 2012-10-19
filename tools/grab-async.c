@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "uca-plugin-manager.h"
 #include "uca-camera.h"
 
 static UcaCamera *camera = NULL;
@@ -29,7 +30,8 @@ typedef struct {
     guint counter;
 } CallbackData;
 
-static void sigint_handler(int signal)
+static void
+sigint_handler(int signal)
 {
     printf("Closing down libuca\n");
     uca_camera_stop_recording(camera, NULL);
@@ -37,7 +39,8 @@ static void sigint_handler(int signal)
     exit(signal);
 }
 
-static void grab_callback(gpointer data, gpointer user_data)
+static void
+grab_callback(gpointer data, gpointer user_data)
 {
     CallbackData *cbd = (CallbackData *) user_data;
     gchar *filename = g_strdup_printf("frame-%04i.raw", cbd->counter++);
@@ -49,16 +52,49 @@ static void grab_callback(gpointer data, gpointer user_data)
     g_free(filename);
 }
 
-int main(int argc, char *argv[])
+static void
+print_usage (void)
+{
+    GList *types;
+    UcaPluginManager *manager;
+
+    manager = uca_plugin_manager_new ();
+    g_print ("Usage: benchmark [ ");
+    types = uca_plugin_manager_get_available_cameras (manager);
+
+    if (types == NULL) {
+        g_print ("] -- no camera plugin found\n");
+        return;
+    }
+
+    for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
+        gchar *name = (gchar *) it->data;
+        if (g_list_next (it) == NULL)
+            g_print ("%s ]\n", name);
+        else
+            g_print ("%s, ", name);
+    }
+}
+
+int
+main(int argc, char *argv[])
 {
     CallbackData cbd;
     guint sensor_width, sensor_height;
     gchar *name;
+    UcaPluginManager *manager;
     GError *error = NULL;
     (void) signal(SIGINT, sigint_handler);
 
     g_type_init();
-    camera = uca_camera_new("pco", &error);
+
+    if (argc < 2) {
+        print_usage();
+        return 1;
+    }
+
+    manager = uca_plugin_manager_new ();
+    camera = uca_plugin_manager_get_camera (manager, argv[1], &error);
 
     if (camera == NULL) {
         g_print("Error during initialization: %s\n", error->message);

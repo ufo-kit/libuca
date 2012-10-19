@@ -10,11 +10,15 @@ html: manual.html
 clean:
 	rm -f manual.pdf manual.html
 
-manual.pdf: manual.md
-	$(PANDOC) $(OPTS) manual.md -o manual.pdf
+manual.pdf: manual.md gen-changelog
+	./gen-changelog
+	$(PANDOC) $(OPTS) manual.md z-changes-*.md -o manual.pdf
+	rm z-changes-*.md
 
-manual.html: manual.md style.css
-	$(PANDOC) $(OPTS) manual.md -H webfonts.html -c style.css -o manual.html
+manual.html: manual.md style.css gen-changelog
+	./gen-changelog
+	$(PANDOC) $(OPTS) manual.md z-changes-*.md -H webfonts.html -c style.css -o manual.html
+	rm z-changes-*.md
 
 ifeq ($(PANDOC),)
 	$(warning Pandoc not found!)

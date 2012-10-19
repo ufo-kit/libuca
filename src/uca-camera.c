@@ -15,34 +15,18 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+/**
+ * SECTION:uca-camera
+ * @Short_description: Base class representing a camera
+ * @Title: UcaCamera
+ *
+ * UcaCamera is the base camera from which a real hardware camera derives from.
+ */
+
 #include <glib.h>
 #include "config.h"
 #include "uca-camera.h"
 #include "uca-enums.h"
-
-#ifdef HAVE_PCO_CL
-#include "cameras/uca-pco-camera.h"
-#endif
-
-#ifdef HAVE_PYLON_CAMERA
-#include "cameras/uca-pylon-camera.h"
-#endif
-
-#ifdef HAVE_MOCK_CAMERA
-#include "cameras/uca-mock-camera.h"
-#endif
-
-#ifdef HAVE_UFO_CAMERA
-#include "cameras/uca-ufo-camera.h"
-#endif
-
-#ifdef HAVE_PHOTON_FOCUS
-#include "cameras/uca-pf-camera.h"
-#endif
-
-#ifdef HAVE_DEXELA_CL
-#include "cameras/uca-dexela-camera.h"
-#endif
 
 #define UCA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_CAMERA, UcaCameraPrivate))
 
@@ -52,7 +36,7 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  * UcaCameraTrigger:
  * @UCA_CAMERA_TRIGGER_AUTO: Trigger automatically
  * @UCA_CAMERA_TRIGGER_EXTERNAL: Trigger from an external source
- * @UCA_CAMERA_TRIGGER_INTERNAL: Trigger internally from software using
+ * @UCA_CAMERA_TRIGGER_SOFTWARE: Trigger from software using
  *      #uca_camera_trigger
  */
 
@@ -63,33 +47,31 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  * @UCA_CAMERA_ERROR_NOT_RECORDING: Camera is not recording
  * @UCA_CAMERA_ERROR_NO_GRAB_FUNC: No grab callback was set
  * @UCA_CAMERA_ERROR_NOT_IMPLEMENTED: Virtual function is not implemented
+ * @UCA_CAMERA_ERROR_END_OF_STREAM: Data stream has ended.
  */
 GQuark uca_camera_error_quark()
 {
-    return g_quark_from_static_string("uca-camera-error-quark");
+    return g_quark_from_static_string ("uca-camera-error-quark");
 }
 
-static gchar *uca_camera_types[] = {
-#ifdef HAVE_PCO_CL
-        "pco",
-#endif
-#ifdef HAVE_PYLON_CAMERA
-        "pylon",
-#endif
-#ifdef HAVE_MOCK_CAMERA
-        "mock",
-#endif
-#ifdef HAVE_UFO_CAMERA
-        "ufo",
-#endif
-#ifdef HAVE_PHOTON_FOCUS
-        "pf",
-#endif
-#ifdef HAVE_DEXELA_CL
-		"dexela",
-#endif
-        NULL
-};
+/**
+ * UcaUnit:
+ * @UCA_UNIT_NA: Not applicable
+ * @UCA_UNIT_METER: Length in SI meter
+ * @UCA_UNIT_SECOND: Time in SI second
+ * @UCA_UNIT_PIXEL: Number of pixels in one dimension
+ * @UCA_UNIT_DEGREE_CELSIUS: Temperature in degree Celsius
+ * @UCA_UNIT_COUNT: Generic number
+ *
+ * Units should be registered by camera implementations using
+ * uca_camera_register_unit() and can be queried by client programs with
+ * uca_camera_get_unit().
+ */
+
+GQuark uca_unit_quark ()
+{
+    return g_quark_from_static_string ("uca-unit-quark");
+}
 
 enum {
     LAST_SIGNAL
@@ -112,6 +94,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "sensor-max-frame-rate",
     "trigger-mode",
     "exposure-time",
+    "frames-per-second",
     "roi-x0",
     "roi-y0",
     "roi-width",
@@ -120,6 +103,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "roi-height-multiplier",
     "has-streaming",
     "has-camram-recording",
+    "recorded-frames",
     "transfer-asynchronously",
     "is-recording",
     "is-readout"
@@ -133,7 +117,14 @@ struct _UcaCameraPrivate {
     gboolean transfer_async;
 };
 
-static void uca_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+static void
+uca_camera_set_property_unit (GParamSpec *pspec, UcaUnit unit)
+{
+    g_param_spec_set_qdata (pspec, UCA_UNIT_QUARK, GINT_TO_POINTER (unit));
+}
+
+static void
+uca_camera_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
 
@@ -147,26 +138,53 @@ static void uca_camera_set_property(GObject *object, guint property_id, const GV
             priv->transfer_async = g_value_get_boolean(value);
             break;
 
+        case PROP_FRAMES_PER_SECOND:
+            {
+                gdouble frames_per_second;
+
+                frames_per_second = g_value_get_double (value);
+                g_object_set (object, "exposure-time", 1. / frames_per_second, NULL);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
 }
 
-static void uca_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+static void
+uca_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-    UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
+    UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE (object);
 
     switch (property_id) {
         case PROP_IS_RECORDING:
-            g_value_set_boolean(value, priv->is_recording);
+            g_value_set_boolean (value, priv->is_recording);
             break;
 
         case PROP_IS_READOUT:
-            g_value_set_boolean(value, priv->is_readout);
+            g_value_set_boolean (value, priv->is_readout);
             break;
 
         case PROP_TRANSFER_ASYNCHRONOUSLY:
-            g_value_set_boolean(value, priv->transfer_async);
+            g_value_set_boolean (value, priv->transfer_async);
+            break;
+
+        case PROP_TRIGGER_MODE:
+            g_value_set_enum (value, UCA_CAMERA_TRIGGER_AUTO);
+            break;
+
+        case PROP_FRAMES_PER_SECOND:
+            {
+                gdouble exposure_time;
+
+                g_object_get (object, "exposure-time", &exposure_time, NULL);
+                g_value_set_double (value, 1. / exposure_time);
+            }
+            break;
+
+        case PROP_RECORDED_FRAMES:
+            g_value_set_uint (value, 0);
             break;
 
         default:
@@ -174,11 +192,19 @@ static void uca_camera_get_property(GObject *object, guint property_id, GValue *
     }
 }
 
-static void uca_camera_class_init(UcaCameraClass *klass)
+static void
+uca_camera_finalize (GObject *object)
+{
+    G_OBJECT_CLASS (uca_camera_parent_class)->finalize (object);
+}
+
+static void
+uca_camera_class_init (UcaCameraClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_camera_set_property;
     gobject_class->get_property = uca_camera_get_property;
+    gobject_class->finalize = uca_camera_finalize;
 
     klass->start_recording = NULL;
     klass->stop_recording = NULL;
@@ -310,6 +336,13 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             0.0, G_MAXDOUBLE, 1.0,
             G_PARAM_READWRITE);
 
+    camera_properties[PROP_FRAMES_PER_SECOND] =
+        g_param_spec_double(uca_camera_props[PROP_FRAMES_PER_SECOND],
+            "Frames per second",
+            "Frames per second",
+            0.0, G_MAXDOUBLE, 1.0,
+            G_PARAM_READWRITE);
+
     camera_properties[PROP_HAS_STREAMING] =
         g_param_spec_boolean(uca_camera_props[PROP_HAS_STREAMING],
             "Streaming capability",
@@ -321,6 +354,20 @@ static void uca_camera_class_init(UcaCameraClass *klass)
             "Cam-RAM capability",
             "Is the camera able to record the data in-camera",
             FALSE, G_PARAM_READABLE);
+
+    /**
+     * UcaCamera:recorded-frames
+     *
+     * Number of frames that are recorded into internal camera memory.
+     *
+     * Since: 1.1
+     */
+    camera_properties[PROP_RECORDED_FRAMES] =
+        g_param_spec_uint(uca_camera_props[PROP_RECORDED_FRAMES],
+            "Number of frames recorded into internal camera memory",
+            "Number of frames recorded into internal camera memory",
+            0, G_MAXUINT, 0,
+            G_PARAM_READABLE);
 
     camera_properties[PROP_TRANSFER_ASYNCHRONOUSLY] =
         g_param_spec_boolean(uca_camera_props[PROP_TRANSFER_ASYNCHRONOUSLY],
@@ -346,7 +393,8 @@ static void uca_camera_class_init(UcaCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaCameraPrivate));
 }
 
-static void uca_camera_init(UcaCamera *camera)
+static void
+uca_camera_init (UcaCamera *camera)
 {
     camera->grab_func = NULL;
 
@@ -355,105 +403,21 @@ static void uca_camera_init(UcaCamera *camera)
     camera->priv->is_readout = FALSE;
     camera->priv->transfer_async = FALSE;
 
-    /*
-     * This here would be the best place to instantiate the tango server object,
-     * along these lines:
-     *
-     * // I'd prefer if you expose a single C method, so we don't have to
-     * // compile uca-camera.c with g++
-     * tango_handle = tango_server_new(camera);
-     *
-     * void tango_server_new(UcaCamera *camera)
-     * {
-     *     // Do whatever is necessary. In the end you will have some kind of
-     *     // Tango object t which needs to somehow hook up to the properties. A
-     *     // list of all available properties can be enumerated with
-     *     // g_object_class_list_properties(G_OBJECT_CLASS(camera),
-     *     //     &n_properties);
-     *
-     *     // For setting/getting properties, use g_object_get/set_property() or
-     *     // g_object_get/set() whatever is more suitable.
-     * }
-     */
-}
-
-static UcaCamera *uca_camera_new_from_type(const gchar *type, GError **error)
-{
-#ifdef HAVE_MOCK_CAMERA
-    if (!g_strcmp0(type, "mock"))
-        return UCA_CAMERA(uca_mock_camera_new(error));
-#endif
-
-#ifdef HAVE_PCO_CL
-    if (!g_strcmp0(type, "pco"))
-        return UCA_CAMERA(uca_pco_camera_new(error));
-#endif
-
-#ifdef HAVE_PYLON_CAMERA
-    if (!g_strcmp0(type, "pylon"))
-        return UCA_CAMERA(uca_pylon_camera_new(error));
-#endif
-
-#ifdef HAVE_UFO_CAMERA
-    if (!g_strcmp0(type, "ufo"))
-        return UCA_CAMERA(uca_ufo_camera_new(error));
-#endif
-
-#ifdef HAVE_PHOTON_FOCUS
-    if (!g_strcmp0(type, "pf"))
-        return UCA_CAMERA(uca_pf_camera_new(error));
-#endif
-
-#ifdef HAVE_DEXELA_CL
-    if (!g_strcmp0(type, "dexela"))
-        return UCA_CAMERA(uca_dexela_camera_new(error));
-#endif
-
-    return NULL;
-}
-
-/**
- * uca_camera_get_types:
- *
- * Enumerate all camera types that can be instantiated with uca_camera_new().
- *
- * Returns: An array of strings with camera types. The list should be freed with
- * g_strfreev().
- */
-gchar **uca_camera_get_types()
-{
-    return g_strdupv(uca_camera_types);
-}
-
-/**
- * uca_camera_new:
- * @type: Type name of the camera
- * @error: Location to store an error or %NULL
- *
- * Factory method for instantiating cameras by names listed in
- * uca_camera_get_types().
- *
- * Returns: A new #UcaCamera of the correct type or %NULL if type was not found
- */
-UcaCamera *uca_camera_new(const gchar *type, GError **error)
-{
-    UcaCamera *camera = NULL;
-    GError *tmp_error = NULL;
-
-    camera = uca_camera_new_from_type(type, &tmp_error);
-
-    if (tmp_error != NULL) {
-        g_propagate_error(error, tmp_error);
-        return NULL;
-    }
-
-    if ((tmp_error == NULL) && (camera == NULL)) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_FOUND,
-                "Camera type %s not found", type);
-        return NULL;
-    }
-
-    return camera;
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_WIDTH], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HEIGHT], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_BITDEPTH], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HORIZONTAL_BINNING], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_VERTICAL_BINNING], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_MAX_FRAME_RATE], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_EXPOSURE_TIME], UCA_UNIT_SECOND);
+    uca_camera_set_property_unit (camera_properties[PROP_FRAMES_PER_SECOND], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_X], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_Y], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH_MULTIPLIER], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT_MULTIPLIER], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_RECORDED_FRAMES], UCA_UNIT_COUNT);
 }
 
 /**
@@ -465,38 +429,47 @@ UcaCamera *uca_camera_new(const gchar *type, GError **error)
  * #UcaCameraGrabFunc callback is set, frames are automatically transfered to
  * the client program, otherwise you must use uca_camera_grab().
  */
-void uca_camera_start_recording(UcaCamera *camera, GError **error)
+void
+uca_camera_start_recording (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    GError *tmp_error = NULL;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA (camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->start_recording != NULL);
+    klass = UCA_CAMERA_GET_CLASS (camera);
+
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->start_recording != NULL);
+
+    g_static_mutex_lock (&mutex);
 
     if (camera->priv->is_recording) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
                 "Camera is already recording");
-        return;
+        goto start_recording_unlock;
     }
 
     if (camera->priv->transfer_async && (camera->grab_func == NULL)) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NO_GRAB_FUNC,
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NO_GRAB_FUNC,
                 "No grab callback function set");
-        return;
+        goto start_recording_unlock;
     }
 
-    GError *tmp_error = NULL;
     (*klass->start_recording)(camera, &tmp_error);
 
     if (tmp_error == NULL) {
         camera->priv->is_readout = FALSE;
         camera->priv->is_recording = TRUE;
         /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-        g_object_notify(G_OBJECT(camera), "is-recording");
+        g_object_notify (G_OBJECT (camera), "is-recording");
     }
     else
-        g_propagate_error(error, tmp_error);
+        g_propagate_error (error, tmp_error);
+
+start_recording_unlock:
+    g_static_mutex_unlock (&mutex);
 }
 
 /**
@@ -506,32 +479,41 @@ void uca_camera_start_recording(UcaCamera *camera, GError **error)
  *
  * Stop recording.
  */
-void uca_camera_stop_recording(UcaCamera *camera, GError **error)
+void
+uca_camera_stop_recording (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA (camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->stop_recording != NULL);
+    klass = UCA_CAMERA_GET_CLASS (camera);
+
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->stop_recording != NULL);
+
+    g_static_mutex_lock (&mutex);
 
     if (!camera->priv->is_recording) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
-                "Camera is not recording");
-        return;
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
+                     "Camera is not recording");
+    }
+    else {
+        GError *tmp_error = NULL;
+
+        (*klass->stop_recording)(camera, &tmp_error);
+
+        if (tmp_error == NULL) {
+            camera->priv->is_readout = FALSE;
+            camera->priv->is_recording = FALSE;
+            /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
+            g_object_notify (G_OBJECT (camera), "is-recording");
+        }
+        else
+            g_propagate_error (error, tmp_error);
     }
 
-    GError *tmp_error = NULL;
-    (*klass->stop_recording)(camera, &tmp_error);
-
-    if (tmp_error == NULL) {
-        camera->priv->is_readout = FALSE;
-        camera->priv->is_recording = FALSE;
-        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-        g_object_notify(G_OBJECT(camera), "is-recording");
-    }
-    else
-        g_propagate_error(error, tmp_error);
+    g_static_mutex_unlock (&mutex);
 }
 
 /**
@@ -544,31 +526,84 @@ void uca_camera_stop_recording(UcaCamera *camera, GError **error)
  * uca_camera_stop_recording(). Frames have to be picked up with
  * ufo_camera_grab().
  */
-void uca_camera_start_readout(UcaCamera *camera, GError **error)
+void
+uca_camera_start_readout (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA(camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->start_readout != NULL);
+    klass = UCA_CAMERA_GET_CLASS(camera);
+
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->start_readout != NULL);
+
+    g_static_mutex_lock (&mutex);
 
     if (camera->priv->is_recording) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                "Camera is still recording");
-        return;
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                     "Camera is still recording");
+    }
+    else {
+        GError *tmp_error = NULL;
+
+        (*klass->start_readout) (camera, &tmp_error);
+
+        if (tmp_error == NULL) {
+            camera->priv->is_readout = TRUE;
+            /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
+            g_object_notify (G_OBJECT (camera), "is-readout");
+        }
+        else
+            g_propagate_error (error, tmp_error);
     }
 
-    GError *tmp_error = NULL;
-    (*klass->start_readout)(camera, &tmp_error);
+    g_static_mutex_unlock (&mutex);
+}
 
-    if (tmp_error == NULL) {
-        camera->priv->is_readout = TRUE;
-        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-        g_object_notify(G_OBJECT(camera), "is-readout");
+/**
+ * uca_camera_stop_readout:
+ * @camera: A #UcaCamera object
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Stop reading out frames.
+ *
+ * Since: 1.1
+ */
+void
+uca_camera_stop_readout (UcaCamera *camera, GError **error)
+{
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+
+    g_return_if_fail (UCA_IS_CAMERA(camera));
+
+    klass = UCA_CAMERA_GET_CLASS(camera);
+
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->start_readout != NULL);
+
+    g_static_mutex_lock (&mutex);
+
+    if (camera->priv->is_recording) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                     "Camera is still recording");
     }
-    else
-        g_propagate_error(error, tmp_error);
+    else {
+        GError *tmp_error = NULL;
+
+        (*klass->stop_readout) (camera, &tmp_error);
+
+        if (tmp_error == NULL) {
+            camera->priv->is_readout = FALSE;
+            g_object_notify (G_OBJECT (camera), "is-readout");
+        }
+        else
+            g_propagate_error (error, tmp_error);
+    }
+
+    g_static_mutex_unlock (&mutex);
 }
 
 /**
@@ -579,7 +614,8 @@ void uca_camera_start_readout(UcaCamera *camera, GError **error)
  *
  * Set the grab function that is called whenever a frame is readily transfered.
  */
-void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data)
+void
+uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointer user_data)
 {
     camera->grab_func = func;
     camera->user_data = user_data;
@@ -595,22 +631,27 @@ void uca_camera_set_grab_func(UcaCamera *camera, UcaCameraGrabFunc func, gpointe
  * You must have called uca_camera_start_recording() before, otherwise you will
  * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
  */
-void uca_camera_trigger(UcaCamera *camera, GError **error)
+void
+uca_camera_trigger (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA (camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->trigger != NULL);
+    klass = UCA_CAMERA_GET_CLASS (camera);
 
-    if (!camera->priv->is_recording) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
-                "Camera is not recording");
-        return;
-    }
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->trigger != NULL);
 
-    (*klass->trigger)(camera, error);
+    g_static_mutex_lock (&mutex);
+
+    if (!camera->priv->is_recording)
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is not recording");
+    else
+        (*klass->trigger) (camera, error);
+
+    g_static_mutex_unlock (&mutex);
 }
 
 /**
@@ -626,23 +667,96 @@ void uca_camera_trigger(UcaCamera *camera, GError **error)
  *
  * You must have called uca_camera_start_recording() before, otherwise you will
  * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
+ *
+ * If *data is %NULL after returning from uca_camera_grab() and error is also
+ * %NULL, the data stream has ended. For example, with cameras that support
+ * in-camera memory, all frames have been transfered.
  */
-void uca_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+void
+uca_camera_grab (UcaCamera *camera, gpointer *data, GError **error)
 {
-    g_return_if_fail(UCA_IS_CAMERA(camera));
+    UcaCameraClass *klass;
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS(camera);
+    g_return_if_fail (UCA_IS_CAMERA(camera));
 
-    g_return_if_fail(klass != NULL);
-    g_return_if_fail(klass->grab != NULL);
-    g_return_if_fail(data != NULL);
+    klass = UCA_CAMERA_GET_CLASS (camera);
 
-    if (!camera->priv->is_recording && !camera->priv->is_readout) {
-        g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
-                "Camera is neither recording nor in readout mode");
+    g_return_if_fail (klass != NULL);
+    g_return_if_fail (klass->grab != NULL);
+    g_return_if_fail (data != NULL);
+
+    g_static_mutex_lock (&mutex);
+
+    if (!camera->priv->is_recording && !camera->priv->is_readout)
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is neither recording nor in readout mode");
+    else
+        (*klass->grab) (camera, data, error);
+
+    g_static_mutex_unlock (&mutex);
+}
+
+/**
+ * uca_camera_register_unit:
+ * @camera: A #UcaCamera object
+ * @prop_name: Name of a property
+ * @unit: #UcaUnit
+ *
+ * Associates @prop_name of @camera with a specific @unit.
+ *
+ * Since: 1.1
+ */
+void
+uca_camera_register_unit (UcaCamera *camera,
+                          const gchar *prop_name,
+                          UcaUnit unit)
+{
+    UcaCameraClass *klass;
+    GObjectClass *oclass;
+    GParamSpec *pspec;
+
+    klass  = UCA_CAMERA_GET_CLASS (camera);
+    oclass = G_OBJECT_CLASS (klass);
+    pspec  = g_object_class_find_property (oclass, prop_name);
+
+    if (pspec == NULL) {
+        g_warning ("Camera does not have property `%s'", prop_name);
         return;
     }
 
-    (*klass->grab)(camera, data, error);
+    uca_camera_set_property_unit (pspec, unit);
+}
+
+/**
+ * uca_camera_get_unit:
+ * @camera: A #UcaCamera object
+ * @prop_name: Name of a property
+ *
+ * Returns the unit associated with @prop_name of @camera.
+ *
+ * Returns: A #UcaUnit value associated with @prop_name. If there is none, the
+ * value will be #UCA_UNIT_NA.
+ * Since: 1.1
+ */
+UcaUnit
+uca_camera_get_unit (UcaCamera *camera,
+                     const gchar *prop_name)
+{
+    UcaCameraClass *klass;
+    GObjectClass *oclass;
+    GParamSpec *pspec;
+    gpointer data;
+
+    klass  = UCA_CAMERA_GET_CLASS (camera);
+    oclass = G_OBJECT_CLASS (klass);
+    pspec  = g_object_class_find_property (oclass, prop_name);
+
+    if (pspec == NULL) {
+        g_warning ("Camera does not have property `%s'", prop_name);
+        return UCA_UNIT_NA;
+    }
+
+    data = g_param_spec_get_qdata (pspec, UCA_UNIT_QUARK);
+    return data == NULL ? UCA_UNIT_NA : GPOINTER_TO_INT (data);
 }
 

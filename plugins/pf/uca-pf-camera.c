@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gmodule.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -99,52 +100,6 @@ struct _UcaPfCameraPrivate {
     dma_mem *fg_mem;
 };
 
-UcaPfCamera *uca_pf_camera_new(GError **error)
-{
-    static const gchar *so_file = "libFullAreaGray8.so";
-    static const int camera_link_type = FG_CL_8BIT_FULL_8;
-    static const int camera_format = FG_GRAY;
-
-    /*
-    gint num_ports;
-    if (pfPortInit(&num_ports) < 0) {
-        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
-                "Could not initialize ports"); 
-        return NULL;
-    }
-
-    if (pfDeviceOpen(0) < 0) {
-        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
-                "Could not open device"); 
-        return NULL;
-    }
-    */
-
-    UcaPfCamera *camera = g_object_new(UCA_TYPE_PF_CAMERA, NULL);
-    UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
-
-    priv->fg_port = PORT_A;
-    priv->fg = Fg_Init(so_file, priv->fg_port);
-
-    /* TODO: get this from the camera */
-    priv->roi_width = 1280;
-    priv->roi_height = 1024;
-
-    if (priv->fg == NULL) {
-        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
-                "%s", Fg_getLastErrorDescription(priv->fg));
-        g_object_unref(camera);
-        return NULL;
-    }
-
-    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &camera_link_type, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &camera_format, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &priv->roi_width, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &priv->roi_height, priv->fg_port);
-
-    return camera;
-}
-
 /*
  * We just embed our private structure here.
  */
@@ -226,7 +181,7 @@ static void uca_pf_camera_grab(UcaCamera *camera, gpointer *data, GError **error
     UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
 
     priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame+1, priv->fg_port, 5, priv->fg_mem);
-    
+
     if (priv->last_frame <= 0) {
         guint err = FG_OK + 1;
         FG_SET_ERROR(err, priv->fg, UCA_PF_CAMERA_ERROR_FG_GENERAL);
@@ -252,10 +207,10 @@ static void uca_pf_camera_set_property(GObject *object, guint property_id, const
 static void uca_pf_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     switch (property_id) {
-        case PROP_SENSOR_WIDTH: 
+        case PROP_SENSOR_WIDTH:
             g_value_set_uint(value, 1280);
             break;
-        case PROP_SENSOR_HEIGHT: 
+        case PROP_SENSOR_HEIGHT:
             g_value_set_uint(value, 1024);
             break;
         case PROP_SENSOR_BITDEPTH:
@@ -279,6 +234,7 @@ static void uca_pf_camera_get_property(GObject *object, guint property_id, GValu
             g_value_set_boolean(value, FALSE);
             break;
         case PROP_EXPOSURE_TIME:
+            g_value_set_double(value, 1. / 488.0);
             break;
         case PROP_ROI_X:
             g_value_set_uint(value, 0);
@@ -298,7 +254,7 @@ static void uca_pf_camera_get_property(GObject *object, guint property_id, GValu
         case PROP_ROI_HEIGHT_MULTIPLIER:
             g_value_set_uint(value, 1);
             break;
-        case PROP_NAME: 
+        case PROP_NAME:
             g_value_set_string(value, "Photon Focus MV2-D1280-640-CL");
             break;
         default:
@@ -346,4 +302,51 @@ static void uca_pf_camera_init(UcaPfCamera *self)
     self->priv->fg = NULL;
     self->priv->fg_mem = NULL;
     self->priv->last_frame = 0;
+}
+
+G_MODULE_EXPORT UcaCamera *
+uca_camera_impl_new (GError **error)
+{
+    static const gchar *so_file = "libFullAreaGray8.so";
+    static const int camera_link_type = FG_CL_8BIT_FULL_8;
+    static const int camera_format = FG_GRAY;
+
+    /*
+    gint num_ports;
+    if (pfPortInit(&num_ports) < 0) {
+        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
+                "Could not initialize ports");
+        return NULL;
+    }
+
+    if (pfDeviceOpen(0) < 0) {
+        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
+                "Could not open device");
+        return NULL;
+    }
+    */
+
+    UcaPfCamera *camera = g_object_new(UCA_TYPE_PF_CAMERA, NULL);
+    UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
+
+    priv->fg_port = PORT_A;
+    priv->fg = Fg_Init(so_file, priv->fg_port);
+
+    /* TODO: get this from the camera */
+    priv->roi_width = 1280;
+    priv->roi_height = 1024;
+
+    if (priv->fg == NULL) {
+        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
+                "%s", Fg_getLastErrorDescription(priv->fg));
+        g_object_unref(camera);
+        return NULL;
+    }
+
+    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &camera_link_type, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &camera_format, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &priv->roi_width, priv->fg_port);
+    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &priv->roi_height, priv->fg_port);
+
+    return UCA_CAMERA (camera);
 }

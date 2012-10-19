@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gmodule.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -100,6 +101,7 @@ struct _UcaUfoCameraPrivate {
         FPGA_48MHZ = 0,
         FPGA_40MHZ
     }                   frequency;
+    UcaCameraTrigger    trigger;
 };
 
 static void
@@ -143,7 +145,8 @@ static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info,
     return PCILIB_STREAMING_CONTINUE;
 }
 
-UcaUfoCamera *uca_ufo_camera_new(GError **error)
+G_MODULE_EXPORT UcaCamera *
+uca_camera_impl_new (GError **error)
 {
     pcilib_model_t model = PCILIB_MODEL_DETECT;
     pcilib_model_description_t *model_description;
@@ -223,7 +226,7 @@ UcaUfoCamera *uca_ufo_camera_new(GError **error)
 
     priv->handle = handle;
 
-    return camera;
+    return UCA_CAMERA (camera);
 }
 
 static void uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
@@ -242,6 +245,7 @@ static void uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
     g_object_get(G_OBJECT(camera),
             "transfer-asynchronously", &transfer_async,
             "exposure-time", &exposure_time,
+            "trigger-mode", &priv->trigger,
             NULL);
 
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
@@ -263,8 +267,11 @@ static void uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
 static void uca_ufo_camera_start_readout(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
-    g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_IMPLEMENTED,
-            "Ufo camera does not support recording to internal memory");
+}
+
+static void uca_ufo_camera_stop_readout(UcaCamera *camera, GError **error)
+{
+    g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 }
 
 static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
@@ -277,8 +284,10 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
 
     const gsize size = SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16);
 
-    err = pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
-    PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_TRIGGER);
+    if (priv->trigger != UCA_CAMERA_TRIGGER_EXTERNAL) {
+        err = pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
+        PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_TRIGGER);
+    }
 
     err = pcilib_get_next_event(priv->handle, priv->timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_NEXT_EVENT);
@@ -328,6 +337,10 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
         case PROP_ROI_WIDTH:
         case PROP_ROI_HEIGHT:
             g_debug("ROI feature not implemented yet");
+            break;
+
+        case PROP_TRIGGER_MODE:
+            priv->trigger = g_value_get_enum (value);
             break;
 
         default:
@@ -428,6 +441,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");
             break;
         case PROP_TRIGGER_MODE:
+            g_value_set_enum (value, priv->trigger);
             break;
         default:
             {
@@ -460,6 +474,7 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
     camera_class->start_recording = uca_ufo_camera_start_recording;
     camera_class->stop_recording = uca_ufo_camera_stop_recording;
     camera_class->start_readout = uca_ufo_camera_start_readout;
+    camera_class->stop_readout = uca_ufo_camera_stop_readout;
     camera_class->grab = uca_ufo_camera_grab;
 
     for (guint i = 0; base_overrideables[i] != 0; i++)

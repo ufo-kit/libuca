@@ -1,0 +1,20 @@
+#!/bin/bash
+
+FROM=$1
+TO=$2
+OUTPUT=$3
+series=('v1.0' 'v1.0.1')
+
+logname="z-changes-${series[0]}.md"
+
+echo "## Changes for stable branch ${series[0]}
+" >> $logname
+
+for ((i = 1; i < ${#series[@]}; i++)) do
+    curr=${series[i]}
+    prev=${series[i-1]}
+
+    echo "### Changes from $prev to $curr
+" >> $logname
+    git log --pretty=format:'* [%h](http://ufo.kit.edu/repos/libuca.git/commit/?id=%h): %s' $prev..$curr >> $logname
+done

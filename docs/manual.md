@@ -12,7 +12,18 @@ Before installing `libuca` itself, you should install any drivers and SDKs
 needed to access the cameras you want to access through `libuca`. Now you have
 two options: install pre-built packages or build from source.
 
-## Building from source
+### Installing packages
+
+Packages for the core library and all plugins are currently provided for
+openSUSE. To install them run `zypper`:
+
+    sudo zypper in libuca-x.y.z-x86_64.rpm
+    sudo zypper in uca-plugin-*.rpm
+
+To install development files such as headers, you have to install the
+`libuca-x.y.z-devel.rpm` package.
+
+### Building from source
 
 Building the library and installing from source is simple and straightforward.
 Make sure you have
@@ -38,7 +49,8 @@ repository][repo], you also need Git:
 
 [repo]: http://ufo.kit.edu/repos/libuca.git/
 
-### Fetching the sources
+
+#### Fetching the sources
 
 Untar the distribution
 
@@ -54,7 +66,7 @@ and create a new, empty build directory inside:
     mkdir build
 
 
-### Configuring and building
+#### Configuring and building
 
 Now you need to create the Makefile with CMake. Go into the build directory and
 point CMake to the `libuca` top-level directory:
@@ -86,7 +98,7 @@ latter that 64 should be appended to any library paths. This is necessary on
 Linux distributions that expect 64-bit libraries in `/usr[/local]/lib64`.
 
 
-### Building this manual
+#### Building this manual
 
 Make sure you have [Pandoc][] installed. With Debian/Ubuntu this can be achieved
 with
@@ -107,6 +119,7 @@ necessary header files:
 
 ~~~ {.c}
 #include <glib-object.h>
+#include <uca-plugin-manager.h>
 #include <uca-camera.h>
 ~~~
 
@@ -116,6 +129,7 @@ Then you need to setup the type system:
 int
 main (int argc, char *argv[])
 {
+    UcaPluginManager *manager;
     UcaCamera *camera;
     GError *error = NULL; /* this _must_ be set to NULL */
 
@@ -124,10 +138,12 @@ main (int argc, char *argv[])
 
 Now you can instantiate new camera _objects_. Each camera is identified by a
 human-readable string, in this case we want to access any pco camera that is
-supported by [libpco][]:
+supported by [libpco][]. To instantiate a camera we have to create a plugin
+manager first:
 
 ~~~ {.c}
-    camera = uca_camera_new ("pco", &error);
+    manager = uca_plugin_manager_new ();
+    camera = uca_plugin_manager_get_camera (manager, "pco", &error);
 ~~~
 
 Errors are indicated with a returned value `NULL` and `error` set to a value
@@ -241,6 +257,16 @@ The following cameras are supported:
 * Pylon
 * UFO Camera developed at KIT/IPE.
 
+## Property documentation
+
+* [Basic camera properties][base-doc]
+* [pco][pco-doc]
+* [mock][mock-doc]
+
+[base-doc]: base.html
+[pco-doc]: pco.html
+[mock-doc]: mock.html
+
 
 # More API
 
@@ -252,38 +278,19 @@ communicate with the camera. Now we will go into more detail.
 We have already seen how to instantiate a camera object from a name. If you have
 more than one camera connected to a machine, you will most likely want the user
 decide which to use. To do so, you can enumerate all camera strings with
-`uca_camera_get_types`:
+`uca_plugin_manager_get_available_cameras`:
 
 ~~~ {.c}
-    gchar **types;
+    GList *types;
 
-    types = uca_camera_get_types ();
+    types = uca_camera_get_available_cameras (manager);
 
-    for (guint i = 0; types[i] != NULL; i++)
-        g_print ("%s\n", types[i]);
+    for (GList *it = g_list_first; it != NULL; it = g_list_next (it))
+        g_print ("%s\n", (gchar *) it->data);
 
-    /* free the string array */
-    g_strfreev (types);
-~~~
-
-If you _know_ which camera you want to use you can instantiate the sub-classed
-camera object directly. In this case we create a pco-based camera:
-
-~~~ {.c}
-#include <glib-object.h>
-#include <uca/uca-camera-pco.h>
-
-int
-main (int argc, char *argv[])
-{
-    UcaPcoCamera *camera;
-    GError *error = NULL;
-
-    g_type_init ();
-    camera = uca_pco_camera_new (&error);
-    g_object_unref (camera);
-    return 0;
-}
+    /* free the strings and the list */
+    g_list_foreach (types, (GFunc) g_free, NULL);
+    g_list_free (types);
 ~~~
 
 [last section]: #first-look-at-the-api
@@ -374,12 +381,68 @@ setup_async (UcaCamera *camera)
 }
 ~~~
 
+
+# Bindings
+
+Since version 1.1, libuca generates GObject introspection meta data if
+`g-ir-scanner` and `g-ir-compiler` can be found. When the XML description
+`Uca-x.y.gir` and the typelib `Uca-x.y.typelib` are installed, GI-aware
+languages can access libuca and create and modify cameras, for example in
+Python:
+
+~~~ {.python}
+from gi.repository import Uca
+
+pm = Uca.PluginManager()
+
+# List all cameras
+print(pm.get_available_cameras())
+
+# Load a camera
+cam = pm.get_camera('pco')
+
+# You can read and write properties in two ways
+cam.set_properties(exposure_time=0.05)
+cam.props.roi_width = 1024
+~~~
+
+Note, that the naming of classes and properties depends on the GI implementation
+of the target language. For example with Python, the namespace prefix `uca_`
+becomes the module name `Uca` and dashes separating property names become
+underscores.
+
+
 # Integrating new cameras
 
 A new camera is integrated by [sub-classing][] `UcaCamera` and implement all
 virtual methods. The simplest way is to take the `mock` camera and
 rename all occurences. Note, that if you class is going to be called `FooBar`,
 the upper case variant is `FOO_BAR` and the lower case variant is `foo_bar`.
+
+In order to fully implement a camera, you need to override at least the
+following virtual methods:
+
+* `start_recording`: Take suitable actions so that a subsequent call to
+  `grab` delivers an image or blocks until one is exposed.
+* `stop_recording`: Stop recording so that subsequent calls to `grab`
+  fail.
+* `grab`: Return an image from the camera or block until one is ready.
+
+## Asynchronous operation
+
+When the camera supports asynchronous acquisition and announces it with a true
+boolean value for `"transfer-asynchronously"`, a mechanism must be setup up
+during `start_recording` so that for each new frame the grab func callback is
+called.
+
+## Cameras with internal memory
+
+Cameras such as the pco.dimax record into their own on-board memory rather than
+streaming directly to the host PC. In this case, both `start_recording` and
+`stop_recording` initiate and end acquisition to the on-board memory. To
+initiate a data transfer, the host calls `start_readout` which must be suitably
+implemented. The actual data transfer happens either with `grab` or
+asynchronously.
 
 
 [sub-classing]: http://developer.gnome.org/gobject/stable/howto-gobject.html
@@ -426,3 +489,6 @@ grabbing time:
 # The GObject Tango device
 
 [TODO: Get more information from Volker Kaiser and/or Mihael Koep]
+
+
+# ChangeLog

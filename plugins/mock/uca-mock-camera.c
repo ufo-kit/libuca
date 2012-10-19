@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gmodule.h>
 #include <string.h>
 #include "uca-mock-camera.h"
 
@@ -36,7 +37,6 @@ static const gint mock_overrideables[] = {
     PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
-    PROP_TRIGGER_MODE,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
@@ -146,28 +146,15 @@ static void print_number(gchar *buffer, guint number, guint x, guint y, guint wi
 static void print_current_frame(UcaMockCameraPrivate *priv, gchar *buffer)
 {
     guint number = priv->current_frame;
-    guint divisor = 100000000;
+    guint divisor = 10000000;
     int x = 10;
-    while (divisor > 1) {
+
+    while (divisor > 0) {
         print_number(buffer, number / divisor, x, 10, priv->width);
         number = number % divisor;
         divisor = divisor / 10;
         x += DIGIT_WIDTH + 1;
     }
-}
-
-/**
- * uca_mock_camera_new:
- * @error: Location for error
- *
- * Create a new #UcaMockCamera object.
- *
- * Returns: A newly created #UcaMockCamera object
- */
-UcaMockCamera *uca_mock_camera_new(GError **error)
-{
-    UcaMockCamera *camera = g_object_new(UCA_TYPE_MOCK_CAMERA, NULL);
-    return camera;
 }
 
 static gpointer mock_grab_func(gpointer data)
@@ -208,7 +195,7 @@ static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
     if (transfer_async) {
         GError *tmp_error = NULL;
         priv->thread_running = TRUE;
-        priv->grab_thread = g_thread_create(mock_grab_func, camera, TRUE, &tmp_error); 
+        priv->grab_thread = g_thread_create(mock_grab_func, camera, TRUE, &tmp_error);
 
         if (tmp_error != NULL) {
             priv->thread_running = FALSE;
@@ -232,7 +219,7 @@ static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
             NULL);
 
     if (transfer_async) {
-        priv->thread_running = FALSE;    
+        priv->thread_running = FALSE;
         g_thread_join(priv->grab_thread);
     }
 }
@@ -314,9 +301,6 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
         case PROP_EXPOSURE_TIME:
             g_value_set_double(value, priv->exposure_time);
             break;
-        case PROP_TRIGGER_MODE:
-            g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
-            break;
         case PROP_ROI_X:
             g_value_set_uint(value, priv->roi_x);
             break;
@@ -358,7 +342,7 @@ static void uca_mock_camera_finalize(GObject *object)
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
     if (priv->thread_running) {
-        priv->thread_running = FALSE;    
+        priv->thread_running = FALSE;
         g_thread_join(priv->grab_thread);
     }
 
@@ -383,7 +367,7 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
     for (guint i = 0; mock_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, mock_overrideables[i], uca_camera_props[mock_overrideables[i]]);
 
-    mock_properties[PROP_FRAMERATE] = 
+    mock_properties[PROP_FRAMERATE] =
         g_param_spec_float("frame-rate",
                 "Frame rate",
                 "Number of frames per second that are taken",
@@ -406,10 +390,20 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     self->priv->frame_rate = self->priv->max_frame_rate = 100000.0f;
     self->priv->grab_thread = NULL;
     self->priv->current_frame = 0;
+    self->priv->exposure_time = 0.05;
 
     self->priv->binnings = g_value_array_new(1);
     GValue val = {0};
     g_value_init(&val, G_TYPE_UINT);
     g_value_set_uint(&val, 1);
     g_value_array_append(self->priv->binnings, &val);
+
+    uca_camera_register_unit (UCA_CAMERA (self), "frame-rate", UCA_UNIT_COUNT);
+}
+
+G_MODULE_EXPORT UcaCamera *
+uca_camera_impl_new (GError **error)
+{
+    UcaCamera *camera = UCA_CAMERA (g_object_new (UCA_TYPE_MOCK_CAMERA, NULL));
+    return camera;
 }

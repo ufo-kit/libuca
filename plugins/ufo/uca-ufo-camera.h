@@ -69,8 +69,6 @@ struct _UcaUfoCameraClass {
     UcaCameraClass parent;
 };
 
-UcaUfoCamera *uca_ufo_camera_new(GError **error);
-
 GType uca_ufo_camera_get_type(void);
 
 G_END_DECLS

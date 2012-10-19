@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "uca-plugin-manager.h"
 #include "uca-camera.h"
 
 static UcaCamera *camera = NULL;
@@ -31,26 +32,33 @@ static void sigint_handler(int signal)
     exit(signal);
 }
 
-static void print_usage(void)
+static void
+print_usage (void)
 {
-    gchar **types;
-    
-    g_print("Usage: grab (");
-    types = uca_camera_get_types();
+    GList *types;
+    UcaPluginManager *manager;
 
-    for (guint i = 0; types[i] != NULL; i++) {
-        if (types[i+1] == NULL)
-            g_print("%s)", types[i]);
-        else
-            g_print("%s | ", types[i]);
+    manager = uca_plugin_manager_new ();
+    g_print ("Usage: benchmark [ ");
+    types = uca_plugin_manager_get_available_cameras (manager);
+
+    if (types == NULL) {
+        g_print ("] -- no camera plugin found\n");
+        return;
     }
 
-    g_print("\n");
-    g_strfreev(types);
+    for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
+        gchar *name = (gchar *) it->data;
+        if (g_list_next (it) == NULL)
+            g_print ("%s ]\n", name);
+        else
+            g_print ("%s, ", name);
+    }
 }
 
 int main(int argc, char *argv[])
 {
+    UcaPluginManager *manager;
     GError *error = NULL;
     (void) signal(SIGINT, sigint_handler);
 
@@ -59,13 +67,15 @@ int main(int argc, char *argv[])
     guint bits;
     gchar *name;
 
+    g_type_init();
+
     if (argc < 2) {
         print_usage();
         return 1;
     }
 
-    g_type_init();
-    camera = uca_camera_new(argv[1], &error);
+    manager = uca_plugin_manager_new ();
+    camera = uca_plugin_manager_get_camera (manager, argv[1], &error);
 
     if (camera == NULL) {
         g_print("Error during initialization: %s\n", error->message);
@@ -100,7 +110,7 @@ int main(int argc, char *argv[])
     g_free(name);
 
     g_print("Sensor: %ix%i px\n", sensor_width, sensor_height);
-    g_print("ROI: %ix%i @ (%i, %i), steps: %i, %i\n", 
+    g_print("ROI: %ix%i @ (%i, %i), steps: %i, %i\n",
             roi_width, roi_height, roi_x, roi_y, roi_width_multiplier, roi_height_multiplier);
 
     const int pixel_size = bits == 8 ? 1 : 2;
