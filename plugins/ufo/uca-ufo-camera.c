@@ -79,7 +79,6 @@ static gint base_overrideables[] = {
     PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
-    PROP_TRIGGER_MODE,
     0,
 };
 
@@ -101,6 +100,7 @@ struct _UcaUfoCameraPrivate {
         FPGA_48MHZ = 0,
         FPGA_40MHZ
     }                   frequency;
+    UcaCameraTrigger    trigger;
 };
 
 static void
@@ -244,6 +244,7 @@ static void uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
     g_object_get(G_OBJECT(camera),
             "transfer-asynchronously", &transfer_async,
             "exposure-time", &exposure_time,
+            "trigger-mode", &priv->trigger,
             NULL);
 
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
@@ -265,8 +266,11 @@ static void uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
 static void uca_ufo_camera_start_readout(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
-    g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_IMPLEMENTED,
-            "Ufo camera does not support recording to internal memory");
+}
+
+static void uca_ufo_camera_stop_readout(UcaCamera *camera, GError **error)
+{
+    g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 }
 
 static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
@@ -279,8 +283,10 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
 
     const gsize size = SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16);
 
-    err = pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
-    PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_TRIGGER);
+    if (priv->trigger != UCA_CAMERA_TRIGGER_EXTERNAL) {
+        err = pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
+        PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_TRIGGER);
+    }
 
     err = pcilib_get_next_event(priv->handle, priv->timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_NEXT_EVENT);
@@ -429,8 +435,6 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_NAME:
             g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");
             break;
-        case PROP_TRIGGER_MODE:
-            break;
         default:
             {
                 RegisterInfo *reg_info = g_hash_table_lookup (ufo_property_table, GINT_TO_POINTER (property_id));
@@ -462,6 +466,7 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
     camera_class->start_recording = uca_ufo_camera_start_recording;
     camera_class->stop_recording = uca_ufo_camera_stop_recording;
     camera_class->start_readout = uca_ufo_camera_start_readout;
+    camera_class->stop_readout = uca_ufo_camera_stop_readout;
     camera_class->grab = uca_ufo_camera_grab;
 
     for (guint i = 0; base_overrideables[i] != 0; i++)
