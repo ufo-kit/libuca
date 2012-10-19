@@ -23,8 +23,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     )
 
-message("${CMAKE_CURRENT_SOURCE_DIR}")
-
 if (HAVE_PYLON_CAMERA)
     set(GENICAM_ROOT $ENV{PYLON_ROOT}/genicam)
     # check for 32/64 bit
