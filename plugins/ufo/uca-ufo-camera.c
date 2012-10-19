@@ -79,6 +79,7 @@ static gint base_overrideables[] = {
     PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
+    PROP_TRIGGER_MODE,
     0,
 };
 
@@ -338,6 +339,10 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
             g_debug("ROI feature not implemented yet");
             break;
 
+        case PROP_TRIGGER_MODE:
+            priv->trigger = g_value_get_enum (value);
+            break;
+
         default:
             {
                 RegisterInfo *reg_info = g_hash_table_lookup (ufo_property_table, GINT_TO_POINTER (property_id));
@@ -434,6 +439,9 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_NAME:
             g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");
+            break;
+        case PROP_TRIGGER_MODE:
+            g_value_set_enum (value, priv->trigger);
             break;
         default:
             {
