@@ -506,11 +506,6 @@ uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
     if (err == FG_INVALID_PARAMETER)
         g_warning(" Unable to unblock all\n");
 
-    err = pco_get_active_segment(priv->pco, &priv->active_segment);
-    HANDLE_PCO_ERROR(err);
-
-    err = pco_get_num_images(priv->pco, priv->active_segment, &priv->num_recorded_images);
-    g_print ("images: %i\n", priv->num_recorded_images);
     HANDLE_PCO_ERROR(err);
 }
 
@@ -524,9 +519,6 @@ uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
      * TODO: Check if readout mode is possible. This is not the case for the
      * edge.
      */
-
-    guint err = pco_get_active_segment(priv->pco, &priv->active_segment);
-    HANDLE_PCO_ERROR(err);
 
     err = pco_get_num_images(priv->pco, priv->active_segment, &priv->num_recorded_images);
     HANDLE_PCO_ERROR(err);
@@ -1033,6 +1025,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
 
         case PROP_RECORDED_FRAMES:
+            err = pco_get_num_images (priv->pco, priv->active_segment, &priv->num_recorded_images);
             g_value_set_uint(value, priv->num_recorded_images);
             break;
 
@@ -1439,6 +1432,7 @@ uca_camera_impl_new (GError **error)
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     priv->pco = pco;
 
+    pco_get_active_segment(priv->pco, &priv->active_segment);
     pco_get_resolution(priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
     pco_get_binning(priv->pco, &priv->binning_h, &priv->binning_v);
     pco_set_storage_mode(pco, STORAGE_MODE_RECORDER);
