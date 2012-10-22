@@ -110,6 +110,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
 };
 
 static GParamSpec *camera_properties[N_BASE_PROPERTIES] = { NULL, };
+static GStaticMutex access_lock = G_STATIC_MUTEX_INIT;
 
 struct _UcaCameraPrivate {
     gboolean is_recording;
@@ -457,7 +458,9 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
         goto start_recording_unlock;
     }
 
+    g_static_mutex_lock (&access_lock);
     (*klass->start_recording)(camera, &tmp_error);
+    g_static_mutex_unlock (&access_lock);
 
     if (tmp_error == NULL) {
         camera->priv->is_readout = FALSE;
@@ -501,7 +504,9 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
     else {
         GError *tmp_error = NULL;
 
+        g_static_mutex_lock (&access_lock);
         (*klass->stop_recording)(camera, &tmp_error);
+        g_static_mutex_unlock (&access_lock);
 
         if (tmp_error == NULL) {
             camera->priv->is_readout = FALSE;
@@ -548,7 +553,9 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
     else {
         GError *tmp_error = NULL;
 
+        g_static_mutex_lock (&access_lock);
         (*klass->start_readout) (camera, &tmp_error);
+        g_static_mutex_unlock (&access_lock);
 
         if (tmp_error == NULL) {
             camera->priv->is_readout = TRUE;
@@ -593,7 +600,9 @@ uca_camera_stop_readout (UcaCamera *camera, GError **error)
     else {
         GError *tmp_error = NULL;
 
+        g_static_mutex_lock (&access_lock);
         (*klass->stop_readout) (camera, &tmp_error);
+        g_static_mutex_unlock (&access_lock);
 
         if (tmp_error == NULL) {
             camera->priv->is_readout = FALSE;
@@ -648,8 +657,11 @@ uca_camera_trigger (UcaCamera *camera, GError **error)
 
     if (!camera->priv->is_recording)
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is not recording");
-    else
+    else {
+        g_static_mutex_lock (&access_lock);
         (*klass->trigger) (camera, error);
+        g_static_mutex_unlock (&access_lock);
+    }
 
     g_static_mutex_unlock (&mutex);
 }
@@ -690,8 +702,11 @@ uca_camera_grab (UcaCamera *camera, gpointer *data, GError **error)
 
     if (!camera->priv->is_recording && !camera->priv->is_readout)
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is neither recording nor in readout mode");
-    else
+    else {
+        g_static_mutex_lock (&access_lock);
         (*klass->grab) (camera, data, error);
+        g_static_mutex_unlock (&access_lock);
+    }
 
     g_static_mutex_unlock (&mutex);
 }
