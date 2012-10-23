@@ -138,24 +138,38 @@ update_pixbuf_dimensions (ThreadData *data)
     gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
 }
 
+static void
+print_and_free_error (GError **error)
+{
+    g_printerr ("%s\n", (*error)->message);
+    g_error_free (*error);
+    *error = NULL;
+}
+
 static gpointer
 preview_frames (void *args)
 {
     ThreadData *data = (ThreadData *) args;
     gint counter = 0;
+    GError *error = NULL;;
 
     while (data->state == RUNNING) {
         gpointer buffer;
 
         buffer = ring_buffer_get_current_pointer (data->buffer);
-        uca_camera_grab (data->camera, &buffer, NULL);
-        convert_grayscale_to_rgb (data, buffer);
+        uca_camera_grab (data->camera, &buffer, &error);
 
-        gdk_threads_enter ();
-        update_pixbuf (data);
-        gdk_threads_leave ();
+        if (error == NULL) {
+            convert_grayscale_to_rgb (data, buffer);
 
-        counter++;
+            gdk_threads_enter ();
+            update_pixbuf (data);
+            gdk_threads_leave ();
+
+            counter++;
+        }
+        else
+            print_and_free_error (&error);
     }
     return NULL;
 }
@@ -166,6 +180,7 @@ record_frames (gpointer args)
     ThreadData *data;
     gpointer buffer;
     guint n_frames = 0;
+    GError *error = NULL;
 
     data = (ThreadData *) args;
     ring_buffer_reset (data->buffer);
@@ -173,8 +188,13 @@ record_frames (gpointer args)
     while (data->state == RECORDING) {
         buffer = ring_buffer_get_current_pointer (data->buffer);
         uca_camera_grab (data->camera, &buffer, NULL);
-        ring_buffer_proceed (data->buffer);
-        n_frames++;
+
+        if (error == NULL) {
+            ring_buffer_proceed (data->buffer);
+            n_frames++;
+        }
+        else
+            print_and_free_error (&error);
     }
 
     n_frames = ring_buffer_get_num_blocks (data->buffer);
