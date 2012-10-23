@@ -91,7 +91,8 @@ convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
             gint offset = y * stride * data->width;
 
             for (gint x = 0; x < data->display_width; x++, offset += stride) {
-                guchar val = (guchar) ((input[offset] - min) * factor);
+                gdouble dval = (input[offset] - min) * factor;
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
                 output[i++] = val;
@@ -106,7 +107,8 @@ convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
             gint offset = y * stride * data->width;
 
             for (gint x = 0; x < data->display_width; x++, offset += stride) {
-                guchar val = (guchar) ((input[offset] - min) * factor);
+                gdouble dval = (input[offset] - min) * factor;
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
                 output[i++] = val;
