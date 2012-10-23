@@ -28,7 +28,8 @@
     if (err != 0) {                                     \
         g_set_error(error, UCA_UFO_CAMERA_ERROR,        \
                 err_type,                               \
-                "pcilib: %s", strerror(err));           \
+                "%s:%i pcilib: %s (errcode = %d)",      \
+                __FILE__, __LINE__, strerror(err), err);\
         return;                                         \
     }
 
@@ -280,7 +281,7 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
     pcilib_event_id_t   event_id;
     pcilib_event_info_t event_info;
-    size_t err;
+    int err;
 
     const gsize size = SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16);
 
@@ -295,7 +296,7 @@ static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **erro
     if (*data == NULL)
         *data = g_malloc0(SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16));
 
-    gpointer src = pcilib_get_data(priv->handle, event_id, PCILIB_EVENT_DATA, &err);
+    gpointer src = pcilib_get_data(priv->handle, event_id, PCILIB_EVENT_DATA, (size_t *) &err);
 
     if (src == NULL)
         PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_NO_DATA);
