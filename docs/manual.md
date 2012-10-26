@@ -236,6 +236,10 @@ In a similar way, properties are set with `g_object_set`:
                   NULL);
 ~~~
 
+Each property can be associated with a physical unit. To query for the unit call
+`uca_camera_get_unit` and pass a property name. The function will then return a
+value from the `UcaUnit` enum.
+
 Several essential camera parameters _must_ be implemented by all cameras. To get
 a list of them consult the API reference for [`UcaCamera`][ucacam-ref]. For
 camera specific parameters you need to consult the corresponding API reference
@@ -259,13 +263,15 @@ The following cameras are supported:
 
 ## Property documentation
 
-* [Basic camera properties][base-doc]
-* [pco][pco-doc]
 * [mock][mock-doc]
+* [pco][pco-doc]
+* [PhotonFocus][pf-doc]
+* [Ufo Camera][ufo-doc]
 
-[base-doc]: base.html
-[pco-doc]: pco.html
 [mock-doc]: mock.html
+[pco-doc]: pco.html
+[pf-doc]: pf.html
+[ufo-doc]: ufo.html
 
 
 # More API
@@ -490,5 +496,3 @@ grabbing time:
 
 [TODO: Get more information from Volker Kaiser and/or Mihael Koep]
 
-
-# ChangeLog

@@ -1,0 +1,346 @@
+<html><head><link rel="stylesheet" href="style.css" type="text/css" /><link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700|Droid+Serif:400,400italic|Inconsolata' rel='stylesheet' type='text/css'><title>ufo &mdash; properties</title></head><body><div id="header"><h1 class="title">Property documentation of ufo</h1><h2>Properties</h2><ul id="toc"><li><code><a href=#name>"name"</a></code></li><li><code><a href=#sensor-width>"sensor-width"</a></code></li><li><code><a href=#sensor-height>"sensor-height"</a></code></li><li><code><a href=#sensor-bitdepth>"sensor-bitdepth"</a></code></li><li><code><a href=#sensor-horizontal-binning>"sensor-horizontal-binning"</a></code></li><li><code><a href=#sensor-horizontal-binnings>"sensor-horizontal-binnings"</a></code></li><li><code><a href=#sensor-vertical-binning>"sensor-vertical-binning"</a></code></li><li><code><a href=#sensor-vertical-binnings>"sensor-vertical-binnings"</a></code></li><li><code><a href=#sensor-max-frame-rate>"sensor-max-frame-rate"</a></code></li><li><code><a href=#trigger-mode>"trigger-mode"</a></code></li><li><code><a href=#exposure-time>"exposure-time"</a></code></li><li><code><a href=#frames-per-second>"frames-per-second"</a></code></li><li><code><a href=#roi-x0>"roi-x0"</a></code></li><li><code><a href=#roi-y0>"roi-y0"</a></code></li><li><code><a href=#roi-width>"roi-width"</a></code></li><li><code><a href=#roi-height>"roi-height"</a></code></li><li><code><a href=#roi-width-multiplier>"roi-width-multiplier"</a></code></li><li><code><a href=#roi-height-multiplier>"roi-height-multiplier"</a></code></li><li><code><a href=#has-streaming>"has-streaming"</a></code></li><li><code><a href=#has-camram-recording>"has-camram-recording"</a></code></li><li><code><a href=#recorded-frames>"recorded-frames"</a></code></li><li><code><a href=#transfer-asynchronously>"transfer-asynchronously"</a></code></li><li><code><a href=#is-recording>"is-recording"</a></code></li><li><code><a href=#is-readout>"is-readout"</a></code></li><li><code><a href=#sensor-temperature>"sensor-temperature"</a></code></li><li><code><a href=#fpga-temperature>"fpga-temperature"</a></code></li><li><code><a href=#ufo-cmosis-number-lines>"ufo-cmosis-number-lines"</a></code></li><li><code><a href=#ufo-cmosis-start1>"ufo-cmosis-start1"</a></code></li><li><code><a href=#ufo-cmosis-start2>"ufo-cmosis-start2"</a></code></li><li><code><a href=#ufo-cmosis-start3>"ufo-cmosis-start3"</a></code></li><li><code><a href=#ufo-cmosis-start4>"ufo-cmosis-start4"</a></code></li><li><code><a href=#ufo-cmosis-start5>"ufo-cmosis-start5"</a></code></li><li><code><a href=#ufo-cmosis-start6>"ufo-cmosis-start6"</a></code></li><li><code><a href=#ufo-cmosis-start7>"ufo-cmosis-start7"</a></code></li><li><code><a href=#ufo-cmosis-start8>"ufo-cmosis-start8"</a></code></li><li><code><a href=#ufo-cmosis-number-lines1>"ufo-cmosis-number-lines1"</a></code></li><li><code><a href=#ufo-cmosis-number-lines2>"ufo-cmosis-number-lines2"</a></code></li><li><code><a href=#ufo-cmosis-number-lines3>"ufo-cmosis-number-lines3"</a></code></li><li><code><a href=#ufo-cmosis-number-lines4>"ufo-cmosis-number-lines4"</a></code></li><li><code><a href=#ufo-cmosis-number-lines5>"ufo-cmosis-number-lines5"</a></code></li><li><code><a href=#ufo-cmosis-number-lines6>"ufo-cmosis-number-lines6"</a></code></li><li><code><a href=#ufo-cmosis-number-lines7>"ufo-cmosis-number-lines7"</a></code></li><li><code><a href=#ufo-cmosis-number-lines8>"ufo-cmosis-number-lines8"</a></code></li><li><code><a href=#ufo-cmosis-sub-s>"ufo-cmosis-sub-s"</a></code></li><li><code><a href=#ufo-cmosis-sub-a>"ufo-cmosis-sub-a"</a></code></li><li><code><a href=#ufo-cmosis-color>"ufo-cmosis-color"</a></code></li><li><code><a href=#ufo-cmosis-image-flipping>"ufo-cmosis-image-flipping"</a></code></li><li><code><a href=#ufo-cmosis-exp-flags>"ufo-cmosis-exp-flags"</a></code></li><li><code><a href=#ufo-cmosis-exp-time>"ufo-cmosis-exp-time"</a></code></li><li><code><a href=#ufo-cmosis-exp-step>"ufo-cmosis-exp-step"</a></code></li><li><code><a href=#ufo-cmosis-exp-kp1>"ufo-cmosis-exp-kp1"</a></code></li><li><code><a href=#ufo-cmosis-exp-kp2>"ufo-cmosis-exp-kp2"</a></code></li><li><code><a href=#ufo-cmosis-nr-slopes>"ufo-cmosis-nr-slopes"</a></code></li><li><code><a href=#ufo-cmosis-exp-seq>"ufo-cmosis-exp-seq"</a></code></li><li><code><a href=#ufo-cmosis-exp-time2>"ufo-cmosis-exp-time2"</a></code></li><li><code><a href=#ufo-cmosis-exp-step2>"ufo-cmosis-exp-step2"</a></code></li><li><code><a href=#ufo-cmosis-nr-slopes2>"ufo-cmosis-nr-slopes2"</a></code></li><li><code><a href=#ufo-cmosis-exp-seq2>"ufo-cmosis-exp-seq2"</a></code></li><li><code><a href=#ufo-cmosis-number-frames>"ufo-cmosis-number-frames"</a></code></li><li><code><a href=#ufo-cmosis-output-mode>"ufo-cmosis-output-mode"</a></code></li><li><code><a href=#ufo-cmosis-training-pattern>"ufo-cmosis-training-pattern"</a></code></li><li><code><a href=#ufo-cmosis-channel-en>"ufo-cmosis-channel-en"</a></code></li><li><code><a href=#ufo-cmosis-special-82>"ufo-cmosis-special-82"</a></code></li><li><code><a href=#ufo-cmosis-vlow2>"ufo-cmosis-vlow2"</a></code></li><li><code><a href=#ufo-cmosis-vlow3>"ufo-cmosis-vlow3"</a></code></li><li><code><a href=#ufo-cmosis-offset>"ufo-cmosis-offset"</a></code></li><li><code><a href=#ufo-cmosis-pga>"ufo-cmosis-pga"</a></code></li><li><code><a href=#ufo-cmosis-adc-gain>"ufo-cmosis-adc-gain"</a></code></li><li><code><a href=#ufo-cmosis-bit-mode>"ufo-cmosis-bit-mode"</a></code></li><li><code><a href=#ufo-cmosis-adc-resolution>"ufo-cmosis-adc-resolution"</a></code></li><li><code><a href=#ufo-cmosis-special-115>"ufo-cmosis-special-115"</a></code></li><li><code><a href=#ufo-spi-conf-input>"ufo-spi-conf-input"</a></code></li><li><code><a href=#ufo-spi-conf-output>"ufo-spi-conf-output"</a></code></li><li><code><a href=#ufo-spi-clk-speed>"ufo-spi-clk-speed"</a></code></li><li><code><a href=#ufo-firmware-info>"ufo-firmware-info"</a></code></li><li><code><a href=#ufo-firmware-version>"ufo-firmware-version"</a></code></li><li><code><a href=#ufo-firmware-bitmode>"ufo-firmware-bitmode"</a></code></li><li><code><a href=#ufo-adc-resolution>"ufo-adc-resolution"</a></code></li><li><code><a href=#ufo-output-mode>"ufo-output-mode"</a></code></li><li><code><a href=#ufo-control>"ufo-control"</a></code></li><li><code><a href=#ufo-status>"ufo-status"</a></code></li><li><code><a href=#ufo-status2>"ufo-status2"</a></code></li><li><code><a href=#ufo-status3>"ufo-status3"</a></code></li><li><code><a href=#ufo-fr-status>"ufo-fr-status"</a></code></li><li><code><a href=#ufo-start-address>"ufo-start-address"</a></code></li><li><code><a href=#ufo-end-address>"ufo-end-address"</a></code></li><li><code><a href=#ufo-rd-address>"ufo-rd-address"</a></code></li><li><code><a href=#ufo-fr-param1>"ufo-fr-param1"</a></code></li><li><code><a href=#ufo-fr-skip-lines>"ufo-fr-skip-lines"</a></code></li><li><code><a href=#ufo-fr-num-lines>"ufo-fr-num-lines"</a></code></li><li><code><a href=#ufo-fr-start-address>"ufo-fr-start-address"</a></code></li><li><code><a href=#ufo-fr-param2>"ufo-fr-param2"</a></code></li><li><code><a href=#ufo-fr-threshold-lines>"ufo-fr-threshold-lines"</a></code></li><li><code><a href=#ufo-skiped-lines>"ufo-skiped-lines"</a></code></li><li><code><a href=#ufo-rawdata-pkt-addr>"ufo-rawdata-pkt-addr"</a></code></li><li><code><a href=#ufo-temperature-info>"ufo-temperature-info"</a></code></li><li><code><a href=#ufo-sensor-temperature>"ufo-sensor-temperature"</a></code></li><li><code><a href=#ufo-sensor-temperature-alarms>"ufo-sensor-temperature-alarms"</a></code></li><li><code><a href=#ufo-fpga-temperature>"ufo-fpga-temperature"</a></code></li><li><code><a href=#ufo-fpga-temperature-alarms>"ufo-fpga-temperature-alarms"</a></code></li><li><code><a href=#ufo-num-lines>"ufo-num-lines"</a></code></li><li><code><a href=#ufo-start-line>"ufo-start-line"</a></code></li><li><code><a href=#ufo-exp-time>"ufo-exp-time"</a></code></li><li><code><a href=#ufo-motor>"ufo-motor"</a></code></li><li><code><a href=#ufo-motor-phi>"ufo-motor-phi"</a></code></li><li><code><a href=#ufo-motor-z>"ufo-motor-z"</a></code></li><li><code><a href=#ufo-motor-y>"ufo-motor-y"</a></code></li><li><code><a href=#ufo-motor-x>"ufo-motor-x"</a></code></li><li><code><a href=#ufo-adc-gain>"ufo-adc-gain"</a></code></li><li><code><a href=#ufo-write-status>"ufo-write-status"</a></code></li><li><code><a href=#ufo-num-triggers>"ufo-num-triggers"</a></code></li><li><code><a href=#ufo-trigger-period>"ufo-trigger-period"</a></code></li><li><code><a href=#ufo-temperature-sample-period>"ufo-temperature-sample-period"</a></code></li><li><code><a href=#ufo-ddr-max-frames>"ufo-ddr-max-frames"</a></code></li><li><code><a href=#ufo-ddr-num-frames>"ufo-ddr-num-frames"</a></code></li></ul><h2>Details</h2><dl><dt id="name"><a href="#toc">name</a></dt>
+<dd><pre><code class="prop-type">"name" : gchararray : Read-only</code></pre>
+<p>Name of the camera</p>
+</dd><dt id="sensor-width"><a href="#toc">sensor-width</a></dt>
+<dd><pre><code class="prop-type">"sensor-width" : guint : Read-only</code></pre>
+<p>Width of the sensor in pixels</p>
+</dd><dt id="sensor-height"><a href="#toc">sensor-height</a></dt>
+<dd><pre><code class="prop-type">"sensor-height" : guint : Read-only</code></pre>
+<p>Height of the sensor in pixels</p>
+</dd><dt id="sensor-bitdepth"><a href="#toc">sensor-bitdepth</a></dt>
+<dd><pre><code class="prop-type">"sensor-bitdepth" : guint : Read-only</code></pre>
+<p>Number of bits per pixel</p>
+</dd><dt id="sensor-horizontal-binning"><a href="#toc">sensor-horizontal-binning</a></dt>
+<dd><pre><code class="prop-type">"sensor-horizontal-binning" : guint : Read / Write</code></pre>
+<p>Number of sensor ADCs that are combined to one pixel in horizontal direction</p>
+</dd><dt id="sensor-horizontal-binnings"><a href="#toc">sensor-horizontal-binnings</a></dt>
+<dd><pre><code class="prop-type">"sensor-horizontal-binnings" : GValueArray : Read-only</code></pre>
+<p>Array of possible binnings in horizontal direction</p>
+</dd><dt id="sensor-vertical-binning"><a href="#toc">sensor-vertical-binning</a></dt>
+<dd><pre><code class="prop-type">"sensor-vertical-binning" : guint : Read / Write</code></pre>
+<p>Number of sensor ADCs that are combined to one pixel in vertical direction</p>
+</dd><dt id="sensor-vertical-binnings"><a href="#toc">sensor-vertical-binnings</a></dt>
+<dd><pre><code class="prop-type">"sensor-vertical-binnings" : GValueArray : Read-only</code></pre>
+<p>Array of possible binnings in vertical direction</p>
+</dd><dt id="sensor-max-frame-rate"><a href="#toc">sensor-max-frame-rate</a></dt>
+<dd><pre><code class="prop-type">"sensor-max-frame-rate" : gfloat : Read-only</code></pre>
+<p>Maximum frame rate at full frame resolution</p>
+</dd><dt id="trigger-mode"><a href="#toc">trigger-mode</a></dt>
+<dd><pre><code class="prop-type">"trigger-mode" : UcaCameraTrigger : Read / Write</code></pre>
+<p>Trigger mode</p>
+</dd><dt id="exposure-time"><a href="#toc">exposure-time</a></dt>
+<dd><pre><code class="prop-type">"exposure-time" : gdouble : Read / Write</code></pre>
+<p>Exposure time in seconds</p>
+</dd><dt id="frames-per-second"><a href="#toc">frames-per-second</a></dt>
+<dd><pre><code class="prop-type">"frames-per-second" : gdouble : Read / Write</code></pre>
+<p>Frames per second</p>
+</dd><dt id="roi-x0"><a href="#toc">roi-x0</a></dt>
+<dd><pre><code class="prop-type">"roi-x0" : guint : Read / Write</code></pre>
+<p>Horizontal coordinate</p>
+</dd><dt id="roi-y0"><a href="#toc">roi-y0</a></dt>
+<dd><pre><code class="prop-type">"roi-y0" : guint : Read / Write</code></pre>
+<p>Vertical coordinate</p>
+</dd><dt id="roi-width"><a href="#toc">roi-width</a></dt>
+<dd><pre><code class="prop-type">"roi-width" : guint : Read / Write</code></pre>
+<p>Width of the region of interest</p>
+</dd><dt id="roi-height"><a href="#toc">roi-height</a></dt>
+<dd><pre><code class="prop-type">"roi-height" : guint : Read / Write</code></pre>
+<p>Height of the region of interest</p>
+</dd><dt id="roi-width-multiplier"><a href="#toc">roi-width-multiplier</a></dt>
+<dd><pre><code class="prop-type">"roi-width-multiplier" : guint : Read-only</code></pre>
+<p>Minimum possible step size of horizontal ROI</p>
+</dd><dt id="roi-height-multiplier"><a href="#toc">roi-height-multiplier</a></dt>
+<dd><pre><code class="prop-type">"roi-height-multiplier" : guint : Read-only</code></pre>
+<p>Minimum possible step size of vertical ROI</p>
+</dd><dt id="has-streaming"><a href="#toc">has-streaming</a></dt>
+<dd><pre><code class="prop-type">"has-streaming" : gboolean : Read-only</code></pre>
+<p>Is the camera able to stream the data</p>
+</dd><dt id="has-camram-recording"><a href="#toc">has-camram-recording</a></dt>
+<dd><pre><code class="prop-type">"has-camram-recording" : gboolean : Read-only</code></pre>
+<p>Is the camera able to record the data in-camera</p>
+</dd><dt id="recorded-frames"><a href="#toc">recorded-frames</a></dt>
+<dd><pre><code class="prop-type">"recorded-frames" : guint : Read-only</code></pre>
+<p>Number of frames recorded into internal camera memory</p>
+</dd><dt id="transfer-asynchronously"><a href="#toc">transfer-asynchronously</a></dt>
+<dd><pre><code class="prop-type">"transfer-asynchronously" : gboolean : Read / Write</code></pre>
+<p>Specify whether data should be transfered asynchronously using a specified callback</p>
+</dd><dt id="is-recording"><a href="#toc">is-recording</a></dt>
+<dd><pre><code class="prop-type">"is-recording" : gboolean : Read-only</code></pre>
+<p>Is the camera currently recording</p>
+</dd><dt id="is-readout"><a href="#toc">is-readout</a></dt>
+<dd><pre><code class="prop-type">"is-readout" : gboolean : Read-only</code></pre>
+<p>Is camera in readout mode</p>
+</dd><dt id="sensor-temperature"><a href="#toc">sensor-temperature</a></dt>
+<dd><pre><code class="prop-type">"sensor-temperature" : gdouble : Read-only</code></pre>
+<p>Temperature of the sensor in degree Celsius</p>
+</dd><dt id="fpga-temperature"><a href="#toc">fpga-temperature</a></dt>
+<dd><pre><code class="prop-type">"fpga-temperature" : gdouble : Read-only</code></pre>
+<p>Temperature of the FPGA in degree Celsius</p>
+</dd><dt id="ufo-cmosis-number-lines"><a href="#toc">ufo-cmosis-number-lines</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-start1"><a href="#toc">ufo-cmosis-start1</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-start1" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-start2"><a href="#toc">ufo-cmosis-start2</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-start2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-start3"><a href="#toc">ufo-cmosis-start3</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-start3" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-start4"><a href="#toc">ufo-cmosis-start4</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-start4" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-start5"><a href="#toc">ufo-cmosis-start5</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-start5" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-start6"><a href="#toc">ufo-cmosis-start6</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-start6" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-start7"><a href="#toc">ufo-cmosis-start7</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-start7" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-start8"><a href="#toc">ufo-cmosis-start8</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-start8" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-lines1"><a href="#toc">ufo-cmosis-number-lines1</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines1" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-lines2"><a href="#toc">ufo-cmosis-number-lines2</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-lines3"><a href="#toc">ufo-cmosis-number-lines3</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines3" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-lines4"><a href="#toc">ufo-cmosis-number-lines4</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines4" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-lines5"><a href="#toc">ufo-cmosis-number-lines5</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines5" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-lines6"><a href="#toc">ufo-cmosis-number-lines6</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines6" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-lines7"><a href="#toc">ufo-cmosis-number-lines7</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines7" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-lines8"><a href="#toc">ufo-cmosis-number-lines8</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-lines8" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-sub-s"><a href="#toc">ufo-cmosis-sub-s</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-sub-s" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-sub-a"><a href="#toc">ufo-cmosis-sub-a</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-sub-a" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-color"><a href="#toc">ufo-cmosis-color</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-color" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-image-flipping"><a href="#toc">ufo-cmosis-image-flipping</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-image-flipping" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-flags"><a href="#toc">ufo-cmosis-exp-flags</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-flags" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-time"><a href="#toc">ufo-cmosis-exp-time</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-time" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-step"><a href="#toc">ufo-cmosis-exp-step</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-step" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-kp1"><a href="#toc">ufo-cmosis-exp-kp1</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-kp1" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-kp2"><a href="#toc">ufo-cmosis-exp-kp2</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-kp2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-nr-slopes"><a href="#toc">ufo-cmosis-nr-slopes</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-nr-slopes" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-seq"><a href="#toc">ufo-cmosis-exp-seq</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-seq" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-time2"><a href="#toc">ufo-cmosis-exp-time2</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-time2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-step2"><a href="#toc">ufo-cmosis-exp-step2</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-step2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-nr-slopes2"><a href="#toc">ufo-cmosis-nr-slopes2</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-nr-slopes2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-exp-seq2"><a href="#toc">ufo-cmosis-exp-seq2</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-exp-seq2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-number-frames"><a href="#toc">ufo-cmosis-number-frames</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-number-frames" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-output-mode"><a href="#toc">ufo-cmosis-output-mode</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-output-mode" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-training-pattern"><a href="#toc">ufo-cmosis-training-pattern</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-training-pattern" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-channel-en"><a href="#toc">ufo-cmosis-channel-en</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-channel-en" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-special-82"><a href="#toc">ufo-cmosis-special-82</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-special-82" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-vlow2"><a href="#toc">ufo-cmosis-vlow2</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-vlow2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-vlow3"><a href="#toc">ufo-cmosis-vlow3</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-vlow3" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-offset"><a href="#toc">ufo-cmosis-offset</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-offset" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-pga"><a href="#toc">ufo-cmosis-pga</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-pga" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-adc-gain"><a href="#toc">ufo-cmosis-adc-gain</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-adc-gain" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-bit-mode"><a href="#toc">ufo-cmosis-bit-mode</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-bit-mode" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-adc-resolution"><a href="#toc">ufo-cmosis-adc-resolution</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-adc-resolution" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-cmosis-special-115"><a href="#toc">ufo-cmosis-special-115</a></dt>
+<dd><pre><code class="prop-type">"ufo-cmosis-special-115" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-spi-conf-input"><a href="#toc">ufo-spi-conf-input</a></dt>
+<dd><pre><code class="prop-type">"ufo-spi-conf-input" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-spi-conf-output"><a href="#toc">ufo-spi-conf-output</a></dt>
+<dd><pre><code class="prop-type">"ufo-spi-conf-output" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-spi-clk-speed"><a href="#toc">ufo-spi-clk-speed</a></dt>
+<dd><pre><code class="prop-type">"ufo-spi-clk-speed" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-firmware-info"><a href="#toc">ufo-firmware-info</a></dt>
+<dd><pre><code class="prop-type">"ufo-firmware-info" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-firmware-version"><a href="#toc">ufo-firmware-version</a></dt>
+<dd><pre><code class="prop-type">"ufo-firmware-version" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-firmware-bitmode"><a href="#toc">ufo-firmware-bitmode</a></dt>
+<dd><pre><code class="prop-type">"ufo-firmware-bitmode" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-adc-resolution"><a href="#toc">ufo-adc-resolution</a></dt>
+<dd><pre><code class="prop-type">"ufo-adc-resolution" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-output-mode"><a href="#toc">ufo-output-mode</a></dt>
+<dd><pre><code class="prop-type">"ufo-output-mode" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-control"><a href="#toc">ufo-control</a></dt>
+<dd><pre><code class="prop-type">"ufo-control" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-status"><a href="#toc">ufo-status</a></dt>
+<dd><pre><code class="prop-type">"ufo-status" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-status2"><a href="#toc">ufo-status2</a></dt>
+<dd><pre><code class="prop-type">"ufo-status2" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-status3"><a href="#toc">ufo-status3</a></dt>
+<dd><pre><code class="prop-type">"ufo-status3" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-fr-status"><a href="#toc">ufo-fr-status</a></dt>
+<dd><pre><code class="prop-type">"ufo-fr-status" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-start-address"><a href="#toc">ufo-start-address</a></dt>
+<dd><pre><code class="prop-type">"ufo-start-address" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-end-address"><a href="#toc">ufo-end-address</a></dt>
+<dd><pre><code class="prop-type">"ufo-end-address" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-rd-address"><a href="#toc">ufo-rd-address</a></dt>
+<dd><pre><code class="prop-type">"ufo-rd-address" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-fr-param1"><a href="#toc">ufo-fr-param1</a></dt>
+<dd><pre><code class="prop-type">"ufo-fr-param1" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-fr-skip-lines"><a href="#toc">ufo-fr-skip-lines</a></dt>
+<dd><pre><code class="prop-type">"ufo-fr-skip-lines" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-fr-num-lines"><a href="#toc">ufo-fr-num-lines</a></dt>
+<dd><pre><code class="prop-type">"ufo-fr-num-lines" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-fr-start-address"><a href="#toc">ufo-fr-start-address</a></dt>
+<dd><pre><code class="prop-type">"ufo-fr-start-address" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-fr-param2"><a href="#toc">ufo-fr-param2</a></dt>
+<dd><pre><code class="prop-type">"ufo-fr-param2" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-fr-threshold-lines"><a href="#toc">ufo-fr-threshold-lines</a></dt>
+<dd><pre><code class="prop-type">"ufo-fr-threshold-lines" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-skiped-lines"><a href="#toc">ufo-skiped-lines</a></dt>
+<dd><pre><code class="prop-type">"ufo-skiped-lines" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-rawdata-pkt-addr"><a href="#toc">ufo-rawdata-pkt-addr</a></dt>
+<dd><pre><code class="prop-type">"ufo-rawdata-pkt-addr" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-temperature-info"><a href="#toc">ufo-temperature-info</a></dt>
+<dd><pre><code class="prop-type">"ufo-temperature-info" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-sensor-temperature"><a href="#toc">ufo-sensor-temperature</a></dt>
+<dd><pre><code class="prop-type">"ufo-sensor-temperature" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-sensor-temperature-alarms"><a href="#toc">ufo-sensor-temperature-alarms</a></dt>
+<dd><pre><code class="prop-type">"ufo-sensor-temperature-alarms" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-fpga-temperature"><a href="#toc">ufo-fpga-temperature</a></dt>
+<dd><pre><code class="prop-type">"ufo-fpga-temperature" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-fpga-temperature-alarms"><a href="#toc">ufo-fpga-temperature-alarms</a></dt>
+<dd><pre><code class="prop-type">"ufo-fpga-temperature-alarms" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-num-lines"><a href="#toc">ufo-num-lines</a></dt>
+<dd><pre><code class="prop-type">"ufo-num-lines" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-start-line"><a href="#toc">ufo-start-line</a></dt>
+<dd><pre><code class="prop-type">"ufo-start-line" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-exp-time"><a href="#toc">ufo-exp-time</a></dt>
+<dd><pre><code class="prop-type">"ufo-exp-time" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-motor"><a href="#toc">ufo-motor</a></dt>
+<dd><pre><code class="prop-type">"ufo-motor" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-motor-phi"><a href="#toc">ufo-motor-phi</a></dt>
+<dd><pre><code class="prop-type">"ufo-motor-phi" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-motor-z"><a href="#toc">ufo-motor-z</a></dt>
+<dd><pre><code class="prop-type">"ufo-motor-z" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-motor-y"><a href="#toc">ufo-motor-y</a></dt>
+<dd><pre><code class="prop-type">"ufo-motor-y" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-motor-x"><a href="#toc">ufo-motor-x</a></dt>
+<dd><pre><code class="prop-type">"ufo-motor-x" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-adc-gain"><a href="#toc">ufo-adc-gain</a></dt>
+<dd><pre><code class="prop-type">"ufo-adc-gain" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-write-status"><a href="#toc">ufo-write-status</a></dt>
+<dd><pre><code class="prop-type">"ufo-write-status" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-num-triggers"><a href="#toc">ufo-num-triggers</a></dt>
+<dd><pre><code class="prop-type">"ufo-num-triggers" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-trigger-period"><a href="#toc">ufo-trigger-period</a></dt>
+<dd><pre><code class="prop-type">"ufo-trigger-period" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-temperature-sample-period"><a href="#toc">ufo-temperature-sample-period</a></dt>
+<dd><pre><code class="prop-type">"ufo-temperature-sample-period" : guint : Read-only</code></pre>
+<p></p>
+</dd><dt id="ufo-ddr-max-frames"><a href="#toc">ufo-ddr-max-frames</a></dt>
+<dd><pre><code class="prop-type">"ufo-ddr-max-frames" : guint : Read / Write</code></pre>
+<p></p>
+</dd><dt id="ufo-ddr-num-frames"><a href="#toc">ufo-ddr-num-frames</a></dt>
+<dd><pre><code class="prop-type">"ufo-ddr-num-frames" : guint : Read-only</code></pre>
+<p></p>
+</dd></dl></body></html>
