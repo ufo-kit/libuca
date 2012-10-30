@@ -22,6 +22,7 @@ set(CPACK_DEBIAN_PACKAGE_NAME "libuca")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Matthias Vogelgesang <matthias.vogelgesang@kit.edu>")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${UCA_DESCRIPTION})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION_SUMMARY ${UCA_DESCRIPTION})
+set(CPACK_PACKAGE_FILE_NAME "${PACKAGE_NAME}-${PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}")
 
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
 
@@ -72,3 +73,6 @@ add_subdirectory(src)
 add_subdirectory(plugins)
 add_subdirectory(test)
 add_subdirectory(tools)
+
+include(CPack)
+
