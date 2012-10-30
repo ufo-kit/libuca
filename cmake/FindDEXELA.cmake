@@ -17,3 +17,5 @@ mark_as_advanced(
     DEXELA_INCLUDE_DIRS
     DEXELA_LIBRARIES
 )
+
+message("-- Dexela libraries found: ${DEXELA_FOUND}")

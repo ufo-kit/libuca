@@ -94,7 +94,7 @@ static void fill_binnings(UcaDexelaCameraPrivate *priv)
 static void map_dexela_trigger_mode_to_uca(GValue* value, TriggerMode mode)
 {
     if (mode == SOFTWARE) {
-        g_value_set_enum(value, UCA_CAMERA_TRIGGER_INTERNAL);
+        g_value_set_enum(value, UCA_CAMERA_TRIGGER_SOFTWARE);
         return;
     }
     if (mode == EDGE) {
@@ -111,7 +111,7 @@ static void map_dexela_trigger_mode_to_uca(GValue* value, TriggerMode mode)
 
 static void set_trigger_mode(UcaCameraTrigger mode)
 {
-    if (mode == UCA_CAMERA_TRIGGER_INTERNAL) {
+    if (mode == UCA_CAMERA_TRIGGER_SOFTWARE) {
         dexela_set_trigger_mode(SOFTWARE);
         return;
     }
