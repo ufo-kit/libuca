@@ -1,2 +1,5 @@
 uca_camera_get_type
+uca_camera_error_get_type
+uca_camera_trigger_get_type
 uca_plugin_manager_get_type
+uca_unit_get_type

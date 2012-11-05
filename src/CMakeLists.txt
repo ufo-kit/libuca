@@ -85,6 +85,9 @@ if (INTROSPECTION_SCANNER AND INTROSPECTION_COMPILER)
             list(APPEND _gir_input "${CMAKE_CURRENT_SOURCE_DIR}/${_src}")
         endforeach()
 
+        list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h")
+        list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c")
+
         add_custom_command(OUTPUT ${GIR_XML}
             COMMAND ${INTROSPECTION_SCANNER}
                     --namespace=Uca
