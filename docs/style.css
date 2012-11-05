@@ -140,8 +140,9 @@ ol ol {
 }
 
 table {
-    width: 100%;
+    margin-top: 1em;
     margin-bottom: 24px;
+    padding: 1em;
 }
 
 th {
@@ -152,7 +153,9 @@ th {
 }
 
 td, th {
-    padding: 2px;
+    padding-right: 1em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
 }
 
 dl {

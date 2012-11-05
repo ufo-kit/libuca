@@ -1,70 +1,73 @@
-<html><head><link rel="stylesheet" href="style.css" type="text/css" /><link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700|Droid+Serif:400,400italic|Inconsolata' rel='stylesheet' type='text/css'><title>mock &mdash; properties</title></head><body><div id="header"><h1 class="title">Property documentation of mock</h1><h2>Properties</h2><ul id="toc"><li><code><a href=#name>"name"</a></code></li><li><code><a href=#sensor-width>"sensor-width"</a></code></li><li><code><a href=#sensor-height>"sensor-height"</a></code></li><li><code><a href=#sensor-bitdepth>"sensor-bitdepth"</a></code></li><li><code><a href=#sensor-horizontal-binning>"sensor-horizontal-binning"</a></code></li><li><code><a href=#sensor-horizontal-binnings>"sensor-horizontal-binnings"</a></code></li><li><code><a href=#sensor-vertical-binning>"sensor-vertical-binning"</a></code></li><li><code><a href=#sensor-vertical-binnings>"sensor-vertical-binnings"</a></code></li><li><code><a href=#sensor-max-frame-rate>"sensor-max-frame-rate"</a></code></li><li><code><a href=#trigger-mode>"trigger-mode"</a></code></li><li><code><a href=#exposure-time>"exposure-time"</a></code></li><li><code><a href=#roi-x0>"roi-x0"</a></code></li><li><code><a href=#roi-y0>"roi-y0"</a></code></li><li><code><a href=#roi-width>"roi-width"</a></code></li><li><code><a href=#roi-height>"roi-height"</a></code></li><li><code><a href=#roi-width-multiplier>"roi-width-multiplier"</a></code></li><li><code><a href=#roi-height-multiplier>"roi-height-multiplier"</a></code></li><li><code><a href=#has-streaming>"has-streaming"</a></code></li><li><code><a href=#has-camram-recording>"has-camram-recording"</a></code></li><li><code><a href=#transfer-asynchronously>"transfer-asynchronously"</a></code></li><li><code><a href=#is-recording>"is-recording"</a></code></li><li><code><a href=#is-readout>"is-readout"</a></code></li><li><code><a href=#frame-rate>"frame-rate"</a></code></li></ul><h2>Details</h2><dl><dt id="name"><a href="#toc">name</a></dt>
+<html><head><link rel="stylesheet" href="style.css" type="text/css" /><link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700|Droid+Serif:400,400italic|Inconsolata' rel='stylesheet' type='text/css'><title>Basic camera &mdash; properties</title></head><body><div id="header"><h1 class="title">Property documentation of Basic camera</h1><h2>Properties</h2><ul id="toc"><li><code><a href=#name>"name"</a></code></li><li><code><a href=#sensor-width>"sensor-width"</a></code></li><li><code><a href=#sensor-height>"sensor-height"</a></code></li><li><code><a href=#sensor-bitdepth>"sensor-bitdepth"</a></code></li><li><code><a href=#sensor-horizontal-binning>"sensor-horizontal-binning"</a></code></li><li><code><a href=#sensor-horizontal-binnings>"sensor-horizontal-binnings"</a></code></li><li><code><a href=#sensor-vertical-binning>"sensor-vertical-binning"</a></code></li><li><code><a href=#sensor-vertical-binnings>"sensor-vertical-binnings"</a></code></li><li><code><a href=#sensor-max-frame-rate>"sensor-max-frame-rate"</a></code></li><li><code><a href=#trigger-mode>"trigger-mode"</a></code></li><li><code><a href=#exposure-time>"exposure-time"</a></code></li><li><code><a href=#frames-per-second>"frames-per-second"</a></code></li><li><code><a href=#roi-x0>"roi-x0"</a></code></li><li><code><a href=#roi-y0>"roi-y0"</a></code></li><li><code><a href=#roi-width>"roi-width"</a></code></li><li><code><a href=#roi-height>"roi-height"</a></code></li><li><code><a href=#roi-width-multiplier>"roi-width-multiplier"</a></code></li><li><code><a href=#roi-height-multiplier>"roi-height-multiplier"</a></code></li><li><code><a href=#has-streaming>"has-streaming"</a></code></li><li><code><a href=#has-camram-recording>"has-camram-recording"</a></code></li><li><code><a href=#recorded-frames>"recorded-frames"</a></code></li><li><code><a href=#transfer-asynchronously>"transfer-asynchronously"</a></code></li><li><code><a href=#is-recording>"is-recording"</a></code></li><li><code><a href=#is-readout>"is-readout"</a></code></li></ul><h2>Details</h2><dl><dt id="name"><a href="#toc">name</a></dt>
 <dd><pre><code class="prop-type">"name" : gchararray : Read-only</code></pre>
 <p>Name of the camera</p>
 </dd><dt id="sensor-width"><a href="#toc">sensor-width</a></dt>
 <dd><pre><code class="prop-type">"sensor-width" : guint : Read-only</code></pre>
 <p>Width of the sensor in pixels</p>
-</dd><dt id="sensor-height"><a href="#toc">sensor-height</a></dt>
+<p>Possible values: 1 &#8804; <em>sensor-width</em> &#8804; -1</p><p>Default value: 1</p></dd><dt id="sensor-height"><a href="#toc">sensor-height</a></dt>
 <dd><pre><code class="prop-type">"sensor-height" : guint : Read-only</code></pre>
 <p>Height of the sensor in pixels</p>
-</dd><dt id="sensor-bitdepth"><a href="#toc">sensor-bitdepth</a></dt>
+<p>Possible values: 1 &#8804; <em>sensor-height</em> &#8804; -1</p><p>Default value: 1</p></dd><dt id="sensor-bitdepth"><a href="#toc">sensor-bitdepth</a></dt>
 <dd><pre><code class="prop-type">"sensor-bitdepth" : guint : Read-only</code></pre>
 <p>Number of bits per pixel</p>
-</dd><dt id="sensor-horizontal-binning"><a href="#toc">sensor-horizontal-binning</a></dt>
+<p>Possible values: 1 &#8804; <em>sensor-bitdepth</em> &#8804; 32</p><p>Default value: 1</p></dd><dt id="sensor-horizontal-binning"><a href="#toc">sensor-horizontal-binning</a></dt>
 <dd><pre><code class="prop-type">"sensor-horizontal-binning" : guint : Read / Write</code></pre>
 <p>Number of sensor ADCs that are combined to one pixel in horizontal direction</p>
-</dd><dt id="sensor-horizontal-binnings"><a href="#toc">sensor-horizontal-binnings</a></dt>
+<p>Possible values: 1 &#8804; <em>sensor-horizontal-binning</em> &#8804; -1</p><p>Default value: 1</p></dd><dt id="sensor-horizontal-binnings"><a href="#toc">sensor-horizontal-binnings</a></dt>
 <dd><pre><code class="prop-type">"sensor-horizontal-binnings" : GValueArray : Read-only</code></pre>
 <p>Array of possible binnings in horizontal direction</p>
 </dd><dt id="sensor-vertical-binning"><a href="#toc">sensor-vertical-binning</a></dt>
 <dd><pre><code class="prop-type">"sensor-vertical-binning" : guint : Read / Write</code></pre>
 <p>Number of sensor ADCs that are combined to one pixel in vertical direction</p>
-</dd><dt id="sensor-vertical-binnings"><a href="#toc">sensor-vertical-binnings</a></dt>
+<p>Possible values: 1 &#8804; <em>sensor-vertical-binning</em> &#8804; -1</p><p>Default value: 1</p></dd><dt id="sensor-vertical-binnings"><a href="#toc">sensor-vertical-binnings</a></dt>
 <dd><pre><code class="prop-type">"sensor-vertical-binnings" : GValueArray : Read-only</code></pre>
 <p>Array of possible binnings in vertical direction</p>
 </dd><dt id="sensor-max-frame-rate"><a href="#toc">sensor-max-frame-rate</a></dt>
 <dd><pre><code class="prop-type">"sensor-max-frame-rate" : gfloat : Read-only</code></pre>
 <p>Maximum frame rate at full frame resolution</p>
-</dd><dt id="trigger-mode"><a href="#toc">trigger-mode</a></dt>
+<p>Possible values: 0.0e+00 &#8804; <em>sensor-max-frame-rate</em> &#8804; 3.4e+38</p><p>Default value: 1.0e+00</p></dd><dt id="trigger-mode"><a href="#toc">trigger-mode</a></dt>
 <dd><pre><code class="prop-type">"trigger-mode" : UcaCameraTrigger : Read / Write</code></pre>
 <p>Trigger mode</p>
-</dd><dt id="exposure-time"><a href="#toc">exposure-time</a></dt>
+<p>Possible values: <table><tr><th>Enum name</th><th>Value</th><tr><td><code>UCA_CAMERA_TRIGGER_AUTO</code></td><td>0</td></tr><tr><td><code>UCA_CAMERA_TRIGGER_SOFTWARE</code></td><td>1</td></tr><tr><td><code>UCA_CAMERA_TRIGGER_EXTERNAL</code></td><td>2</td></tr></table></p></dd><dt id="exposure-time"><a href="#toc">exposure-time</a></dt>
 <dd><pre><code class="prop-type">"exposure-time" : gdouble : Read / Write</code></pre>
 <p>Exposure time in seconds</p>
-</dd><dt id="roi-x0"><a href="#toc">roi-x0</a></dt>
+<p>Possible values: 0.0e+00 &#8804; <em>exposure-time</em> &#8804; 1.8e+308</p><p>Default value: 1.0e+00</p></dd><dt id="frames-per-second"><a href="#toc">frames-per-second</a></dt>
+<dd><pre><code class="prop-type">"frames-per-second" : gdouble : Read / Write</code></pre>
+<p>Frames per second</p>
+<p>Possible values: 0.0e+00 &#8804; <em>frames-per-second</em> &#8804; 1.8e+308</p><p>Default value: 1.0e+00</p></dd><dt id="roi-x0"><a href="#toc">roi-x0</a></dt>
 <dd><pre><code class="prop-type">"roi-x0" : guint : Read / Write</code></pre>
 <p>Horizontal coordinate</p>
-</dd><dt id="roi-y0"><a href="#toc">roi-y0</a></dt>
+<p>Possible values: 0 &#8804; <em>roi-x0</em> &#8804; -1</p><p>Default value: 0</p></dd><dt id="roi-y0"><a href="#toc">roi-y0</a></dt>
 <dd><pre><code class="prop-type">"roi-y0" : guint : Read / Write</code></pre>
 <p>Vertical coordinate</p>
-</dd><dt id="roi-width"><a href="#toc">roi-width</a></dt>
+<p>Possible values: 0 &#8804; <em>roi-y0</em> &#8804; -1</p><p>Default value: 0</p></dd><dt id="roi-width"><a href="#toc">roi-width</a></dt>
 <dd><pre><code class="prop-type">"roi-width" : guint : Read / Write</code></pre>
 <p>Width of the region of interest</p>
-</dd><dt id="roi-height"><a href="#toc">roi-height</a></dt>
+<p>Possible values: 1 &#8804; <em>roi-width</em> &#8804; -1</p><p>Default value: 1</p></dd><dt id="roi-height"><a href="#toc">roi-height</a></dt>
 <dd><pre><code class="prop-type">"roi-height" : guint : Read / Write</code></pre>
 <p>Height of the region of interest</p>
-</dd><dt id="roi-width-multiplier"><a href="#toc">roi-width-multiplier</a></dt>
+<p>Possible values: 1 &#8804; <em>roi-height</em> &#8804; -1</p><p>Default value: 1</p></dd><dt id="roi-width-multiplier"><a href="#toc">roi-width-multiplier</a></dt>
 <dd><pre><code class="prop-type">"roi-width-multiplier" : guint : Read-only</code></pre>
 <p>Minimum possible step size of horizontal ROI</p>
-</dd><dt id="roi-height-multiplier"><a href="#toc">roi-height-multiplier</a></dt>
+<p>Possible values: 1 &#8804; <em>roi-width-multiplier</em> &#8804; -1</p><p>Default value: 1</p></dd><dt id="roi-height-multiplier"><a href="#toc">roi-height-multiplier</a></dt>
 <dd><pre><code class="prop-type">"roi-height-multiplier" : guint : Read-only</code></pre>
 <p>Minimum possible step size of vertical ROI</p>
-</dd><dt id="has-streaming"><a href="#toc">has-streaming</a></dt>
+<p>Possible values: 1 &#8804; <em>roi-height-multiplier</em> &#8804; -1</p><p>Default value: 1</p></dd><dt id="has-streaming"><a href="#toc">has-streaming</a></dt>
 <dd><pre><code class="prop-type">"has-streaming" : gboolean : Read-only</code></pre>
 <p>Is the camera able to stream the data</p>
-</dd><dt id="has-camram-recording"><a href="#toc">has-camram-recording</a></dt>
+<p>Default value: <code>TRUE</code></p></dd><dt id="has-camram-recording"><a href="#toc">has-camram-recording</a></dt>
 <dd><pre><code class="prop-type">"has-camram-recording" : gboolean : Read-only</code></pre>
 <p>Is the camera able to record the data in-camera</p>
-</dd><dt id="transfer-asynchronously"><a href="#toc">transfer-asynchronously</a></dt>
+<p>Default value: <code>FALSE</code></p></dd><dt id="recorded-frames"><a href="#toc">recorded-frames</a></dt>
+<dd><pre><code class="prop-type">"recorded-frames" : guint : Read-only</code></pre>
+<p>Number of frames recorded into internal camera memory</p>
+<p>Possible values: 0 &#8804; <em>recorded-frames</em> &#8804; -1</p><p>Default value: 0</p></dd><dt id="transfer-asynchronously"><a href="#toc">transfer-asynchronously</a></dt>
 <dd><pre><code class="prop-type">"transfer-asynchronously" : gboolean : Read / Write</code></pre>
 <p>Specify whether data should be transfered asynchronously using a specified callback</p>
-</dd><dt id="is-recording"><a href="#toc">is-recording</a></dt>
+<p>Default value: <code>FALSE</code></p></dd><dt id="is-recording"><a href="#toc">is-recording</a></dt>
 <dd><pre><code class="prop-type">"is-recording" : gboolean : Read-only</code></pre>
 <p>Is the camera currently recording</p>
-</dd><dt id="is-readout"><a href="#toc">is-readout</a></dt>
+<p>Default value: <code>FALSE</code></p></dd><dt id="is-readout"><a href="#toc">is-readout</a></dt>
 <dd><pre><code class="prop-type">"is-readout" : gboolean : Read-only</code></pre>
 <p>Is camera in readout mode</p>
-</dd><dt id="frame-rate"><a href="#toc">frame-rate</a></dt>
-<dd><pre><code class="prop-type">"frame-rate" : gfloat : Read / Write</code></pre>
-<p>Number of frames per second that are taken</p>
-</dd></dl></body></html>
+<p>Default value: <code>FALSE</code></p></dd></dl></body></html>
