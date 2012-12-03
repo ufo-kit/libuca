@@ -392,7 +392,7 @@ check_pco_property_error (guint err, guint property_id)
 }
 
 static void
-uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
+uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     guint err = PCO_NOERROR;
@@ -491,11 +491,10 @@ uca_pco_camera_start_recording(UcaCamera *camera, GError **error)
 }
 
 static void
-uca_pco_camera_stop_recording(UcaCamera *camera, GError **error)
+uca_pco_camera_stop_recording (UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
-
     guint err = pco_stop_recording(priv->pco);
     HANDLE_PCO_ERROR(err);
 
@@ -564,7 +563,7 @@ uca_pco_camera_trigger(UcaCamera *camera, GError **error)
 static void
 uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
-    static const gint MAX_TIMEOUT = G_MAXINT;
+    static const gint MAX_TIMEOUT = 5;
 
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
