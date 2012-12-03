@@ -193,7 +193,7 @@ struct _UcaPcoCameraPrivate {
 static pco_cl_map_entry pco_cl_map[] = {
     { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
     { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE  },
-    { CAMERATYPE_PCO_DIMAX_STD,  "libDualAreaGray16.so", FG_CL_SINGLETAP_8_BIT,     FG_GRAY16, 1279.0f, TRUE  },
+    { CAMERATYPE_PCO_DIMAX_STD,  "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16, 1279.0f, TRUE  },
     { 0, NULL, 0, 0, 0.0f, FALSE }
 };
 
