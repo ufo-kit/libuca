@@ -11,3 +11,4 @@ Description: @UCA_DESCRIPTION@
 Version: @VERSION@
 Libs: -L${libdir} -luca
 Cflags: -I${includedir_old} -I${includedir_new}
+Requires: glib-2.0 gobject-2.0
