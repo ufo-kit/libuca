@@ -202,7 +202,7 @@ install(TARGETS uca
         COMPONENT libraries)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc
-        DESTINATION lib/pkgconfig
+        DESTINATION ${LIB_INSTALL_DIR}/pkgconfig
         COMPONENT libraries)
 
 install(FILES ${uca_HDRS}
