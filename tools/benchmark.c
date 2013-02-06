@@ -115,8 +115,12 @@ grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames)
 static void
 grab_callback (gpointer data, gpointer user_data)
 {
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
     guint *n_acquired_frames = user_data;
+
+    g_static_mutex_lock (&mutex);
     *n_acquired_frames += 1;
+    g_static_mutex_unlock (&mutex);
 }
 
 static void
@@ -204,6 +208,7 @@ benchmark (UcaCamera *camera)
     g_print ("# Sensor size: %ix%i\n", sensor_width, sensor_height);
     g_print ("# ROI size: %ix%i\n", roi_width, roi_height);
     g_print ("# Exposure time: %fs\n", exposure);
+    g_print ("# Bits: %i\n", bits);
 
     /* Synchronous frame acquisition */
     g_print ("# %-10s%-10s%-10s%-16s%-16s\n", "type", "n_frames", "n_runs", "frames/s", "MiB/s");
