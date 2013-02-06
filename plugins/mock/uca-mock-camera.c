@@ -232,9 +232,9 @@ static void uca_mock_camera_grab(UcaCamera *camera, gpointer *data, GError **err
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
 
     if (*data == NULL)
-        *data = g_malloc0(priv->width * priv->height);
+        *data = g_malloc0(priv->roi_width * priv->roi_height);
 
-    g_memmove(*data, priv->dummy_data, priv->width * priv->height);
+    g_memmove(*data, priv->dummy_data, priv->roi_width * priv->roi_height);
     print_current_frame(priv, *data);
     priv->current_frame++;
 }
@@ -385,8 +385,8 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     self->priv = UCA_MOCK_CAMERA_GET_PRIVATE(self);
     self->priv->roi_x = 0;
     self->priv->roi_y = 0;
-    self->priv->width = self->priv->roi_width = 640;
-    self->priv->height = self->priv->roi_height = 480;
+    self->priv->width = self->priv->roi_width = 2016;
+    self->priv->height = self->priv->roi_height = 2016;
     self->priv->frame_rate = self->priv->max_frame_rate = 100000.0f;
     self->priv->grab_thread = NULL;
     self->priv->current_frame = 0;
