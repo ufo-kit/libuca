@@ -38,6 +38,7 @@ static const gint mock_overrideables[] = {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_EXPOSURE_TIME,
+    PROP_TRIGGER_MODE,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -224,6 +225,10 @@ static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
     }
 }
 
+static void uca_mock_camera_trigger (UcaCamera *camera, GError **error)
+{
+}
+
 static void uca_mock_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
@@ -262,6 +267,8 @@ static void uca_mock_camera_set_property(GObject *object, guint property_id, con
             break;
         case PROP_ROI_HEIGHT:
             priv->roi_height = g_value_get_uint(value);
+            break;
+        case PROP_TRIGGER_MODE:
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -363,6 +370,7 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
     camera_class->start_recording = uca_mock_camera_start_recording;
     camera_class->stop_recording = uca_mock_camera_stop_recording;
     camera_class->grab = uca_mock_camera_grab;
+    camera_class->trigger = uca_mock_camera_trigger;
 
     for (guint i = 0; mock_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, mock_overrideables[i], uca_camera_props[mock_overrideables[i]]);
