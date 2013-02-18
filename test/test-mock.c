@@ -8,14 +8,29 @@ typedef struct {
     UcaCamera *camera;
 } Fixture;
 
+static gchar *
+build_mock_plugin_path (void)
+{
+    gchar *cwd;
+    gchar *plugin_path;
+
+    cwd = g_get_current_dir ();
+    plugin_path = g_build_filename (cwd, "plugins", "mock", NULL);
+    g_free (cwd);
+    return plugin_path;
+}
+
 static void
 fixture_setup (Fixture *fixture, gconstpointer data)
 {
+    gchar *plugin_path;
     GError *error = NULL;
 
-    fixture->manager = uca_plugin_manager_new ();
-    uca_plugin_manager_add_path (fixture->manager, "./src");
+    plugin_path = build_mock_plugin_path ();
+    g_setenv ("UCA_CAMERA_PATH", plugin_path, TRUE);
+    g_free (plugin_path);
 
+    fixture->manager = uca_plugin_manager_new ();
     fixture->camera = uca_plugin_manager_get_camera (fixture->manager, "mock", &error);
     g_assert (error == NULL);
     g_assert (fixture->camera);
