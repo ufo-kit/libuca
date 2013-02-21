@@ -10,3 +10,9 @@ src/config.h
 install_manifest.txt
 _CPack_Packages
 *.orig
+tools/benchmark
+tools/gen-doc
+tools/grab
+tools/grab-async
+tools/gui/control
+tools/perf
