@@ -5,6 +5,12 @@ find_package(DEXELA)
 
 if (DEXELA_FOUND)
     set(UCA_CAMERA_NAME "dexela")
+    set(PLUGIN_REVISION "2")
+    set(PLUGIN_VERSION "1.0.0")
+    set(PLUGIN_CHANGELOG "${CMAKE_CURRENT_SOURCE_DIR}/changelog.txt")
+    set(PLUGIN_REQUIRES "libuca = 1.1.0, libdexela >= 0.9.2")
+    set(PLUGIN_SPECIFIC_FLAGS
+ "-D CPACK_PACKAGE_NAME=\"uca-plugin-dexela\" -D CPACK_PACKAGE_VERSION=\"${PLUGIN_VERSION}\" -D CPACK_RPM_PACKAGE_RELEASE=\"${PLUGIN_REVISION}\" -D CPACK_RPM_CHANGELOG_FILE=${PLUGIN_CHANGELOG} -D CPACK_RPM_PACKAGE_REQUIRES=${PLUGIN_REQUIRES}")
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
                    ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
