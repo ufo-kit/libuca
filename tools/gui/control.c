@@ -135,6 +135,8 @@ update_pixbuf_dimensions (ThreadData *data)
     if (data->pixbuf != NULL)
         g_object_unref (data->pixbuf);
 
+    data->display_width = (gint) data->width * data->zoom_factor;
+    data->display_height = (gint) data->height * data->zoom_factor;
     data->pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, data->display_width, data->display_height);
     data->pixels = gdk_pixbuf_get_pixels (data->pixbuf);
     gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
@@ -415,9 +417,21 @@ on_zoom_changed (GtkComboBox *widget, ThreadData *data)
     gtk_combo_box_get_active_iter (widget, &iter);
     gtk_tree_model_get (model, &iter, FACTOR_COLUMN, &factor, -1);
 
-    data->display_width = (gint) data->width * factor;
-    data->display_height = (gint) data->height * factor;
     data->zoom_factor = factor;
+    update_pixbuf_dimensions (data);
+}
+
+static void
+on_roi_width_changed (GObject *object, GParamSpec *pspec, ThreadData *data)
+{
+    g_object_get (object, "roi-width", &data->width, NULL);
+    update_pixbuf_dimensions (data);
+}
+
+static void
+on_roi_height_changed (GObject *object, GParamSpec *pspec, ThreadData *data)
+{
+    g_object_get (object, "roi-height", &data->height, NULL);
     update_pixbuf_dimensions (data);
 }
 
@@ -454,6 +468,9 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
                   "roi-height", &height,
                   "sensor-bitdepth", &bits_per_sample,
                   NULL);
+
+    g_signal_connect (camera, "notify::roi-width", (GCallback) on_roi_width_changed, &td);
+    g_signal_connect (camera, "notify::roi-height", (GCallback) on_roi_height_changed, &td);
 
     histogram_view      = egg_histogram_view_new ();
     property_tree_view  = egg_property_tree_view_new (G_OBJECT (camera));
