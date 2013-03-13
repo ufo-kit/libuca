@@ -32,6 +32,7 @@
  *
  * @Since: 1.1
  */
+#include <gio/gio.h>
 #include <gmodule.h>
 #include "uca-plugin-manager.h"
 
@@ -45,7 +46,7 @@ struct _UcaPluginManagerPrivate {
 
 static const gchar *MODULE_PATTERN = "libuca([A-Za-z]+)";
 
-typedef UcaCamera * (*GetCameraFunc) (GError **error);
+typedef GType (*GetTypeFunc) (void);
 
 /**
  * UcaPluginManagerError:
@@ -217,20 +218,25 @@ find_camera_module_path (GList *search_paths, const gchar *name)
  * Create a new camera instance with camera @name.
  *
  * Returns: (transfer full): A new #UcaCamera object.
+ * @Since: 1.2: Pass construction properties.
  */
 UcaCamera *
-uca_plugin_manager_get_camera (UcaPluginManager   *manager,
-                               const gchar        *name,
-                               GError            **error)
+uca_plugin_manager_get_camera (UcaPluginManager *manager,
+                               const gchar *name,
+                               GError **error,
+                               const gchar *first_prop_name,
+                               ...)
 {
     UcaPluginManagerPrivate *priv;
     UcaCamera *camera;
     GModule *module;
-    GetCameraFunc *func;
     gchar *module_path;
+    GetTypeFunc *func;
+    GType type;
+    va_list var_args;
     GError *tmp_error = NULL;
 
-    const gchar *symbol_name = "uca_camera_impl_new";
+    const gchar *symbol_name = "uca_camera_get_type";
 
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
 
@@ -252,7 +258,7 @@ uca_plugin_manager_get_camera (UcaPluginManager   *manager,
         return NULL;
     }
 
-    func = g_malloc0 (sizeof (GetCameraFunc));
+    func = g_malloc0 (sizeof (GetTypeFunc));
 
     if (!g_module_symbol (module, symbol_name, (gpointer *) func)) {
         g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_SYMBOL_NOT_FOUND,
@@ -265,7 +271,12 @@ uca_plugin_manager_get_camera (UcaPluginManager   *manager,
         return NULL;
     }
 
-    camera = (*func) (&tmp_error);
+    type = (*func) ();
+
+    va_start (var_args, first_prop_name);
+    camera = (UcaCamera *) g_initable_new (type, NULL, &tmp_error,
+                                           first_prop_name, var_args);
+    va_end (var_args);
 
     if (tmp_error != NULL) {
         g_propagate_error (error, tmp_error);

@@ -54,17 +54,21 @@ find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
 pkg_check_modules(GLIB2 glib-2.0>=2.24 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.24 REQUIRED)
 pkg_check_modules(GMODULE2 gmodule-2.0>=2.24 REQUIRED)
+pkg_check_modules(GIO2 gio-2.0>=2.24 REQUIRED)
 
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${GLIB2_INCLUDE_DIRS}
-    ${GOBJECT2_INCLUDE_DIRS})
+    ${GOBJECT2_INCLUDE_DIRS}
+    ${GMODULE2_INCLUDE_DIRS}
+    ${GIO2_INCLUDE_DIRS})
 
 set(UCA_DEPS
     ${GLIB2_LIBRARIES}
     ${GOBJECT2_LIBRARIES}
-    ${GMODULE2_LIBRARIES})
+    ${GMODULE2_LIBRARIES}
+    ${GIO2_LIBRARIES})
 
 add_subdirectory(src)
 add_subdirectory(plugins)

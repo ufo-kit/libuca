@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     }
 
     manager = uca_plugin_manager_new ();
-    camera = uca_plugin_manager_get_camera (manager, argv[1], &error);
+    camera = uca_plugin_manager_get_camera (manager, argv[1], &error, NULL);
 
     if (camera == NULL) {
         g_print("Error during initialization: %s\n", error->message);

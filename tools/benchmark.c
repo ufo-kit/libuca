@@ -140,7 +140,6 @@ grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames)
         ;
 
     uca_camera_stop_recording (camera, &error);
-
 }
 
 static void
@@ -255,7 +254,7 @@ main (int argc, char *argv[])
     g_log_set_handler (NULL, G_LOG_LEVEL_MASK, log_handler, log_channel);
 
     manager = uca_plugin_manager_new ();
-    camera = uca_plugin_manager_get_camera (manager, argv[1], &error);
+    camera = uca_plugin_manager_get_camera (manager, argv[1], &error, NULL);
 
     if (camera == NULL) {
         g_error ("Initialization: %s", error->message);

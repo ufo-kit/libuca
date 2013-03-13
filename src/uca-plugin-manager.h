@@ -57,7 +57,9 @@ GList               *uca_plugin_manager_get_available_cameras
                                                     (UcaPluginManager   *manager);
 UcaCamera           *uca_plugin_manager_get_camera  (UcaPluginManager   *manager,
                                                      const gchar        *name,
-                                                     GError            **error);
+                                                     GError            **error,
+                                                     const gchar        *first_prop_name,
+                                                     ...);
 GType                uca_plugin_manager_get_type    (void);
 
 G_END_DECLS

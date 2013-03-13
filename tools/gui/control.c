@@ -456,7 +456,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     guint width, height;
     GError  *error = NULL;
 
-    camera = uca_plugin_manager_get_camera (plugin_manager, camera_name, &error);
+    camera = uca_plugin_manager_get_camera (plugin_manager, camera_name, &error, NULL);
 
     if ((camera == NULL) || (error != NULL)) {
         g_error ("%s\n", error->message);

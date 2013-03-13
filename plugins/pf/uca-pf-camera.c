@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gio/gio.h>
 #include <gmodule.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,7 +33,6 @@
             g_set_error(error, UCA_PF_CAMERA_ERROR,         \
                     UCA_PF_CAMERA_ERROR_FG_GENERAL,         \
                     "%s", Fg_getLastErrorDescription(fg));  \
-            g_object_unref(camobj);                         \
             return NULL;                                    \
         } }
 
@@ -46,7 +46,11 @@
 
 #define UCA_PF_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PF_CAMERA, UcaPfCameraPrivate))
 
-G_DEFINE_TYPE(UcaPfCamera, uca_pf_camera, UCA_TYPE_CAMERA)
+static void uca_pf_camera_initable_iface_init (GInitableIface *iface);
+
+G_DEFINE_TYPE_WITH_CODE (UcaPfCamera, uca_pf_camera, UCA_TYPE_CAMERA,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
+                                                uca_pf_camera_initable_iface_init))
 
 /**
  * UcaPfCameraError:
@@ -91,6 +95,7 @@ enum {
 
 
 struct _UcaPfCameraPrivate {
+    GError *construct_error;
     guint roi_width;
     guint roi_height;
     guint last_frame;
@@ -107,7 +112,8 @@ struct {
     UcaCamera *camera;
 } fg_apc_data;
 
-static int me4_callback(frameindex_t frame, struct fg_apc_data *apc)
+static int
+me4_callback(frameindex_t frame, struct fg_apc_data *apc)
 {
     UcaCamera *camera = UCA_CAMERA(apc);
     UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
@@ -115,7 +121,8 @@ static int me4_callback(frameindex_t frame, struct fg_apc_data *apc)
     return 0;
 }
 
-static void uca_pf_camera_start_recording(UcaCamera *camera, GError **error)
+static void
+uca_pf_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PF_CAMERA(camera));
     UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
@@ -155,7 +162,8 @@ static void uca_pf_camera_start_recording(UcaCamera *camera, GError **error)
     FG_SET_ERROR(err, priv->fg, UCA_PF_CAMERA_ERROR_FG_ACQUISITION);
 }
 
-static void uca_pf_camera_stop_recording(UcaCamera *camera, GError **error)
+static void
+uca_pf_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PF_CAMERA(camera));
     UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
@@ -168,14 +176,16 @@ static void uca_pf_camera_stop_recording(UcaCamera *camera, GError **error)
         g_print(" Unable to unblock all\n");
 }
 
-static void uca_pf_camera_start_readout(UcaCamera *camera, GError **error)
+static void
+uca_pf_camera_start_readout(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PF_CAMERA(camera));
     g_set_error(error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_IMPLEMENTED,
             "This photon focus camera does not support recording to internal memory");
 }
 
-static void uca_pf_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static void
+uca_pf_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_PF_CAMERA(camera));
     UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
@@ -195,7 +205,8 @@ static void uca_pf_camera_grab(UcaCamera *camera, gpointer *data, GError **error
     memcpy((gchar *) *data, (gchar *) frame, priv->roi_width * priv->roi_height);
 }
 
-static void uca_pf_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+static void
+uca_pf_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     switch (property_id) {
         default:
@@ -204,7 +215,8 @@ static void uca_pf_camera_set_property(GObject *object, guint property_id, const
     }
 }
 
-static void uca_pf_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+static void
+uca_pf_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     switch (property_id) {
         case PROP_SENSOR_WIDTH:
@@ -263,7 +275,8 @@ static void uca_pf_camera_get_property(GObject *object, guint property_id, GValu
     }
 }
 
-static void uca_pf_camera_finalize(GObject *object)
+static void
+uca_pf_camera_finalize(GObject *object)
 {
     UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(object);
 
@@ -274,10 +287,54 @@ static void uca_pf_camera_finalize(GObject *object)
         Fg_FreeGrabber(priv->fg);
     }
 
+    g_clear_error (&priv->construct_error);
+
     G_OBJECT_CLASS(uca_pf_camera_parent_class)->finalize(object);
 }
 
-static void uca_pf_camera_class_init(UcaPfCameraClass *klass)
+static gboolean
+uca_pf_camera_initable_init (GInitable *initable,
+                             GCancellable *cancellable,
+                             GError **error)
+{
+    UcaPfCamera *camera;
+    UcaPfCameraPrivate *priv;
+
+    g_return_val_if_fail (UCA_IS_PF_CAMERA (initable), FALSE);
+
+    if (cancellable != NULL) {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                             "Cancellable initialization not supported");
+        return FALSE;
+    }
+
+    camera = UCA_PF_CAMERA (initable);
+    priv = camera->priv;
+
+    if (priv->construct_error != NULL) {
+        if (error)
+            *error = g_error_copy (priv->construct_error);
+
+        return FALSE;
+    }
+
+    if (priv->fg == NULL) {
+        g_set_error (error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
+                     "%s", Fg_getLastErrorDescription (NULL));
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void
+uca_pf_camera_initable_iface_init (GInitableIface *iface)
+{
+    iface->init = uca_pf_camera_initable_init;
+}
+
+static void
+uca_pf_camera_class_init(UcaPfCameraClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_pf_camera_set_property;
@@ -296,57 +353,56 @@ static void uca_pf_camera_class_init(UcaPfCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaPfCameraPrivate));
 }
 
-static void uca_pf_camera_init(UcaPfCamera *self)
+static gboolean
+try_fg_param (UcaPfCameraPrivate *priv,
+              int param,
+              const gpointer value)
 {
-    self->priv = UCA_PF_CAMERA_GET_PRIVATE(self);
-    self->priv->fg = NULL;
-    self->priv->fg_mem = NULL;
-    self->priv->last_frame = 0;
+    if (Fg_setParameter (priv->fg, param, value, priv->fg_port) != FG_OK) {
+        g_set_error (&priv->construct_error, UCA_PF_CAMERA_ERROR,
+                     UCA_PF_CAMERA_ERROR_FG_GENERAL,
+                     "%s", Fg_getLastErrorDescription (priv->fg));
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
-G_MODULE_EXPORT UcaCamera *
-uca_camera_impl_new (GError **error)
+static void
+uca_pf_camera_init (UcaPfCamera *self)
 {
+    UcaPfCameraPrivate *priv;
     static const gchar *so_file = "libFullAreaGray8.so";
-    static const int camera_link_type = FG_CL_8BIT_FULL_8;
-    static const int camera_format = FG_GRAY;
+    static const int link_type = FG_CL_8BIT_FULL_8;
+    static const int format = FG_GRAY;
 
-    /*
-    gint num_ports;
-    if (pfPortInit(&num_ports) < 0) {
-        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
-                "Could not initialize ports");
-        return NULL;
-    }
+    self->priv = priv = UCA_PF_CAMERA_GET_PRIVATE(self);
 
-    if (pfDeviceOpen(0) < 0) {
-        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
-                "Could not open device");
-        return NULL;
-    }
-    */
-
-    UcaPfCamera *camera = g_object_new(UCA_TYPE_PF_CAMERA, NULL);
-    UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
-
+    priv->construct_error = NULL;
     priv->fg_port = PORT_A;
-    priv->fg = Fg_Init(so_file, priv->fg_port);
-
-    /* TODO: get this from the camera */
+    priv->fg = Fg_Init (so_file, priv->fg_port);
+    priv->fg_mem = NULL;
+    priv->last_frame = 0;
     priv->roi_width = 1280;
     priv->roi_height = 1024;
 
-    if (priv->fg == NULL) {
-        g_set_error(error, UCA_PF_CAMERA_ERROR, UCA_PF_CAMERA_ERROR_INIT,
-                "%s", Fg_getLastErrorDescription(priv->fg));
-        g_object_unref(camera);
-        return NULL;
+    if (priv->fg != NULL) {
+        if (!try_fg_param (priv, FG_CAMERA_LINK_CAMTYP, (const gpointer) &link_type))
+            return;
+
+        if (!try_fg_param (priv, FG_FORMAT, (const gpointer) &format))
+            return;
+
+        if (!try_fg_param (priv, FG_WIDTH, &priv->roi_width))
+            return;
+
+        if (!try_fg_param (priv, FG_HEIGHT, &priv->roi_height))
+            return;
     }
+}
 
-    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &camera_link_type, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &camera_format, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &priv->roi_width, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &priv->roi_height, priv->fg_port);
-
-    return UCA_CAMERA (camera);
+G_MODULE_EXPORT GType
+uca_camera_get_type (void)
+{
+    return UCA_TYPE_PF_CAMERA;
 }

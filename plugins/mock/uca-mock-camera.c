@@ -16,12 +16,17 @@
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #include <gmodule.h>
+#include <gio/gio.h>
 #include <string.h>
 #include "uca-mock-camera.h"
 
 #define UCA_MOCK_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_MOCK_CAMERA, UcaMockCameraPrivate))
 
-G_DEFINE_TYPE(UcaMockCamera, uca_mock_camera, UCA_TYPE_CAMERA)
+static void uca_mock_initable_iface_init (GInitableIface *iface);
+
+G_DEFINE_TYPE_WITH_CODE (UcaMockCamera, uca_mock_camera, UCA_TYPE_CAMERA,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
+                                                uca_mock_initable_iface_init))
 
 enum {
     PROP_FRAMERATE = N_BASE_PROPERTIES,
@@ -137,7 +142,8 @@ static const char g_digits[10][20] = {
 static const guint DIGIT_WIDTH = 4;
 static const guint DIGIT_HEIGHT = 5;
 
-static void print_number(gchar *buffer, guint number, guint x, guint y, guint width)
+static void
+print_number(gchar *buffer, guint number, guint x, guint y, guint width)
 {
     for (int i = 0; i < DIGIT_WIDTH; i++) {
         for (int j = 0; j < DIGIT_HEIGHT; j++) {
@@ -146,7 +152,8 @@ static void print_number(gchar *buffer, guint number, guint x, guint y, guint wi
     }
 }
 
-static void print_current_frame(UcaMockCameraPrivate *priv, gchar *buffer)
+static void
+print_current_frame(UcaMockCameraPrivate *priv, gchar *buffer)
 {
     guint number = priv->current_frame;
     guint divisor = 10000000;
@@ -160,7 +167,8 @@ static void print_current_frame(UcaMockCameraPrivate *priv, gchar *buffer)
     }
 }
 
-static gpointer mock_grab_func(gpointer data)
+static gpointer
+mock_grab_func(gpointer data)
 {
     UcaMockCamera *mock_camera = UCA_MOCK_CAMERA(data);
     g_return_val_if_fail(UCA_IS_MOCK_CAMERA(mock_camera), NULL);
@@ -177,7 +185,8 @@ static gpointer mock_grab_func(gpointer data)
     return NULL;
 }
 
-static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
+static void
+uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
 {
     gboolean transfer_async = FALSE;
     UcaMockCameraPrivate *priv;
@@ -207,7 +216,8 @@ static void uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
     }
 }
 
-static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
+static void
+uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     gboolean transfer_async = FALSE;
     UcaMockCameraPrivate *priv;
@@ -227,11 +237,13 @@ static void uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
     }
 }
 
-static void uca_mock_camera_trigger (UcaCamera *camera, GError **error)
+static void
+uca_mock_camera_trigger (UcaCamera *camera, GError **error)
 {
 }
 
-static void uca_mock_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static void
+uca_mock_camera_grab (UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
     g_return_if_fail(data != NULL);
@@ -246,7 +258,8 @@ static void uca_mock_camera_grab(UcaCamera *camera, gpointer *data, GError **err
     priv->current_frame++;
 }
 
-static void uca_mock_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+static void
+uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     g_return_if_fail(UCA_IS_MOCK_CAMERA(object));
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
@@ -279,7 +292,8 @@ static void uca_mock_camera_set_property(GObject *object, guint property_id, con
     }
 }
 
-static void uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+static void
+uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
@@ -350,7 +364,8 @@ static void uca_mock_camera_get_property(GObject *object, guint property_id, GVa
     }
 }
 
-static void uca_mock_camera_finalize(GObject *object)
+static void
+uca_mock_camera_finalize(GObject *object)
 {
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
@@ -365,7 +380,23 @@ static void uca_mock_camera_finalize(GObject *object)
     G_OBJECT_CLASS(uca_mock_camera_parent_class)->finalize(object);
 }
 
-static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
+static gboolean
+ufo_mock_camera_initable_init (GInitable *initable,
+                               GCancellable *cancellable,
+                               GError **error)
+{
+    g_return_val_if_fail (UCA_IS_MOCK_CAMERA (initable), FALSE);
+    return TRUE;
+}
+
+static void
+uca_mock_initable_iface_init (GInitableIface *iface)
+{
+    iface->init = ufo_mock_camera_initable_init;
+}
+
+static void
+uca_mock_camera_class_init(UcaMockCameraClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_mock_camera_set_property;
@@ -394,7 +425,8 @@ static void uca_mock_camera_class_init(UcaMockCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaMockCameraPrivate));
 }
 
-static void uca_mock_camera_init(UcaMockCamera *self)
+static void
+uca_mock_camera_init(UcaMockCamera *self)
 {
     self->priv = UCA_MOCK_CAMERA_GET_PRIVATE(self);
     self->priv->roi_x = 0;
@@ -415,9 +447,8 @@ static void uca_mock_camera_init(UcaMockCamera *self)
     uca_camera_register_unit (UCA_CAMERA (self), "frame-rate", UCA_UNIT_COUNT);
 }
 
-G_MODULE_EXPORT UcaCamera *
-uca_camera_impl_new (GError **error)
+G_MODULE_EXPORT GType
+uca_camera_get_type (void)
 {
-    UcaCamera *camera = UCA_CAMERA (g_object_new (UCA_TYPE_MOCK_CAMERA, NULL));
-    return camera;
+    return UCA_TYPE_MOCK_CAMERA;
 }
