@@ -55,6 +55,11 @@ void                 uca_plugin_manager_add_path    (UcaPluginManager   *manager
                                                      const gchar        *path);
 GList               *uca_plugin_manager_get_available_cameras
                                                     (UcaPluginManager   *manager);
+UcaCamera           *uca_plugin_manager_get_camerav (UcaPluginManager   *manager,
+                                                     const gchar        *name,
+                                                     guint               n_parameters,
+                                                     GParameter         *parameters,
+                                                     GError            **error);
 UcaCamera           *uca_plugin_manager_get_camera  (UcaPluginManager   *manager,
                                                      const gchar        *name,
                                                      GError            **error,

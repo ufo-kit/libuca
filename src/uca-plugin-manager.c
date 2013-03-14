@@ -209,11 +209,97 @@ find_camera_module_path (GList *search_paths, const gchar *name)
     return result;
 }
 
+static GType
+get_camera_type (UcaPluginManagerPrivate *priv,
+                 const gchar *name,
+                 GError **error)
+{
+    GModule *module;
+    gchar *module_path;
+    GetTypeFunc *func;
+    const gchar *symbol_name = "uca_camera_get_type";
+
+    module_path = find_camera_module_path (priv->search_paths, name);
+
+    if (module_path == NULL) {
+        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_NOT_FOUND,
+                     "Camera module `%s' not found", name);
+        return G_TYPE_NONE;
+    }
+
+    module = g_module_open (module_path, G_MODULE_BIND_LAZY);
+    g_free (module_path);
+
+    if (!module) {
+        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_OPEN,
+                     "Camera module `%s' could not be opened: %s", name, g_module_error ());
+        return G_TYPE_NONE;
+    }
+
+    func = g_malloc0 (sizeof (GetTypeFunc));
+
+    if (!g_module_symbol (module, symbol_name, (gpointer *) func)) {
+        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_SYMBOL_NOT_FOUND,
+                     "%s", g_module_error ());
+        g_free (func);
+
+        if (!g_module_close (module))
+            g_warning ("%s", g_module_error ());
+
+        return G_TYPE_NONE;
+    }
+
+    return (*func) ();
+}
+
 /**
- * uca_plugin_manager_get_camera:
+ * uca_plugin_manager_get_camerav:
+ * @manager: A #UcaPluginManager
+ * @name: Name of the camera module, that maps to libuca<name>.so
+ * @n_parameters: number of parameters in @parameters
+ * @parameters: (array length=n_parameters): the parameters to use to construct
+ *      the camera
+ * @error: Location for a #GError or %NULL
+ *
+ * Create a new camera instance with camera @name.
+ *
+ * Returns: (transfer full): A new #UcaCamera object.
+ * @Since: 1.2
+ */
+UcaCamera *
+uca_plugin_manager_get_camerav (UcaPluginManager *manager,
+                                const gchar *name,
+                                guint n_parameters,
+                                GParameter *parameters,
+                                GError **error)
+{
+    UcaPluginManagerPrivate *priv;
+    UcaCamera *camera;
+    GType type;
+
+    g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
+
+    priv = manager->priv;
+    type = get_camera_type (priv, name, error);
+
+    if (type == G_TYPE_NONE)
+        return NULL;
+
+    camera = (UcaCamera *) g_initable_newv (type, n_parameters, parameters,
+                                            NULL, error);
+
+    return camera;
+}
+
+/**
+ * uca_plugin_manager_get_camera: (skip)
  * @manager: A #UcaPluginManager
  * @name: Name of the camera module, that maps to libuca<name>.so
  * @error: Location for a #GError
+ * @first_prop_name: (allow-none): name of the first property, or %NULL if no
+ *      properties
+ * @...: value of the first property, followed by and other property value
+ *      pairs, and ended by %NULL.
  *
  * Create a new camera instance with camera @name.
  *
@@ -229,59 +315,21 @@ uca_plugin_manager_get_camera (UcaPluginManager *manager,
 {
     UcaPluginManagerPrivate *priv;
     UcaCamera *camera;
-    GModule *module;
-    gchar *module_path;
-    GetTypeFunc *func;
     GType type;
     va_list var_args;
-    GError *tmp_error = NULL;
-
-    const gchar *symbol_name = "uca_camera_get_type";
 
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
 
     priv = manager->priv;
-    module_path = find_camera_module_path (priv->search_paths, name);
+    type = get_camera_type (priv, name, error);
 
-    if (module_path == NULL) {
-        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_NOT_FOUND,
-                "Camera module `%s' not found", name);
+    if (type == G_TYPE_NONE)
         return NULL;
-    }
-
-    module = g_module_open (module_path, G_MODULE_BIND_LAZY);
-    g_free (module_path);
-
-    if (!module) {
-        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_OPEN,
-                     "Camera module `%s' could not be opened: %s", name, g_module_error ());
-        return NULL;
-    }
-
-    func = g_malloc0 (sizeof (GetTypeFunc));
-
-    if (!g_module_symbol (module, symbol_name, (gpointer *) func)) {
-        g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_SYMBOL_NOT_FOUND,
-                     "%s", g_module_error ());
-        g_free (func);
-
-        if (!g_module_close (module))
-            g_warning ("%s", g_module_error ());
-
-        return NULL;
-    }
-
-    type = (*func) ();
 
     va_start (var_args, first_prop_name);
-    camera = (UcaCamera *) g_initable_new (type, NULL, &tmp_error,
+    camera = (UcaCamera *) g_initable_new (type, NULL, error,
                                            first_prop_name, var_args);
     va_end (var_args);
-
-    if (tmp_error != NULL) {
-        g_propagate_error (error, tmp_error);
-        return NULL;
-    }
 
     return camera;
 }
