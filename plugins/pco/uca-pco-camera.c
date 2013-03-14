@@ -1565,3 +1565,9 @@ uca_pco_camera_init (UcaPcoCamera *self)
     uca_camera_register_unit (camera, "sensor-max-adcs", UCA_UNIT_COUNT);
     uca_camera_register_unit (camera, "delay-time", UCA_UNIT_SECOND);
 }
+
+G_MODULE_EXPORT GType
+uca_camera_get_type (void)
+{
+    return UCA_TYPE_PCO_CAMERA;
+}
