@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gio/gio.h>
 #include <gmodule.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,7 +36,11 @@
 
 #define UCA_UFO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_UFO_CAMERA, UcaUfoCameraPrivate))
 
-G_DEFINE_TYPE(UcaUfoCamera, uca_ufo_camera, UCA_TYPE_CAMERA)
+static void uca_ufo_camera_initable_iface_init (GInitableIface *iface);
+
+G_DEFINE_TYPE_WITH_CODE (UcaUfoCamera, uca_ufo_camera, UCA_TYPE_CAMERA,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
+                                                uca_ufo_camera_initable_iface_init))
 
 static const guint SENSOR_WIDTH = 2048;
 static const guint SENSOR_HEIGHT = 1088;
@@ -92,9 +97,10 @@ typedef struct _RegisterInfo {
 static GParamSpec *ufo_properties[N_MAX_PROPERTIES] = { NULL, };
 
 static guint N_PROPERTIES;
-static GHashTable *ufo_property_table; /* maps from prop_id to RegisterInfo* */
 
 struct _UcaUfoCameraPrivate {
+    GError             *construct_error;
+    GHashTable         *property_table; /* maps from prop_id to RegisterInfo* */
     pcilib_t           *handle;
     pcilib_timeout_t    timeout;
     guint               n_bits;
@@ -146,35 +152,23 @@ static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info,
     return PCILIB_STREAMING_CONTINUE;
 }
 
-G_MODULE_EXPORT UcaCamera *
-uca_camera_impl_new (GError **error)
+static guint
+update_properties (UcaUfoCameraPrivate *priv)
 {
-    pcilib_model_t model = PCILIB_MODEL_DETECT;
-    pcilib_model_description_t *model_description;
-    pcilib_t *handle = pcilib_open("/dev/fpga0", model);
-    guint prop = PROP_UFO_START;
-    guint adc_resolution;
+    guint prop;
+    pcilib_model_description_t *description;
 
-    if (handle == NULL) {
-        g_set_error(error, UCA_UFO_CAMERA_ERROR, UCA_UFO_CAMERA_ERROR_INIT,
-                "Initializing pcilib failed");
-        return NULL;
-    }
+    prop = PROP_UFO_START;
+    description = pcilib_get_model_description (priv->handle);
 
-    pcilib_set_error_handler(&error_handler, &error_handler);
-
-    /* Generate properties from model description */
-    model_description = pcilib_get_model_description(handle);
-    ufo_property_table = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_free);
-
-    for (guint i = 0; model_description->registers[i].name != NULL; i++) {
+    for (guint i = 0; description->registers[i].name != NULL; i++) {
         GParamFlags flags = 0;
         RegisterInfo *reg_info;
         gchar *prop_name;
         pcilib_register_description_t *reg;
         pcilib_register_value_t value;
 
-        reg = &model_description->registers[i];
+        reg = &description->registers[i];
 
         switch (reg->mode) {
             case PCILIB_REGISTER_R:
@@ -190,12 +184,12 @@ uca_camera_impl_new (GError **error)
                 break;
         }
 
-        pcilib_read_register (handle, NULL, reg->name, &value);
+        pcilib_read_register (priv->handle, NULL, reg->name, &value);
         reg_info = g_new0 (RegisterInfo, 1);
         reg_info->name = g_strdup (reg->name);
         reg_info->cached_value = (guint32) value;
 
-        g_hash_table_insert (ufo_property_table, GINT_TO_POINTER (prop), reg_info);
+        g_hash_table_insert (priv->property_table, GINT_TO_POINTER (prop), reg_info);
         prop_name = g_strdup_printf ("ufo-%s", reg->name);
 
         ufo_properties[prop++] = g_param_spec_uint (
@@ -205,13 +199,32 @@ uca_camera_impl_new (GError **error)
         g_free (prop_name);
     }
 
-    N_PROPERTIES = prop;
+    return prop;
+}
 
-    UcaUfoCamera *camera = g_object_new(UCA_TYPE_UFO_CAMERA, NULL);
-    UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
+static gboolean
+setup_pcilib (UcaUfoCameraPrivate *priv)
+{
+    pcilib_model_t model;
+    guint adc_resolution;
 
-    priv->frequency = read_register_value (handle, "bit_mode");
-    adc_resolution = read_register_value (handle, "adc_resolution");
+    model = PCILIB_MODEL_DETECT;
+    priv->handle = pcilib_open("/dev/fpga0", model);
+
+    if (priv->handle == NULL) {
+        g_set_error (&priv->construct_error,
+                     UCA_UFO_CAMERA_ERROR, UCA_UFO_CAMERA_ERROR_INIT,
+                     "Initializing pcilib failed");
+        return FALSE;
+    }
+
+    pcilib_set_error_handler (&error_handler, &error_handler);
+
+    priv->property_table = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+                                                  NULL, g_free);
+    N_PROPERTIES = update_properties (priv);
+    priv->frequency = read_register_value (priv->handle, "bit_mode");
+    adc_resolution = read_register_value (priv->handle, "adc_resolution");
 
     switch (adc_resolution) {
         case 0:
@@ -225,12 +238,11 @@ uca_camera_impl_new (GError **error)
             break;
     }
 
-    priv->handle = handle;
-
-    return UCA_CAMERA (camera);
+    return TRUE;
 }
 
-static void uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
+static void
+uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 {
     UcaUfoCameraPrivate *priv;
     gdouble exposure_time;
@@ -257,7 +269,8 @@ static void uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
     }
 }
 
-static void uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
+static void
+uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
@@ -265,17 +278,20 @@ static void uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_START_RECORDING);
 }
 
-static void uca_ufo_camera_start_readout(UcaCamera *camera, GError **error)
+static void
+uca_ufo_camera_start_readout(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 }
 
-static void uca_ufo_camera_stop_readout(UcaCamera *camera, GError **error)
+static void
+uca_ufo_camera_stop_readout(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 }
 
-static void uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static void
+uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
 {
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
@@ -346,13 +362,16 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
 
         default:
             {
-                RegisterInfo *reg_info = g_hash_table_lookup (ufo_property_table, GINT_TO_POINTER (property_id));
+                RegisterInfo *reg_info;
+
+                reg_info = g_hash_table_lookup (priv->property_table,
+                                                GINT_TO_POINTER (property_id));
 
                 if (reg_info != NULL) {
                     pcilib_register_value_t reg_value;
 
                     reg_value = g_value_get_uint (value);
-                    pcilib_write_register(priv->handle, NULL, reg_info->name, reg_value);
+                    pcilib_write_register (priv->handle, NULL, reg_info->name, reg_value);
                     pcilib_read_register (priv->handle, NULL, reg_info->name, &reg_value);
                     reg_info->cached_value = (guint) reg_value;
                 }
@@ -446,7 +465,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         default:
             {
-                RegisterInfo *reg_info = g_hash_table_lookup (ufo_property_table, GINT_TO_POINTER (property_id));
+                RegisterInfo *reg_info = g_hash_table_lookup (priv->property_table, GINT_TO_POINTER (property_id));
 
                 if (reg_info != NULL)
                     g_value_set_uint (value, reg_info->cached_value);
@@ -457,14 +476,56 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
     }
 }
 
-static void uca_ufo_camera_finalize(GObject *object)
+static void
+uca_ufo_camera_finalize(GObject *object)
 {
-    UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(object);
-    pcilib_close(priv->handle);
-    G_OBJECT_CLASS(uca_ufo_camera_parent_class)->finalize(object);
+    UcaUfoCameraPrivate *priv;
+
+    priv = UCA_UFO_CAMERA_GET_PRIVATE (object);
+
+    pcilib_close (priv->handle);
+    g_clear_error (&priv->construct_error);
+
+    G_OBJECT_CLASS (uca_ufo_camera_parent_class)->finalize (object);
 }
 
-static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
+static gboolean
+ufo_ufo_camera_initable_init (GInitable *initable,
+                              GCancellable *cancellable,
+                              GError **error)
+{
+    UcaUfoCamera *camera;
+    UcaUfoCameraPrivate *priv;
+
+    g_return_val_if_fail (UCA_IS_UFO_CAMERA (initable), FALSE);
+
+    if (cancellable != NULL) {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                             "Cancellable initialization not supported");
+        return FALSE;
+    }
+
+    camera = UCA_UFO_CAMERA (initable);
+    priv = camera->priv;
+
+    if (priv->construct_error != NULL) {
+        if (error)
+            *error = g_error_copy (priv->construct_error);
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void
+uca_ufo_camera_initable_iface_init (GInitableIface *iface)
+{
+    iface->init = ufo_ufo_camera_initable_init;
+}
+
+static void
+uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_ufo_camera_set_property;
@@ -505,7 +566,25 @@ static void uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaUfoCameraPrivate));
 }
 
-static void uca_ufo_camera_init(UcaUfoCamera *self)
+static void
+uca_ufo_camera_init(UcaUfoCamera *self)
 {
-    self->priv = UCA_UFO_CAMERA_GET_PRIVATE(self);
+    UcaCamera *camera;
+    UcaUfoCameraPrivate *priv;
+
+    self->priv = priv = UCA_UFO_CAMERA_GET_PRIVATE(self);
+    priv->construct_error = NULL;
+
+    if (!setup_pcilib (priv))
+        return;
+
+    camera = UCA_CAMERA (self);
+    uca_camera_register_unit (camera, "sensor-temperature", UCA_UNIT_DEGREE_CELSIUS);
+    uca_camera_register_unit (camera, "fpga-temperature", UCA_UNIT_DEGREE_CELSIUS);
+}
+
+G_MODULE_EXPORT GType
+uca_camera_get_type (void)
+{
+    return UCA_TYPE_UFO_CAMERA;
 }
