@@ -15,6 +15,7 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include <gio/gio.h>
 #include <gmodule.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,14 +27,13 @@
 #include "uca-pco-camera.h"
 #include "uca-enums.h"
 
-#define FG_TRY_PARAM(fg, camobj, param, val_addr, port)     \
+#define FG_TRY_PARAM(fg, error, param, val_addr, port)     \
     { int r = Fg_setParameter(fg, param, val_addr, port);   \
         if (r != FG_OK) {                                   \
-            g_set_error(error, UCA_PCO_CAMERA_ERROR,        \
+            g_set_error (error, UCA_PCO_CAMERA_ERROR,        \
                     UCA_PCO_CAMERA_ERROR_FG_GENERAL,        \
                     "%s", Fg_getLastErrorDescription(fg));  \
-            g_object_unref(camobj);                         \
-            return NULL;                                    \
+            return FALSE;                                    \
         } }
 
 #define FG_SET_ERROR(err, fg, err_type)                 \
@@ -54,7 +54,11 @@
 
 #define UCA_PCO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCameraPrivate))
 
-G_DEFINE_TYPE(UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA)
+static void uca_pco_camera_initable_iface_init (GInitableIface *iface);
+
+G_DEFINE_TYPE_WITH_CODE (UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
+                                                uca_pco_camera_initable_iface_init))
 
 #define TIMEBASE_INVALID 0xDEAD
 
@@ -149,7 +153,7 @@ static GParamSpec *pco_properties[N_PROPERTIES] = { NULL, };
  * This structure defines type-specific properties of PCO cameras.
  */
 typedef struct {
-    int camera_type;
+    int type;
     const char *so_file;
     int cl_type;
     int cl_format;
@@ -158,8 +162,9 @@ typedef struct {
 } pco_cl_map_entry;
 
 struct _UcaPcoCameraPrivate {
+    GError *construct_error;
     pco_handle pco;
-    pco_cl_map_entry *camera_description;
+    pco_cl_map_entry *description;
 
     Fg_Struct *fg;
     guint fg_port;
@@ -201,8 +206,8 @@ static pco_cl_map_entry *get_pco_cl_map_entry(int camera_type)
 {
     pco_cl_map_entry *entry = pco_cl_map;
 
-    while (entry->camera_type != 0) {
-        if (entry->camera_type == camera_type)
+    while (entry->type != 0) {
+        if (entry->type == camera_type)
             return entry;
         entry++;
     }
@@ -249,7 +254,7 @@ fill_pixelrates(UcaPcoCameraPrivate *priv, guint32 rates[4], gint num_rates)
 {
     GValue val = {0};
     g_value_init(&val, G_TYPE_UINT);
-    priv->pixelrates = g_value_array_new(num_rates);
+    priv->pixelrates = g_value_array_new (num_rates);
 
     for (gint i = 0; i < num_rates; i++) {
         g_value_set_uint(&val, (guint) rates[i]);
@@ -330,7 +335,7 @@ get_suitable_timebase(gdouble time)
 static gdouble
 get_internal_delay (UcaPcoCamera *camera)
 {
-    if (camera->priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD) {
+    if (camera->priv->description->type == CAMERATYPE_PCO_DIMAX_STD) {
         gdouble sensor_rate;
         g_object_get (camera, "sensor-pixelrate", &sensor_rate, NULL);
 
@@ -350,7 +355,7 @@ fg_callback(frameindex_t frame, struct fg_apc_data *apc)
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     gpointer data = Fg_getImagePtrEx(priv->fg, frame, priv->fg_port, priv->fg_mem);
 
-    if (priv->camera_description->camera_type != CAMERATYPE_PCO_EDGE)
+    if (priv->description->type != CAMERATYPE_PCO_EDGE)
         camera->grab_func(data, camera->user_data);
     else {
         pco_get_reorder_func(priv->pco)(priv->grab_buffer, data, priv->frame_width, priv->frame_height);
@@ -447,7 +452,7 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
     /*     g_warning("Cannot set binning\n"); */
 
     if (priv->frame_width != priv->roi_width || priv->frame_height != priv->roi_height || priv->fg_mem == NULL) {
-        guint fg_width = priv->camera_description->camera_type == CAMERATYPE_PCO_EDGE ? 2 * priv->roi_width : priv->roi_width;
+        guint fg_width = priv->description->type == CAMERATYPE_PCO_EDGE ? 2 * priv->roi_width : priv->roi_width;
 
         priv->frame_width = priv->roi_width;
         priv->frame_height = priv->roi_height;
@@ -474,8 +479,8 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
     if (transfer_async)
         setup_fg_callback(camera);
 
-    if ((priv->camera_description->camera_type == CAMERATYPE_PCO_DIMAX_STD) ||
-        (priv->camera_description->camera_type == CAMERATYPE_PCO4000))
+    if ((priv->description->type == CAMERATYPE_PCO_DIMAX_STD) ||
+        (priv->description->type == CAMERATYPE_PCO4000))
         pco_clear_active_segment(priv->pco);
 
     priv->last_frame = 0;
@@ -599,7 +604,7 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
     if (*data == NULL)
         *data = g_malloc0(priv->frame_width * priv->frame_height * priv->num_bytes);
 
-    if (priv->camera_description->camera_type == CAMERATYPE_PCO_EDGE)
+    if (priv->description->type == CAMERATYPE_PCO_EDGE)
         pco_get_reorder_func(priv->pco)((guint16 *) *data, frame, priv->frame_width, priv->frame_height);
     else
         memcpy((gchar *) *data, (gchar *) frame, priv->frame_width * priv->frame_height * priv->num_bytes);
@@ -914,7 +919,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
 
         case PROP_SENSOR_MAX_FRAME_RATE:
-            g_value_set_float(value, priv->camera_description->max_frame_rate);
+            g_value_set_float(value, priv->description->max_frame_rate);
             break;
 
         case PROP_SENSOR_BITDEPTH:
@@ -1022,7 +1027,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
 
         case PROP_HAS_CAMRAM_RECORDING:
-            g_value_set_boolean(value, priv->camera_description->has_camram);
+            g_value_set_boolean(value, priv->description->has_camram);
             break;
 
         case PROP_RECORDED_FRAMES:
@@ -1178,27 +1183,63 @@ uca_pco_camera_finalize(GObject *object)
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
 
     if (priv->horizontal_binnings)
-        g_value_array_free(priv->horizontal_binnings);
+        g_value_array_free (priv->horizontal_binnings);
 
     if (priv->vertical_binnings)
-        g_value_array_free(priv->vertical_binnings);
+        g_value_array_free (priv->vertical_binnings);
 
     if (priv->pixelrates)
-        g_value_array_free(priv->pixelrates);
+        g_value_array_free (priv->pixelrates);
 
     if (priv->fg) {
         if (priv->fg_mem)
             Fg_FreeMemEx(priv->fg, priv->fg_mem);
 
-        Fg_FreeGrabber(priv->fg);
+        Fg_FreeGrabber (priv->fg);
     }
 
     if (priv->pco)
-        pco_destroy(priv->pco);
+        pco_destroy (priv->pco);
 
-    g_free(priv->grab_buffer);
+    g_free (priv->grab_buffer);
+    g_clear_error (&priv->construct_error);
 
-    G_OBJECT_CLASS(uca_pco_camera_parent_class)->finalize(object);
+    G_OBJECT_CLASS (uca_pco_camera_parent_class)->finalize (object);
+}
+
+static gboolean
+uca_pco_camera_initable_init (GInitable *initable,
+                              GCancellable *cancellable,
+                              GError **error)
+{
+    UcaPcoCamera *camera;
+    UcaPcoCameraPrivate *priv;
+
+    g_return_val_if_fail (UCA_IS_PCO_CAMERA (initable), FALSE);
+
+    if (cancellable != NULL) {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                             "Cancellable initialization not supported");
+        return FALSE;
+    }
+
+    camera = UCA_PCO_CAMERA (initable);
+    priv = camera->priv;
+
+    if (priv->construct_error != NULL) {
+        if (error)
+            *error = g_error_copy (priv->construct_error);
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void
+uca_pco_camera_initable_iface_init (GInitableIface *iface)
+{
+    iface->init = uca_pco_camera_initable_init;
 }
 
 static void
@@ -1386,24 +1427,131 @@ uca_pco_camera_class_init(UcaPcoCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaPcoCameraPrivate));
 }
 
+static gboolean
+setup_pco_camera (UcaPcoCameraPrivate *priv)
+{
+    pco_cl_map_entry *map_entry;
+    guint16 roi[4];
+    guint16 camera_type;
+    guint16 camera_subtype;
+
+    priv->pco = pco_init();
+
+    if (priv->pco == NULL) {
+        g_set_error (&priv->construct_error,
+                     UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_INIT,
+                     "Initializing libpco failed");
+        return FALSE;
+    }
+
+    pco_get_camera_type (priv->pco, &camera_type, &camera_subtype);
+    map_entry = get_pco_cl_map_entry (camera_type);
+
+    if (map_entry == NULL) {
+        g_set_error (&priv->construct_error,
+                     UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
+                     "Camera type is not supported");
+        return FALSE;
+    }
+
+    priv->description = map_entry;
+
+    pco_get_active_segment (priv->pco, &priv->active_segment);
+    pco_get_resolution (priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
+    pco_get_binning (priv->pco, &priv->binning_h, &priv->binning_v);
+    pco_set_storage_mode (priv->pco, STORAGE_MODE_RECORDER);
+    pco_set_auto_transfer (priv->pco, 1);
+
+    pco_get_roi (priv->pco, roi);
+    pco_get_roi_steps (priv->pco, &priv->roi_horizontal_steps, &priv->roi_vertical_steps);
+
+    priv->roi_x = roi[0] - 1;
+    priv->roi_y = roi[1] - 1;
+    priv->roi_width = roi[2] - roi[0] + 1;
+    priv->roi_height = roi[3] - roi[1] + 1;
+    priv->num_recorded_images = 0;
+
+    return TRUE;
+}
+
+static gboolean
+setup_frame_grabber (UcaPcoCameraPrivate *priv)
+{
+    guint32 fg_width;
+    guint32 fg_height;
+    int val;
+
+    priv->fg_port = PORT_A;
+    priv->fg = Fg_Init (priv->description->so_file, priv->fg_port);
+
+    if (priv->fg == NULL) {
+        g_set_error (&priv->construct_error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
+                     "%s", Fg_getLastErrorDescription(priv->fg));
+        return FALSE;
+    }
+
+    FG_TRY_PARAM (priv->fg, &priv->construct_error, FG_CAMERA_LINK_CAMTYP, &priv->description->cl_type, priv->fg_port);
+    FG_TRY_PARAM (priv->fg, &priv->construct_error, FG_FORMAT, &priv->description->cl_format, priv->fg_port);
+
+    fg_width = priv->description->type == CAMERATYPE_PCO_EDGE ? priv->width * 2 : priv->width;
+    FG_TRY_PARAM (priv->fg, &priv->construct_error, FG_WIDTH, &fg_width, priv->fg_port);
+
+    fg_height = priv->height;
+    FG_TRY_PARAM (priv->fg, &priv->construct_error, FG_HEIGHT, &fg_height, priv->fg_port);
+
+    val = FREE_RUN;
+    FG_TRY_PARAM (priv->fg, &priv->construct_error, FG_TRIGGERMODE, &val, priv->fg_port);
+
+    return TRUE;
+}
+
 static void
-uca_pco_camera_init(UcaPcoCamera *self)
+override_property_ranges (UcaPcoCamera *camera)
+{
+    UcaPcoCameraPrivate *priv;
+    GObjectClass *oclass;
+
+    priv = UCA_PCO_CAMERA_GET_PRIVATE (camera);
+    oclass = G_OBJECT_CLASS (UCA_PCO_CAMERA_GET_CLASS (camera));
+    property_override_default_guint_value (oclass, "roi-width", priv->width);
+    property_override_default_guint_value (oclass, "roi-height", priv->height);
+
+    guint32 rates[4] = {0};
+    gint num_rates = 0;
+
+    if (pco_get_available_pixelrates (priv->pco, rates, &num_rates) == PCO_NOERROR) {
+        fill_pixelrates (priv, rates, num_rates);
+        property_override_default_guint_value (oclass, "sensor-pixelrate", rates[0]);
+    }
+
+    override_temperature_range (priv);
+    override_maximum_adcs (priv);
+}
+
+static void
+uca_pco_camera_init (UcaPcoCamera *self)
 {
     UcaCamera *camera;
+    UcaPcoCameraPrivate *priv;
 
-    self->priv = UCA_PCO_CAMERA_GET_PRIVATE(self);
-    self->priv->fg = NULL;
-    self->priv->fg_mem = NULL;
-    self->priv->pco = NULL;
-    self->priv->horizontal_binnings = NULL;
-    self->priv->vertical_binnings = NULL;
-    self->priv->pixelrates = NULL;
-    self->priv->camera_description = NULL;
-    self->priv->last_frame = 0;
-    self->priv->grab_buffer = NULL;
+    self->priv = priv = UCA_PCO_CAMERA_GET_PRIVATE (self);
 
-    self->priv->delay_timebase = TIMEBASE_INVALID;
-    self->priv->exposure_timebase = TIMEBASE_INVALID;
+    priv->fg_mem = NULL;
+    priv->description = NULL;
+    priv->last_frame = 0;
+    priv->grab_buffer = NULL;
+    priv->construct_error = NULL;
+    priv->delay_timebase = TIMEBASE_INVALID;
+    priv->exposure_timebase = TIMEBASE_INVALID;
+
+    if (!setup_pco_camera (priv))
+        return;
+
+    if (!setup_frame_grabber (priv))
+        return;
+
+    fill_binnings (priv);
+    override_property_ranges (self);
 
     camera = UCA_CAMERA (self);
     uca_camera_register_unit (camera, "sensor-width-extended", UCA_UNIT_PIXEL);
@@ -1416,94 +1564,4 @@ uca_pco_camera_init(UcaPcoCamera *self)
     uca_camera_register_unit (camera, "sensor-adcs", UCA_UNIT_COUNT);
     uca_camera_register_unit (camera, "sensor-max-adcs", UCA_UNIT_COUNT);
     uca_camera_register_unit (camera, "delay-time", UCA_UNIT_SECOND);
-}
-
-G_MODULE_EXPORT UcaCamera *
-uca_camera_impl_new (GError **error)
-{
-    pco_handle pco = pco_init();
-
-    if (pco == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_INIT,
-                "Initializing libpco failed");
-        return NULL;
-    }
-
-    UcaPcoCamera *camera = g_object_new(UCA_TYPE_PCO_CAMERA, NULL);
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
-    priv->pco = pco;
-
-    pco_get_active_segment(priv->pco, &priv->active_segment);
-    pco_get_resolution(priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
-    pco_get_binning(priv->pco, &priv->binning_h, &priv->binning_v);
-    pco_set_storage_mode(pco, STORAGE_MODE_RECORDER);
-    pco_set_auto_transfer(pco, 1);
-
-    guint16 roi[4];
-    pco_get_roi(priv->pco, roi);
-    pco_get_roi_steps(priv->pco, &priv->roi_horizontal_steps, &priv->roi_vertical_steps);
-
-    priv->roi_x = roi[0] - 1;
-    priv->roi_y = roi[1] - 1;
-    priv->roi_width = roi[2] - roi[0] + 1;
-    priv->roi_height = roi[3] - roi[1] + 1;
-    priv->num_recorded_images = 0;
-
-    guint16 camera_type, camera_subtype;
-    pco_get_camera_type(priv->pco, &camera_type, &camera_subtype);
-    pco_cl_map_entry *map_entry = get_pco_cl_map_entry(camera_type);
-    priv->camera_description = map_entry;
-
-    if (map_entry == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
-                "Camera type is not supported");
-        g_object_unref(camera);
-        return NULL;
-    }
-
-    priv->fg_port = PORT_A;
-    priv->fg = Fg_Init(map_entry->so_file, priv->fg_port);
-
-    if (priv->fg == NULL) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
-                "%s", Fg_getLastErrorDescription(priv->fg));
-        g_object_unref(camera);
-        return NULL;
-    }
-
-    const guint32 fg_height = priv->height;
-    const guint32 fg_width = camera_type == CAMERATYPE_PCO_EDGE ? priv->width * 2 : priv->width;
-
-    FG_TRY_PARAM(priv->fg, camera, FG_CAMERA_LINK_CAMTYP, &map_entry->cl_type, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_FORMAT, &map_entry->cl_format, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_WIDTH, &fg_width, priv->fg_port);
-    FG_TRY_PARAM(priv->fg, camera, FG_HEIGHT, &fg_height, priv->fg_port);
-
-    int val = FREE_RUN;
-    FG_TRY_PARAM(priv->fg, camera, FG_TRIGGERMODE, &val, priv->fg_port);
-
-    fill_binnings(priv);
-
-    /*
-     * Here we override property ranges because we didn't know them at property
-     * installation time.
-     */
-    GObjectClass *camera_class = G_OBJECT_CLASS (UCA_CAMERA_GET_CLASS (camera));
-    property_override_default_guint_value (camera_class, "roi-width", priv->width);
-    property_override_default_guint_value (camera_class, "roi-height", priv->height);
-
-    guint32 rates[4] = {0};
-    gint num_rates = 0;
-
-    if (pco_get_available_pixelrates(priv->pco, rates, &num_rates) == PCO_NOERROR) {
-        GObjectClass *pco_camera_class = G_OBJECT_CLASS (UCA_PCO_CAMERA_GET_CLASS (camera));
-
-        fill_pixelrates(priv, rates, num_rates);
-        property_override_default_guint_value (pco_camera_class, "sensor-pixelrate", rates[0]);
-    }
-
-    override_temperature_range (priv);
-    override_maximum_adcs (priv);
-
-    return UCA_CAMERA (camera);
 }
