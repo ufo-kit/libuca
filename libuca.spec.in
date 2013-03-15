@@ -2,7 +2,7 @@
 Buildroot: @UCA_BUILD_DIR@/_CPack_Packages/Linux/RPM/@CPACK_PACKAGE_FILE_NAME@
 Summary:        Abstract interface for different camera classes and frame grabber devices
 Name:           libuca
-Version:        @VERSION@
+Version:        @PACKAGE_VERSION@
 Release:        @CPACK_PACKAGE_RELEASE@
 License:        unknown
 Group:          unknown
@@ -60,11 +60,10 @@ mv "@UCA_BUILD_DIR@/_CPack_Packages/Linux/RPM/tmpBBroot" $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
+@CMAKE_INSTALL_PREFIX@/bin/control
 @CMAKE_INSTALL_PREFIX@/include/uca/*.h
-@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so
-@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so.@UCA_VERSION_MINOR@
-@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/libuca.so.@UCA_ABI_VERSION@
-@CMAKE_INSTALL_PREFIX@/lib/pkgconfig/uca.pc
+@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@/*
+@CMAKE_INSTALL_PREFIX@/share/*
 
 
 %changelog

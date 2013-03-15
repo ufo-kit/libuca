@@ -3,6 +3,8 @@
 #cmakedefine HAVE_PHOTRON_FASTCAM
 #cmakedefine HAVE_UFO_CAMERA
 #cmakedefine HAVE_PYLON_CAMERA
+#cmakedefine HAVE_DEXELA_CL
 
 #cmakedefine HAVE_MOCK_CAMERA
-#define CONTROL_GLADE_PATH "${CMAKE_INSTALL_PREFIX}/share/libuca/control.glade"
+//#define CONTROL_GLADE_PATH "${CMAKE_INSTALL_PREFIX}/share/libuca/control.glade"
+#define CONTROL_GLADE_PATH "./control.glade"
