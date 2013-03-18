@@ -6,5 +6,4 @@
 #cmakedefine HAVE_DEXELA_CL
 
 #cmakedefine HAVE_MOCK_CAMERA
-//#define CONTROL_GLADE_PATH "${CMAKE_INSTALL_PREFIX}/share/libuca/control.glade"
-#define CONTROL_GLADE_PATH "./control.glade"
+#define CONTROL_GLADE_PATH "${CMAKE_INSTALL_PREFIX}/share/libuca/control.glade"
