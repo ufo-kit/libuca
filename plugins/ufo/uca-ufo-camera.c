@@ -132,7 +132,8 @@ read_register_value (pcilib_t *handle, const gchar *name)
     return (guint) reg_value;
 }
 
-static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info, void *user)
+static int
+event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info, void *user)
 {
     UcaCamera *camera = UCA_CAMERA(user);
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
@@ -145,9 +146,9 @@ static int event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info,
         return PCILIB_STREAMING_CONTINUE;
     }
 
-    camera->grab_func(buffer, camera->user_data);
-    pcilib_return_data(priv->handle, event_id, PCILIB_EVENT_DATA, buffer);
-    pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
+    camera->grab_func (buffer, camera->user_data);
+    pcilib_return_data (priv->handle, event_id, PCILIB_EVENT_DATA, buffer);
+    pcilib_trigger (priv->handle, PCILIB_EVENT0, 0, NULL);
 
     return PCILIB_STREAMING_CONTINUE;
 }
@@ -241,6 +242,17 @@ setup_pcilib (UcaUfoCameraPrivate *priv)
     return TRUE;
 }
 
+static gpointer
+stream_async (UcaCamera *camera)
+{
+    UcaUfoCameraPrivate *priv;
+
+    priv = UCA_UFO_CAMERA_GET_PRIVATE (camera);
+    pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
+    pcilib_stream(priv->handle, &event_callback, camera);
+    return NULL;
+}
+
 static void
 uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 {
@@ -264,8 +276,7 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
 
     if (transfer_async) {
-        pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
-        pcilib_stream(priv->handle, &event_callback, camera);
+        g_thread_create ((GThreadFunc) stream_async, camera, FALSE, error);
     }
 }
 
