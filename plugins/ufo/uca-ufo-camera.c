@@ -34,6 +34,15 @@
         return;                                         \
     }
 
+#define PCILIB_SET_ERROR_RETURN_FALSE(err, err_type)    \
+    if (err != 0) {                                     \
+        g_set_error(error, UCA_UFO_CAMERA_ERROR,        \
+                err_type,                               \
+                "%s:%i pcilib: %s (errcode = %d)",      \
+                __FILE__, __LINE__, strerror(err), err);\
+        return FALSE;                                   \
+    }
+
 #define UCA_UFO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_UFO_CAMERA, UcaUfoCameraPrivate))
 
 static void uca_ufo_camera_initable_iface_init (GInitableIface *iface);
@@ -301,10 +310,10 @@ uca_ufo_camera_stop_readout(UcaCamera *camera, GError **error)
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 }
 
-static void
-uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static gboolean
+uca_ufo_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
-    g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
+    g_return_val_if_fail (UCA_IS_UFO_CAMERA(camera), FALSE);
     UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
     pcilib_event_id_t   event_id;
     pcilib_event_info_t event_info;
@@ -313,20 +322,17 @@ uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
     const gsize size = SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16);
 
     if (priv->trigger != UCA_CAMERA_TRIGGER_EXTERNAL) {
-        err = pcilib_trigger(priv->handle, PCILIB_EVENT0, 0, NULL);
-        PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_TRIGGER);
+        err = pcilib_trigger (priv->handle, PCILIB_EVENT0, 0, NULL);
+        PCILIB_SET_ERROR_RETURN_FALSE (err, UCA_UFO_CAMERA_ERROR_TRIGGER);
     }
 
-    err = pcilib_get_next_event(priv->handle, priv->timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
-    PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_NEXT_EVENT);
+    err = pcilib_get_next_event (priv->handle, priv->timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
+    PCILIB_SET_ERROR_RETURN_FALSE (err, UCA_UFO_CAMERA_ERROR_NEXT_EVENT);
 
-    if (*data == NULL)
-        *data = g_malloc0(SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16));
-
-    gpointer src = pcilib_get_data(priv->handle, event_id, PCILIB_EVENT_DATA, (size_t *) &err);
+    gpointer src = pcilib_get_data (priv->handle, event_id, PCILIB_EVENT_DATA, (size_t *) &err);
 
     if (src == NULL)
-        PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_NO_DATA);
+        PCILIB_SET_ERROR_RETURN_FALSE (err, UCA_UFO_CAMERA_ERROR_NO_DATA);
 
     /*
      * Apparently, we checked that err equals total size in previous version.
@@ -336,15 +342,17 @@ uca_ufo_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
      */
     /* assert(err == size); */
 
-    memcpy(*data, src, size);
+    memcpy (data, src, size);
 
     /*
      * Another problem here. What does this help us? At this point we have
      * already overwritten the original buffer but can only know here if the
      * data is corrupted.
      */
-    err = pcilib_return_data(priv->handle, event_id, PCILIB_EVENT_DATA, data);
-    PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_MAYBE_CORRUPTED);
+    err = pcilib_return_data (priv->handle, event_id, PCILIB_EVENT_DATA, data);
+    PCILIB_SET_ERROR_RETURN_FALSE (err, UCA_UFO_CAMERA_ERROR_MAYBE_CORRUPTED);
+
+    return TRUE;
 }
 
 static void

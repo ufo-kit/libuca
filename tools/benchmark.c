@@ -100,7 +100,7 @@ grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames)
     uca_camera_start_recording (camera, &error);
 
     for (guint i = 0; i < n_frames; i++) {
-        uca_camera_grab(camera, &buffer, &error);
+        uca_camera_grab(camera, buffer, &error);
 
         if (error != NULL) {
             g_warning ("Error grabbing frame %02i/%i: `%s'", i, n_frames, error->message);

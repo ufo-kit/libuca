@@ -669,34 +669,31 @@ uca_camera_trigger (UcaCamera *camera, GError **error)
 /**
  * uca_camera_grab:
  * @camera: A #UcaCamera object
- * @data: Pointer to pointer to the data. Must not be %NULL.
+ * @data: (type gulong): Pointer to suitably sized data buffer. Must not be
+ *  %NULL.
  * @error: Location to store a #UcaCameraError error or %NULL
  *
- * Grab a frame a single frame and store the result in @data. If the pointer
- * pointing to the data is %NULL, memory will be allocated otherwise it will be
- * used to store the frame. If memory is allocated by uca_camera_grab() it must
- * be freed by the caller.
+ * Grab a frame a single frame and store the result in @data.
  *
  * You must have called uca_camera_start_recording() before, otherwise you will
  * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
- *
- * If *data is %NULL after returning from uca_camera_grab() and error is also
- * %NULL, the data stream has ended. For example, with cameras that support
- * in-camera memory, all frames have been transfered.
  */
-void
-uca_camera_grab (UcaCamera *camera, gpointer *data, GError **error)
+gboolean
+uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 {
     UcaCameraClass *klass;
+    gboolean result;
+
+    /* FIXME: this prevents accessing two independent cameras simultanously. */
     static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
-    g_return_if_fail (UCA_IS_CAMERA(camera));
+    g_return_val_if_fail (UCA_IS_CAMERA(camera), FALSE);
 
     klass = UCA_CAMERA_GET_CLASS (camera);
 
-    g_return_if_fail (klass != NULL);
-    g_return_if_fail (klass->grab != NULL);
-    g_return_if_fail (data != NULL);
+    g_return_val_if_fail (klass != NULL, FALSE);
+    g_return_val_if_fail (klass->grab != NULL, FALSE);
+    g_return_val_if_fail (data != NULL, FALSE);
 
     g_static_mutex_lock (&mutex);
 
@@ -704,11 +701,12 @@ uca_camera_grab (UcaCamera *camera, gpointer *data, GError **error)
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is neither recording nor in readout mode");
     else {
         g_static_mutex_lock (&access_lock);
-        (*klass->grab) (camera, data, error);
+        result = (*klass->grab) (camera, data, error);
         g_static_mutex_unlock (&access_lock);
     }
 
     g_static_mutex_unlock (&mutex);
+    return result;
 }
 
 /**

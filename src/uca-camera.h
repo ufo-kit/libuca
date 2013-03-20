@@ -129,7 +129,7 @@ struct _UcaCameraClass {
     void (*start_readout)   (UcaCamera *camera, GError **error);
     void (*stop_readout)    (UcaCamera *camera, GError **error);
     void (*trigger)         (UcaCamera *camera, GError **error);
-    void (*grab)            (UcaCamera *camera, gpointer *data, GError **error);
+    gboolean (*grab)        (UcaCamera *camera, gpointer data, GError **error);
 
     void (*recording_started) (UcaCamera *camera);
     void (*recording_stopped) (UcaCamera *camera);
@@ -147,9 +147,10 @@ void        uca_camera_stop_readout     (UcaCamera          *camera,
                                          GError            **error);
 void        uca_camera_trigger          (UcaCamera          *camera,
                                          GError            **error);
-void        uca_camera_grab             (UcaCamera          *camera,
-                                         gpointer           *data,
-                                         GError            **error);
+gboolean    uca_camera_grab             (UcaCamera          *camera,
+                                         gpointer            data,
+                                         GError            **error)
+                                        __attribute__((nonnull (2)));
 void        uca_camera_set_grab_func    (UcaCamera          *camera,
                                          UcaCameraGrabFunc   func,
                                          gpointer            user_data);

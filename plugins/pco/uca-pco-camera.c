@@ -565,12 +565,12 @@ uca_pco_camera_trigger(UcaCamera *camera, GError **error)
                 "Could not trigger frame acquisition");
 }
 
-static void
-uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static gboolean
+uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
     static const gint MAX_TIMEOUT = 5;
 
-    g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
+    g_return_val_if_fail (UCA_IS_PCO_CAMERA(camera), FALSE);
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
     gboolean is_readout = FALSE;
@@ -580,7 +580,7 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
         if (priv->current_image == priv->num_recorded_images) {
             g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
                          "End of data stream");
-            return;
+            return FALSE;
         }
 
         /*
@@ -595,19 +595,20 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
     priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame + 1, priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
 
     if (priv->last_frame <= 0) {
-        guint err = FG_OK + 1;
-        FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
+        g_set_error (error, UCA_PCO_CAMERA_ERROR,
+                     UCA_PCO_CAMERA_ERROR_FG_GENERAL,
+                     "%s", Fg_getLastErrorDescription(priv->fg));
+        return FALSE;
     }
 
     guint16 *frame = Fg_getImagePtrEx(priv->fg, priv->last_frame, priv->fg_port, priv->fg_mem);
 
-    if (*data == NULL)
-        *data = g_malloc0(priv->frame_width * priv->frame_height * priv->num_bytes);
-
     if (priv->description->type == CAMERATYPE_PCO_EDGE)
-        pco_get_reorder_func(priv->pco)((guint16 *) *data, frame, priv->frame_width, priv->frame_height);
+        pco_get_reorder_func(priv->pco)((guint16 *) data, frame, priv->frame_width, priv->frame_height);
     else
-        memcpy((gchar *) *data, (gchar *) frame, priv->frame_width * priv->frame_height * priv->num_bytes);
+        memcpy((gchar *) data, (gchar *) frame, priv->frame_width * priv->frame_height * priv->num_bytes);
+
+    return TRUE;
 }
 
 static void

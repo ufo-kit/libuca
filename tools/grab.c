@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
         while (counter < 5) {
             g_print(" grab frame ... ");
             g_timer_start(timer);
-            uca_camera_grab(camera, &buffer, &error);
+            uca_camera_grab(camera, buffer, &error);
 
             if (error != NULL) {
                 g_print("\nError: %s\n", error->message);

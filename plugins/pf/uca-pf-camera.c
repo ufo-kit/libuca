@@ -184,25 +184,27 @@ uca_pf_camera_start_readout(UcaCamera *camera, GError **error)
             "This photon focus camera does not support recording to internal memory");
 }
 
-static void
-uca_pf_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static gboolean
+uca_pf_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
-    g_return_if_fail(UCA_IS_PF_CAMERA(camera));
+    g_return_val_if_fail (UCA_IS_PF_CAMERA (camera), FALSE);
     UcaPfCameraPrivate *priv = UCA_PF_CAMERA_GET_PRIVATE(camera);
 
-    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame+1, priv->fg_port, 5, priv->fg_mem);
+    priv->last_frame = Fg_getLastPicNumberBlockingEx (priv->fg, priv->last_frame+1,
+                                                      priv->fg_port, 5, priv->fg_mem);
 
     if (priv->last_frame <= 0) {
-        guint err = FG_OK + 1;
-        FG_SET_ERROR(err, priv->fg, UCA_PF_CAMERA_ERROR_FG_GENERAL);
+        g_set_error (error, UCA_PF_CAMERA_ERROR,
+                     UCA_PF_CAMERA_ERROR_FG_ACQUISITION,
+                     "%s", Fg_getLastErrorDescription(priv->fg));
+        return FALSE;
     }
 
-    guint16 *frame = Fg_getImagePtrEx(priv->fg, priv->last_frame, priv->fg_port, priv->fg_mem);
+    guint16 *frame = Fg_getImagePtrEx (priv->fg, priv->last_frame,
+                                       priv->fg_port, priv->fg_mem);
 
-    if (*data == NULL)
-        *data = g_malloc0(priv->roi_width * priv->roi_height);
-
-    memcpy((gchar *) *data, (gchar *) frame, priv->roi_width * priv->roi_height);
+    memcpy((gchar *) data, (gchar *) frame, priv->roi_width * priv->roi_height);
+    return TRUE;
 }
 
 static void

@@ -161,7 +161,7 @@ preview_frames (void *args)
         gpointer buffer;
 
         buffer = ring_buffer_get_current_pointer (data->buffer);
-        uca_camera_grab (data->camera, &buffer, &error);
+        uca_camera_grab (data->camera, buffer, &error);
 
         if (error == NULL) {
             convert_grayscale_to_rgb (data, buffer);
@@ -191,7 +191,7 @@ record_frames (gpointer args)
 
     while (data->state == RECORDING) {
         buffer = ring_buffer_get_current_pointer (data->buffer);
-        uca_camera_grab (data->camera, &buffer, NULL);
+        uca_camera_grab (data->camera, buffer, NULL);
 
         if (error == NULL) {
             ring_buffer_proceed (data->buffer);
@@ -345,7 +345,7 @@ download_frames (ThreadData *data)
 
     while (error == NULL) {
         buffer = ring_buffer_get_current_pointer (data->buffer);
-        uca_camera_grab (data->camera, &buffer, &error);
+        uca_camera_grab (data->camera, buffer, &error);
         ring_buffer_proceed (data->buffer);
         gdk_threads_enter ();
         gtk_adjustment_set_value (data->download_adjustment, current_frame++);

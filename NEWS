@@ -1,3 +1,20 @@
+Changes in libuca 1.2
+=====================
+
+API break
+---------
+
+The interface of uca_camera_grab() has changed. The buffer must be provided as a
+void pointer (or gpointer in GLib speak), _not_ the address of a void pointer.
+Furthermore, uca_camera_grab() returns TRUE if grabbing an image was successful
+and FALSE if not.
+
+The plugin manager does not call the plugins "constructor" function directly but
+instantiates it via the GInitable initialization function. Therefore, all
+plugins must implement initialization code in the objects init function and flag
+errors in the init method from the GInitable interface.
+
+
 Changes in libuca 1.1
 =====================
 

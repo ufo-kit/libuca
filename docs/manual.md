@@ -185,21 +185,17 @@ To synchronously grab frames, first start the camera:
     g_assert_no_error (error);
 ~~~
 
-Now you have two options with regard to memory buffers. If you already have a
-suitable sized buffer, just pass it to `uca_camera_grab`. Otherwise pass a
-pointer pointing to `NULL` (this is different from a `NULL` pointer!). In this
-case memory will be allocated for you:
+Now, you have to allocate a suitably sized buffer and pass it to
+`uca_camera_grab`.
 
 ~~~ {.c}
-    gpointer buffer_1 = NULL;   /* A pointer pointing to NULL */
-    gpointer buffer_2 = g_malloc0 (640 * 480 * 2);
+    gpointer buffer = g_malloc0 (640 * 480 * 2);
 
-    /* Memory will be allocated. Remember to free it! */
-    uca_camera_grab (camera, &buffer_1, &error);
-
-    /* Memory buffer will be used */
-    uca_camera_grab (camera, &buffer_2, &error);
+    uca_camera_grab (camera, buffer, &error);
 ~~~
+
+You have to make sure that the buffer is large enough by querying the size of
+the region of interest and the number of bits that are transferred.
 
 
 ### Getting and setting camera parameters

@@ -242,20 +242,18 @@ uca_mock_camera_trigger (UcaCamera *camera, GError **error)
 {
 }
 
-static void
-uca_mock_camera_grab (UcaCamera *camera, gpointer *data, GError **error)
+static gboolean
+uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 {
-    g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
-    g_return_if_fail(data != NULL);
+    g_return_val_if_fail (UCA_IS_MOCK_CAMERA(camera), FALSE);
 
-    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
+    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
 
-    if (*data == NULL)
-        *data = g_malloc0(priv->roi_width * priv->roi_height);
-
-    g_memmove(*data, priv->dummy_data, priv->roi_width * priv->roi_height);
-    print_current_frame(priv, *data);
+    g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height);
+    print_current_frame (priv, data);
     priv->current_frame++;
+
+    return TRUE;
 }
 
 static void
