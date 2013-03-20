@@ -300,11 +300,11 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
                   "trigger-mode", &trigger,
                   NULL);
 
-    if (trigger == UCA_CAMERA_TRIGGER_AUTO)
-        set_streaming (priv, TRUE);
-
     err = pcilib_start(priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_START_RECORDING);
+
+    if (trigger == UCA_CAMERA_TRIGGER_AUTO)
+        set_streaming (priv, TRUE);
 
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
 
