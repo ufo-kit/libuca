@@ -401,7 +401,7 @@ pm = Uca.PluginManager()
 print(pm.get_available_cameras())
 
 # Load a camera
-cam = pm.get_camera('pco')
+cam = pm.get_camerav('pco', [])
 
 # You can read and write properties in two ways
 cam.set_properties(exposure_time=0.05)
@@ -412,6 +412,32 @@ Note, that the naming of classes and properties depends on the GI implementation
 of the target language. For example with Python, the namespace prefix `uca_`
 becomes the module name `Uca` and dashes separating property names become
 underscores.
+
+Integration with Numpy is relatively straightforward. The most important thing
+is to get the data pointer from a Numpy array to pass it to `uca_camera_grab`:
+
+~~~ {.python}
+import numpy as np
+
+def create_array_from(camera):
+    """Create a suitably sized Numpy array and return it together with the
+    arrays data pointer"""
+    bits = camera.props.sensor_bitdepth
+    dtype = np.uint16 if bits > 8 else np.uint8
+    a = np.zeros((cam.props.roi_height, cam.props.roi_width), dtype=dtype)
+    return a, a.__array_interface__['data'][0]
+
+# Suppose 'camera' is a already available, you would get the camera data like
+# this:
+a, buf = create_array_from(camera)
+camera.start_recording()
+camera.grab(buf)
+
+# Now data is in 'a' and we can use Numpy functions on it
+print(np.mean(a))
+
+camera.stop_recording()
+~~~
 
 
 # Integrating new cameras
