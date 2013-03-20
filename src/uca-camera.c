@@ -116,6 +116,7 @@ struct _UcaCameraPrivate {
     gboolean is_recording;
     gboolean is_readout;
     gboolean transfer_async;
+    UcaCameraTrigger trigger;
 };
 
 static void
@@ -148,6 +149,10 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
             }
             break;
 
+        case PROP_TRIGGER_MODE:
+            priv->trigger = g_value_get_enum (value);
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
@@ -172,7 +177,7 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             break;
 
         case PROP_TRIGGER_MODE:
-            g_value_set_enum (value, UCA_CAMERA_TRIGGER_AUTO);
+            g_value_set_enum (value, priv->trigger);
             break;
 
         case PROP_FRAMES_PER_SECOND:
@@ -403,6 +408,7 @@ uca_camera_init (UcaCamera *camera)
     camera->priv->is_recording = FALSE;
     camera->priv->is_readout = FALSE;
     camera->priv->transfer_async = FALSE;
+    camera->priv->trigger = UCA_CAMERA_TRIGGER_AUTO;
 
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_WIDTH], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HEIGHT], UCA_UNIT_PIXEL);

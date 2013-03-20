@@ -94,7 +94,6 @@ static gint base_overrideables[] = {
     PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
-    PROP_TRIGGER_MODE,
     0,
 };
 
@@ -118,7 +117,6 @@ struct _UcaUfoCameraPrivate {
         FPGA_48MHZ = 0,
         FPGA_40MHZ
     }                   frequency;
-    UcaCameraTrigger    trigger;
 };
 
 static void
@@ -287,25 +285,26 @@ static void
 uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 {
     UcaUfoCameraPrivate *priv;
+    UcaCameraTrigger trigger;
     gdouble exposure_time;
-    int     err;
+    gboolean transfer_async;
+    int err;
 
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 
     priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
 
-    if (priv->trigger == UCA_CAMERA_TRIGGER_AUTO)
+    g_object_get (G_OBJECT(camera),
+                  "transfer-asynchronously", &transfer_async,
+                  "exposure-time", &exposure_time,
+                  "trigger-mode", &trigger,
+                  NULL);
+
+    if (trigger == UCA_CAMERA_TRIGGER_AUTO)
         set_streaming (priv, TRUE);
 
     err = pcilib_start(priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_START_RECORDING);
-
-    gboolean transfer_async = FALSE;
-    g_object_get (G_OBJECT(camera),
-                  "transfer-asynchronously", &transfer_async,
-                  "exposure-time", &exposure_time,
-                  "trigger-mode", &priv->trigger,
-                  NULL);
 
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
 
@@ -316,8 +315,13 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 static void
 uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
 {
+    UcaUfoCameraPrivate *priv;
+    UcaCameraTrigger trigger;
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
-    UcaUfoCameraPrivate *priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
+
+    priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
+
+    g_object_get (G_OBJECT (camera), "trigger-mode", &trigger, NULL);
 
     if (priv->async_thread) {
         int err = pcilib_stop(priv->handle, PCILIB_EVENT_FLAG_STOP_ONLY);
@@ -329,7 +333,7 @@ uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
     int err = pcilib_stop (priv->handle, PCILIB_EVENT_FLAGS_DEFAULT);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_STOP_RECORDING);
 
-    if (priv->trigger == UCA_CAMERA_TRIGGER_AUTO)
+    if (trigger == UCA_CAMERA_TRIGGER_AUTO)
         set_streaming (priv, FALSE);
 }
 
@@ -415,10 +419,6 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
         case PROP_ROI_WIDTH:
         case PROP_ROI_HEIGHT:
             g_debug("ROI feature not implemented yet");
-            break;
-
-        case PROP_TRIGGER_MODE:
-            priv->trigger = g_value_get_enum (value);
             break;
 
         default:
@@ -520,9 +520,6 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_NAME:
             g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");
-            break;
-        case PROP_TRIGGER_MODE:
-            g_value_set_enum (value, priv->trigger);
             break;
         default:
             {
