@@ -161,6 +161,7 @@ preview_frames (void *args)
         gpointer buffer;
 
         buffer = ring_buffer_get_current_pointer (data->buffer);
+        uca_camera_trigger (data->camera, &error);
         uca_camera_grab (data->camera, buffer, &error);
 
         if (error == NULL) {
