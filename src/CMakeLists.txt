@@ -53,8 +53,8 @@ set(libdir      ${prefix}/${LIB_INSTALL_DIR})
 set(includedir  "\${prefix}/include")
 set(VERSION     ${UCA_VERSION_STRING})
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uca.pc.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/uca.pc" @ONLY IMMEDIATE)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libuca.pc.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/libuca.pc" @ONLY IMMEDIATE)
 
 
 # --- Build target ------------------------------------------------------------
@@ -198,7 +198,7 @@ install(TARGETS uca
         LIBRARY DESTINATION ${LIB_INSTALL_DIR}
         COMPONENT libraries)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/uca.pc
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libuca.pc
         DESTINATION lib/pkgconfig
         COMPONENT libraries)
 
