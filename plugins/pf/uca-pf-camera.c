@@ -208,6 +208,11 @@ uca_pf_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 }
 
 static void
+uca_pf_camera_trigger(UcaCamera *camera, GError **error)
+{
+}
+
+static void
 uca_pf_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     switch (property_id) {
@@ -348,6 +353,7 @@ uca_pf_camera_class_init(UcaPfCameraClass *klass)
     camera_class->stop_recording = uca_pf_camera_stop_recording;
     camera_class->start_readout = uca_pf_camera_start_readout;
     camera_class->grab = uca_pf_camera_grab;
+    camera_class->trigger = uca_pf_camera_trigger;
 
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
