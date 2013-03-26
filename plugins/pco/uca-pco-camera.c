@@ -320,14 +320,22 @@ read_timebase(UcaPcoCameraPrivate *priv)
     pco_get_timebase(priv->pco, &priv->delay_timebase, &priv->exposure_timebase);
 }
 
+static gboolean
+check_timebase (gdouble time, gdouble scale)
+{
+    const gdouble EPSILON = 1e-3;
+    gdouble scaled = time * scale;
+    return scaled >= 1.0 && (scaled - ((int) scaled)) < EPSILON;
+}
+
 static gdouble
 get_suitable_timebase(gdouble time)
 {
-    if (time * 1e3 >= 1.0)
+    if (check_timebase (time, 1e3))
         return TIMEBASE_MS;
-    if (time * 1e6 >= 1.0)
+    if (check_timebase (time, 1e6))
         return TIMEBASE_US;
-    if (time * 1e9 >= 1.0)
+    if (check_timebase (time, 1e9))
         return TIMEBASE_NS;
     return TIMEBASE_INVALID;
 }
@@ -336,13 +344,13 @@ static gdouble
 get_internal_delay (UcaPcoCamera *camera)
 {
     if (camera->priv->description->type == CAMERATYPE_PCO_DIMAX_STD) {
-        gdouble sensor_rate;
+        guint sensor_rate;
         g_object_get (camera, "sensor-pixelrate", &sensor_rate, NULL);
 
         if (sensor_rate == 55000000.0)
             return 0.000079;
         else if (sensor_rate == 62500000.0)
-            return 0.000069;
+            return 0.000036;
     }
 
     return 0.0;
@@ -688,6 +696,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
 
                     gdouble timebase = convert_timebase(suitable_timebase);
                     guint32 timesteps = time / timebase;
+
                     err = pco_set_exposure_time(priv->pco, timesteps);
                 }
             }
