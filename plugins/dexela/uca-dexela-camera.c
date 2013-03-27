@@ -200,14 +200,12 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         }
         case PROP_ROI_WIDTH:
         {
-            // use full frame for now
-            g_value_set_uint(value, priv->width);
+            g_value_set_uint(value, dexela_get_width());
             break;
         }
         case PROP_ROI_HEIGHT:
         {
-            // use full frame for now
-            g_value_set_uint(value, priv->height);
+            g_value_set_uint(value, dexela_get_height());
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
