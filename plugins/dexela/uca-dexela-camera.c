@@ -16,9 +16,8 @@
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #include <string.h>
-#include "uca-camera.h"
+#include <gmodule.h>
 #include "uca-dexela-camera.h"
-#include "uca-enums.h"
 #include "dexela_api.h"
 
 #define UCA_DEXELA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_DEXELA_CAMERA, UcaDexelaCameraPrivate))
@@ -392,4 +391,10 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
 static void uca_dexela_camera_init(UcaDexelaCamera *self)
 {
     self->priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
+}
+
+G_MODULE_EXPORT UcaCamera *
+uca_camera_impl_new (GError **error)
+{
+    return UCA_CAMERA(uca_dexela_camera_new(error));
 }
