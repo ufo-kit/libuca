@@ -71,7 +71,6 @@ get_bytes_per_pixel (guint bits_per_pixel)
     return bits_per_pixel > 8 ? 2 : 1;
 }
 
-
 #ifdef HAVE_LIBTIFF
 static void
 write_tiff (RingBuffer *buffer,
@@ -204,7 +203,7 @@ record_frames (UcaCamera *camera, Options *opts)
         n_frames++;
         elapsed = g_timer_elapsed (timer, NULL);
 
-        if (n_frames == opts->n_frames || elapsed >= opts->duration)
+        if (n_frames == opts->n_frames || (opts->duration > 0.0 && elapsed >= opts->duration))
             break;
 
         if (elapsed - last_printed >= 1.0) {
