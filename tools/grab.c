@@ -33,6 +33,7 @@
 typedef struct {
     gint n_frames;
     gdouble duration;
+    gchar *filename;
 } Options;
 
 
@@ -74,17 +75,21 @@ get_bytes_per_pixel (guint bits_per_pixel)
 #ifdef HAVE_LIBTIFF
 static void
 write_tiff (RingBuffer *buffer,
+            Options *opts,
             guint width,
             guint height,
             guint bits_per_pixel)
 {
     TIFF *tif;
     guint32 rows_per_strip;
-    gpointer data;
     guint n_frames;
     gsize bytes_per_pixel;
 
-    tif = TIFFOpen ("frames.tif", "w");
+    if (opts->filename)
+        tif = TIFFOpen (opts->filename, "w");
+    else
+        tif = TIFFOpen ("frames.tif", "w");
+
     n_frames = ring_buffer_get_num_blocks (buffer);
     rows_per_strip = TIFFDefaultStripSize (tif, (guint32) - 1);
     bytes_per_pixel = get_bytes_per_pixel (bits_per_pixel);
@@ -106,10 +111,6 @@ write_tiff (RingBuffer *buffer,
         TIFFSetField (tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
         TIFFSetField (tif, TIFFTAG_ROWSPERSTRIP, rows_per_strip);
         TIFFSetField (tif, TIFFTAG_PAGENUMBER, i, n_frames);
-        /* start = ((gfloat *) data) + i * width * height; */
-
-        /* for (guint y = 0; y < height; y++, start += width) */
-        /*     TIFFWriteScanline (tif, start, y, 0); */
 
         for (guint y = 0; y < height; y++, offset += width * bytes_per_pixel)
             TIFFWriteScanline (tif, data + offset, y, 0);
@@ -121,7 +122,8 @@ write_tiff (RingBuffer *buffer,
 }
 #else
 static void
-write_raw (RingBuffer *buffer)
+write_raw (RingBuffer *buffer,
+           Options *opts)
 {
     guint n_frames;
     gsize size;
@@ -134,7 +136,11 @@ write_raw (RingBuffer *buffer)
         gchar *filename;
         gpointer data;
 
-        filename = g_strdup_printf ("frame-%08i.raw", i);
+        if (opts->filename)
+            filename = g_strdup_printf ("%s-%08i.raw", opts->filename, i);
+        else
+            filename = g_strdup_printf ("frame-%08i.raw", i);
+
         fp = fopen(filename, "wb");
         data = ring_buffer_get_pointer (buffer, i);
 
@@ -198,10 +204,10 @@ record_frames (UcaCamera *camera, Options *opts)
     uca_camera_stop_recording (camera, &error);
 
 #ifdef HAVE_LIBTIFF
-    write_tiff (buffer, roi_width, roi_height, bits);
+    write_tiff (buffer, opts, roi_width, roi_height, bits);
     g_print ("writing tiff\n");
 #else
-    write_raw (buffer);
+    write_raw (buffer, opts);
     g_print ("writing raw\n");
 #endif
 
@@ -222,12 +228,14 @@ main (int argc, char *argv[])
 
     static Options opts = {
         .n_frames = -1,
-        .duration = -1.0
+        .duration = -1.0,
+        .filename = NULL
     };
 
     static GOptionEntry entries[] = {
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &opts.n_frames, "Number of frames to acquire", "N" },
         { "duration", 'd', 0, G_OPTION_ARG_DOUBLE, &opts.duration, "Duration in seconds", NULL },
+        { "output", 'o', 0, G_OPTION_ARG_STRING, &opts.filename, "Output file name", "FILE" },
         { NULL }
     };
 
@@ -246,6 +254,11 @@ main (int argc, char *argv[])
     if (argc < 2) {
         g_print ("%s\n", g_option_context_get_help (context, TRUE, NULL));
         exit (0);
+    }
+
+    if (opts.n_frames < 0 && opts.duration < 0.0) {
+        g_print ("You must specify at least one of --num-frames and --output.\n");
+        exit (1);
     }
 
     manager = uca_plugin_manager_new ();
