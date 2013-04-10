@@ -68,8 +68,9 @@ get_camera_list (void)
 static guint
 get_bytes_per_pixel (guint bits_per_pixel)
 {
-    return bits_per_pixel == 8 ? 1 : 2;
+    return bits_per_pixel > 8 ? 2 : 1;
 }
+
 
 #ifdef HAVE_LIBTIFF
 static void
@@ -82,6 +83,7 @@ write_tiff (RingBuffer *buffer,
     TIFF *tif;
     guint32 rows_per_strip;
     guint n_frames;
+    guint bits_per_sample;
     gsize bytes_per_pixel;
 
     if (opts->filename)
@@ -92,6 +94,7 @@ write_tiff (RingBuffer *buffer,
     n_frames = ring_buffer_get_num_blocks (buffer);
     rows_per_strip = TIFFDefaultStripSize (tif, (guint32) - 1);
     bytes_per_pixel = get_bytes_per_pixel (bits_per_pixel);
+    bits_per_sample = bits_per_pixel > 8 ? 16 : 8;
 
     /* Write multi page TIFF file */
     TIFFSetField (tif, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);
@@ -104,7 +107,7 @@ write_tiff (RingBuffer *buffer,
 
         TIFFSetField (tif, TIFFTAG_IMAGEWIDTH, width);
         TIFFSetField (tif, TIFFTAG_IMAGELENGTH, height);
-        TIFFSetField (tif, TIFFTAG_BITSPERSAMPLE, bits_per_pixel);
+        TIFFSetField (tif, TIFFTAG_BITSPERSAMPLE, bits_per_sample);
         TIFFSetField (tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
         TIFFSetField (tif, TIFFTAG_SAMPLESPERPIXEL, 1);
         TIFFSetField (tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
