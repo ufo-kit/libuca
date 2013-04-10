@@ -35,11 +35,5 @@ target_link_libraries(gen-doc ${libs})
 add_executable(grab grab.c ring-buffer.c)
 target_link_libraries(grab ${libs})
 
-add_executable(grab-async grab-async.c)
-target_link_libraries(grab-async ${libs})
-
 add_executable(benchmark benchmark.c)
 target_link_libraries(benchmark ${libs})
-
-add_executable(perf perf-overhead.c)
-target_link_libraries(perf ${libs})
