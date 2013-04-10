@@ -32,8 +32,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
 add_executable(gen-doc gen-doc.c)
 target_link_libraries(gen-doc ${libs})
 
-add_executable(grab grab.c ring-buffer.c)
-target_link_libraries(grab ${libs})
+add_executable(uca-grab grab.c ring-buffer.c)
+target_link_libraries(uca-grab ${libs})
 
 add_executable(benchmark benchmark.c)
 target_link_libraries(benchmark ${libs})
+
+install(TARGETS uca-grab
+        RUNTIME DESTINATION bin)
