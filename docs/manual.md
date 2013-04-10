@@ -482,17 +482,26 @@ Several tools are available to ensure `libuca` works as expected. All of them
 are located in `build/test/` and some of them are installed with `make
 installed`.
 
-## `grab` -- grabbing frames
+## `uca-grab` -- grabbing frames
 
 Grab with frames with
 
-    $ ./grab camera-model
+    $ uca-grab --num-frames=10 camera-model
 
-store them on disk as `frame-00000.raw`, `frame-000001.raw` ... and measure the
-time to take them. The raw format is not format but a memory dump of the
-buffers, so you might want to use [ImageJ][] to view them.
+store them on disk as `frames.tif` if `libtiff` is installed, otherwise as
+`frame-00000.raw`, `frame-000001.raw`. The raw format is a memory dump of the
+frames, so you might want to use [ImageJ][] to view them. You can also specify
+the output filename or filename prefix with the ``-o/--output`` option:
+
+    $ uca-grab -n 10 --output=foobar.tif camera-model
+
+Instead of reading exactly _n_ frames, you can also specify a duration in
+fractions of seconds:
+
+    $ uca-grab --duration=0.25 camera-model
 
 [ImageJ]: http://rsbweb.nih.gov/ij/
+
 
 ## `control` -- simple graphical user interface
 
