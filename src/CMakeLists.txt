@@ -59,6 +59,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libuca.pc.in"
 
 # --- Build target ------------------------------------------------------------
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR}
+                    ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_library(uca SHARED
     ${uca_SRCS}
     ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)

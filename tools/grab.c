@@ -15,6 +15,8 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
+#include "config.h"
+
 #include <glib-object.h>
 #include <signal.h>
 #include <stdio.h>
@@ -22,6 +24,10 @@
 #include "uca-plugin-manager.h"
 #include "uca-camera.h"
 #include "ring-buffer.h"
+
+#ifdef HAVE_LIBTIFF
+#include <tiffio.h>
+#endif
 
 
 typedef struct {
@@ -59,8 +65,63 @@ get_camera_list (void)
     return g_string_free (str, FALSE);
 }
 
+static guint
+get_bytes_per_pixel (guint bits_per_pixel)
+{
+    return bits_per_pixel == 8 ? 1 : 2;
+}
+
+#ifdef HAVE_LIBTIFF
 static void
-store_frames (RingBuffer *buffer)
+write_tiff (RingBuffer *buffer,
+            guint width,
+            guint height,
+            guint bits_per_pixel)
+{
+    TIFF *tif;
+    guint32 rows_per_strip;
+    gpointer data;
+    guint n_frames;
+    gsize bytes_per_pixel;
+
+    tif = TIFFOpen ("frames.tif", "w");
+    n_frames = ring_buffer_get_num_blocks (buffer);
+    rows_per_strip = TIFFDefaultStripSize (tif, (guint32) - 1);
+    bytes_per_pixel = get_bytes_per_pixel (bits_per_pixel);
+
+    /* Write multi page TIFF file */
+    TIFFSetField (tif, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);
+
+    for (guint i = 0; i < n_frames; i++) {
+        gpointer data;
+        gsize offset = 0;
+
+        data = ring_buffer_get_pointer (buffer, i);
+
+        TIFFSetField (tif, TIFFTAG_IMAGEWIDTH, width);
+        TIFFSetField (tif, TIFFTAG_IMAGELENGTH, height);
+        TIFFSetField (tif, TIFFTAG_BITSPERSAMPLE, bits_per_pixel);
+        TIFFSetField (tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
+        TIFFSetField (tif, TIFFTAG_SAMPLESPERPIXEL, 1);
+        TIFFSetField (tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+        TIFFSetField (tif, TIFFTAG_ROWSPERSTRIP, rows_per_strip);
+        TIFFSetField (tif, TIFFTAG_PAGENUMBER, i, n_frames);
+        /* start = ((gfloat *) data) + i * width * height; */
+
+        /* for (guint y = 0; y < height; y++, start += width) */
+        /*     TIFFWriteScanline (tif, start, y, 0); */
+
+        for (guint y = 0; y < height; y++, offset += width * bytes_per_pixel)
+            TIFFWriteScanline (tif, data + offset, y, 0);
+
+        TIFFWriteDirectory (tif);
+    }
+
+    TIFFClose (tif);
+}
+#else
+static void
+write_raw (RingBuffer *buffer)
 {
     guint n_frames;
     gsize size;
@@ -82,6 +143,7 @@ store_frames (RingBuffer *buffer)
         g_free (filename);
     }
 }
+#endif
 
 static GError *
 record_frames (UcaCamera *camera, Options *opts)
@@ -103,7 +165,7 @@ record_frames (UcaCamera *camera, Options *opts)
                   "sensor-bitdepth", &bits,
                   NULL);
 
-    pixel_size = bits == 8 ? 1 : 2;
+    pixel_size = get_bytes_per_pixel (bits);
     size = roi_width * roi_height * pixel_size;
     n_allocated = opts->n_frames > 0 ? opts->n_frames : 256;
     buffer = ring_buffer_new (size, n_allocated);
@@ -130,11 +192,19 @@ record_frames (UcaCamera *camera, Options *opts)
         n_frames++;
     }
 
-    g_print ("Stop recording: %3.5f frames/s\n",
+    g_print ("Stop recording: %3.2f frames/s\n",
              n_frames / g_timer_elapsed (timer, NULL));
 
     uca_camera_stop_recording (camera, &error);
-    store_frames (buffer);
+
+#ifdef HAVE_LIBTIFF
+    write_tiff (buffer, roi_width, roi_height, bits);
+    g_print ("writing tiff\n");
+#else
+    write_raw (buffer);
+    g_print ("writing raw\n");
+#endif
+
     ring_buffer_free (buffer);
     g_timer_destroy (timer);
 

@@ -58,8 +58,8 @@ pkg_check_modules(GMODULE2 gmodule-2.0>=2.24 REQUIRED)
 pkg_check_modules(GIO2 gio-2.0>=2.24 REQUIRED)
 
 include_directories(
-    ${CMAKE_CURRENT_BINARY_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    #    ${CMAKE_CURRENT_BINARY_DIR}/src
+    #${CMAKE_CURRENT_SOURCE_DIR}/src
     ${GLIB2_INCLUDE_DIRS}
     ${GOBJECT2_INCLUDE_DIRS}
     ${GMODULE2_INCLUDE_DIRS}
@@ -75,6 +75,7 @@ add_subdirectory(src)
 add_subdirectory(plugins)
 add_subdirectory(test)
 add_subdirectory(tools)
+add_subdirectory(gui)
 
 include(CPack)
 
