@@ -17,6 +17,7 @@ RingBuffer * ring_buffer_new                  (gsize       block_size,
                                                gsize       n_blocks);
 void         ring_buffer_free                 (RingBuffer *buffer);
 void         ring_buffer_reset                (RingBuffer *buffer);
+gsize        ring_buffer_get_block_size       (RingBuffer *buffer);
 gpointer     ring_buffer_get_current_pointer  (RingBuffer *buffer);
 gpointer     ring_buffer_get_pointer          (RingBuffer *buffer,
                                                guint       index);

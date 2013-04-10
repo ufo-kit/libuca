@@ -21,7 +21,7 @@ set(libs uca ${GLIB2_LIBRARIES} ${GOBJECT2_LIBRARIES})
 add_executable(gen-doc gen-doc.c)
 target_link_libraries(gen-doc ${libs})
 
-add_executable(grab grab.c)
+add_executable(grab grab.c ring-buffer.c)
 target_link_libraries(grab ${libs})
 
 add_executable(grab-async grab-async.c)

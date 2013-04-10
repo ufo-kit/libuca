@@ -18,6 +18,7 @@ include_directories(
     ${GOBJECT2_INCLUDE_DIRS}
     ${CMAKE_CURRENT_BINARY_DIR}/../../src/
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../
     )
 
 if (GTK2_FOUND)
@@ -25,7 +26,7 @@ if (GTK2_FOUND)
 
     add_executable(control
         control.c
-        ring-buffer.c
+        ../ring-buffer.c    # yes this sucks and should be fixed
         egg-property-cell-renderer.c
         egg-property-tree-view.c
         egg-histogram-view.c)

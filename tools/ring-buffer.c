@@ -32,6 +32,12 @@ ring_buffer_reset (RingBuffer *buffer)
     buffer->current_index = 0;
 }
 
+gsize
+ring_buffer_get_block_size (RingBuffer *buffer)
+{
+    return buffer->block_size;
+}
+
 gpointer
 ring_buffer_get_current_pointer (RingBuffer *buffer)
 {
