@@ -18,7 +18,6 @@
 #include "config.h"
 
 #include <glib-object.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "uca-plugin-manager.h"
@@ -164,6 +163,7 @@ record_frames (UcaCamera *camera, Options *opts)
     GTimer *timer;
     RingBuffer *buffer;
     GError *error = NULL;
+    gdouble last_printed;
 
     g_object_get (G_OBJECT (camera),
                   "roi-width", &roi_width,
@@ -187,8 +187,11 @@ record_frames (UcaCamera *camera, Options *opts)
 
     n_frames = 0;
     g_timer_start(timer);
+    last_printed = 0.0;
 
-    while (n_frames < opts->n_frames || g_timer_elapsed (timer, NULL) < opts->duration) {
+    while (1) {
+        gdouble elapsed;
+
         uca_camera_grab (camera, ring_buffer_get_current_pointer (buffer), &error);
         ring_buffer_proceed (buffer);
 
@@ -196,6 +199,16 @@ record_frames (UcaCamera *camera, Options *opts)
             return error;
 
         n_frames++;
+        elapsed = g_timer_elapsed (timer, NULL);
+
+        if (n_frames == opts->n_frames || elapsed >= opts->duration)
+            break;
+
+        if (elapsed - last_printed >= 1.0) {
+            g_print ("Recorded %i frames at %.2f frames/s\n",
+                     n_frames, n_frames / elapsed);
+            last_printed = elapsed;
+        }
     }
 
     g_print ("Stop recording: %3.2f frames/s\n",
@@ -205,10 +218,8 @@ record_frames (UcaCamera *camera, Options *opts)
 
 #ifdef HAVE_LIBTIFF
     write_tiff (buffer, opts, roi_width, roi_height, bits);
-    g_print ("writing tiff\n");
 #else
     write_raw (buffer, opts);
-    g_print ("writing raw\n");
 #endif
 
     ring_buffer_free (buffer);
