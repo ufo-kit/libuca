@@ -130,7 +130,9 @@ record_frames (UcaCamera *camera, Options *opts)
         n_frames++;
     }
 
-    g_print ("Stop recording\n");
+    g_print ("Stop recording: %3.5f frames/s\n",
+             n_frames / g_timer_elapsed (timer, NULL));
+
     uca_camera_stop_recording (camera, &error);
     store_frames (buffer);
     ring_buffer_free (buffer);
@@ -155,7 +157,7 @@ main (int argc, char *argv[])
 
     static GOptionEntry entries[] = {
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &opts.n_frames, "Number of frames to acquire", "N" },
-        { "time", 't', 0, G_OPTION_ARG_DOUBLE, &opts.duration, "Duration in seconds", NULL },
+        { "duration", 'd', 0, G_OPTION_ARG_DOUBLE, &opts.duration, "Duration in seconds", NULL },
         { NULL }
     };
 
