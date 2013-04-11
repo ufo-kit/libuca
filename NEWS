@@ -14,6 +14,23 @@ instantiates it via the GInitable initialization function. Therefore, all
 plugins must implement initialization code in the objects init function and flag
 errors in the init method from the GInitable interface.
 
+Restructuring of tools
+----------------------
+
+All binary sources are now found in bin/, with the GUI application now
+split off from the command line tools. Also, all tools are now installed with
+a common "uca-" prefix, e.g. `uca-control` and `uca-grab`.
+
+Minor changes
+-------------
+
+- Improved plugin packaging: Plugins can now specify a version number
+  independent of libuca which is reflected when building RPM packages.
+- `uca-grab` is a lot more useful now and gained `--num-frames` and `--duration`
+  parameters as well as the possibility to write frames as a single multi-page
+  TIFF file.
+- Bug fixes for Dexela, pco and UFO cameras.
+
 
 Changes in libuca 1.1
 =====================
