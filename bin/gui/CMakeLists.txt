@@ -20,20 +20,20 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 if (GTK2_FOUND)
     include_directories(${GTK2_INCLUDE_DIRS})
 
-    add_executable(control
+    add_executable(uca-control
         control.c
         egg-property-cell-renderer.c
         egg-property-tree-view.c
         egg-histogram-view.c)
 
-    target_link_libraries(control
+    target_link_libraries(uca-control
         m
         uca
         ringbuffer
         ${GTK2_LIBRARIES} 
         ${GTHREAD2_LIBRARIES})
 
-    install(TARGETS control
+    install(TARGETS uca-control
         RUNTIME DESTINATION bin)
 
     install(FILES control.glade

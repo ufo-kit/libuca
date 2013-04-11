@@ -23,18 +23,16 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 # --- gen-doc
-add_executable(gen-doc gen-doc.c)
-target_link_libraries(gen-doc ${libs})
+add_executable(uca-gen-doc gen-doc.c)
+target_link_libraries(uca-gen-doc ${libs})
 
 # --- uca-grab
 add_executable(uca-grab grab.c)
-target_link_libraries(uca-grab
-                      ringbuffer
-                      ${libs})
+target_link_libraries(uca-grab ringbuffer ${libs})
 
 # --- uca-benchmark
-add_executable(benchmark benchmark.c)
-target_link_libraries(benchmark ${libs})
+add_executable(uca-benchmark benchmark.c)
+target_link_libraries(uca-benchmark ${libs})
 
-install(TARGETS uca-grab
+install(TARGETS uca-benchmark uca-grab uca-gen-doc
         RUNTIME DESTINATION bin)
