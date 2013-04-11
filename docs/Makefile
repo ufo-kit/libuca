@@ -1,5 +1,8 @@
 PANDOC=$(shell which pandoc)
 OPTS=-s --smart --toc
+MANUAL=manual.md
+NEWS=../NEWS
+INPUTS=$(MANUAL) $(NEWS)
 
 all: pdf html
 
@@ -10,11 +13,11 @@ html: manual.html
 clean:
 	rm -f manual.pdf manual.html
 
-manual.pdf: manual.md
-	$(PANDOC) $(OPTS) manual.md -o manual.pdf
+manual.pdf: $(INPUTS)
+	$(PANDOC) $(OPTS) $(INPUTS) -o $@
 
-manual.html: manual.md style.css
-	$(PANDOC) $(OPTS) manual.md -H webfonts.html -c style.css -o manual.html
+manual.html: $(INPUTS) style.css
+	$(PANDOC) $(OPTS) $(INPUTS) -H webfonts.html -c style.css -o $@
 
 ifeq ($(PANDOC),)
 	$(warning Pandoc not found!)

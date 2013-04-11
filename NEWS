@@ -1,8 +1,10 @@
-Changes in libuca 1.2
-=====================
+Changelog
+=========
 
-API break
----------
+Changes in libuca 1.2
+---------------------
+
+### API break
 
 The interface of uca_camera_grab() has changed. The buffer must be provided as a
 void pointer (or gpointer in GLib speak), _not_ the address of a void pointer.
@@ -14,15 +16,13 @@ instantiates it via the GInitable initialization function. Therefore, all
 plugins must implement initialization code in the objects init function and flag
 errors in the init method from the GInitable interface.
 
-Restructuring of tools
-----------------------
+### Restructuring of tools
 
 All binary sources are now found in bin/, with the GUI application now
 split off from the command line tools. Also, all tools are now installed with
 a common "uca-" prefix, e.g. `uca-control` and `uca-grab`.
 
-Minor changes
--------------
+### Minor changes
 
 - Improved plugin packaging: Plugins can now specify a version number
   independent of libuca which is reflected when building RPM packages.
@@ -33,10 +33,9 @@ Minor changes
 
 
 Changes in libuca 1.1
-=====================
+---------------------
 
-Plugin System
--------------
+### Plugin System
 
 A new plugin manager is used to instantiate camera objects from a shared
 library. Instead of calling `uca_camera_new`, a plugin manager is created that
@@ -52,8 +51,7 @@ looks in pre- and user-defined directories for DSOs that match
 The plugin manager adds a dependency on GModule (pkg-config package
 `gmodule-2.0`) that is part of GLib.
 
-Minor changes
--------------
+### Minor changes
 
 - It is now possible to generate GObject introspection meta data to bind libuca
   to all languages that support GObject introspection. A first experiment of
@@ -73,10 +71,9 @@ Minor changes
 
 
 Changes in libuca 1.0 aka 0.6
-=============================
+-----------------------------
 
-GObject Type System
--------------------
+### GObject Type System
 
 Instead of using a home-grown type and class system, we switched to the GObject
 system as part of GLib. This effort has the advantage of much more typesafe
@@ -87,8 +84,7 @@ instead of trying to initialize each camera first and having the user decide
 what to use, the user must now determine the used camera at compile time or use
 the factory pattern to delegate this to run-time. 
 
-Tango Wrapper
--------------
+### Tango Wrapper
 
 The old Tango wrapper has been superseded by a generic one that proxies
 GObject's to the Tango bus. This makes things a lot easier, for example reacting
@@ -98,7 +94,7 @@ The wrapper is developed as an external project at ISS by Volker Kaiser.
 
 
 Changes in libuca 0.5.0
-=======================
+-----------------------
 
 - Put work under LGPL 2.1
 
@@ -113,4 +109,3 @@ Changes in libuca 0.5.0
 
 - New symbols:
     - uca_cam_release_buffer()
-    
