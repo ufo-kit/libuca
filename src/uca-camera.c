@@ -117,6 +117,8 @@ struct _UcaCameraPrivate {
     gboolean is_readout;
     gboolean transfer_async;
     UcaCameraTrigger trigger;
+    GValueArray *h_binnings;
+    GValueArray *v_binnings;
 };
 
 static void
@@ -193,6 +195,14 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             g_value_set_uint (value, 0);
             break;
 
+        case PROP_SENSOR_HORIZONTAL_BINNINGS:
+            g_value_set_boxed (value, priv->h_binnings);
+            break;
+
+        case PROP_SENSOR_VERTICAL_BINNINGS:
+            g_value_set_boxed (value, priv->v_binnings);
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
@@ -201,6 +211,12 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
 static void
 uca_camera_finalize (GObject *object)
 {
+    UcaCameraPrivate *priv;
+
+    priv = UCA_CAMERA_GET_PRIVATE (object);
+    g_value_array_free (priv->h_binnings);
+    g_value_array_free (priv->v_binnings);
+
     G_OBJECT_CLASS (uca_camera_parent_class)->finalize (object);
 }
 
@@ -402,6 +418,8 @@ uca_camera_class_init (UcaCameraClass *klass)
 static void
 uca_camera_init (UcaCamera *camera)
 {
+    GValue val = {0};
+
     camera->grab_func = NULL;
 
     camera->priv = UCA_CAMERA_GET_PRIVATE(camera);
@@ -409,6 +427,13 @@ uca_camera_init (UcaCamera *camera)
     camera->priv->is_readout = FALSE;
     camera->priv->transfer_async = FALSE;
     camera->priv->trigger = UCA_CAMERA_TRIGGER_AUTO;
+    camera->priv->h_binnings = g_value_array_new (1);
+    camera->priv->v_binnings = g_value_array_new (1);
+
+    g_value_init (&val, G_TYPE_UINT);
+    g_value_set_uint (&val, 1);
+    g_value_array_append (camera->priv->h_binnings, &val);
+    g_value_array_append (camera->priv->v_binnings, &val);
 
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_WIDTH], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HEIGHT], UCA_UNIT_PIXEL);
