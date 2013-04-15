@@ -615,13 +615,6 @@ uca_ufo_camera_class_init(UcaUfoCameraClass *klass)
             -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
             G_PARAM_READABLE);
 
-    /*
-     * This automatic property installation includes the properties created
-     * dynamically in uca_ufo_camera_new().
-     */
-    for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
-        g_object_class_install_property(gobject_class, id, ufo_properties[id]);
-
     g_type_class_add_private(klass, sizeof(UcaUfoCameraPrivate));
 }
 
@@ -630,6 +623,7 @@ uca_ufo_camera_init(UcaUfoCamera *self)
 {
     UcaCamera *camera;
     UcaUfoCameraPrivate *priv;
+    GObjectClass *oclass;
 
     self->priv = priv = UCA_UFO_CAMERA_GET_PRIVATE(self);
     priv->construct_error = NULL;
@@ -637,6 +631,11 @@ uca_ufo_camera_init(UcaUfoCamera *self)
 
     if (!setup_pcilib (priv))
         return;
+
+    oclass = G_OBJECT_GET_CLASS (self);
+
+    for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
+        g_object_class_install_property(oclass, id, ufo_properties[id]);
 
     camera = UCA_CAMERA (self);
     uca_camera_register_unit (camera, "sensor-temperature", UCA_UNIT_DEGREE_CELSIUS);
