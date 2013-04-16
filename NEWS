@@ -20,7 +20,7 @@ errors in the init method from the GInitable interface.
 
 All binary sources are now found in bin/, with the GUI application now
 split off from the command line tools. Also, all tools are now installed with
-a common "uca-" prefix, e.g. `uca-control` and `uca-grab`.
+a common "uca-" prefix, e.g. `uca-camera-control` and `uca-grab`.
 
 ### Minor changes
 
