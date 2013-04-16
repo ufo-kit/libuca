@@ -19,21 +19,22 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 if (GTK2_FOUND)
     include_directories(${GTK2_INCLUDE_DIRS})
+    set(BINARY "uca-camera-control")
 
-    add_executable(uca-control
+    add_executable(${BINARY}
         control.c
         egg-property-cell-renderer.c
         egg-property-tree-view.c
         egg-histogram-view.c)
 
-    target_link_libraries(uca-control
+    target_link_libraries(${BINARY}
         m
         uca
         ringbuffer
         ${GTK2_LIBRARIES} 
         ${GTHREAD2_LIBRARIES})
 
-    install(TARGETS uca-control
+    install(TARGETS ${BINARY}
         RUNTIME DESTINATION bin)
 
     install(FILES control.glade
