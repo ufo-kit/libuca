@@ -411,7 +411,7 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
             {
                 const guint frequency = priv->frequency == FPGA_40MHZ ? 40 : 48;
                 const gdouble user_exposure_time = g_value_get_double(value);
-                pcilib_register_value_t reg_value = (pcilib_register_value_t) (10e6 * user_exposure_time) / (129 * frequency);
+                pcilib_register_value_t reg_value = (pcilib_register_value_t) ((1e6 * user_exposure_time * frequency) / 129.0);
                 pcilib_write_register(priv->handle, NULL, "cmosis_exp_time", reg_value);
             }
             break;
@@ -492,7 +492,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_EXPOSURE_TIME:
             {
                 const gdouble frequency = priv->frequency == FPGA_40MHZ ? 40.0 : 48.0;
-                g_value_set_double (value, read_register_value (priv->handle, "cmosis_exp_time") * 129 * frequency / 10e6);
+                g_value_set_double (value, read_register_value (priv->handle, "cmosis_exp_time") * 129.0 / frequency / 1e6);
             }
             break;
         case PROP_HAS_STREAMING:
