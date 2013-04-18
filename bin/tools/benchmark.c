@@ -26,6 +26,7 @@ typedef void (*GrabFrameFunc) (UcaCamera *camera, gpointer buffer, guint n_frame
 
 static UcaCamera *camera = NULL;
 
+
 static void
 sigint_handler(int signal)
 {
@@ -35,28 +36,33 @@ sigint_handler(int signal)
     exit (signal);
 }
 
-static void
-print_usage (void)
+static gchar *
+get_camera_list (void)
 {
     GList *types;
+    GString *str;
     UcaPluginManager *manager;
 
     manager = uca_plugin_manager_new ();
-    g_print ("Usage: benchmark [ ");
     types = uca_plugin_manager_get_available_cameras (manager);
+    str = g_string_new ("[ ");
 
-    if (types == NULL) {
-        g_print ("] -- no camera plugin found\n");
-        return;
+    if (types != NULL) {
+        for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
+            gchar *name = (gchar *) it->data;
+
+            if (g_list_next (it) == NULL)
+                g_string_append_printf (str, "%s ]", name);
+            else
+                g_string_append_printf (str, "%s, ", name);
+        }
+    }
+    else {
+        g_string_append (str, "]");
     }
 
-    for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
-        gchar *name = (gchar *) it->data;
-        if (g_list_next (it) == NULL)
-            g_print ("%s ]\n", name);
-        else
-            g_print ("%s, ", name);
-    }
+    g_object_unref (manager);
+    return g_string_free (str, FALSE);
 }
 
 static void
@@ -176,18 +182,15 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, guint 
 }
 
 static void
-benchmark (UcaCamera *camera)
+benchmark (UcaCamera *camera, gint n_runs, gint n_frames)
 {
-    const guint n_runs = 3;
-    const guint n_frames = 100;
-
-    guint   sensor_width;
-    guint   sensor_height;
-    guint   roi_width;
-    guint   roi_height;
-    guint   bits;
-    guint   n_bytes_per_pixel;
-    guint   n_bytes;
+    guint sensor_width;
+    guint sensor_height;
+    guint roi_width;
+    guint roi_height;
+    guint bits;
+    guint n_bytes_per_pixel;
+    guint n_bytes;
     gdouble exposure = 0.00001;
     gpointer buffer;
 
@@ -238,16 +241,36 @@ benchmark (UcaCamera *camera)
 int
 main (int argc, char *argv[])
 {
+    GOptionContext *context;
     UcaPluginManager *manager;
-    GIOChannel  *log_channel;
-    GError      *error = NULL;
+    GIOChannel *log_channel;
+    gchar *cam_list;
+    GError *error = NULL;
+    static gint n_frames = 100;
+    static gint n_runs = 3;
+
+    static GOptionEntry entries[] = {
+        { "num-frames", 'n', 0, G_OPTION_ARG_INT, &n_frames, "Number of frames per run", "N" },
+        { "num-runs", 'r', 0, G_OPTION_ARG_INT, &n_runs, "Number of runs", "N" },
+        { NULL }
+    };
 
     (void) signal (SIGINT, sigint_handler);
-    g_type_init();
+    g_type_init ();
+
+    cam_list = get_camera_list ();
+    context = g_option_context_new (cam_list);
+    g_option_context_add_main_entries (context, entries, NULL);
+    g_free (cam_list);
+
+    if (!g_option_context_parse (context, &argc, &argv, &error)) {
+        g_print ("Failed parsing arguments: %s\n", error->message);
+        exit (1);
+    }
 
     if (argc < 2) {
-        print_usage();
-        return 1;
+        g_print ("%s\n", g_option_context_get_help (context, TRUE, NULL));
+        exit (0);
     }
 
     log_channel = g_io_channel_new_file ("error.log", "a+", &error);
@@ -262,7 +285,7 @@ main (int argc, char *argv[])
         return 1;
     }
 
-    benchmark (camera);
+    benchmark (camera, n_runs, n_frames);
 
     g_object_unref (camera);
     g_io_channel_shutdown (log_channel, TRUE, &error);
