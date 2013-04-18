@@ -27,11 +27,13 @@ add_executable(uca-gen-doc gen-doc.c)
 target_link_libraries(uca-gen-doc ${libs})
 
 # --- uca-grab
-add_executable(uca-grab grab.c)
+add_executable(uca-grab
+               grab.c common.c)
 target_link_libraries(uca-grab ringbuffer ${libs})
 
 # --- uca-benchmark
-add_executable(uca-benchmark benchmark.c)
+add_executable(uca-benchmark
+               benchmark.c common.c)
 target_link_libraries(uca-benchmark ${libs})
 
 install(TARGETS uca-benchmark uca-grab uca-gen-doc

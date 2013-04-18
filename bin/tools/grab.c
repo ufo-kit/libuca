@@ -23,6 +23,7 @@
 #include "uca-plugin-manager.h"
 #include "uca-camera.h"
 #include "ring-buffer.h"
+#include "common.h"
 
 #ifdef HAVE_LIBTIFF
 #include <tiffio.h>
@@ -35,35 +36,6 @@ typedef struct {
     gchar *filename;
 } Options;
 
-
-static gchar *
-get_camera_list (void)
-{
-    GList *types;
-    GString *str;
-    UcaPluginManager *manager;
-
-    manager = uca_plugin_manager_new ();
-    types = uca_plugin_manager_get_available_cameras (manager);
-    str = g_string_new ("[ ");
-
-    if (types != NULL) {
-        for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
-            gchar *name = (gchar *) it->data;
-
-            if (g_list_next (it) == NULL)
-                g_string_append_printf (str, "%s ]", name);
-            else
-                g_string_append_printf (str, "%s, ", name);
-        }
-    }
-    else {
-        g_string_append (str, "]");
-    }
-
-    g_object_unref (manager);
-    return g_string_free (str, FALSE);
-}
 
 static guint
 get_bytes_per_pixel (guint bits_per_pixel)
@@ -236,7 +208,6 @@ main (int argc, char *argv[])
     GOptionContext *context;
     UcaPluginManager *manager;
     UcaCamera *camera;
-    gchar *cam_list;
     GError *error = NULL;
 
     static Options opts = {
@@ -254,32 +225,30 @@ main (int argc, char *argv[])
 
     g_type_init();
 
-    cam_list = get_camera_list ();
-    context = g_option_context_new (cam_list);
+    manager = uca_plugin_manager_new ();
+    context = uca_option_context_new (manager);
     g_option_context_add_main_entries (context, entries, NULL);
-    g_free (cam_list);
 
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
         g_print ("Failed parsing arguments: %s\n", error->message);
-        exit (1);
+        goto cleanup_manager;
     }
 
     if (argc < 2) {
         g_print ("%s\n", g_option_context_get_help (context, TRUE, NULL));
-        exit (0);
+        goto cleanup_manager;
     }
 
     if (opts.n_frames < 0 && opts.duration < 0.0) {
         g_print ("You must specify at least one of --num-frames and --output.\n");
-        exit (1);
+        goto cleanup_manager;
     }
 
-    manager = uca_plugin_manager_new ();
     camera = uca_plugin_manager_get_camera (manager, argv[1], &error, NULL);
 
     if (camera == NULL) {
         g_print ("Error during initialization: %s\n", error->message);
-        exit (1);
+        goto cleanup_camera;
     }
 
     error = record_frames (camera, &opts);
@@ -287,6 +256,11 @@ main (int argc, char *argv[])
     if (error != NULL)
         g_print ("Error: %s\n", error->message);
 
+cleanup_camera:
     g_object_unref (camera);
+
+cleanup_manager:
+    g_object_unref (manager);
+
     return error != NULL ? 1 : 0;
 }

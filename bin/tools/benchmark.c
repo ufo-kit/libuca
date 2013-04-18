@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include "uca-camera.h"
 #include "uca-plugin-manager.h"
+#include "common.h"
+
 
 typedef void (*GrabFrameFunc) (UcaCamera *camera, gpointer buffer, guint n_frames);
 
@@ -34,35 +36,6 @@ sigint_handler(int signal)
     uca_camera_stop_recording (camera, NULL);
     g_object_unref (camera);
     exit (signal);
-}
-
-static gchar *
-get_camera_list (void)
-{
-    GList *types;
-    GString *str;
-    UcaPluginManager *manager;
-
-    manager = uca_plugin_manager_new ();
-    types = uca_plugin_manager_get_available_cameras (manager);
-    str = g_string_new ("[ ");
-
-    if (types != NULL) {
-        for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it)) {
-            gchar *name = (gchar *) it->data;
-
-            if (g_list_next (it) == NULL)
-                g_string_append_printf (str, "%s ]", name);
-            else
-                g_string_append_printf (str, "%s, ", name);
-        }
-    }
-    else {
-        g_string_append (str, "]");
-    }
-
-    g_object_unref (manager);
-    return g_string_free (str, FALSE);
 }
 
 static void
@@ -244,7 +217,6 @@ main (int argc, char *argv[])
     GOptionContext *context;
     UcaPluginManager *manager;
     GIOChannel *log_channel;
-    gchar *cam_list;
     GError *error = NULL;
     static gint n_frames = 100;
     static gint n_runs = 3;
@@ -258,38 +230,41 @@ main (int argc, char *argv[])
     (void) signal (SIGINT, sigint_handler);
     g_type_init ();
 
-    cam_list = get_camera_list ();
-    context = g_option_context_new (cam_list);
+    manager = uca_plugin_manager_new ();
+    context = uca_option_context_new (manager);
     g_option_context_add_main_entries (context, entries, NULL);
-    g_free (cam_list);
 
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
         g_print ("Failed parsing arguments: %s\n", error->message);
-        exit (1);
+        goto cleanup_manager;
     }
 
     if (argc < 2) {
         g_print ("%s\n", g_option_context_get_help (context, TRUE, NULL));
-        exit (0);
+        goto cleanup_manager;
     }
 
     log_channel = g_io_channel_new_file ("error.log", "a+", &error);
     g_assert_no_error (error);
     g_log_set_handler (NULL, G_LOG_LEVEL_MASK, log_handler, log_channel);
 
-    manager = uca_plugin_manager_new ();
     camera = uca_plugin_manager_get_camera (manager, argv[1], &error, NULL);
 
     if (camera == NULL) {
         g_error ("Initialization: %s", error->message);
-        return 1;
+        goto cleanup_camera;
     }
 
     benchmark (camera, n_runs, n_frames);
 
-    g_object_unref (camera);
     g_io_channel_shutdown (log_channel, TRUE, &error);
     g_assert_no_error (error);
+
+cleanup_camera:
+    g_object_unref (camera);
+
+cleanup_manager:
+    g_object_unref (manager);
 
     return 0;
 }
