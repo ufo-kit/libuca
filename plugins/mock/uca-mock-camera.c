@@ -43,7 +43,6 @@ static const gint mock_overrideables[] = {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_EXPOSURE_TIME,
-    PROP_TRIGGER_MODE,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -59,8 +58,6 @@ static const gint mock_overrideables[] = {
 static GParamSpec *mock_properties[N_PROPERTIES] = { NULL, };
 
 struct _UcaMockCameraPrivate {
-    UcaCameraTrigger trigger;
-
     guint width;
     guint height;
     guint roi_x, roi_y, roi_width, roi_height;
@@ -281,9 +278,6 @@ uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *
         case PROP_ROI_HEIGHT:
             priv->roi_height = g_value_get_uint(value);
             break;
-        case PROP_TRIGGER_MODE:
-            priv->trigger = g_value_get_enum (value);
-            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -352,9 +346,6 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
             break;
         case PROP_FRAMERATE:
             g_value_set_float(value, priv->frame_rate);
-            break;
-        case PROP_TRIGGER_MODE:
-            g_value_set_enum (value, priv->trigger);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
