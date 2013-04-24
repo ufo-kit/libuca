@@ -86,6 +86,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_SENSOR_BITDEPTH,
     PROP_EXPOSURE_TIME,
+    PROP_FRAMES_PER_SECOND,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -493,6 +494,25 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             {
                 const gdouble frequency = priv->frequency == FPGA_40MHZ ? 40.0 : 48.0;
                 g_value_set_double (value, read_register_value (priv->handle, "cmosis_exp_time") * 129.0 / frequency / 1e6);
+            }
+            break;
+        case PROP_FRAMES_PER_SECOND:
+            {
+                gdouble exposure_time;
+                gdouble fps;
+                guint trigger_period;
+                guint roi_height;
+
+                g_object_get (object,
+                              "exposure-time", &exposure_time,
+                              "ufo-trigger-period", &trigger_period,
+                              "roi-height", &roi_height,
+                              NULL);
+
+                fps = 1. / (exposure_time + 
+                            (roi_height / 1088. * 2924. * 1e-6)+
+                            (trigger_period * 8. * 1e-9));
+                g_value_set_double(value, fps);
             }
             break;
         case PROP_HAS_STREAMING:
