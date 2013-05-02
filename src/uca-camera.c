@@ -86,6 +86,8 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "name",
     "sensor-width",
     "sensor-height",
+    "sensor-pixel-width",
+    "sensor-pixel-height",
     "sensor-bitdepth",
     "sensor-horizontal-binning",
     "sensor-horizontal-binnings",
@@ -195,6 +197,16 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             g_value_set_uint (value, 0);
             break;
 
+        case PROP_SENSOR_PIXEL_WIDTH:
+            /* 10um is an arbitrary default, cameras should definitely override
+             * this. */
+            g_value_set_double (value, 10e-6);
+            break;
+
+        case PROP_SENSOR_PIXEL_HEIGHT:
+            g_value_set_double (value, 10e-6);
+            break;
+
         case PROP_SENSOR_HORIZONTAL_BINNINGS:
             g_value_set_boxed (value, priv->h_binnings);
             break;
@@ -250,6 +262,20 @@ uca_camera_class_init (UcaCameraClass *klass)
             "Height of sensor",
             "Height of the sensor in pixels",
             1, G_MAXUINT, 1,
+            G_PARAM_READABLE);
+
+    camera_properties[PROP_SENSOR_PIXEL_WIDTH] =
+        g_param_spec_double (uca_camera_props[PROP_SENSOR_PIXEL_WIDTH],
+            "Width of sensor pixel in meters",
+            "Width of sensor pixel in meters",
+            G_MINDOUBLE, G_MAXDOUBLE, 10e-6,
+            G_PARAM_READABLE);
+
+    camera_properties[PROP_SENSOR_PIXEL_HEIGHT] =
+        g_param_spec_double (uca_camera_props[PROP_SENSOR_PIXEL_HEIGHT],
+            "Height of sensor pixel in meters",
+            "Height of sensor pixel in meters",
+            G_MINDOUBLE, G_MAXDOUBLE, 10e-6,
             G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_BITDEPTH] =
@@ -437,6 +463,8 @@ uca_camera_init (UcaCamera *camera)
 
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_WIDTH], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HEIGHT], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_PIXEL_WIDTH], UCA_UNIT_METER);
+    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_PIXEL_HEIGHT], UCA_UNIT_METER);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_BITDEPTH], UCA_UNIT_COUNT);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HORIZONTAL_BINNING], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_VERTICAL_BINNING], UCA_UNIT_PIXEL);
