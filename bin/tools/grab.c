@@ -34,6 +34,9 @@ typedef struct {
     gint n_frames;
     gdouble duration;
     gchar *filename;
+#ifdef HAVE_LIBTIFF
+    gboolean write_tiff;
+#endif
 } Options;
 
 
@@ -93,7 +96,8 @@ write_tiff (RingBuffer *buffer,
 
     TIFFClose (tif);
 }
-#else
+#endif
+
 static void
 write_raw (RingBuffer *buffer,
            Options *opts)
@@ -122,7 +126,6 @@ write_raw (RingBuffer *buffer,
         g_free (filename);
     }
 }
-#endif
 
 static GError *
 record_frames (UcaCamera *camera, Options *opts)
@@ -191,7 +194,10 @@ record_frames (UcaCamera *camera, Options *opts)
     uca_camera_stop_recording (camera, &error);
 
 #ifdef HAVE_LIBTIFF
-    write_tiff (buffer, opts, roi_width, roi_height, bits);
+    if (opts->write_tiff)
+        write_tiff (buffer, opts, roi_width, roi_height, bits);
+    else
+        write_raw (buffer, opts);
 #else
     write_raw (buffer, opts);
 #endif
@@ -213,13 +219,19 @@ main (int argc, char *argv[])
     static Options opts = {
         .n_frames = -1,
         .duration = -1.0,
-        .filename = NULL
+        .filename = NULL,
+#ifdef HAVE_LIBTIFF
+        .write_tiff = FALSE,
+#endif
     };
 
     static GOptionEntry entries[] = {
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &opts.n_frames, "Number of frames to acquire", "N" },
         { "duration", 'd', 0, G_OPTION_ARG_DOUBLE, &opts.duration, "Duration in seconds", NULL },
         { "output", 'o', 0, G_OPTION_ARG_STRING, &opts.filename, "Output file name", "FILE" },
+#ifdef HAVE_LIBTIFF
+        { "write-tiff", 't', 0, G_OPTION_ARG_NONE, &opts.write_tiff, "Write as TIFF", NULL },
+#endif
         { NULL }
     };
 
