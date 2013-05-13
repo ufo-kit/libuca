@@ -53,7 +53,6 @@ add_definitions("-std=c99 -Wall")
 # @template_prefix: prefix of the template (should be src/uca-enums)
 # @header_list: list with header files that should be searched for enums
 macro(create_enums prefix template_prefix header_list)
-    ${CMAKE_CURRENT_SOURCE_DIR}")
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
         COMMAND ${GLIB2_MKENUMS}
