@@ -46,6 +46,36 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
 add_definitions("-std=c99 -Wall")
 
 
+# --- Common macros
+
+# create_enums
+# @prefix: prefix of the output enum files
+# @template_prefix: prefix of the template (should be src/uca-enums)
+# @header_list: list with header files that should be searched for enums
+macro(create_enums prefix template_prefix header_list)
+    ${CMAKE_CURRENT_SOURCE_DIR}")
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
+        COMMAND ${GLIB2_MKENUMS}
+        ARGS
+            --template ${template_prefix}.h.template
+            ${header_list} > ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS ${header_list})
+
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.c
+        COMMAND ${GLIB2_MKENUMS}
+        ARGS
+            --template ${template_prefix}.c.template
+            ${header_list} > ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.c
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS ${header_list}
+                ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
+        )
+endmacro()
+
+
 # --- Common libraries --------------------------------------------------------
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)

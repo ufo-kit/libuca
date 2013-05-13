@@ -11,29 +11,9 @@ set(uca_HDRS
     uca-camera.h
     uca-plugin-manager.h)
 
-# --- Generate enum file
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
-    COMMAND ${GLIB2_MKENUMS}
-    ARGS
-        --template uca-enums.h.template
-        ${UCA_ENUM_HDRS} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${UCA_ENUM_HDRS}
-            ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums.h.template)
-
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c
-    COMMAND ${GLIB2_MKENUMS}
-    ARGS
-        --template uca-enums.c.template
-        ${UCA_ENUM_HDRS} > ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS ${UCA_ENUM_HDRS}
-            ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums.c.template
-    )
-
+create_enums(uca-enums
+             ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums
+             ${uca_HDRS})
 
 # --- Configure ---------------------------------------------------------------
 

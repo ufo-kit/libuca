@@ -25,7 +25,7 @@
 #include <fgrab_prototyp.h>
 #include "uca-camera.h"
 #include "uca-pco-camera.h"
-#include "uca-enums.h"
+#include "uca-pco-enums.h"
 
 #define FG_TRY_PARAM(fg, error, param, val_addr, port)     \
     { int r = Fg_setParameter(fg, param, val_addr, port);   \
