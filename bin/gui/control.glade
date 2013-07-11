@@ -446,6 +446,14 @@
     </columns>
     <data>
       <row>
+        <col id="0" translatable="yes">400 %</col>
+        <col id="1">4</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">200 %</col>
+        <col id="1">2</col>
+      </row>
+      <row>
         <col id="0" translatable="yes">100 %</col>
         <col id="1">1</col>
       </row>

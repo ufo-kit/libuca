@@ -70,14 +70,14 @@ static UcaPluginManager *plugin_manager;
 static gsize mem_size = 2048;
 
 static void
-convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
+down_scale (ThreadData *data, gpointer buffer)
 {
     gdouble min;
     gdouble max;
     gdouble factor;
     guint8 *output;
-    gint i = 0;
     gint stride;
+    gint i = 0;
 
     egg_histogram_get_visible_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
     factor = 255.0 / (max - min);
@@ -116,6 +116,63 @@ convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
             }
         }
     }
+}
+
+static void
+up_scale (ThreadData *data, gpointer buffer)
+{
+    gdouble min;
+    gdouble max;
+    gdouble factor;
+    guint8 *output;
+    gint i = 0;
+    gint zoom;
+
+    egg_histogram_get_visible_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
+    factor = 255.0 / (max - min);
+    output = data->pixels;
+    zoom = (gint) data->zoom_factor;
+
+    if (data->pixel_size == 1) {
+        guint8 *input = (guint8 *) buffer;
+
+        for (gint y = 0; y < data->display_height; y++) {
+            for (gint x = 0; x < data->display_width; x++) {
+                gint offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
+                gdouble dval = (input[offset] - min) * factor;
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
+
+                output[i++] = val;
+                output[i++] = val;
+                output[i++] = val;
+            }
+        }
+    }
+    else if (data->pixel_size == 2) {
+        guint16 *input = (guint16 *) buffer;
+
+        for (gint y = 0; y < data->display_height; y++) {
+            for (gint x = 0; x < data->display_width; x++) {
+                gint offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
+                gdouble dval = (input[offset] - min) * factor;
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
+
+                output[i++] = val;
+                output[i++] = val;
+                output[i++] = val;
+            }
+        }
+    }
+}
+
+
+static void
+convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
+{
+    if (data->zoom_factor <= 1)
+        down_scale (data, buffer);
+    else
+        up_scale (data, buffer);
 }
 
 static void
