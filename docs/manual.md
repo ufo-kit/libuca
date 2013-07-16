@@ -33,21 +33,23 @@ Make sure you have
 * GLib and GObject development libraries and
 * necessary camera SDKs
 
-installed. With Debian/Ubuntu this should be enough:
+installed.
 
-    sudo apt-get install libglib2.0 cmake gcc
+For the base system, install
+
+    [Debian] sudo apt-get install libglib2.0 cmake gcc
+    [openSUSE] sudo zypper in glib2-devel cmake gcc
 
 In case you want to use the graphical user interface you also need the Gtk+
 development libraries:
 
-    sudo apt-get install libgtk+2.0-dev
+    [Debian] sudo apt-get install libgtk+2.0-dev
+    [openSUSE] sudo zypper in gtk2-devel
 
-If you want to build the most recent version fresh from the [Git
-repository][repo], you also need Git:
+To generate bindings for third-party languages, you have to install
 
-    sudo apt-get install git
-
-[repo]: http://ufo.kit.edu/repos/libuca.git/
+    [Debian] sudo apt-get install gobject-introspection
+    [openSUSE] sudo zypper in gobject-introspection-devel
 
 
 #### Fetching the sources
