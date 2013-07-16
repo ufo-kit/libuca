@@ -55,7 +55,7 @@
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="save-item">
-                        <property name="label">gtk-save</property>
+                        <property name="label">gtk-save-as</property>
                         <property name="visible">True</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
