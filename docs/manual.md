@@ -99,6 +99,12 @@ The former tells CMake to install into `/usr` instead of `/usr/local` and the
 latter that 64 should be appended to any library paths. This is necessary on
 Linux distributions that expect 64-bit libraries in `/usr[/local]/lib64`.
 
+It is also highly recommended to set the the install prefix to `/usr` when
+using the language bindings because GObject introspection will only look for
+type libraries in `/usr/lib/girepository-1.0`. If you want to install in another
+directory, you can also set the `GI_TYPELIB_PATH` environment variable to the
+path were the `Ufo-x.y.typelib` is located.
+
 
 #### Building this manual
 
