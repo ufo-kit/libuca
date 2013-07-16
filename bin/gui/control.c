@@ -332,6 +332,50 @@ on_frame_slider_changed (GtkAdjustment *adjustment, ThreadData *data)
         update_current_frame (data);
 }
 
+static gboolean
+write_raw_file (const gchar *filename, RingBuffer *buffer)
+{
+    FILE *fp;
+    guint n_blocks;
+    gsize size;
+
+    fp = fopen (filename, "wb");
+
+    if (fp == NULL)
+        return FALSE;
+
+    n_blocks = ring_buffer_get_num_blocks (buffer);
+    size = ring_buffer_get_block_size (buffer);
+
+    for (guint i = 0; i < n_blocks; i++)
+        fwrite (ring_buffer_get_pointer (buffer, i), size , 1, fp);
+
+    fclose (fp);
+    return TRUE;
+}
+
+static void
+on_save (GtkMenuItem *item, ThreadData *data)
+{
+    GtkWidget *dialog;
+
+    dialog = gtk_file_chooser_dialog_new ("Save Frames", NULL,
+                                          GTK_FILE_CHOOSER_ACTION_SAVE,
+                                          GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                                          GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
+                                          NULL);
+
+    if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT) {
+        gchar *filename;
+
+        filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
+        write_raw_file (filename, data->buffer);
+        g_free (filename);
+    }
+
+    gtk_widget_destroy (dialog);
+}
+
 static void
 on_start_button_clicked (GtkWidget *widget, ThreadData *data)
 {
@@ -611,6 +655,8 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_object_bind_property (camera, "exposure-time",
                             gtk_builder_get_object (builder, "exposure-adjustment"), "value",
                             G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
+
+    g_signal_connect (gtk_builder_get_object (builder, "save-item"), "activate", G_CALLBACK (on_save), &td);
 
     g_signal_connect (td.frame_slider, "value-changed", G_CALLBACK (on_frame_slider_changed), &td);
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
