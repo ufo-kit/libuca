@@ -49,6 +49,7 @@ typedef struct {
     GtkProgressBar  *download_progressbar;
     GtkWidget       *download_close_button;
     GtkAdjustment   *download_adjustment;
+    GtkAdjustment   *count;
 
     GtkWidget       *histogram_view;
     GtkToggleButton *histogram_button;
@@ -207,6 +208,21 @@ print_and_free_error (GError **error)
     *error = NULL;
 }
 
+static void
+set_tool_button_state (ThreadData *data)
+{
+    gtk_widget_set_sensitive (data->start_button,
+                              data->state == IDLE);
+    gtk_widget_set_sensitive (data->stop_button,
+                              data->state == RUNNING || data->state == RECORDING);
+    gtk_widget_set_sensitive (data->record_button,
+                              data->state == IDLE);
+    gtk_widget_set_sensitive (data->download_button,
+                              data->data_in_camram);
+    gtk_widget_set_sensitive (GTK_WIDGET (data->zoom_box),
+                              data->state == IDLE);
+}
+
 static gpointer
 preview_frames (void *args)
 {
@@ -241,13 +257,22 @@ record_frames (gpointer args)
 {
     ThreadData *data;
     gpointer buffer;
+    guint n_max;
     guint n_frames = 0;
     GError *error = NULL;
 
     data = (ThreadData *) args;
     ring_buffer_reset (data->buffer);
 
-    while (data->state == RECORDING) {
+    n_max = (guint) gtk_adjustment_get_value (data->count);
+
+    while (1) {
+        if (data->state != RECORDING)
+            break;
+
+        if (n_max > 0 && n_frames >= n_max)
+            break;
+
         buffer = ring_buffer_get_current_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, NULL);
 
@@ -258,6 +283,9 @@ record_frames (gpointer args)
         else
             print_and_free_error (&error);
     }
+
+    data->state = IDLE;
+    set_tool_button_state (data);
 
     n_frames = ring_buffer_get_num_blocks (data->buffer);
 
@@ -283,21 +311,6 @@ on_destroy (GtkWidget *widget, ThreadData *data)
     ring_buffer_free (data->buffer);
 
     gtk_main_quit ();
-}
-
-static void
-set_tool_button_state (ThreadData *data)
-{
-    gtk_widget_set_sensitive (data->start_button,
-                              data->state == IDLE);
-    gtk_widget_set_sensitive (data->stop_button,
-                              data->state == RUNNING || data->state == RECORDING);
-    gtk_widget_set_sensitive (data->record_button,
-                              data->state == IDLE);
-    gtk_widget_set_sensitive (data->download_button,
-                              data->data_in_camram);
-    gtk_widget_set_sensitive (GTK_WIDGET (data->zoom_box),
-                              data->state == IDLE);
 }
 
 static void
@@ -504,7 +517,6 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     GtkWidget *property_tree_view;
     GdkPixbuf *pixbuf;
     GtkBox    *histogram_box;
-    GtkContainer    *property_window;
     GtkAdjustment   *max_bin_adjustment;
     RingBuffer      *ring_buffer;
     gsize image_size;
@@ -532,7 +544,6 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     histogram_view      = egg_histogram_view_new ();
     property_tree_view  = egg_property_tree_view_new (G_OBJECT (camera));
-    property_window     = GTK_CONTAINER (gtk_builder_get_object (builder, "property-window"));
     image               = GTK_WIDGET (gtk_builder_get_object (builder, "image"));
     histogram_box       = GTK_BOX (gtk_builder_get_object (builder, "histogram-box"));
     window              = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
@@ -545,6 +556,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
     td.frame_slider     = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
+    td.count            = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "acquisitions-adjustment"));
 
     td.download_dialog  = GTK_DIALOG (gtk_builder_get_object (builder, "download-dialog"));
     td.download_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "download-adjustment"));
@@ -593,6 +605,13 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
                             td.histogram_view, "maximum-bin-value",
                             G_BINDING_DEFAULT);
 
+    g_object_bind_property (gtk_builder_get_object (builder, "repeat-checkbutton"), "active", 
+                            gtk_builder_get_object (builder, "repeat-box"), "sensitive", 0);
+
+    g_object_bind_property (camera, "exposure-time",
+                            gtk_builder_get_object (builder, "exposure-adjustment"), "value",
+                            G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
+
     g_signal_connect (td.frame_slider, "value-changed", G_CALLBACK (on_frame_slider_changed), &td);
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
@@ -603,7 +622,8 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
 
     /* Layout */
-    gtk_container_add (property_window, property_tree_view);
+    gtk_container_add (GTK_CONTAINER (gtk_builder_get_object (builder, "property-window")),
+                       property_tree_view);
     gtk_box_pack_start (histogram_box, td.histogram_view, TRUE, TRUE, 6);
 
     gtk_widget_show_all (window);
