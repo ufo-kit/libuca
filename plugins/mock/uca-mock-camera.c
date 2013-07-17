@@ -38,17 +38,11 @@ static const gint mock_overrideables[] = {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
-    PROP_SENSOR_HORIZONTAL_BINNING,
-    PROP_SENSOR_HORIZONTAL_BINNINGS,
-    PROP_SENSOR_VERTICAL_BINNING,
-    PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
-    PROP_ROI_HEIGHT_MULTIPLIER,
-    PROP_ROI_WIDTH_MULTIPLIER,
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
@@ -302,18 +296,6 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint(value, 8);
             break;
-        case PROP_SENSOR_HORIZONTAL_BINNING:
-            g_value_set_uint(value, 1);
-            break;
-        case PROP_SENSOR_HORIZONTAL_BINNINGS:
-            g_value_set_boxed(value, priv->binnings);
-            break;
-        case PROP_SENSOR_VERTICAL_BINNING:
-            g_value_set_uint(value, 1);
-            break;
-        case PROP_SENSOR_VERTICAL_BINNINGS:
-            g_value_set_boxed(value, priv->binnings);
-            break;
         case PROP_EXPOSURE_TIME:
             g_value_set_double(value, priv->exposure_time);
             break;
@@ -328,12 +310,6 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
             break;
         case PROP_ROI_HEIGHT:
             g_value_set_uint(value, priv->roi_height);
-            break;
-        case PROP_ROI_WIDTH_MULTIPLIER:
-            g_value_set_uint(value, 1);
-            break;
-        case PROP_ROI_HEIGHT_MULTIPLIER:
-            g_value_set_uint(value, 1);
             break;
         case PROP_SENSOR_MAX_FRAME_RATE:
             g_value_set_float(value, priv->max_frame_rate);

@@ -81,8 +81,6 @@ static gint base_overrideables[] = {
     PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
-    PROP_SENSOR_HORIZONTAL_BINNING,
-    PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_SENSOR_BITDEPTH,
     PROP_EXPOSURE_TIME,
@@ -91,8 +89,6 @@ static gint base_overrideables[] = {
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
-    PROP_ROI_WIDTH_MULTIPLIER,
-    PROP_ROI_HEIGHT_MULTIPLIER,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     0,
@@ -461,12 +457,6 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint (value, priv->n_bits);
             break;
-        case PROP_SENSOR_HORIZONTAL_BINNING:
-            g_value_set_uint(value, 1);
-            break;
-        case PROP_SENSOR_VERTICAL_BINNING:
-            g_value_set_uint(value, 1);
-            break;
         case PROP_SENSOR_MAX_FRAME_RATE:
             g_value_set_float(value, 340.0);
             break;
@@ -532,12 +522,6 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_ROI_HEIGHT:
             g_value_set_uint(value, SENSOR_HEIGHT);
-            break;
-        case PROP_ROI_WIDTH_MULTIPLIER:
-            g_value_set_uint(value, 1);
-            break;
-        case PROP_ROI_HEIGHT_MULTIPLIER:
-            g_value_set_uint(value, 1);
             break;
         case PROP_NAME:
             g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");

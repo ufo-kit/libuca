@@ -207,6 +207,14 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             g_value_set_double (value, 10e-6);
             break;
 
+        case PROP_SENSOR_HORIZONTAL_BINNING:
+            g_value_set_uint (value, 1);
+            break;
+
+        case PROP_SENSOR_VERTICAL_BINNING:
+            g_value_set_uint (value, 1);
+            break;
+
         case PROP_SENSOR_HORIZONTAL_BINNINGS:
             g_value_set_boxed (value, priv->h_binnings);
             break;
