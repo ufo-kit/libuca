@@ -33,6 +33,8 @@
 
 #define UCA_XKIT_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_XKIT_CAMERA, UcaXkitCameraPrivate))
 
+#define MEDIPIX_SENSOR_HEIGHT   256
+
 static void uca_xkit_camera_initable_iface_init (GInitableIface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (UcaXkitCamera, uca_xkit_camera, UCA_TYPE_CAMERA,
@@ -52,7 +54,12 @@ enum {
 };
 
 static gint base_overrideables[] = {
+    PROP_NAME,
+    PROP_SENSOR_WIDTH,
+    PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
+    PROP_ROI_X,
+    PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
     0,
@@ -64,15 +71,26 @@ static guint N_PROPERTIES;
 
 struct _UcaXkitCameraPrivate {
     GError  *construct_error;
+    Mpx2Interface *interface;
+    gint devices[4];
+    gint n_devices;
+    gint device;
+    DevInfo info;
 };
 
 
 static gboolean
 setup_xkit (UcaXkitCameraPrivate *priv)
 {
-    Mpx2Interface *interface;
 
-    interface = getMpx2Interface();
+    priv->interface = getMpx2Interface();
+    priv->interface->findDevices (priv->devices, &priv->n_devices);
+
+    if (priv->n_devices > 0)
+        priv->interface->init (priv->devices[0]);
+
+    priv->device = priv->devices[0];
+    priv->interface->getDevInfo (priv->device, &priv->info);
 
     return TRUE;
 }
@@ -110,7 +128,34 @@ uca_xkit_camera_grab (UcaCamera *camera,
                       gpointer data,
                       GError **error)
 {
+    UcaXkitCameraPrivate *priv;
+    guint32 size;
     g_return_val_if_fail (UCA_IS_XKIT_CAMERA (camera), FALSE);
+
+    /* XXX: For now we trigger on our own because the X-KIT chip does not
+     * provide auto triggering */
+
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
+    size = priv->info.pixCount * 2;
+
+    if (priv->interface->startAcquisition (priv->device)) {
+        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                             "Could not pre-trigger");
+        return FALSE;
+    }
+
+    if (priv->interface->readMatrix (priv->device, (gint16 *) data, size)) {
+        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                             "Could not grab frame");
+        return FALSE;
+    }
+
+    if (priv->interface->stopAcquisition (priv->device)) {
+        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                             "Could stop acquisition");
+        return FALSE;
+    }
+
     return TRUE;
 }
 
@@ -142,17 +187,32 @@ uca_xkit_camera_get_property (GObject *object,
                               GValue *value,
                               GParamSpec *pspec)
 {
-    /* UcaXkitCameraPrivate *priv = UCA_XKIT_CAMERA_GET_PRIVATE(object); */
+    UcaXkitCameraPrivate *priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
 
     switch (property_id) {
-        case PROP_ROI_WIDTH:
-            g_value_set_uint (value, 512);
+        case PROP_NAME:
+            g_value_set_string (value, priv->info.ifaceName);
             break;
-        case PROP_ROI_HEIGHT:
-            g_value_set_uint (value, 512);
+        case PROP_SENSOR_WIDTH:
+            g_value_set_uint (value, priv->info.rowLen);
+            break;
+        case PROP_SENSOR_HEIGHT:
+            g_value_set_uint (value, priv->info.numberOfRows * MEDIPIX_SENSOR_HEIGHT);
             break;
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint (value, 11);
+            break;
+        case PROP_ROI_X:
+            g_value_set_uint (value, 0);
+            break;
+        case PROP_ROI_Y:
+            g_value_set_uint (value, 0);
+            break;
+        case PROP_ROI_WIDTH:
+            g_value_set_uint (value, priv->info.rowLen);
+            break;
+        case PROP_ROI_HEIGHT:
+            g_value_set_uint (value, priv->info.numberOfRows * MEDIPIX_SENSOR_HEIGHT);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -229,13 +289,12 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
 }
 
 static void
-uca_xkit_camera_init(UcaXkitCamera *self)
+uca_xkit_camera_init (UcaXkitCamera *self)
 {
-    UcaCamera *camera;
     UcaXkitCameraPrivate *priv;
     GObjectClass *oclass;
 
-    self->priv = priv = UCA_XKIT_CAMERA_GET_PRIVATE(self);
+    self->priv = priv = UCA_XKIT_CAMERA_GET_PRIVATE (self);
     priv->construct_error = NULL;
 
     if (!setup_xkit (priv))
@@ -244,7 +303,7 @@ uca_xkit_camera_init(UcaXkitCamera *self)
     oclass = G_OBJECT_GET_CLASS (self);
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
-        g_object_class_install_property(oclass, id, ufo_properties[id]);
+        g_object_class_install_property (oclass, id, ufo_properties[id]);
 }
 
 G_MODULE_EXPORT GType
