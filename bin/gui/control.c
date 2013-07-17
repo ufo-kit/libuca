@@ -284,8 +284,11 @@ record_frames (gpointer args)
             print_and_free_error (&error);
     }
 
-    data->state = IDLE;
-    set_tool_button_state (data);
+    if (n_max > 0) {
+        uca_camera_stop_recording (data->camera, NULL);
+        data->state = IDLE;
+        set_tool_button_state (data);
+    }
 
     n_frames = ring_buffer_get_num_blocks (data->buffer);
 
