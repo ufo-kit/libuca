@@ -215,6 +215,14 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             g_value_set_boxed (value, priv->v_binnings);
             break;
 
+        case PROP_ROI_WIDTH_MULTIPLIER:
+            g_value_set_uint (value, 1);
+            break;
+
+        case PROP_ROI_HEIGHT_MULTIPLIER:
+            g_value_set_uint (value, 1);
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
