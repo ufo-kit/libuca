@@ -154,7 +154,7 @@ uca_xkit_camera_grab (UcaCamera *camera,
      * provide auto triggering */
 
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
-    size = priv->info.pixCount * 2;
+    size = priv->info.pixCount;
 
     if (priv->interface->startAcquisition (priv->device)) {
         g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
