@@ -8,6 +8,8 @@ Changes in libuca 1.3
 
 - Added `sensor-pixel-width` and `sensor-pixel-height` to describe the cameras
   pixel size in meters.
+- Added `-c/--camera` flag to uca-camera-control to specify a camera name from
+  the command-line and by-pass the choice window.
 
 
 Changes in libuca 1.2

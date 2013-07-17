@@ -746,16 +746,19 @@ main (int argc, char *argv[])
     GtkBuilder *builder;
     GOptionContext *context;
     GError *error = NULL;
+    static gchar *camera_name = NULL;
 
     static GOptionEntry entries[] =
     {
         { "mem-size", 'm', 0, G_OPTION_ARG_INT, &mem_size, "Memory in megabytes to allocate for frame storage", "M" },
+        { "camera", 'c', 0, G_OPTION_ARG_STRING, &camera_name, "Default camera (skips choice window)", "NAME" },
         { NULL }
     };
 
     context = g_option_context_new ("- control libuca cameras");
     g_option_context_add_main_entries (context, entries, NULL);
     g_option_context_add_group (context, gtk_get_option_group (TRUE));
+
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
         g_print ("Option parsing failed: %s\n", error->message);
         return 1;
@@ -773,8 +776,12 @@ main (int argc, char *argv[])
     }
 
     plugin_manager = uca_plugin_manager_new ();
-    create_choice_window (builder);
     gtk_builder_connect_signals (builder, NULL);
+
+    if (camera_name != NULL)
+        create_main_window (builder, camera_name);
+    else
+        create_choice_window (builder);
 
     gdk_threads_enter ();
     gtk_main ();
