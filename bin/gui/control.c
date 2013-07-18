@@ -674,6 +674,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     gtk_container_add (GTK_CONTAINER (gtk_builder_get_object (builder, "property-window")),
                        property_tree_view);
     gtk_box_pack_start (histogram_box, td.histogram_view, TRUE, TRUE, 6);
+    gtk_box_reorder_child (histogram_box, GTK_WIDGET (td.histogram_button), 2);
 
     gtk_widget_show_all (window);
 }
