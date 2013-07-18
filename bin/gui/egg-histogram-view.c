@@ -62,7 +62,7 @@ enum
     LAST_SIGNAL
 };
 
-static GParamSpec *egg_histogram_view_properties[N_PROPERTIES] = { NULL, };
+static GParamSpec *properties[N_PROPERTIES] = { NULL, };
 
 static guint egg_histogram_view_signals[LAST_SIGNAL] = { 0 };
 
@@ -289,9 +289,10 @@ egg_histogram_view_set_property (GObject *object,
             {
                 gdouble v = g_value_get_double (value);
 
-                if (v > priv->max_value)
+                if (v > priv->max_value) {
                     g_warning ("Minimum value `%f' larger than maximum value `%f'",
                                v, priv->max_value);
+                }
                 else {
                     priv->min_value = v;
                     gtk_widget_queue_draw (GTK_WIDGET (object));
@@ -303,9 +304,10 @@ egg_histogram_view_set_property (GObject *object,
             {
                 gdouble v = g_value_get_double (value);
 
-                if (v < priv->min_value)
+                if (v < priv->min_value) {
                     g_warning ("Maximum value `%f' larger than minimum value `%f'",
                                v, priv->min_value);
+                }
                 else {
                     priv->max_value = v;
                     gtk_widget_queue_draw (GTK_WIDGET (object));
@@ -371,12 +373,12 @@ set_grab_value (EggHistogramView *view,
     if (view->priv->grabbed == GRAB_MIN) {
         view->priv->min_value = value;
         g_object_notify_by_pspec (G_OBJECT (view),
-                                  egg_histogram_view_properties[PROP_MINIMUM_BIN_VALUE]);
+                                  properties[PROP_MINIMUM_BIN_VALUE]);
     }
     else {
         view->priv->max_value = value;
         g_object_notify_by_pspec (G_OBJECT (view),
-                                  egg_histogram_view_properties[PROP_MAXIMUM_BIN_VALUE]);
+                                  properties[PROP_MAXIMUM_BIN_VALUE]);
     }
 }
 
@@ -397,10 +399,10 @@ egg_histogram_view_motion_notify (GtkWidget *widget,
 
         coord = screen_to_histogram_coordinate (priv, &allocation, event->x);
 
-        if (ABS (priv->max_value - priv->min_value) > 8.0)
+        if (ABS (priv->max_value - priv->min_value) > 8.0 && coord > 0 && coord < priv->max) {
             set_grab_value (view, coord);
-
-        gtk_widget_queue_draw (widget);
+            gtk_widget_queue_draw (widget);
+        }
     }
     else {
         if (is_on_border (priv, &allocation, event->x))
@@ -474,22 +476,22 @@ egg_histogram_view_class_init (EggHistogramViewClass *klass)
     widget_class->button_release_event = egg_histogram_view_button_release;
     widget_class->motion_notify_event  = egg_histogram_view_motion_notify;
 
-    egg_histogram_view_properties[PROP_MINIMUM_BIN_VALUE] =
+    properties[PROP_MINIMUM_BIN_VALUE] =
         g_param_spec_double ("minimum-bin-value",
                              "Smallest possible bin value",
                              "Smallest possible bin value, everything below is discarded.",
                              0.0, G_MAXDOUBLE, 0.0,
                              G_PARAM_READWRITE);
 
-    egg_histogram_view_properties[PROP_MAXIMUM_BIN_VALUE] =
+    properties[PROP_MAXIMUM_BIN_VALUE] =
         g_param_spec_double ("maximum-bin-value",
                              "Largest possible bin value",
                              "Largest possible bin value, everything above is discarded.",
                              0.0, G_MAXDOUBLE, 256.0,
                              G_PARAM_READWRITE);
 
-    g_object_class_install_property (object_class, PROP_MINIMUM_BIN_VALUE, egg_histogram_view_properties[PROP_MINIMUM_BIN_VALUE]);
-    g_object_class_install_property (object_class, PROP_MAXIMUM_BIN_VALUE, egg_histogram_view_properties[PROP_MAXIMUM_BIN_VALUE]);
+    g_object_class_install_property (object_class, PROP_MINIMUM_BIN_VALUE, properties[PROP_MINIMUM_BIN_VALUE]);
+    g_object_class_install_property (object_class, PROP_MAXIMUM_BIN_VALUE, properties[PROP_MAXIMUM_BIN_VALUE]);
 
     egg_histogram_view_signals[CHANGED] =
         g_signal_new ("changed",
