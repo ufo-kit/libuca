@@ -18,6 +18,7 @@
 #include <gmodule.h>
 #include <gio/gio.h>
 #include <string.h>
+#include <math.h>
 #include "uca-mock-camera.h"
 
 #define UCA_MOCK_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_MOCK_CAMERA, UcaMockCameraPrivate))
@@ -60,6 +61,7 @@ struct _UcaMockCameraPrivate {
     gdouble exposure_time;
     guint8 *dummy_data;
     guint current_frame;
+    GRand *rand;
 
     gboolean thread_running;
 
@@ -134,7 +136,7 @@ static const guint DIGIT_WIDTH = 4;
 static const guint DIGIT_HEIGHT = 5;
 
 static void
-print_number(gchar *buffer, guint number, guint x, guint y, guint width)
+print_number (gchar *buffer, guint number, guint x, guint y, guint width)
 {
     for (int i = 0; i < DIGIT_WIDTH; i++) {
         for (int j = 0; j < DIGIT_HEIGHT; j++) {
@@ -144,17 +146,30 @@ print_number(gchar *buffer, guint number, guint x, guint y, guint width)
 }
 
 static void
-print_current_frame(UcaMockCameraPrivate *priv, gchar *buffer)
+print_current_frame (UcaMockCameraPrivate *priv, gchar *buffer)
 {
     guint number = priv->current_frame;
     guint divisor = 10000000;
-    int x = 10;
+    int x = 1;
+    const double mean = 128.0;
+    const double std = 32.0;
 
     while (divisor > 0) {
-        print_number(buffer, number / divisor, x, 10, priv->width);
+        print_number(buffer, number / divisor, x, 1, priv->width);
         number = number % divisor;
         divisor = divisor / 10;
         x += DIGIT_WIDTH + 1;
+    }
+
+    for (guint y = 16; y < priv->height; y++) {
+        guint index = y * priv->width;
+
+        for (guint i = 0; i < priv->width; i++, index++) {
+            double u1 = g_rand_double (priv->rand);
+            double u2 = g_rand_double (priv->rand);
+            double r = sqrt(-2 * log(u1)) * cos(2 * G_PI * u2);
+            buffer[index] = (guint8) (r * std + mean);
+        }
     }
 }
 
@@ -334,6 +349,8 @@ uca_mock_camera_finalize(GObject *object)
 {
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
 
+    g_rand_free (priv->rand);
+
     if (priv->thread_running) {
         priv->thread_running = FALSE;
         g_thread_join(priv->grab_thread);
@@ -396,14 +413,16 @@ uca_mock_camera_init(UcaMockCamera *self)
     self->priv = UCA_MOCK_CAMERA_GET_PRIVATE(self);
     self->priv->roi_x = 0;
     self->priv->roi_y = 0;
-    self->priv->width = self->priv->roi_width = 2016;
-    self->priv->height = self->priv->roi_height = 2016;
+    self->priv->width = self->priv->roi_width = 512;
+    self->priv->height = self->priv->roi_height = 512;
     self->priv->frame_rate = self->priv->max_frame_rate = 100000.0f;
     self->priv->grab_thread = NULL;
     self->priv->current_frame = 0;
     self->priv->exposure_time = 0.05;
 
     self->priv->binnings = g_value_array_new(1);
+    self->priv->rand = g_rand_new ();
+
     GValue val = {0};
     g_value_init(&val, G_TYPE_UINT);
     g_value_set_uint(&val, 1);
