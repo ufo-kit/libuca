@@ -44,6 +44,10 @@ typedef struct {
     GtkWidget   *record_button;
     GtkWidget   *download_button;
     GtkComboBox *zoom_box;
+    GtkLabel    *mean_label;
+    GtkLabel    *sigma_label;
+    GtkLabel    *max_label;
+    GtkLabel    *min_label;
 
     GtkDialog       *download_dialog;
     GtkProgressBar  *download_progressbar;
@@ -167,6 +171,54 @@ up_scale (ThreadData *data, gpointer buffer)
 }
 
 static void
+get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, guint *_min)
+{
+    gdouble sum = 0.0;
+    gdouble squared_sum = 0.0;
+    guint min = G_MAXUINT;
+    guint max = 0;
+    guint n = data->width * data->height;
+
+    if (data->pixel_size == 1) {
+        guint8 *input = (guint8 *) ring_buffer_get_current_pointer (data->buffer);
+
+        for (gint i = 0; i < n; i++) {
+            guint8 val = input[i];
+
+            if (val > max)
+                max = val;
+
+            if (val < min)
+                min = val;
+
+            sum += val;
+            squared_sum += val * val;
+        }
+    }
+    else {
+        guint16 *input = (guint16 *) ring_buffer_get_current_pointer (data->buffer);
+
+        for (gint i = 0; i < n; i++) {
+            guint16 val = input[i];
+
+            if (val > max)
+                max = val;
+
+            if (val < min)
+                min = val;
+
+            sum += val;
+            squared_sum += val * val;
+        }
+    }
+
+    *mean = sum / n;
+    *sigma = sqrt((squared_sum - sum*sum/n) / (n - 1));
+    *_min = min;
+    *_max = max;
+}
+
+static void
 convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
 {
     if (data->zoom_factor <= 1)
@@ -178,9 +230,35 @@ convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
 static void
 update_pixbuf (ThreadData *data)
 {
+    GString *string;
+    gdouble mean;
+    gdouble sigma;
+    guint min;
+    guint max;
+
     gdk_flush ();
     gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
     gtk_widget_queue_draw_area (data->image, 0, 0, data->display_width, data->display_height);
+
+    egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view),
+                               ring_buffer_get_current_pointer (data->buffer));
+
+    get_statistics (data, &mean, &sigma, &min, &max);
+    string = g_string_new_len (NULL, 32);
+
+    g_string_printf (string, "\u03bc = %3.2f", mean);
+    gtk_label_set_text (data->mean_label, string->str);
+
+    g_string_printf (string, "\u03c3 = %3.2f", sigma);
+    gtk_label_set_text (data->sigma_label, string->str);
+
+    g_string_printf (string, "min = %i", min);
+    gtk_label_set_text (data->min_label, string->str);
+
+    g_string_printf (string, "max = %i", max);
+    gtk_label_set_text (data->max_label, string->str);
+
+    g_string_free (string, TRUE);
 
     if (gtk_toggle_button_get_active (data->histogram_button))
         gtk_widget_queue_draw (data->histogram_view);
@@ -237,7 +315,6 @@ preview_frames (void *args)
         uca_camera_grab (data->camera, buffer, &error);
 
         if (error == NULL) {
-            egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), buffer);
             convert_grayscale_to_rgb (data, buffer);
 
             gdk_threads_enter ();
@@ -604,6 +681,11 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
     td.frame_slider     = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
     td.count            = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "acquisitions-adjustment"));
+
+    td.mean_label       = GTK_LABEL (gtk_builder_get_object (builder, "mean-label"));
+    td.sigma_label      = GTK_LABEL (gtk_builder_get_object (builder, "sigma-label"));
+    td.max_label        = GTK_LABEL (gtk_builder_get_object (builder, "max-label"));
+    td.min_label        = GTK_LABEL (gtk_builder_get_object (builder, "min-label"));
 
     td.download_dialog  = GTK_DIALOG (gtk_builder_get_object (builder, "download-dialog"));
     td.download_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "download-adjustment"));
