@@ -34,15 +34,16 @@ struct _EggHistogramViewPrivate
     /* This could be moved into a real histogram class */
     guint n_bins;
     gint *bins;
-    gint *grabbed;
-    gint  min_border;   /* threshold set in screen units */
-    gint  max_border;
+    /* gdouble *grabbed; */
+    enum {
+        GRAB_MIN,
+        GRAB_MAX
+    } grabbed;
 
+    gdouble max;
     gdouble min_value;    /* lowest value of the first bin */
     gdouble max_value;    /* highest value of the last bin */
-    gdouble range;
 
-    gpointer data;
     gint     n_elements;
     gint     n_bits;
 };
@@ -67,45 +68,67 @@ static guint egg_histogram_view_signals[LAST_SIGNAL] = { 0 };
 
 
 GtkWidget *
-egg_histogram_view_new (void)
+egg_histogram_view_new (guint n_elements,
+                        guint n_bits,
+                        guint n_bins)
 {
     EggHistogramView *view;
-
-    view = EGG_HISTOGRAM_VIEW (g_object_new (EGG_TYPE_HISTOGRAM_VIEW, NULL));
-    return GTK_WIDGET (view);
-}
-
-void
-egg_histogram_view_set_data (EggHistogramView *view,
-                             gpointer data,
-                             guint n_elements,
-                             guint n_bits,
-                             guint n_bins)
-{
     EggHistogramViewPrivate *priv;
 
-    g_return_if_fail (EGG_IS_HISTOGRAM_VIEW (view));
+    view = EGG_HISTOGRAM_VIEW (g_object_new (EGG_TYPE_HISTOGRAM_VIEW, NULL));
     priv = view->priv;
 
-    if (priv->bins != NULL)
-        g_free (priv->bins);
-
-    priv->data = data;
     priv->bins = g_malloc0 (n_bins * sizeof (guint));
     priv->n_bins = n_bins;
     priv->n_bits = n_bits;
     priv->n_elements = n_elements;
 
     priv->min_value = 0.0;
-    priv->max_value = (gint) pow(2, n_bits) - 1;
+    priv->max_value = priv->max = (gint) pow (2, n_bits) - 1;
 
-    priv->min_border = 0;
-    priv->max_border = 256;
-    priv->range = priv->max_value - priv->min_value;
+    return GTK_WIDGET (view);
 }
 
 void
-egg_histogram_get_visible_range (EggHistogramView *view, gdouble *min, gdouble *max)
+egg_histogram_view_update (EggHistogramView *view,
+                           gpointer buffer)
+{
+    EggHistogramViewPrivate *priv;
+    guint n_bins;
+
+    g_return_if_fail (EGG_IS_HISTOGRAM_VIEW (view));
+    priv = view->priv;
+    n_bins = priv->n_bins - 1;
+
+    for (guint i = 0; i < priv->n_bins; i++)
+        priv->bins[i] = 0;
+
+    if (priv->n_bits == 8) {
+        guint8 *data = (guint8 *) buffer;
+
+        for (guint i = 0; i < priv->n_elements; i++) {
+            guint8 v = data[i];
+
+            guint index = (guint) round (((gdouble) v) / priv->max * n_bins);
+            priv->bins[index]++;
+        }
+    }
+    else {
+        guint16 *data = (guint16 *) buffer;
+
+        for (guint i = 0; i < priv->n_elements; i++) {
+            guint16 v = data[i];
+
+            guint index = (guint) floor (((gdouble ) v) / priv->max * n_bins);
+            priv->bins[index]++;
+        }
+    }
+}
+
+void
+egg_histogram_get_range (EggHistogramView *view,
+                         gdouble *min,
+                         gdouble *max)
 {
     EggHistogramViewPrivate *priv;
     GtkAllocation allocation;
@@ -117,52 +140,8 @@ egg_histogram_get_visible_range (EggHistogramView *view, gdouble *min, gdouble *
     width = (gdouble) allocation.width - 2 * BORDER;
     priv = view->priv;
 
-    *min = (priv->min_border - 2) / width * priv->range;
-    *max = (priv->max_border - 2) / width * priv->range;
-}
-
-static void
-set_max_border (EggHistogramView *view)
-{
-    GtkAllocation allocation;
-
-    g_return_if_fail (EGG_IS_HISTOGRAM_VIEW (view));
-    gtk_widget_get_allocation (GTK_WIDGET (view), &allocation);
-    view->priv->max_border = allocation.width - 2 * BORDER;
-}
-
-static void
-compute_histogram (EggHistogramViewPrivate *priv)
-{
-    guint n_bins = priv->n_bins - 1;
-
-    for (guint i = 0; i < priv->n_bins; i++)
-        priv->bins[i] = 0;
-
-    if (priv->n_bits == 8) {
-        guint8 *data = (guint8 *) priv->data;
-
-        for (guint i = 0; i < priv->n_elements; i++) {
-            guint8 v = data[i];
-
-            if (v >= priv->min_value && v <= priv->max_value) {
-                guint index = (guint) round (((gdouble) v) / priv->max_value * n_bins);
-                priv->bins[index]++;
-            }
-        }
-    }
-    else {
-        guint16 *data = (guint16 *) priv->data;
-
-        for (guint i = 0; i < priv->n_elements; i++) {
-            guint16 v = data[i];
-
-            if (v >= priv->min_value && v <= priv->max_value) {
-                guint index = (guint) floor (((gdouble ) v) / priv->max_value * n_bins);
-                priv->bins[index]++;
-            }
-        }
-    }
+    *min = priv->min_value;
+    *max = priv->max_value;
 }
 
 static void
@@ -224,6 +203,7 @@ egg_histogram_view_expose (GtkWidget *widget,
     GtkStyle *style;
     cairo_t *cr;
     gint width, height;
+    gdouble left, right;
 
     priv = EGG_HISTOGRAM_VIEW_GET_PRIVATE (widget);
     cr = gdk_cairo_create (gtk_widget_get_window (widget));
@@ -253,15 +233,16 @@ egg_histogram_view_expose (GtkWidget *widget,
     if (priv->bins == NULL)
         goto cleanup;
 
-    compute_histogram (priv);
-
     /* Draw border areas */
     gdk_cairo_set_source_color (cr, &style->dark[GTK_STATE_NORMAL]);
 
-    cairo_rectangle (cr, BORDER, BORDER, priv->min_border + 0.5, height - 1);
+    left = ((gint) (priv->min_value / priv->max * width)) + 0.5;
+    cairo_rectangle (cr, BORDER, BORDER, left, height - 1);
     cairo_fill (cr);
 
-    cairo_rectangle (cr, priv->max_border + 0.5, BORDER, width - priv->max_border + 0.5, height - 1);
+    right = ((gint) (priv->max_value / priv->max * width)) + 0.5;
+
+    cairo_rectangle (cr, right, BORDER, width - right, height - 1);
     cairo_fill (cr);
 
     /* Draw spikes */
@@ -313,8 +294,7 @@ egg_histogram_view_set_property (GObject *object,
                                v, priv->max_value);
                 else {
                     priv->min_value = v;
-                    priv->range = priv->max_value - v;
-                    priv->min_border = 0;
+                    gtk_widget_queue_draw (GTK_WIDGET (object));
                 }
             }
             break;
@@ -328,8 +308,7 @@ egg_histogram_view_set_property (GObject *object,
                                v, priv->min_value);
                 else {
                     priv->max_value = v;
-                    priv->range = v - priv->min_value;
-                    set_max_border (EGG_HISTOGRAM_VIEW (object));
+                    gtk_widget_queue_draw (GTK_WIDGET (object));
                 }
             }
             break;
@@ -366,28 +345,39 @@ egg_histogram_view_get_property (GObject *object,
     }
 }
 
-static gboolean
-is_on_border (EggHistogramViewPrivate *priv,
-              gint x)
+static gdouble
+screen_to_histogram_coordinate (EggHistogramViewPrivate *priv,
+                                GtkAllocation *allocation,
+                                gint x)
 {
-    gint d1 = (priv->min_border + BORDER) - x;
-    gint d2 = (priv->max_border + BORDER) - x;
-    return ABS (d1) < 6 || ABS (d2) < 6;
+    return (((gdouble) x) / (allocation->width - BORDER)) * priv->max;
 }
 
-static gint *
-get_grabbed_border (EggHistogramViewPrivate *priv,
-                    gint x)
+static gboolean
+is_on_border (EggHistogramViewPrivate *priv,
+              GtkAllocation *allocation,
+              gint x)
 {
-    gint d1 = (priv->min_border + BORDER) - x;
-    gint d2 = (priv->max_border + BORDER) - x;
+    gdouble coord;
 
-    if (ABS (d1) < 6)
-        return &priv->min_border;
-    else if (ABS (d2) < 6)
-        return &priv->max_border;
+    coord = screen_to_histogram_coordinate (priv, allocation , x);
+    return (ABS (coord - priv->min_value) < 6) || (ABS (coord - priv->max_value) < 6);
+}
 
-    return NULL;
+static void
+set_grab_value (EggHistogramView *view,
+                gdouble value)
+{
+    if (view->priv->grabbed == GRAB_MIN) {
+        view->priv->min_value = value;
+        g_object_notify_by_pspec (G_OBJECT (view),
+                                  egg_histogram_view_properties[PROP_MINIMUM_BIN_VALUE]);
+    }
+    else {
+        view->priv->max_value = value;
+        g_object_notify_by_pspec (G_OBJECT (view),
+                                  egg_histogram_view_properties[PROP_MAXIMUM_BIN_VALUE]);
+    }
 }
 
 static gboolean
@@ -396,22 +386,24 @@ egg_histogram_view_motion_notify (GtkWidget *widget,
 {
     EggHistogramView *view;
     EggHistogramViewPrivate *priv;
+    GtkAllocation allocation;
 
     view = EGG_HISTOGRAM_VIEW (widget);
     priv = view->priv;
+    gtk_widget_get_allocation (widget, &allocation);
 
     if (priv->grabbing) {
-        GtkAllocation allocation;
+        gdouble coord;
 
-        gtk_widget_get_allocation (widget, &allocation);
+        coord = screen_to_histogram_coordinate (priv, &allocation, event->x);
 
-        if ((event->x + BORDER > 0) && (event->x + BORDER < allocation.width)) {
-            *priv->grabbed = event->x;
-            gtk_widget_queue_draw (widget);
-        }
+        if (ABS (priv->max_value - priv->min_value) > 8.0)
+            set_grab_value (view, coord);
+
+        gtk_widget_queue_draw (widget);
     }
     else {
-        if (is_on_border (priv, event->x))
+        if (is_on_border (priv, &allocation, event->x))
             set_cursor_type (view, GDK_FLEUR);
         else
             set_cursor_type (view, GDK_ARROW);
@@ -429,6 +421,7 @@ egg_histogram_view_button_release (GtkWidget *widget,
     view = EGG_HISTOGRAM_VIEW (widget);
     set_cursor_type (view, GDK_ARROW);
     view->priv->grabbing = FALSE;
+
     g_signal_emit (widget, egg_histogram_view_signals[CHANGED], 0);
 
     return TRUE;
@@ -440,13 +433,24 @@ egg_histogram_view_button_press (GtkWidget *widget,
 {
     EggHistogramView *view;
     EggHistogramViewPrivate *priv;
+    GtkAllocation allocation;
 
     view = EGG_HISTOGRAM_VIEW (widget);
     priv = view->priv;
+    gtk_widget_get_allocation (widget, &allocation);
 
-    if (is_on_border (priv, event->x)) {
+    if (is_on_border (priv, &allocation, event->x)) {
+        gdouble coord;
+
         priv->grabbing = TRUE;
-        priv->grabbed = get_grabbed_border (priv, event->x);
+        coord = screen_to_histogram_coordinate (priv, &allocation, event->x);
+
+        if (ABS (coord - priv->min_value < 6))
+            priv->grabbed = GRAB_MIN;
+        else if (ABS (coord - priv->max_value < 6))
+            priv->grabbed = GRAB_MAX;
+
+        set_grab_value (view, coord);
         set_cursor_type (view, GDK_FLEUR);
     }
 
@@ -507,11 +511,10 @@ egg_histogram_view_init (EggHistogramView *view)
     view->priv = priv = EGG_HISTOGRAM_VIEW_GET_PRIVATE (view);
 
     priv->bins = NULL;
-    priv->data = NULL;
     priv->n_bins = 0;
     priv->n_elements = 0;
-    priv->min_value = priv->min_border = 0;
-    priv->max_value = priv->max_border = 256;
+    priv->min_value = 0;
+    priv->max_value = 256;
 
     priv->cursor_type = GDK_ARROW;
     priv->grabbing = FALSE;

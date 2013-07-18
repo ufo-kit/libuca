@@ -50,14 +50,12 @@ struct _EggHistogramViewClass
 };
 
 GType         egg_histogram_view_get_type (void);
-GtkWidget   * egg_histogram_view_new      (void);
-void          egg_histogram_view_set_data (EggHistogramView *view,
-                                           gpointer          data,
-                                           guint             n_elements,
+GtkWidget   * egg_histogram_view_new      (guint             n_elements,
                                            guint             n_bits,
                                            guint             n_bins);
-void          egg_histogram_get_visible_range
-                                          (EggHistogramView *view,
+void          egg_histogram_view_update   (EggHistogramView *view,
+                                           gpointer          data);
+void          egg_histogram_get_range     (EggHistogramView *view,
                                            gdouble          *min,
                                            gdouble          *max);
 

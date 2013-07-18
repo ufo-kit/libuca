@@ -80,7 +80,7 @@ down_scale (ThreadData *data, gpointer buffer)
     gint stride;
     gint i = 0;
 
-    egg_histogram_get_visible_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
+    egg_histogram_get_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
     factor = 255.0 / (max - min);
     output = data->pixels;
     stride = (gint) 1 / data->zoom_factor;
@@ -129,7 +129,7 @@ up_scale (ThreadData *data, gpointer buffer)
     gint i = 0;
     gint zoom;
 
-    egg_histogram_get_visible_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
+    egg_histogram_get_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
     factor = 255.0 / (max - min);
     output = data->pixels;
     zoom = (gint) data->zoom_factor;
@@ -165,7 +165,6 @@ up_scale (ThreadData *data, gpointer buffer)
         }
     }
 }
-
 
 static void
 convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
@@ -238,6 +237,7 @@ preview_frames (void *args)
         uca_camera_grab (data->camera, buffer, &error);
 
         if (error == NULL) {
+            egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), buffer);
             convert_grayscale_to_rgb (data, buffer);
 
             gdk_threads_enter ();
@@ -589,7 +589,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (camera, "notify::roi-width", (GCallback) on_roi_width_changed, &td);
     g_signal_connect (camera, "notify::roi-height", (GCallback) on_roi_height_changed, &td);
 
-    histogram_view      = egg_histogram_view_new ();
+    histogram_view      = egg_histogram_view_new (width * height, bits_per_sample, 256);
     property_tree_view  = egg_property_tree_view_new (G_OBJECT (camera));
     image               = GTK_WIDGET (gtk_builder_get_object (builder, "image"));
     histogram_box       = GTK_BOX (gtk_builder_get_object (builder, "histogram-box"));
@@ -615,9 +615,8 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     n_frames    = mem_size * 1024 * 1024 / image_size;
     ring_buffer = ring_buffer_new (image_size, n_frames);
 
-    egg_histogram_view_set_data (EGG_HISTOGRAM_VIEW (histogram_view),
-                                 ring_buffer_get_current_pointer (ring_buffer),
-                                 width * height, bits_per_sample, 256);
+    egg_histogram_view_update (EGG_HISTOGRAM_VIEW (histogram_view),
+                               ring_buffer_get_current_pointer (ring_buffer));
 
     pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, width, height);
     gtk_image_set_from_pixbuf (GTK_IMAGE (image), pixbuf);
@@ -646,11 +645,11 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     /* Hook up signals */
     g_object_bind_property (gtk_builder_get_object (builder, "min-bin-value-adjustment"), "value",
                             td.histogram_view, "minimum-bin-value",
-                            G_BINDING_DEFAULT);
+                            G_BINDING_BIDIRECTIONAL);
 
     g_object_bind_property (max_bin_adjustment, "value",
                             td.histogram_view, "maximum-bin-value",
-                            G_BINDING_DEFAULT);
+                            G_BINDING_BIDIRECTIONAL);
 
     g_object_bind_property (gtk_builder_get_object (builder, "repeat-checkbutton"), "active", 
                             gtk_builder_get_object (builder, "repeat-box"), "sensitive", 0);
