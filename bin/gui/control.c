@@ -397,10 +397,12 @@ static void
 update_current_frame (ThreadData *data)
 {
     gpointer buffer;
-    gint index;
+    guint index;
 
-    index = (gint) gtk_adjustment_get_value (data->frame_slider);
-    buffer = ring_buffer_get_pointer (data->buffer, index);
+    index = (guint) gtk_adjustment_get_value (data->frame_slider);
+    ring_buffer_set_current_pointer (data->buffer, index);
+
+    buffer = ring_buffer_get_current_pointer (data->buffer);
     convert_grayscale_to_rgb (data, buffer);
     update_pixbuf (data);
 }

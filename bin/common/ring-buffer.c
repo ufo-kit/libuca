@@ -44,6 +44,14 @@ ring_buffer_get_current_pointer (RingBuffer *buffer)
     return buffer->data + (buffer->current_index % buffer->n_blocks_total) * buffer->block_size;
 }
 
+void
+ring_buffer_set_current_pointer (RingBuffer *buffer,
+                                 guint index)
+{
+    g_assert (index < buffer->n_blocks_total);
+    buffer->current_index = index;
+}
+
 gpointer
 ring_buffer_get_pointer (RingBuffer *buffer,
                          guint       index)
