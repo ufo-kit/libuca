@@ -131,15 +131,9 @@ egg_histogram_get_range (EggHistogramView *view,
                          gdouble *max)
 {
     EggHistogramViewPrivate *priv;
-    GtkAllocation allocation;
-    gdouble width;
 
     g_return_if_fail (EGG_IS_HISTOGRAM_VIEW (view));
-
-    gtk_widget_get_allocation (GTK_WIDGET (view), &allocation);
-    width = (gdouble) allocation.width - 2 * BORDER;
     priv = view->priv;
-
     *min = priv->min_value;
     *max = priv->max_value;
 }
