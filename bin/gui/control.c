@@ -43,7 +43,9 @@ typedef struct {
     GtkWidget   *stop_button;
     GtkWidget   *record_button;
     GtkWidget   *download_button;
-    GtkComboBox *zoom_box;
+    GtkWidget   *acquisition_expander;
+    GtkWidget   *properties_expander;
+    GtkWidget   *zoom_box;
     GtkLabel    *mean_label;
     GtkLabel    *sigma_label;
     GtkLabel    *max_label;
@@ -243,7 +245,7 @@ update_pixbuf (ThreadData *data)
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view),
                                ring_buffer_get_current_pointer (data->buffer));
 
-    get_statistics (data, &mean, &sigma, &min, &max);
+    get_statistics (data, &mean, &sigma, &max, &min);
     string = g_string_new_len (NULL, 32);
 
     g_string_printf (string, "\u03bc = %3.2f", mean);
@@ -296,7 +298,11 @@ set_tool_button_state (ThreadData *data)
                               data->state == IDLE);
     gtk_widget_set_sensitive (data->download_button,
                               data->data_in_camram);
-    gtk_widget_set_sensitive (GTK_WIDGET (data->zoom_box),
+    gtk_widget_set_sensitive (data->acquisition_expander,
+                              data->state == IDLE);
+    gtk_widget_set_sensitive (data->properties_expander,
+                              data->state == IDLE);
+    gtk_widget_set_sensitive (data->zoom_box,
                               data->state == IDLE);
 }
 
@@ -675,7 +681,10 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     window              = GTK_WIDGET (gtk_builder_get_object (builder, "window"));
     max_bin_adjustment  = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "max-bin-value-adjustment"));
 
-    td.zoom_box         = GTK_COMBO_BOX (gtk_builder_get_object (builder, "zoom-box"));
+    td.acquisition_expander = GTK_WIDGET (gtk_builder_get_object (builder, "acquisition-expander"));
+    td.properties_expander  = GTK_WIDGET (gtk_builder_get_object (builder, "properties-expander"));
+
+    td.zoom_box         = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-box"));
     td.start_button     = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
     td.stop_button      = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
     td.record_button    = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
@@ -742,14 +751,17 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
                             gtk_builder_get_object (builder, "exposure-adjustment"), "value",
                             G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
 
-    g_signal_connect (gtk_builder_get_object (builder, "save-item"), "activate", G_CALLBACK (on_save), &td);
+    g_signal_connect (gtk_builder_get_object (builder, "save-item"),
+                      "activate", G_CALLBACK (on_save), &td);
+
+    g_signal_connect (gtk_builder_get_object (builder, "zoom-box"),
+                      "changed", G_CALLBACK (on_zoom_changed), &td);
 
     g_signal_connect (td.frame_slider, "value-changed", G_CALLBACK (on_frame_slider_changed), &td);
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
     g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);
     g_signal_connect (td.download_button, "clicked", G_CALLBACK (on_download_button_clicked), &td);
-    g_signal_connect (td.zoom_box, "changed", G_CALLBACK (on_zoom_changed), &td);
     g_signal_connect (histogram_view, "changed", G_CALLBACK (on_histogram_changed), &td);
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
 

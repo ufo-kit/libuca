@@ -194,10 +194,10 @@
               </packing>
             </child>
             <child>
-              <object class="GtkVBox" id="vbox5">
+              <object class="GtkVBox" id="settings-box">
                 <property name="visible">True</property>
                 <child>
-                  <object class="GtkExpander" id="expander2">
+                  <object class="GtkExpander" id="acquisition-expander">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="expanded">True</property>
@@ -437,9 +437,10 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkExpander" id="expander3">
+                  <object class="GtkExpander" id="statistics-expander">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
+                    <property name="expanded">True</property>
                     <child>
                       <object class="GtkVBox" id="vbox7">
                         <property name="visible">True</property>
@@ -554,22 +555,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkLabel" id="label19">
-                            <property name="visible">True</property>
-                            <property name="xalign">0</property>
-                            <property name="label" translatable="yes">Statistics</property>
-                            <attributes>
-                              <attribute name="weight" value="bold"/>
-                            </attributes>
-                          </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">False</property>
-                            <property name="position">2</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <object class="GtkTable" id="table1">
+                          <object class="GtkTable" id="stats-table">
                             <property name="visible">True</property>
                             <property name="border_width">12</property>
                             <property name="n_rows">2</property>
@@ -664,7 +650,7 @@
                             </child>
                           </object>
                           <packing>
-                            <property name="position">3</property>
+                            <property name="position">2</property>
                           </packing>
                         </child>
                       </object>
@@ -685,7 +671,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkExpander" id="expander4">
+                  <object class="GtkExpander" id="preview-expander">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <child>
@@ -741,7 +727,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkExpander" id="expander1">
+                  <object class="GtkExpander" id="properties-expander">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <child>
