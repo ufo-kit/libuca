@@ -6,7 +6,7 @@ set(UCA_DESCRIPTION "Unified Camera Access")
 
 # These are software release versions
 set(UCA_VERSION_MAJOR "1")
-set(UCA_VERSION_MINOR "3")
+set(UCA_VERSION_MINOR "4")
 set(UCA_VERSION_PATCH "0")
 set(UCA_VERSION_STRING "${UCA_VERSION_MAJOR}.${UCA_VERSION_MINOR}.${UCA_VERSION_PATCH}")
 
