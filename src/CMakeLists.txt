@@ -59,7 +59,7 @@ if (INTROSPECTION_SCANNER AND INTROSPECTION_COMPILER)
     option(WITH_GIR "Build introspection files" ON)
 
     if (WITH_GIR)
-        set(GIR_PREFIX "Uca-${UCA_ABI_VERSION}")
+        set(GIR_PREFIX "Uca-${UCA_ABI_VERSION}.0")
         set(GIR_XML "${GIR_PREFIX}.gir")
         set(GIR_TYPELIB "${GIR_PREFIX}.typelib")
         set(_gir_input)
