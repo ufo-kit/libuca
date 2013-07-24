@@ -4,6 +4,12 @@ Changelog
 Changes in libuca 1.3
 ---------------------
 
+### Correct ABI versioning
+
+Until now, the ABI version was not set correctly and all versions prior 1.3 bear
+the same ABI version 1. This version has ABI version 2 and all subsequent
+versions will increase it if the ABI breaks.
+
 ### Minor changes
 
 - Added `sensor-pixel-width` and `sensor-pixel-height` to describe the cameras
@@ -67,16 +73,13 @@ The plugin manager adds a dependency on GModule (pkg-config package
 - It is now possible to generate GObject introspection meta data to bind libuca
   to all languages that support GObject introspection. A first experiment of
   UcaDevice using this was successful and the camera showed up in Jive.
-
 - Added virtual function uca_camera_stop_readout() to cleanup after using
   uca_camera_start_readout().
-
 - There is now a mechanism to register and query physical units of camera
   properties. Camera plugins must call uca_camera_register_unit() for each
   property that they want to have a physical unit (e.g. UCA_UNIT_SECOND)
   attached to. Client programs can get this information with
   uca_camera_get_unit().
-
 - The control GUI learned some new tricks: live histogram, zooming and recording
   into an internal ring buffer.
 
@@ -108,15 +111,11 @@ Changes in libuca 0.5.0
 -----------------------
 
 - Put work under LGPL 2.1
-
 - Adapt cameras/ipe.c to support the current driver API
-
 - Adapt cameras/pco.c to support libpco 0.3
-
 - API changes
     - new enum type uca_buffer_status
     - uca_cam_grab_callback()s have to return uca_buffer_status
     - typedef all types
-
 - New symbols:
     - uca_cam_release_buffer()

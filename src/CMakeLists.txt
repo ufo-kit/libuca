@@ -47,8 +47,8 @@ add_library(uca SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)
 
 set_target_properties(uca PROPERTIES
-      VERSION ${UCA_ABI_VERSION}
-      SOVERSION ${UCA_VERSION_MAJOR})
+      VERSION ${UCA_VERSION_STRING}
+      SOVERSION ${UCA_ABI_VERSION})
 
 target_link_libraries(uca ${UCA_DEPS})
 
