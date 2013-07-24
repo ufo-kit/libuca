@@ -52,7 +52,6 @@ G_DEFINE_TYPE_WITH_CODE (UcaUfoCamera, uca_ufo_camera, UCA_TYPE_CAMERA,
                                                 uca_ufo_camera_initable_iface_init))
 
 static const guint SENSOR_WIDTH = 2048;
-static const guint SENSOR_HEIGHT = 1088;
 static const gdouble EXPOSURE_TIME_SCALE = 2.69e6;
 
 /**
@@ -110,6 +109,7 @@ struct _UcaUfoCameraPrivate {
     pcilib_t           *handle;
     pcilib_timeout_t    timeout;
     guint               n_bits;
+    guint               height;
     enum {
         FPGA_48MHZ = 0,
         FPGA_40MHZ
@@ -226,6 +226,7 @@ setup_pcilib (UcaUfoCameraPrivate *priv)
     priv->property_table = g_hash_table_new_full (g_direct_hash, g_direct_equal,
                                                   NULL, g_free);
     N_PROPERTIES = update_properties (priv);
+    priv->height = read_register_value (priv->handle, "cmosis_number_lines") + 1;
     priv->frequency = read_register_value (priv->handle, "bit_mode");
     adc_resolution = read_register_value (priv->handle, "adc_resolution");
 
@@ -355,7 +356,7 @@ uca_ufo_camera_grab(UcaCamera *camera, gpointer data, GError **error)
     pcilib_event_info_t event_info;
     int err;
 
-    const gsize size = SENSOR_WIDTH * SENSOR_HEIGHT * sizeof(guint16);
+    const gsize size = SENSOR_WIDTH * priv->height * sizeof(guint16);
 
     err = pcilib_get_next_event (priv->handle, priv->timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
     PCILIB_SET_ERROR_RETURN_FALSE (err, UCA_UFO_CAMERA_ERROR_NEXT_EVENT);
@@ -449,10 +450,10 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
 
     switch (property_id) {
         case PROP_SENSOR_WIDTH:
-            g_value_set_uint(value, SENSOR_WIDTH);
+            g_value_set_uint (value, SENSOR_WIDTH);
             break;
         case PROP_SENSOR_HEIGHT:
-            g_value_set_uint(value, SENSOR_HEIGHT);
+            g_value_set_uint (value, priv->height);
             break;
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint (value, priv->n_bits);
@@ -506,25 +507,25 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             }
             break;
         case PROP_HAS_STREAMING:
-            g_value_set_boolean(value, TRUE);
+            g_value_set_boolean (value, TRUE);
             break;
         case PROP_HAS_CAMRAM_RECORDING:
-            g_value_set_boolean(value, FALSE);
+            g_value_set_boolean (value, FALSE);
             break;
         case PROP_ROI_X:
-            g_value_set_uint(value, 0);
+            g_value_set_uint (value, 0);
             break;
         case PROP_ROI_Y:
-            g_value_set_uint(value, 0);
+            g_value_set_uint (value, 0);
             break;
         case PROP_ROI_WIDTH:
-            g_value_set_uint(value, SENSOR_WIDTH);
+            g_value_set_uint (value, SENSOR_WIDTH);
             break;
         case PROP_ROI_HEIGHT:
-            g_value_set_uint(value, SENSOR_HEIGHT);
+            g_value_set_uint (value, priv->height);
             break;
         case PROP_NAME:
-            g_value_set_string(value, "Ufo Camera w/ CMOSIS CMV2000");
+            g_value_set_string (value, "Ufo Camera w/ CMOSIS CMV2000");
             break;
         default:
             {
