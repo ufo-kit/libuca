@@ -4,6 +4,8 @@ Changelog
 Changes in libuca 1.3
 ---------------------
 
+Released on July 24th 2013.
+
 ### Correct ABI versioning
 
 Until now, the ABI version was not set correctly and all versions prior 1.3 bear
@@ -32,6 +34,8 @@ also be stored as a raw binary dump.
 
 Changes in libuca 1.2
 ---------------------
+
+Released on April 16th 2013.
 
 ### API break
 
@@ -63,6 +67,8 @@ a common "uca-" prefix, e.g. `uca-camera-control` and `uca-grab`.
 
 Changes in libuca 1.1
 ---------------------
+
+Released on October 26th 2012.
 
 ### Plugin System
 
@@ -98,6 +104,8 @@ The plugin manager adds a dependency on GModule (pkg-config package
 
 Changes in libuca 1.0 aka 0.6
 -----------------------------
+
+Released on September 19th 2012.
 
 ### GObject Type System
 
