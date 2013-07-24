@@ -511,12 +511,12 @@ fractions of seconds:
 [ImageJ]: http://rsbweb.nih.gov/ij/
 
 
-## `control` -- simple graphical user interface
+## `uca-camera-control` -- simple graphical user interface
 
 Shows the frames and displays them on screen. Moreover, you can change the
 camera properties in a side pane.
 
-## `benchmark` -- check bandwidth
+## `uca-benchmark` -- check bandwidth
 
 Measure the memory bandwidth by taking subsequent frames and averaging the
 grabbing time:
