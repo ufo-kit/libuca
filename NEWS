@@ -10,12 +10,24 @@ Until now, the ABI version was not set correctly and all versions prior 1.3 bear
 the same ABI version 1. This version has ABI version 2 and all subsequent
 versions will increase it if the ABI breaks.
 
+### More control and sleeker design for the control GUI
+
+The look of the GUI was changed and includes now controls for acquisition as
+well as status information about the frames pixel values. Moreover, the frames
+can now also be scaled *up* to 200 and 400 per cent. Acquired frames can now
+also be stored as a raw binary dump.
+
 ### Minor changes
 
 - Added `sensor-pixel-width` and `sensor-pixel-height` to describe the cameras
   pixel size in meters.
 - Added `-c/--camera` flag to uca-camera-control to specify a camera name from
   the command-line and by-pass the choice window.
+- Added `-n/--num-frames` and `-r/--num-runs` to uca-camera-benchmark.
+- The mock camera produces Gaussian distributed, random data now.
+- Sane defaults have been set for binning and ROI and don't need to be repeated
+  by cameras that don't support them.
+- Fix exposure time calculation for UFO camera.
 
 
 Changes in libuca 1.2
