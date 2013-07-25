@@ -622,6 +622,9 @@ on_zoom_changed (GtkComboBox *widget, ThreadData *data)
 
     data->zoom_factor = factor;
     update_pixbuf_dimensions (data);
+
+    convert_grayscale_to_rgb (data, ring_buffer_get_current_pointer (data->buffer));
+    update_pixbuf (data);
 }
 
 static void
