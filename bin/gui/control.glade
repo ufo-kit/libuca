@@ -296,7 +296,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="invisible_char">•</property>
-                                    <property name="width_chars">5</property>
+                                    <property name="width_chars">6</property>
                                     <property name="adjustment">acquisitions-adjustment</property>
                                   </object>
                                   <packing>
@@ -351,7 +351,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="invisible_char">•</property>
-                                    <property name="width_chars">5</property>
+                                    <property name="width_chars">6</property>
                                   </object>
                                   <packing>
                                     <property name="expand">False</property>
@@ -978,7 +978,6 @@
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="acquisitions-adjustment">
-    <property name="upper">100</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>

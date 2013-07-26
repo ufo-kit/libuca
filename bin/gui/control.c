@@ -719,6 +719,8 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     gtk_adjustment_set_value (max_bin_adjustment, pow (2, bits_per_sample) - 1);
 
+    gtk_adjustment_set_upper (td.count, (gdouble) G_MAXULONG);
+
     g_message ("Allocated memory for %d frames", n_frames);
 
     td.pixel_size = pixel_size;
