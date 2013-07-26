@@ -413,7 +413,8 @@ update_current_frame (ThreadData *data)
     n_max = ring_buffer_get_num_blocks (data->buffer);
 
     /* Shift index so that we always show the oldest frames first */
-    index = (index + data->n_recorded - n_max) % n_max;
+    if (n_max > 0)
+        index = (index + data->n_recorded - n_max) % n_max;
 
     ring_buffer_set_current_pointer (data->buffer, index);
 
