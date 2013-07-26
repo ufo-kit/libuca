@@ -66,6 +66,7 @@ typedef struct {
     gint         display_width, display_height;
     gdouble      zoom_factor;
     State        state;
+    guint        n_recorded;
     gboolean     data_in_camram;
 
     gint         timestamp;
@@ -347,6 +348,7 @@ record_frames (gpointer args)
     data = (ThreadData *) args;
     ring_buffer_reset (data->buffer);
 
+    data->n_recorded = 0;
     n_max = (guint) gtk_adjustment_get_value (data->count);
 
     while (1) {
@@ -362,6 +364,7 @@ record_frames (gpointer args)
         if (error == NULL) {
             ring_buffer_proceed (data->buffer);
             n_frames++;
+            data->n_recorded++;
         }
         else
             print_and_free_error (&error);
@@ -404,8 +407,14 @@ update_current_frame (ThreadData *data)
 {
     gpointer buffer;
     guint index;
+    guint n_max;
 
     index = (guint) gtk_adjustment_get_value (data->frame_slider);
+    n_max = ring_buffer_get_num_blocks (data->buffer);
+
+    /* Shift index so that we always show the oldest frames first */
+    index = (index + data->n_recorded - n_max) % n_max;
+
     ring_buffer_set_current_pointer (data->buffer, index);
 
     buffer = ring_buffer_get_current_pointer (data->buffer);
