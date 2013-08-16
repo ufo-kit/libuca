@@ -404,6 +404,12 @@ check_pco_property_error (guint err, guint property_id)
     }
 }
 
+static gboolean
+is_type (UcaPcoCameraPrivate *priv, int type)
+{
+    return priv->description->type == type;
+}
+
 static void
 uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
 {
@@ -487,9 +493,15 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
     if (transfer_async)
         setup_fg_callback(camera);
 
-    if ((priv->description->type == CAMERATYPE_PCO_DIMAX_STD) ||
-        (priv->description->type == CAMERATYPE_PCO4000))
+    if (is_type (priv, CAMERATYPE_PCO_DIMAX_STD) || is_type (priv, CAMERATYPE_PCO4000))
         pco_clear_active_segment(priv->pco);
+
+    /*
+     * Set the storage mode to FIFO buffer otherwise pco.4000 skips
+     * frames that it is not able to send in time.
+     */
+    if (is_type (priv, CAMERATYPE_PCO4000))
+        pco_set_storage_mode (priv->pco, STORAGE_MODE_FIFO_BUFFER);
 
     priv->last_frame = 0;
 
