@@ -70,6 +70,14 @@ G_DEFINE_TYPE_WITH_CODE (UcaPcoCamera, uca_pco_camera, UCA_TYPE_CAMERA,
  */
 
 /**
+ * UcaPcoCameraStorageMode:
+ * @UCA_PCO_CAMERA_STORAGE_MODE_RECORDER: Record all frames and output live
+ *      preview frames in timely fashion, i.e. skipping those that cannot be handled.
+ * @UCA_PCO_CAMERA_STORAGE_MODE_FIFO_BUFFER: Record frames in FIFO mode and
+ *      return every frame in live view.
+ */
+
+/**
  * UcaPcoCameraAcquireMode:
  * @UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO: Take all images
  * @UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL: Use <acq enbl> signal
@@ -112,6 +120,7 @@ enum {
     PROP_DOUBLE_IMAGE_MODE,
     PROP_OFFSET_MODE,
     PROP_RECORD_MODE,
+    PROP_STORAGE_MODE,
     PROP_ACQUIRE_MODE,
     PROP_COOLING_POINT,
     PROP_COOLING_POINT_MIN,
@@ -834,6 +843,20 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
             }
             break;
 
+        case PROP_STORAGE_MODE:
+            {
+                /* TODO: setting this is not possible for the edge */
+                UcaPcoCameraStorageMode mode = (UcaPcoCameraStorageMode) g_value_get_enum(value);
+
+                if (mode == UCA_PCO_CAMERA_STORAGE_MODE_FIFO_BUFFER)
+                    err = pco_set_record_mode (priv->pco, STORAGE_MODE_FIFO_BUFFER);
+                else if (mode == UCA_PCO_CAMERA_STORAGE_MODE_RECORDER)
+                    err = pco_set_record_mode (priv->pco, STORAGE_MODE_RECORDER);
+                else
+                    g_warning("Unknown record mode");
+            }
+            break;
+
         case PROP_ACQUIRE_MODE:
             {
                 UcaPcoCameraAcquireMode mode = (UcaPcoCameraAcquireMode) g_value_get_enum(value);
@@ -1066,6 +1089,20 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
                     g_value_set_enum(value, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE);
                 else if (mode == RECORDER_SUBMODE_RINGBUFFER)
                     g_value_set_enum(value, UCA_PCO_CAMERA_RECORD_MODE_RING_BUFFER);
+                else
+                    g_warning("pco storage mode not handled");
+            }
+            break;
+
+        case PROP_STORAGE_MODE:
+            {
+                guint16 mode;
+                err = pco_get_storage_mode (priv->pco, &mode);
+
+                if (mode == STORAGE_MODE_RECORDER)
+                    g_value_set_enum (value, UCA_PCO_CAMERA_STORAGE_MODE_RECORDER);
+                else if (mode == STORAGE_MODE_FIFO_BUFFER)
+                    g_value_set_enum (value, UCA_PCO_CAMERA_STORAGE_MODE_FIFO_BUFFER);
                 else
                     g_warning("pco record mode not handled");
             }
@@ -1371,6 +1408,13 @@ uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             UCA_TYPE_PCO_CAMERA_RECORD_MODE, UCA_PCO_CAMERA_RECORD_MODE_SEQUENCE,
             G_PARAM_READWRITE);
 
+    pco_properties[PROP_STORAGE_MODE] =
+        g_param_spec_enum("storage-mode",
+            "Storage mode",
+            "Storage mode",
+            UCA_TYPE_PCO_CAMERA_STORAGE_MODE, UCA_PCO_CAMERA_STORAGE_MODE_FIFO_BUFFER,
+            G_PARAM_READWRITE);
+
     pco_properties[PROP_ACQUIRE_MODE] =
         g_param_spec_enum("acquire-mode",
             "Acquire mode",
@@ -1481,7 +1525,7 @@ setup_pco_camera (UcaPcoCameraPrivate *priv)
     pco_get_active_segment (priv->pco, &priv->active_segment);
     pco_get_resolution (priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
     pco_get_binning (priv->pco, &priv->binning_h, &priv->binning_v);
-    pco_set_storage_mode (priv->pco, STORAGE_MODE_RECORDER);
+    pco_set_storage_mode (priv->pco, STORAGE_MODE_FIFO_BUFFER);
     pco_set_auto_transfer (priv->pco, 1);
 
     pco_get_roi (priv->pco, roi);

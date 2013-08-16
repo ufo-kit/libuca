@@ -50,6 +50,11 @@ typedef enum {
 } UcaPcoCameraRecordMode;
 
 typedef enum {
+    UCA_PCO_CAMERA_STORAGE_MODE_RECORDER,
+    UCA_PCO_CAMERA_STORAGE_MODE_FIFO_BUFFER,
+} UcaPcoCameraStorageMode;
+
+typedef enum {
     UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO,
     UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL
 } UcaPcoCameraAcquireMode;
