@@ -59,6 +59,7 @@ typedef struct {
 
     GtkWidget       *histogram_view;
     GtkToggleButton *histogram_button;
+    GtkToggleButton *log_button;
     GtkAdjustment   *frame_slider;
 
     RingBuffer  *buffer;
@@ -83,9 +84,10 @@ down_scale (ThreadData *data, gpointer buffer)
     gdouble min;
     gdouble max;
     gdouble factor;
+    gdouble dval;
     guint8 *output;
     gint stride;
-    gint i = 0;
+    gint i = 0;   
 
     egg_histogram_get_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
     factor = 255.0 / (max - min);
@@ -99,7 +101,13 @@ down_scale (ThreadData *data, gpointer buffer)
             gint offset = y * stride * data->width;
 
             for (gint x = 0; x < data->display_width; x++, offset += stride) {
-                gdouble dval = (input[offset] - min) * factor;
+                
+                if (gtk_toggle_button_get_active (data->log_button))
+                {
+                    dval = log((input[offset] - min) * factor);
+                } else {
+                    dval = (input[offset] - min) * factor;
+                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
@@ -115,12 +123,19 @@ down_scale (ThreadData *data, gpointer buffer)
             gint offset = y * stride * data->width;
 
             for (gint x = 0; x < data->display_width; x++, offset += stride) {
-                gdouble dval = (input[offset] - min) * factor;
+
+                if (gtk_toggle_button_get_active (data->log_button))
+                {
+                    dval = log((input[offset] - min) * factor);
+                } else {
+                    dval = (input[offset] - min) * factor;
+                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
                 output[i++] = val;
                 output[i++] = val;
+                
             }
         }
     }
@@ -132,6 +147,7 @@ up_scale (ThreadData *data, gpointer buffer)
     gdouble min;
     gdouble max;
     gdouble factor;
+    gdouble dval;
     guint8 *output;
     gint i = 0;
     gint zoom;
@@ -147,7 +163,13 @@ up_scale (ThreadData *data, gpointer buffer)
         for (gint y = 0; y < data->display_height; y++) {
             for (gint x = 0; x < data->display_width; x++) {
                 gint offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
-                gdouble dval = (input[offset] - min) * factor;
+                
+                if (gtk_toggle_button_get_active (data->log_button))
+                {
+                    dval = log((input[offset] - min) * factor);
+                } else {
+                    dval = (input[offset] - min) * factor;
+                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
@@ -162,7 +184,12 @@ up_scale (ThreadData *data, gpointer buffer)
         for (gint y = 0; y < data->display_height; y++) {
             for (gint x = 0; x < data->display_width; x++) {
                 gint offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
-                gdouble dval = (input[offset] - min) * factor;
+                if (gtk_toggle_button_get_active (data->log_button))
+                {
+                    dval = log((input[offset] - min) * factor);
+                } else { 
+                    dval = (input[offset] - min) * factor;
+                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
@@ -215,8 +242,14 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
         }
     }
 
-    *mean = sum / n;
-    *sigma = sqrt((squared_sum - sum*sum/n) / (n - 1));
+    if (gtk_toggle_button_get_active (data->log_button))
+    {
+        *mean = log(sum/n);
+        *sigma = log(sqrt((squared_sum - sum*sum/n) / (n - 1)));
+    } else {
+        *mean = sum / n;
+        *sigma = sqrt((squared_sum - sum*sum/n) / (n - 1));
+    }
     *_min = min;
     *_max = max;
 }
@@ -702,6 +735,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.record_button    = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
     td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
+    td.log_button       = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "logarithmus-checkbutton"));
     td.frame_slider     = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
     td.count            = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "acquisitions-adjustment"));
 
