@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Changes in libuca 1.4
+---------------------
+
+### X-KIT detector plugin
+
+This release adds experimental support for X-KIT, a Medipix2 and timepix
+detector system developed at IPE/KIT. Note, that this requires a pre-built
+shared library and header files by the chip vendor.
+
+
 Changes in libuca 1.3
 ---------------------
 
