@@ -1,12 +1,12 @@
-
-General Information
+General information
 ===================
 
-This directory contains libuca version 0.6. libuca (short for Unified Camera
-access) is a library to access two-dimensional pixel detectors most commonly
-called cameras. It gives the user a general interface to a variety of different
-cameras and camera types. It is used to configure them via a property based
-interface and acquire images.
+This directory contains libuca (short for Unified Camera access), a GLib-based
+library to access two-dimensional pixel detectors. It gives the user a general
+interface to a variety of different cameras and camera types. You can read more
+about it in our manual located at:
+
+    http://ufo.kit.edu/extra/libuca/manual/manual.html
 
 Details of the latest version can be found on the UFO project page under:
 
@@ -18,7 +18,7 @@ For changes see the file called NEWS.
 Installation
 ============
 
-Please see the file called INSTALL.
+Please see the file called INSTALL or refer to the manual.
 
 
 Licensing
