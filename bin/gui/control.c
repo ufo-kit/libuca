@@ -53,7 +53,6 @@ typedef struct {
 
     GtkDialog       *download_dialog;
     GtkProgressBar  *download_progressbar;
-    GtkWidget       *download_close_button;
     GtkAdjustment   *download_adjustment;
     GtkAdjustment   *count;
 
@@ -542,7 +541,6 @@ download_frames (ThreadData *data)
 
     g_object_get (data->camera, "recorded-frames", &n_frames, NULL);
     gdk_threads_enter ();
-    gtk_widget_set_sensitive (data->download_close_button, FALSE);
     gtk_adjustment_set_upper (data->download_adjustment, n_frames);
     gdk_threads_leave ();
 
@@ -582,7 +580,7 @@ download_frames (ThreadData *data)
         g_printerr ("Failed to stop reading out of camera memory: %s\n", error->message);
 
     gdk_threads_enter ();
-    gtk_widget_set_sensitive (data->download_close_button, TRUE);
+    gtk_dialog_response (data->download_dialog, GTK_RESPONSE_OK);
     gdk_threads_leave ();
 
     return NULL;
@@ -712,7 +710,6 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     td.download_dialog  = GTK_DIALOG (gtk_builder_get_object (builder, "download-dialog"));
     td.download_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "download-adjustment"));
-    td.download_close_button = GTK_WIDGET (gtk_builder_get_object (builder, "download-close-button"));
 
     /* Set initial data */
     pixel_size  = bits_per_sample > 8 ? 2 : 1;
