@@ -606,11 +606,8 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
     g_object_get(G_OBJECT(camera), "is-readout", &is_readout, NULL);
 
     if (is_readout) {
-        if (priv->current_image == priv->num_recorded_images) {
-            g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
-                         "End of data stream");
+        if (priv->current_image == priv->num_recorded_images)
             return FALSE;
-        }
 
         /*
          * No joke, the pco firmware allows to read a range of images but
