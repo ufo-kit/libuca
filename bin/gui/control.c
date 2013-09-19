@@ -588,7 +588,7 @@ on_start_button_clicked (GtkWidget *widget, ThreadData *data)
 }
 
 static void
-on_stop_button_clicked (GtkWidget *widget, ThreadData *data)
+on_stop_button_clicked (GtkWidget *widget, ThreadData *data, GtkAdjustment *adjustment)
 {
     GError *error = NULL;
 
@@ -596,6 +596,8 @@ on_stop_button_clicked (GtkWidget *widget, ThreadData *data)
     data->state = IDLE;
     set_tool_button_state (data);
     uca_camera_stop_recording (data->camera, &error);
+
+    on_frame_slider_changed (adjustment, data);
 
     if (error != NULL)
         g_printerr ("Failed to stop: %s\n", error->message);
