@@ -55,14 +55,20 @@ typedef struct {
     GtkProgressBar  *download_progressbar;
     GtkAdjustment   *download_adjustment;
     GtkAdjustment   *count;
+    GtkAdjustment   *hadjustment, *vadjustment;
+
+    GtkPaned  *paned;
+    GtkRequisition child_requisition;
 
     GtkWidget       *histogram_view;
     GtkToggleButton *histogram_button;
+    GtkToggleButton *log_button;
     GtkAdjustment   *frame_slider;
 
     RingBuffer  *buffer;
     guchar      *pixels;
     gint         display_width, display_height;
+    gint         page_width, page_height;
     gdouble      zoom_factor;
     State        state;
     guint        n_recorded;
@@ -74,7 +80,7 @@ typedef struct {
 } ThreadData;
 
 static UcaPluginManager *plugin_manager;
-static gsize mem_size = 2048;
+static gsize mem_size = 2048; 
 
 static void
 down_scale (ThreadData *data, gpointer buffer)
@@ -82,44 +88,83 @@ down_scale (ThreadData *data, gpointer buffer)
     gdouble min;
     gdouble max;
     gdouble factor;
+    gdouble dval;
     guint8 *output;
     gint stride;
     gint i = 0;
+    gint start_wval;
+    gint start_hval;
 
     egg_histogram_get_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
     factor = 255.0 / (max - min);
     output = data->pixels;
     stride = (gint) 1 / data->zoom_factor;
 
+    if (data->state == RUNNING) {
+        gint page_width = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->hadjustment));
+        gint page_height = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->vadjustment));
+        start_wval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->hadjustment));
+        start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
+        data->page_width = (page_width + start_wval);
+        data->page_height = (page_height + start_hval);
+    } else {
+        start_wval = 0;
+        start_hval = 0;
+        data->page_width = data->display_width;
+        data->page_height = data->display_height;
+    }
+
     if (data->pixel_size == 1) {
         guint8 *input = (guint8 *) buffer;
 
-        for (gint y = 0; y < data->display_height; y++) {
+        for (gint y = 0; y < data->display_height; y++){                  
             gint offset = y * stride * data->width;
 
             for (gint x = 0; x < data->display_width; x++, offset += stride) {
-                gdouble dval = (input[offset] - min) * factor;
+
+                if (y >= start_hval && y < data->page_height) {
+                    if (x >= start_wval && x < data->page_width) {
+
+                        if (gtk_toggle_button_get_active (data->log_button))
+                        {
+                            dval = log((input[offset] - min) * factor);
+                        } else { 
+                            dval = (input[offset] - min) * factor;
+                        }
+                    }
+                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
                 output[i++] = val;
-                output[i++] = val;
+                output[i++] = val;  
             }
         }
     }
     else if (data->pixel_size == 2) {
         guint16 *input = (guint16 *) buffer;
 
-        for (gint y = 0; y < data->display_height; y++) {
+        for (gint y = 0; y < data->display_height; y++){                  
             gint offset = y * stride * data->width;
 
             for (gint x = 0; x < data->display_width; x++, offset += stride) {
-                gdouble dval = (input[offset] - min) * factor;
+
+                if (y >= start_hval && y < data->page_height) {
+                    if (x >= start_wval && x < data->page_width) {
+
+                        if (gtk_toggle_button_get_active (data->log_button))
+                        {
+                            dval = log((input[offset] - min) * factor);
+                        } else { 
+                            dval = (input[offset] - min) * factor;
+                        }
+                    }
+                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
                 output[i++] = val;
-                output[i++] = val;
+                output[i++] = val;      
             }
         }
     }
@@ -131,14 +176,31 @@ up_scale (ThreadData *data, gpointer buffer)
     gdouble min;
     gdouble max;
     gdouble factor;
+    gdouble dval;
     guint8 *output;
     gint i = 0;
     gint zoom;
+    gint start_wval; 
+    gint start_hval;
 
     egg_histogram_get_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
     factor = 255.0 / (max - min);
     output = data->pixels;
     zoom = (gint) data->zoom_factor;
+
+    if (data->state == RUNNING) {
+        gint page_width = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->hadjustment));
+        gint page_height = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->vadjustment));
+        start_wval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->hadjustment));
+        start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
+        data->page_width = (page_width + start_wval);
+        data->page_height = (page_height + start_hval);
+    } else {
+        start_wval = 0;
+        start_hval = 0;
+        data->page_width = data->display_width;
+        data->page_height = data->display_height;
+    }
 
     if (data->pixel_size == 1) {
         guint8 *input = (guint8 *) buffer;
@@ -146,7 +208,18 @@ up_scale (ThreadData *data, gpointer buffer)
         for (gint y = 0; y < data->display_height; y++) {
             for (gint x = 0; x < data->display_width; x++) {
                 gint offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
-                gdouble dval = (input[offset] - min) * factor;
+
+                if (y >= start_hval && y < data->page_height) {
+                    if (x >= start_wval && x < data->page_width) {
+
+                        if (gtk_toggle_button_get_active (data->log_button))
+                        {
+                            dval = log((input[offset] - min) * factor);
+                        } else { 
+                            dval = (input[offset] - min) * factor;
+                        }
+                    }
+                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
@@ -161,12 +234,23 @@ up_scale (ThreadData *data, gpointer buffer)
         for (gint y = 0; y < data->display_height; y++) {
             for (gint x = 0; x < data->display_width; x++) {
                 gint offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
-                gdouble dval = (input[offset] - min) * factor;
+
+                if (y >= start_hval && y < data->page_height) {
+                    if (x >= start_wval && x < data->page_width) {
+
+                        if (gtk_toggle_button_get_active (data->log_button))
+                        {
+                            dval = log((input[offset] - min) * factor);
+                        } else { 
+                            dval = (input[offset] - min) * factor;
+                        }
+                    }
+                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 output[i++] = val;
                 output[i++] = val;
-                output[i++] = val;
+                output[i++] = val;            
             }
         }
     }
@@ -214,8 +298,14 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
         }
     }
 
-    *mean = sum / n;
-    *sigma = sqrt((squared_sum - sum*sum/n) / (n - 1));
+    if (gtk_toggle_button_get_active (data->log_button))
+    {
+        *mean = log(sum/n);
+        *sigma = log(sqrt((squared_sum - sum*sum/n) / (n - 1)));
+    } else {
+        *mean = sum / n;
+        *sigma = sqrt((squared_sum - sum*sum/n) / (n - 1));
+    }
     *_min = min;
     *_max = max;
 }
@@ -274,6 +364,7 @@ update_pixbuf_dimensions (ThreadData *data)
 
     data->display_width = (gint) data->width * data->zoom_factor;
     data->display_height = (gint) data->height * data->zoom_factor;
+
     data->pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, data->display_width, data->display_height);
     data->pixels = gdk_pixbuf_get_pixels (data->pixbuf);
     gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
@@ -317,6 +408,7 @@ preview_frames (void *args)
         gpointer buffer;
 
         buffer = ring_buffer_get_current_pointer (data->buffer);
+        uca_camera_trigger (data->camera, &error);
         uca_camera_grab (data->camera, buffer, &error);
 
         if (error == NULL) {
@@ -495,7 +587,7 @@ on_start_button_clicked (GtkWidget *widget, ThreadData *data)
 }
 
 static void
-on_stop_button_clicked (GtkWidget *widget, ThreadData *data)
+on_stop_button_clicked (GtkWidget *widget, ThreadData *data, GtkAdjustment *adjustment)
 {
     GError *error = NULL;
 
@@ -503,6 +595,8 @@ on_stop_button_clicked (GtkWidget *widget, ThreadData *data)
     data->state = IDLE;
     set_tool_button_state (data);
     uca_camera_stop_recording (data->camera, &error);
+
+    on_frame_slider_changed (adjustment, data);
 
     if (error != NULL)
         g_printerr ("Failed to stop: %s\n", error->message);
@@ -700,8 +794,14 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.record_button    = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
     td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
+    td.log_button       = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "logarithmus-checkbutton"));
     td.frame_slider     = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
     td.count            = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "acquisitions-adjustment"));
+
+    td.hadjustment      = GTK_ADJUSTMENT (gtk_builder_get_object(builder, "adjustment1"));
+    td.vadjustment      = GTK_ADJUSTMENT (gtk_builder_get_object(builder, "adjustment2"));
+    td.page_width = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(td.hadjustment));
+    td.page_height = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(td.vadjustment));
 
     td.mean_label       = GTK_LABEL (gtk_builder_get_object (builder, "mean-label"));
     td.sigma_label      = GTK_LABEL (gtk_builder_get_object (builder, "sigma-label"));
