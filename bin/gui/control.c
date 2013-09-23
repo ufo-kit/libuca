@@ -89,6 +89,7 @@ down_scale (ThreadData *data, gpointer buffer)
     gdouble max;
     gdouble factor;
     gdouble dval;
+    gboolean do_log;
     guint8 *output;
     gint stride;
     gint i = 0;
@@ -99,6 +100,7 @@ down_scale (ThreadData *data, gpointer buffer)
     factor = 255.0 / (max - min);
     output = data->pixels;
     stride = (gint) 1 / data->zoom_factor;
+    do_log = gtk_toggle_button_get_active (data->log_button);
 
     if (data->state == RUNNING) {
         gint page_width = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->hadjustment));
@@ -107,7 +109,8 @@ down_scale (ThreadData *data, gpointer buffer)
         start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
         data->page_width = (page_width + start_wval);
         data->page_height = (page_height + start_hval);
-    } else {
+    }
+    else {
         start_wval = 0;
         start_hval = 0;
         data->page_width = data->display_width;
@@ -121,20 +124,17 @@ down_scale (ThreadData *data, gpointer buffer)
             gint offset = y * stride * data->width;
 
             for (gint x = 0; x < data->display_width; x++, offset += stride) {
-
                 if (y >= start_hval && y < data->page_height) {
                     if (x >= start_wval && x < data->page_width) {
 
-                        if (gtk_toggle_button_get_active (data->log_button))
-                        {
-                            dval = log((input[offset] - min) * factor);
-                        } else { 
+                        if (do_log)
+                            dval = log ((input[offset] - min) * factor);
+                        else
                             dval = (input[offset] - min) * factor;
-                        }
                     }
                 }
-                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
                 output[i++] = val;
                 output[i++] = val;
                 output[i++] = val;  
@@ -148,20 +148,17 @@ down_scale (ThreadData *data, gpointer buffer)
             gint offset = y * stride * data->width;
 
             for (gint x = 0; x < data->display_width; x++, offset += stride) {
-
                 if (y >= start_hval && y < data->page_height) {
                     if (x >= start_wval && x < data->page_width) {
 
-                        if (gtk_toggle_button_get_active (data->log_button))
-                        {
-                            dval = log((input[offset] - min) * factor);
-                        } else { 
+                        if (do_log)
+                            dval = log ((input[offset] - min) * factor);
+                        else
                             dval = (input[offset] - min) * factor;
-                        }
                     }
                 }
-                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
                 output[i++] = val;
                 output[i++] = val;
                 output[i++] = val;      
@@ -177,6 +174,7 @@ up_scale (ThreadData *data, gpointer buffer)
     gdouble max;
     gdouble factor;
     gdouble dval;
+    gboolean do_log;
     guint8 *output;
     gint i = 0;
     gint zoom;
@@ -187,6 +185,7 @@ up_scale (ThreadData *data, gpointer buffer)
     factor = 255.0 / (max - min);
     output = data->pixels;
     zoom = (gint) data->zoom_factor;
+    do_log = gtk_toggle_button_get_active (data->log_button);
 
     if (data->state == RUNNING) {
         gint page_width = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->hadjustment));
@@ -195,7 +194,8 @@ up_scale (ThreadData *data, gpointer buffer)
         start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
         data->page_width = (page_width + start_wval);
         data->page_height = (page_height + start_hval);
-    } else {
+    }
+    else {
         start_wval = 0;
         start_hval = 0;
         data->page_width = data->display_width;
@@ -212,16 +212,14 @@ up_scale (ThreadData *data, gpointer buffer)
                 if (y >= start_hval && y < data->page_height) {
                     if (x >= start_wval && x < data->page_width) {
 
-                        if (gtk_toggle_button_get_active (data->log_button))
-                        {
-                            dval = log((input[offset] - min) * factor);
-                        } else { 
+                        if (do_log)
+                            dval = log ((input[offset] - min) * factor);
+                        else
                             dval = (input[offset] - min) * factor;
-                        }
                     }
                 }
-                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
                 output[i++] = val;
                 output[i++] = val;
                 output[i++] = val;
@@ -238,16 +236,14 @@ up_scale (ThreadData *data, gpointer buffer)
                 if (y >= start_hval && y < data->page_height) {
                     if (x >= start_wval && x < data->page_width) {
 
-                        if (gtk_toggle_button_get_active (data->log_button))
-                        {
-                            dval = log((input[offset] - min) * factor);
-                        } else { 
+                        if (do_log)
+                            dval = log ((input[offset] - min) * factor);
+                        else
                             dval = (input[offset] - min) * factor;
-                        }
                     }
                 }
-                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
                 output[i++] = val;
                 output[i++] = val;
                 output[i++] = val;            
@@ -298,14 +294,15 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
         }
     }
 
-    if (gtk_toggle_button_get_active (data->log_button))
-    {
+    if (gtk_toggle_button_get_active (data->log_button)) {
         *mean = log(sum/n);
-        *sigma = log(sqrt((squared_sum - sum*sum/n) / (n - 1)));
-    } else {
-        *mean = sum / n;
-        *sigma = sqrt((squared_sum - sum*sum/n) / (n - 1));
+        *sigma = log (sqrt((squared_sum - sum*sum/n) / (n - 1)));
     }
+    else {
+        *mean = sum / n;
+        *sigma = sqrt ((squared_sum - sum*sum/n) / (n - 1));
+    }
+
     *_min = min;
     *_max = max;
 }
