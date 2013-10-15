@@ -6,12 +6,12 @@ find_package(DEXELA)
 
 if (DEXELA_FOUND)
     set(UCA_CAMERA_NAME "dexela")
-    set(PLUGIN_REVISION "1")
+    set(PLUGIN_REVISION "2")
     set(PLUGIN_VERSION ${VERSION})
     set(PLUGIN_SUMMARY "Dexela plugin for libuca")
     set(PLUGIN_CHANGELOG "${CMAKE_CURRENT_SOURCE_DIR}/changelog.txt")
     set(PLUGIN_DESCRIPTION "Plugin for the Dexela 1207 detector.")
-    set(PLUGIN_REQUIRES "libuca = 1.1.0, libdexela >= 1.0.0")
+    set(PLUGIN_REQUIRES "libuca = 1.3.0, libdexela >= 1.0.0")
     set(PLUGIN_VENDOR "ANKA Computing Group")
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
