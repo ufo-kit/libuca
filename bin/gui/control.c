@@ -101,7 +101,7 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
     factor = 255.0 / (max - min);
     output = data->pixels;
     zoom = (gint) data->zoom_factor;
-    stride = (gint) 1 / zoom;
+    stride = (gint) 1 / data->zoom_factor;
     do_log = gtk_toggle_button_get_active (data->log_button);
 
     if (data->state == RUNNING) {
@@ -129,7 +129,7 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
 
             for (gint x = 0; x < data->display_width; x++) {
                 if (zoom <= 1)
-                    offset += stride;
+                    offset += stride; 
                 else
                     offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
 
@@ -193,7 +193,7 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
         guint16 *input = (guint16 *) buffer;
 
         for (gint y = 0; y < data->display_height; y++) {
-            if (zoom <= 1){ 
+            if (zoom <= 1) { 
                 offset = y * stride * data->width;
             }
 
@@ -304,7 +304,7 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
     }
 
     if (gtk_toggle_button_get_active (data->log_button)) {
-        *mean = log(sum/n);
+        *mean = log (sum/n);
         *sigma = log (sqrt((squared_sum - sum*sum/n) / (n - 1)));
     }
     else {
@@ -799,6 +799,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     g_signal_connect (camera, "notify::roi-width", (GCallback) on_roi_width_changed, &td);
     g_signal_connect (camera, "notify::roi-height", (GCallback) on_roi_height_changed, &td);
+
 
     histogram_view      = egg_histogram_view_new (width * height, bits_per_sample, 256);
     property_tree_view  = egg_property_tree_view_new (G_OBJECT (camera));
