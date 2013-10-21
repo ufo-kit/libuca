@@ -713,9 +713,9 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                 UcaPcoCameraStorageMode mode = (UcaPcoCameraStorageMode) g_value_get_enum(value);
 
                 if (mode == UCA_PCO_CAMERA_STORAGE_MODE_FIFO_BUFFER)
-                    err = pco_set_record_mode (priv->pco, STORAGE_MODE_FIFO_BUFFER);
+                    err = pco_set_storage_mode (priv->pco, STORAGE_MODE_FIFO_BUFFER);
                 else if (mode == UCA_PCO_CAMERA_STORAGE_MODE_RECORDER)
-                    err = pco_set_record_mode (priv->pco, STORAGE_MODE_RECORDER);
+                    err = pco_set_storage_mode (priv->pco, STORAGE_MODE_RECORDER);
                 else
                     g_warning("Unknown record mode");
             }
