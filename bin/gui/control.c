@@ -46,6 +46,7 @@ typedef struct {
     GtkWidget   *acquisition_expander;
     GtkWidget   *properties_expander;
     GtkWidget   *zoom_box;
+    GtkWidget   *colormap_box;
     GtkLabel    *mean_label;
     GtkLabel    *sigma_label;
     GtkLabel    *max_label;
@@ -57,9 +58,6 @@ typedef struct {
     GtkAdjustment   *count;
     GtkAdjustment   *hadjustment, *vadjustment;
 
-    GtkPaned  *paned;
-    GtkRequisition child_requisition;
-
     GtkWidget       *histogram_view;
     GtkToggleButton *histogram_button;
     GtkToggleButton *log_button;
@@ -69,6 +67,7 @@ typedef struct {
     guchar      *pixels;
     gint         display_width, display_height;
     gint         page_width, page_height;
+    gint         colormap;
     gdouble      zoom_factor;
     State        state;
     guint        n_recorded;
@@ -83,92 +82,7 @@ static UcaPluginManager *plugin_manager;
 static gsize mem_size = 2048; 
 
 static void
-down_scale (ThreadData *data, gpointer buffer)
-{
-    gdouble min;
-    gdouble max;
-    gdouble factor;
-    gdouble dval;
-    gboolean do_log;
-    guint8 *output;
-    gint stride;
-    gint i = 0;
-    gint start_wval;
-    gint start_hval;
-
-    egg_histogram_get_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
-    factor = 255.0 / (max - min);
-    output = data->pixels;
-    stride = (gint) 1 / data->zoom_factor;
-    do_log = gtk_toggle_button_get_active (data->log_button);
-
-    if (data->state == RUNNING) {
-        gint page_width = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->hadjustment));
-        gint page_height = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->vadjustment));
-        start_wval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->hadjustment));
-        start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
-        data->page_width = (page_width + start_wval);
-        data->page_height = (page_height + start_hval);
-    }
-    else {
-        start_wval = 0;
-        start_hval = 0;
-        data->page_width = data->display_width;
-        data->page_height = data->display_height;
-    }
-
-    if (data->pixel_size == 1) {
-        guint8 *input = (guint8 *) buffer;
-
-        for (gint y = 0; y < data->display_height; y++){                  
-            gint offset = y * stride * data->width;
-
-            for (gint x = 0; x < data->display_width; x++, offset += stride) {
-                if (y >= start_hval && y < data->page_height) {
-                    if (x >= start_wval && x < data->page_width) {
-
-                        if (do_log)
-                            dval = log ((input[offset] - min) * factor);
-                        else
-                            dval = (input[offset] - min) * factor;
-                    }
-                }
-
-                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
-                output[i++] = val;
-                output[i++] = val;
-                output[i++] = val;  
-            }
-        }
-    }
-    else if (data->pixel_size == 2) {
-        guint16 *input = (guint16 *) buffer;
-
-        for (gint y = 0; y < data->display_height; y++){                  
-            gint offset = y * stride * data->width;
-
-            for (gint x = 0; x < data->display_width; x++, offset += stride) {
-                if (y >= start_hval && y < data->page_height) {
-                    if (x >= start_wval && x < data->page_width) {
-
-                        if (do_log)
-                            dval = log ((input[offset] - min) * factor);
-                        else
-                            dval = (input[offset] - min) * factor;
-                    }
-                }
-
-                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
-                output[i++] = val;
-                output[i++] = val;
-                output[i++] = val;      
-            }
-        }
-    }
-}
-
-static void
-up_scale (ThreadData *data, gpointer buffer)
+up_and_down_scale (ThreadData *data, gpointer buffer)
 {
     gdouble min;
     gdouble max;
@@ -178,6 +92,8 @@ up_scale (ThreadData *data, gpointer buffer)
     guint8 *output;
     gint i = 0;
     gint zoom;
+    gint stride;
+    gint offset;
     gint start_wval; 
     gint start_hval;
 
@@ -185,6 +101,7 @@ up_scale (ThreadData *data, gpointer buffer)
     factor = 255.0 / (max - min);
     output = data->pixels;
     zoom = (gint) data->zoom_factor;
+    stride = (gint) 1 / zoom;
     do_log = gtk_toggle_button_get_active (data->log_button);
 
     if (data->state == RUNNING) {
@@ -206,10 +123,17 @@ up_scale (ThreadData *data, gpointer buffer)
         guint8 *input = (guint8 *) buffer;
 
         for (gint y = 0; y < data->display_height; y++) {
-            for (gint x = 0; x < data->display_width; x++) {
-                gint offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
+            if (zoom <= 1){ 
+                offset = y * stride * data->width;
+            }
 
-                if (y >= start_hval && y < data->page_height) {
+            for (gint x = 0; x < data->display_width; x++) {
+                if (zoom <= 1)
+                    offset += stride;
+                else
+                    offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
+
+                if (y >= start_hval && y < data->page_height) {   
                     if (x >= start_wval && x < data->page_width) {
 
                         if (do_log)
@@ -218,11 +142,50 @@ up_scale (ThreadData *data, gpointer buffer)
                             dval = (input[offset] - min) * factor;
                     }
                 }
-
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
-                output[i++] = val;
-                output[i++] = val;
-                output[i++] = val;
+
+                if (data->colormap == 1) {
+                    output[i++] = val;
+                    output[i++] = val;
+                    output[i++] = val;
+                } 
+                else {
+                    val = (float) val; 
+                    float red = 0;
+                    float green = 0;
+                    float blue = 0;
+
+                    if (val == 255) { 
+                        red = 255;
+                        green = 255;
+                        blue = 255; 
+                    }
+                    else if (val == 0) { 
+                    }
+                    else if (val <= 31.875) {  
+                        blue = 255 - 4 * (31.875 - val); 
+                    }
+                    else if (val <= 95.625) {
+                        green = 255 - 4 * (95.625 - val);  
+                        blue = 255;
+                    }    
+                    else if (val <= 159.375) { 
+                        red = 255 - 4 * (159.375 - val);  
+                        green = 255;
+                        blue = 255 + 4 * (95.625 - val); 
+                    }
+                    else if (val <= 223.125) { 
+                        red = 255;
+                        green = 255 + 4 * (159.375 - val); 
+                    } 
+                    else {   
+                        red = 255 + 4 * (223.125 - val); 
+                    }
+                 
+                    output[i++] = (guchar) red;
+                    output[i++] = (guchar) green;
+                    output[i++] = (guchar) blue; 
+                }
             }
         }
     }
@@ -230,10 +193,17 @@ up_scale (ThreadData *data, gpointer buffer)
         guint16 *input = (guint16 *) buffer;
 
         for (gint y = 0; y < data->display_height; y++) {
-            for (gint x = 0; x < data->display_width; x++) {
-                gint offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
+            if (zoom <= 1){ 
+                offset = y * stride * data->width;
+            }
 
-                if (y >= start_hval && y < data->page_height) {
+            for (gint x = 0; x < data->display_width; x++) {
+                if (zoom <= 1)
+                    offset += stride;
+                else
+                    offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
+
+                if (y >= start_hval && y < data->page_height)  {   
                     if (x >= start_wval && x < data->page_width) {
 
                         if (do_log)
@@ -242,11 +212,50 @@ up_scale (ThreadData *data, gpointer buffer)
                             dval = (input[offset] - min) * factor;
                     }
                 }
-
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
-                output[i++] = val;
-                output[i++] = val;
-                output[i++] = val;            
+
+                if (data->colormap == 1) {
+                    output[i++] = val;
+                    output[i++] = val;
+                    output[i++] = val;
+                } 
+                else {
+                    val = (float) val; 
+                    float red = 0;
+                    float green = 0;
+                    float blue = 0;
+  
+                    if (val == 255) { 
+                        red = 65535;
+                        green = 65535;
+                        blue = 65535; 
+                    }
+                    else if (val == 0) { 
+                    }
+                    else if (val <= 31.875) {  
+                        blue = (255 - 4 * (31.875 - val)) * 257; 
+                    }
+                    else if (val <= 95.625) {
+                        green = (255 - 4 * (95.625 - val)) * 257;  
+                        blue = 65535;
+                    }    
+                    else if (val <= 159.375) { 
+                        red = (255 - 4 * (159.375 - val)) * 257;  
+                        green = 65535;
+                        blue = (255 + 4 * (95.625 - val)) * 257; 
+                    }
+                    else if (val <= 223.125) { 
+                        red = 65535;
+                        green = (255 + 4 * (159.375 - val)) * 257; 
+                    } 
+                    else {   
+                        red = (255 + 4 * (223.125 - val)) * 257; 
+                    }
+                                
+                    output[i++] = (guchar) red;
+                    output[i++] = (guchar) green;
+                    output[i++] = (guchar) blue; 
+                }   
             }
         }
     }
@@ -305,15 +314,6 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
 
     *_min = min;
     *_max = max;
-}
-
-static void
-convert_grayscale_to_rgb (ThreadData *data, gpointer buffer)
-{
-    if (data->zoom_factor <= 1)
-        down_scale (data, buffer);
-    else
-        up_scale (data, buffer);
 }
 
 static void
@@ -392,6 +392,8 @@ set_tool_button_state (ThreadData *data)
                               data->state == IDLE);
     gtk_widget_set_sensitive (data->zoom_box,
                               data->state == IDLE);
+    gtk_widget_set_sensitive (data->colormap_box,
+                              data->state == IDLE);
 }
 
 static gpointer
@@ -409,7 +411,7 @@ preview_frames (void *args)
         uca_camera_grab (data->camera, buffer, &error);
 
         if (error == NULL) {
-            convert_grayscale_to_rgb (data, buffer);
+            up_and_down_scale (data, buffer);
 
             gdk_threads_enter ();
             update_pixbuf (data);
@@ -506,7 +508,7 @@ update_current_frame (ThreadData *data)
     ring_buffer_set_current_pointer (data->buffer, index);
 
     buffer = ring_buffer_get_current_pointer (data->buffer);
-    convert_grayscale_to_rgb (data, buffer);
+    up_and_down_scale (data, buffer);
     update_pixbuf (data);
 }
 
@@ -721,7 +723,30 @@ on_zoom_changed (GtkComboBox *widget, ThreadData *data)
     data->zoom_factor = factor;
     update_pixbuf_dimensions (data);
 
-    convert_grayscale_to_rgb (data, ring_buffer_get_current_pointer (data->buffer));
+    up_and_down_scale (data, ring_buffer_get_current_pointer (data->buffer));
+    update_pixbuf (data);
+}
+
+static void
+on_colormap_changed (GtkComboBox *widget, ThreadData *data)
+{
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+    gint map;
+
+    enum {
+        DISPLAY2_COLUMN,
+        MAP_COLUMN
+    };
+
+    model = gtk_combo_box_get_model (widget);
+    gtk_combo_box_get_active_iter (widget, &iter);
+    gtk_tree_model_get (model, &iter, MAP_COLUMN, &map, -1);
+
+    data->colormap = map;
+    update_pixbuf_dimensions (data);
+
+    up_and_down_scale (data, ring_buffer_get_current_pointer (data->buffer));
     update_pixbuf (data);
 }
 
@@ -786,19 +811,20 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.properties_expander  = GTK_WIDGET (gtk_builder_get_object (builder, "properties-expander"));
 
     td.zoom_box         = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-box"));
+    td.colormap_box     = GTK_WIDGET (gtk_builder_get_object (builder, "colormap-box"));
     td.start_button     = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
     td.stop_button      = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
     td.record_button    = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
     td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
-    td.log_button       = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "logarithmus-checkbutton"));
+    td.log_button       = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "logarithm-checkbutton"));
     td.frame_slider     = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "frames-adjustment"));
     td.count            = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "acquisitions-adjustment"));
 
-    td.hadjustment      = GTK_ADJUSTMENT (gtk_builder_get_object(builder, "adjustment1"));
-    td.vadjustment      = GTK_ADJUSTMENT (gtk_builder_get_object(builder, "adjustment2"));
-    td.page_width = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(td.hadjustment));
-    td.page_height = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(td.vadjustment));
+    td.hadjustment      = GTK_ADJUSTMENT (gtk_builder_get_object(builder, "hadjustment"));
+    td.vadjustment      = GTK_ADJUSTMENT (gtk_builder_get_object(builder, "vadjustment"));
+    td.page_width       = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(td.hadjustment));
+    td.page_height      = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(td.vadjustment));
 
     td.mean_label       = GTK_LABEL (gtk_builder_get_object (builder, "mean-label"));
     td.sigma_label      = GTK_LABEL (gtk_builder_get_object (builder, "sigma-label"));
@@ -817,7 +843,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (histogram_view),
                                ring_buffer_get_current_pointer (ring_buffer));
 
-    pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, width, height);
+    pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, TRUE, 8, width, height);
     gtk_image_set_from_pixbuf (GTK_IMAGE (image), pixbuf);
 
     gtk_adjustment_set_value (max_bin_adjustment, pow (2, bits_per_sample) - 1);
@@ -836,6 +862,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.width  = td.display_width = width;
     td.height = td.display_height = height;
     td.zoom_factor = 1.0;
+    td.colormap = 1;
     td.histogram_view = histogram_view;
     td.data_in_camram = FALSE;
     td.main_window = window;
@@ -864,6 +891,9 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     g_signal_connect (gtk_builder_get_object (builder, "zoom-box"),
                       "changed", G_CALLBACK (on_zoom_changed), &td);
+
+    g_signal_connect (gtk_builder_get_object (builder, "colormap-box"),
+                      "changed", G_CALLBACK (on_colormap_changed), &td);
 
     g_signal_connect (td.frame_slider, "value-changed", G_CALLBACK (on_frame_slider_changed), &td);
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
