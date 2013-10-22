@@ -757,7 +757,7 @@ gboolean
 uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 {
     UcaCameraClass *klass;
-    gboolean result;
+    gboolean result = FALSE;
 
     /* FIXME: this prevents accessing two independent cameras simultanously. */
     static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
