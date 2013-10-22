@@ -1,0 +1,9 @@
+language: c
+before_script:
+    - sudo apt-get install cmake libglib2.0-dev
+    - mkdir build
+    - cd build
+    - cmake ..
+script:
+    - make
+    - ./test/test-mock
