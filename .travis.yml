@@ -1,4 +1,7 @@
 language: c
+compiler:
+    - clang
+    - gcc
 before_script:
     - sudo apt-get install cmake libglib2.0-dev
     - mkdir build
