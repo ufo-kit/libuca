@@ -152,6 +152,7 @@ static gint base_overrideables[] = {
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     PROP_RECORDED_FRAMES,
+    PROP_IS_RECORDING,
     0
 };
 
@@ -1074,6 +1075,15 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
 
                 err = pco_get_timestamp_mode (priv->pco, &mode);
                 g_value_set_enum (value, table[mode]);
+            }
+            break;
+
+        case PROP_IS_RECORDING:
+            {
+                bool is_recording;
+
+                err = pco_is_recording (priv->pco, &is_recording);
+                g_value_set_boolean (value, (gboolean) is_recording);
             }
             break;
 
