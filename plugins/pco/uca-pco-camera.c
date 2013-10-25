@@ -189,7 +189,7 @@ struct _UcaPcoCameraPrivate {
 
     guint frame_width;
     guint frame_height;
-    gsize num_bytes;
+    gsize buffer_size;
     guint16 *grab_buffer;
 
     guint16 width, height;
@@ -342,9 +342,9 @@ setup_fg_callback(UcaCamera *camera)
     ctrl.timeout = 1;
 
     if (priv->grab_buffer)
-        g_free(priv->grab_buffer);
+        g_free (priv->grab_buffer);
 
-    priv->grab_buffer = g_malloc0(priv->frame_width * priv->frame_height * sizeof(guint16));
+    priv->grab_buffer = g_malloc0 (priv->buffer_size);
 
     return Fg_registerApcHandler(priv->fg, priv->fg_port, &ctrl, FG_APC_CONTROL_BASIC) == FG_OK;
 }
@@ -425,7 +425,7 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
 
         priv->frame_width = priv->roi_width;
         priv->frame_height = priv->roi_height;
-        priv->num_bytes = 2;
+        priv->buffer_size = 2 * priv->frame_width * priv->frame_height;
 
         Fg_setParameter(priv->fg, FG_WIDTH, &fg_width, priv->fg_port);
         Fg_setParameter(priv->fg, FG_HEIGHT, &priv->frame_height, priv->fg_port);
@@ -434,8 +434,7 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
             Fg_FreeMemEx(priv->fg, priv->fg_mem);
 
         const guint num_buffers = 2;
-        priv->fg_mem = Fg_AllocMemEx(priv->fg,
-                num_buffers * priv->frame_width * priv->frame_height * sizeof(uint16_t), num_buffers);
+        priv->fg_mem = Fg_AllocMemEx(priv->fg, num_buffers * priv->buffer_size, num_buffers);
 
         if (priv->fg_mem == NULL) {
             g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
@@ -602,7 +601,7 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
     if (priv->description->type == CAMERATYPE_PCO_EDGE)
         pco_get_reorder_func(priv->pco)((guint16 *) data, frame, priv->frame_width, priv->frame_height);
     else
-        memcpy((gchar *) data, (gchar *) frame, priv->frame_width * priv->frame_height * priv->num_bytes);
+        memcpy((gchar *) data, (gchar *) frame, priv->buffer_size);
 
     return TRUE;
 }
