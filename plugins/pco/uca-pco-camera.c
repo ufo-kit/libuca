@@ -379,7 +379,10 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
 
     priv = UCA_PCO_CAMERA_GET_PRIVATE (camera);
 
-    g_object_get (camera, "sensor-extended", &use_extended, NULL);
+    g_object_get (camera,
+                  "sensor-extended", &use_extended,
+                  "transfer-asynchronously", &transfer_async,
+                  NULL);
 
     if (use_extended) {
         binned_width = priv->width_ex;
@@ -407,8 +410,6 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
 
     err = pco_set_roi (priv->pco, roi);
     CHECK_AND_RETURN_ON_PCO_ERROR (err);
-
-    g_object_get (G_OBJECT (camera), "transfer-asynchronously", &transfer_async, NULL);
 
     /*
      * FIXME: We cannot set the binning here as this breaks communication with
