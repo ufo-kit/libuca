@@ -583,9 +583,10 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
         pco_read_images(priv->pco, priv->active_segment, priv->current_image, priv->current_image);
         priv->current_image++;
     }
-
-    err = pco_request_image(priv->pco);
-    CHECK_AND_RETURN_VAL_ON_PCO_ERROR (err, FALSE);
+    else {
+        err = pco_request_image (priv->pco);
+        CHECK_AND_RETURN_VAL_ON_PCO_ERROR (err, FALSE);
+    }
 
     priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame + 1,
                                                      priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
