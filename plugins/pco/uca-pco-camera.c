@@ -44,12 +44,20 @@
         return;                                         \
     }
 
-#define HANDLE_PCO_ERROR(err)                       \
-    if ((err) != PCO_NOERROR) {                     \
-        g_set_error(error, UCA_PCO_CAMERA_ERROR,    \
-                UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,\
-                "libpco error %x", err);            \
-        return;                                     \
+#define CHECK_AND_RETURN_ON_PCO_ERROR(err)               \
+    if ((err) != PCO_NOERROR) {                          \
+        g_set_error (error, UCA_PCO_CAMERA_ERROR,        \
+                     UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,\
+                     "libpco error %x", err);            \
+        return;                                          \
+    }
+
+#define CHECK_AND_RETURN_VAL_ON_PCO_ERROR(err, val)         \
+    if ((err) != PCO_NOERROR) {                             \
+        g_set_error (error, UCA_PCO_CAMERA_ERROR,           \
+                     UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,   \
+                     "libpco error %x", err);               \
+        return val;                                         \
     }
 
 #define UCA_PCO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PCO_CAMERA, UcaPcoCameraPrivate))
@@ -280,7 +288,7 @@ override_temperature_range(UcaPcoCameraPrivate *priv)
         spec->default_value = default_temp;
     }
     else
-        g_warning("Unable to retrieve cooling range");
+        g_warning ("Unable to retrieve cooling range");
 
     return err;
 }
@@ -360,13 +368,16 @@ is_type (UcaPcoCameraPrivate *priv, int type)
 static void
 uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
-    guint err = PCO_NOERROR;
+    UcaPcoCameraPrivate *priv;
+    guint16 binned_width;
+    guint16 binned_height;
+    gboolean use_extended;
+    gboolean transfer_async;
+    guint err;
 
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
-    guint16 binned_width, binned_height;
-    gboolean use_extended = FALSE;
-    gboolean transfer_async = FALSE;
+    g_return_if_fail (UCA_IS_PCO_CAMERA (camera));
+
+    priv = UCA_PCO_CAMERA_GET_PRIVATE (camera);
 
     g_object_get (camera, "sensor-extended", &use_extended, NULL);
 
@@ -383,9 +394,9 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
     binned_height /= priv->binning_v;
 
     if ((priv->roi_x + priv->roi_width > binned_width) || (priv->roi_y + priv->roi_height > binned_height)) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
-                "ROI of size %ix%i @ (%i, %i) is outside of (binned) sensor size %ix%i\n",
-                priv->roi_width, priv->roi_height, priv->roi_x, priv->roi_y, binned_width, binned_height);
+        g_set_error (error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_UNSUPPORTED,
+                     "ROI of size %ix%i @ (%i, %i) is outside of (binned) sensor size %ix%i\n",
+                     priv->roi_width, priv->roi_height, priv->roi_x, priv->roi_y, binned_width, binned_height);
         return;
     }
 
@@ -394,13 +405,10 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
      */
     guint16 roi[4] = { priv->roi_x + 1, priv->roi_y + 1, priv->roi_x + priv->roi_width, priv->roi_y + priv->roi_height };
 
-    if (pco_set_roi(priv->pco, roi) != PCO_NOERROR) {
-        g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,
-                "Could not set ROI via pco_set_roi()");
-        return;
-    }
+    err = pco_set_roi (priv->pco, roi);
+    CHECK_AND_RETURN_ON_PCO_ERROR (err);
 
-    g_object_get(G_OBJECT(camera), "transfer-asynchronously", &transfer_async, NULL);
+    g_object_get (G_OBJECT (camera), "transfer-asynchronously", &transfer_async, NULL);
 
     /*
      * FIXME: We cannot set the binning here as this breaks communication with
@@ -438,66 +446,74 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
     }
 
     if (transfer_async)
-        setup_fg_callback(camera);
+        setup_fg_callback (camera);
 
-    if (is_type (priv, CAMERATYPE_PCO_DIMAX_STD) || is_type (priv, CAMERATYPE_PCO4000))
-        pco_clear_active_segment(priv->pco);
+    if (is_type (priv, CAMERATYPE_PCO_DIMAX_STD) || is_type (priv, CAMERATYPE_PCO4000)) {
+        err = pco_clear_active_segment (priv->pco);
+        CHECK_AND_RETURN_ON_PCO_ERROR (err);
+    }
 
     /*
      * Set the storage mode to FIFO buffer otherwise pco.4000 skips
      * frames that it is not able to send in time.
      */
-    if (is_type (priv, CAMERATYPE_PCO4000))
-        pco_set_storage_mode (priv->pco, STORAGE_MODE_FIFO_BUFFER);
+    if (is_type (priv, CAMERATYPE_PCO4000)) {
+        err = pco_set_storage_mode (priv->pco, STORAGE_MODE_FIFO_BUFFER);
+        CHECK_AND_RETURN_ON_PCO_ERROR (err);
+    }
 
     priv->last_frame = 0;
 
-    err = pco_arm_camera(priv->pco);
-    HANDLE_PCO_ERROR(err);
+    err = pco_arm_camera (priv->pco);
+    CHECK_AND_RETURN_ON_PCO_ERROR (err);
 
-    err = pco_start_recording(priv->pco);
-    HANDLE_PCO_ERROR(err);
+    err = pco_start_recording (priv->pco);
+    CHECK_AND_RETURN_ON_PCO_ERROR (err);
 
-    err = Fg_AcquireEx(priv->fg, priv->fg_port, GRAB_INFINITE, ACQ_STANDARD, priv->fg_mem);
-    FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
+    err = Fg_AcquireEx (priv->fg, priv->fg_port, GRAB_INFINITE, ACQ_STANDARD, priv->fg_mem);
+    FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
 
 static void
 uca_pco_camera_stop_recording (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
-    guint err = pco_stop_recording(priv->pco);
-    HANDLE_PCO_ERROR(err);
+    UcaPcoCameraPrivate *priv;
+    guint err;
+
+    g_return_if_fail (UCA_IS_PCO_CAMERA (camera));
+
+    priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+    err = pco_stop_recording (priv->pco);
+    CHECK_AND_RETURN_ON_PCO_ERROR (err);
 
     err = Fg_stopAcquireEx(priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
-    FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
+    FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 
     err = Fg_setStatusEx(priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
-    if (err == FG_INVALID_PARAMETER)
-        g_warning(" Unable to unblock all\n");
-
-    HANDLE_PCO_ERROR(err);
+    FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 }
 
 static void
 uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
 {
+    UcaPcoCameraPrivate *priv;
     guint err;
 
-    g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+    g_return_if_fail (UCA_IS_PCO_CAMERA (camera));
+
+    priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
     /*
      * TODO: Check if readout mode is possible. This is not the case for the
      * edge.
      */
 
-    err = pco_get_num_images(priv->pco, priv->active_segment, &priv->num_recorded_images);
-    HANDLE_PCO_ERROR(err);
+    err = pco_get_num_images (priv->pco, priv->active_segment, &priv->num_recorded_images);
+    CHECK_AND_RETURN_ON_PCO_ERROR (err);
 
-    err = Fg_AcquireEx(priv->fg, priv->fg_port, GRAB_INFINITE, ACQ_STANDARD, priv->fg_mem);
-    FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
+    err = Fg_AcquireEx (priv->fg, priv->fg_port, GRAB_INFINITE, ACQ_STANDARD, priv->fg_mem);
+    FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 
     priv->last_frame = 0;
     priv->current_image = 1;
@@ -506,42 +522,55 @@ uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
 static void
 uca_pco_camera_stop_readout(UcaCamera *camera, GError **error)
 {
+    UcaPcoCameraPrivate *priv;
+    guint err;
+
     g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
-    guint err = Fg_stopAcquireEx(priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
-    FG_SET_ERROR(err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
+    priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
-    err = Fg_setStatusEx(priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
-    if (err == FG_INVALID_PARAMETER)
-        g_warning(" Unable to unblock all\n");
+    err = Fg_stopAcquireEx (priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
+    FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
+
+    err = Fg_setStatusEx (priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
+    FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
 }
 
 static void
-uca_pco_camera_trigger(UcaCamera *camera, GError **error)
+uca_pco_camera_trigger (UcaCamera *camera, GError **error)
 {
-    g_return_if_fail(UCA_IS_PCO_CAMERA(camera));
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+    UcaPcoCameraPrivate *priv;
+    guint32 success;
+    guint err;
+
+    g_return_if_fail (UCA_IS_PCO_CAMERA (camera));
+
+    priv = UCA_PCO_CAMERA_GET_PRIVATE (camera);
 
     /* TODO: Check if we can trigger */
-    guint32 success = 0;
-    pco_force_trigger(priv->pco, &success);
+    err = pco_force_trigger(priv->pco, &success);
+    CHECK_AND_RETURN_ON_PCO_ERROR (err);
 
-    if (!success)
+    if (!success) {
         g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,
-                "Could not trigger frame acquisition");
+                    "Could not trigger frame acquisition");
+    }
 }
 
 static gboolean
 uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
     static const gint MAX_TIMEOUT = 5;
+    UcaPcoCameraPrivate *priv;
+    gboolean is_readout;
+    guint16 *frame;
+    guint err;
 
     g_return_val_if_fail (UCA_IS_PCO_CAMERA(camera), FALSE);
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
-    gboolean is_readout = FALSE;
-    g_object_get(G_OBJECT(camera), "is-readout", &is_readout, NULL);
+    priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+    g_object_get (G_OBJECT (camera), "is-readout", &is_readout, NULL);
 
     if (is_readout) {
         if (priv->current_image == priv->num_recorded_images)
@@ -555,17 +584,20 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
         priv->current_image++;
     }
 
-    pco_request_image(priv->pco);
-    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame + 1, priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
+    err = pco_request_image(priv->pco);
+    CHECK_AND_RETURN_VAL_ON_PCO_ERROR (err, FALSE);
+
+    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame + 1,
+                                                     priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
 
     if (priv->last_frame <= 0) {
         g_set_error (error, UCA_PCO_CAMERA_ERROR,
                      UCA_PCO_CAMERA_ERROR_FG_GENERAL,
-                     "%s", Fg_getLastErrorDescription(priv->fg));
+                     "%s", Fg_getLastErrorDescription (priv->fg));
         return FALSE;
     }
 
-    guint16 *frame = Fg_getImagePtrEx(priv->fg, priv->last_frame, priv->fg_port, priv->fg_mem);
+    frame = Fg_getImagePtrEx (priv->fg, priv->last_frame, priv->fg_port, priv->fg_mem);
 
     if (priv->description->type == CAMERATYPE_PCO_EDGE)
         pco_get_reorder_func(priv->pco)((guint16 *) data, frame, priv->frame_width, priv->frame_height);
@@ -632,9 +664,9 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                 uint32_t exposure;
                 uint32_t framerate;
 
-                pco_get_framerate (priv->pco, &framerate, &exposure);
+                err = pco_get_framerate (priv->pco, &framerate, &exposure);
                 exposure = (uint32_t) (g_value_get_double (value) * 1000 * 1000 * 1000);
-                pco_set_framerate (priv->pco, framerate, exposure, false);
+                err = pco_set_framerate (priv->pco, framerate, exposure, false);
             }
             break;
 
@@ -643,9 +675,9 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                 uint32_t exposure;
                 uint32_t framerate;
 
-                pco_get_framerate (priv->pco, &framerate, &exposure);
+                err = pco_get_framerate (priv->pco, &framerate, &exposure);
                 framerate = (uint32_t) (g_value_get_double (value) * 1000);
-                pco_set_framerate (priv->pco, framerate, exposure, true);
+                err = pco_set_framerate (priv->pco, framerate, exposure, true);
             }
             break;
 
@@ -880,7 +912,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
                 uint32_t exposure;
                 uint32_t framerate;
 
-                pco_get_framerate (priv->pco, &framerate, &exposure);
+                err = pco_get_framerate (priv->pco, &framerate, &exposure);
                 g_value_set_double (value, exposure / 1000. / 1000. / 1000.);
             }
             break;
@@ -890,7 +922,7 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
                 uint32_t exposure;
                 uint32_t framerate;
 
-                pco_get_framerate (priv->pco, &framerate, &exposure);
+                err = pco_get_framerate (priv->pco, &framerate, &exposure);
                 g_value_set_double (value, framerate / 1000.);
             }
             break;
