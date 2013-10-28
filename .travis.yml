@@ -1,12 +1,24 @@
 language: c
+
 compiler:
     - clang
     - gcc
+
+env:
+    - BUILD_TYPE=Debug
+    - BUILD_TYPE=Release
+
+matrix:
+    exclude:
+        - compiler: clang
+          env: BUILD_TYPE=Release
+
 before_script:
     - sudo apt-get install cmake libglib2.0-dev
     - mkdir build
     - cd build
-    - cmake ..
+    - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
 script:
     - make
     - ./test/test-mock
