@@ -22,6 +22,6 @@ if (IPE_FOUND)
                           ${IPE_LIBRARIES})
 
     install(TARGETS ucaufo
-            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca
+            LIBRARY DESTINATION ${UCA_PLUGINDIR}
             COMPONENT ${UCA_CAMERA_NAME})
 endif()

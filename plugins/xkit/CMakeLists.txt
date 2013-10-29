@@ -27,6 +27,6 @@ if (XKIT_INCLUDE_DIR AND XKIT_LIBRARIES)
                           ${XKIT_LIBRARIES})
 
     install(TARGETS ucaxkit
-            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca
+            LIBRARY DESTINATION ${UCA_PLUGINDIR}
             COMPONENT ${UCA_CAMERA_NAME})
 endif ()

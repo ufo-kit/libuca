@@ -66,11 +66,14 @@ macro(create_enums prefix template_prefix header_list)
 endmacro()
 #}}}
 #{{{ Configure
+include(ConfigurePaths)
+configure_paths(UCA)
+
+set(UCA_PLUGINDIR "${UCA_LIBDIR}/uca")
 set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
                ${CMAKE_CURRENT_BINARY_DIR}/package.sh)
-
 #}}}
 #{{{ Common dependencies
 find_package(PkgConfig)

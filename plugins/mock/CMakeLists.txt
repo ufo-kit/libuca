@@ -18,5 +18,5 @@ target_link_libraries(ucamock
                       ${UCA_DEPS})
 
 install(TARGETS ucamock
-        LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca
+        LIBRARY DESTINATION ${UCA_PLUGINDIR}
         COMPONENT ${UCA_CAMERA_NAME})

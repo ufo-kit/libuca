@@ -1,14 +1,13 @@
-# Package Information for pkg-config
-
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-libdir=@libdir@
-includedir_old=@includedir@/uca
-includedir_new=@includedir@
+prefix=@UCA_PREFIX@
+exec_prefix=@UCA_EPREFIX@
+libdir=@UCA_LIBDIR@
+includedir=@UCA_INCLUDEDIR@
+girdir=@UCA_GIRDIR@
+typelibdir=@UCA_TYPELIBDIR@
 
 Name: libuca
 Description: @UCA_DESCRIPTION@
-Version: @VERSION@
+Version: @UCA_VERSION_STRING@
 Libs: -L${libdir} -luca
-Cflags: -I${includedir_old} -I${includedir_new}
+Cflags: -I${includedir}
 Requires: glib-2.0 gobject-2.0

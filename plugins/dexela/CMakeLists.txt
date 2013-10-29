@@ -24,6 +24,6 @@ if (DEXELA_FOUND)
     target_link_libraries(ucadexela ${UCA_DEPS}  ${DEXELA_LIBRARIES})
 
     install(TARGETS ucadexela
-            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca
+            LIBRARY DESTINATION ${UCA_PLUGINDIR}
             COMPONENT ${UCA_CAMERA_NAME})
 endif()

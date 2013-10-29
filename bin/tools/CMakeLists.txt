@@ -32,8 +32,8 @@ target_link_libraries(uca-grab ringbuffer ${libs})
 add_executable(uca-benchmark
                benchmark.c common.c)
 target_link_libraries(uca-benchmark ${libs})
+#}}}
 
 install(TARGETS uca-benchmark uca-grab uca-gen-doc
-        RUNTIME DESTINATION bin)
-#}}}
+        RUNTIME DESTINATION ${UCA_BINDIR})
 #}}}

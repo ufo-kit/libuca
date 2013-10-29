@@ -16,15 +16,9 @@ create_enums(uca-enums
              ${uca_HDRS})
 #}}}
 #{{{ Variables
-set(prefix      ${CMAKE_INSTALL_PREFIX})
 if (CI_INSTALL_PREFIX)
-    set(prefix  ${CI_INSTALL_PREFIX})
+    set(UCA_PREFIX "${CI_INSTALL_PREFIX}")
 endif()
-
-set(exec_prefix "\${prefix}")
-set(libdir      ${prefix}/${LIB_INSTALL_DIR})
-set(includedir  "\${prefix}/include")
-set(VERSION     ${UCA_VERSION_STRING})
 #}}}
 #{{{ Configure
 find_program(INTROSPECTION_SCANNER "g-ir-scanner")
@@ -37,7 +31,6 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libuca.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/libuca.pc" @ONLY IMMEDIATE)
 #}}}
 #{{{ Target
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR}
                     ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -168,32 +161,31 @@ if(GTK_DOC_FOUND)
 
         add_custom_target(reference ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html.stamp)
 
-        install(FILES ${reference_files} DESTINATION share/gtk-doc/html/uca)
+        install(FILES ${reference_files}
+                DESTINATION ${UCA_DATADIR}/gtk-doc/html/uca)
     endif()
 endif()
-
-
-# --- Install target ----------------------------------------------------------
-
+#}}}
+#{{{ Installation
 install(TARGETS uca
-        LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+        LIBRARY DESTINATION ${UCA_LIBDIR}
         COMPONENT libraries)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libuca.pc
-        DESTINATION ${LIB_INSTALL_DIR}/pkgconfig
+        DESTINATION ${UCA_PKGCONFIGDIR}
         COMPONENT libraries)
 
 install(FILES ${uca_HDRS}
-        DESTINATION include/uca
+        DESTINATION ${UCA_INCLUDEDIR}
         COMPONENT headers)
 
 if(WITH_GIR)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${GIR_XML}
-            DESTINATION share/gir-1.0
+            DESTINATION ${UCA_GIRDIR}
             COMPONENT libraries)
 
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${GIR_TYPELIB}
-            DESTINATION ${LIB_INSTALL_DIR}/girepository-1.0
+            DESTINATION ${UCA_TYPELIBDIR}
             COMPONENT libraries)
 endif()
 #}}}

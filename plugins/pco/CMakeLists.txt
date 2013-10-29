@@ -35,6 +35,6 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
                           ${FGLIB5_LIBRARY})
 
     install(TARGETS ucapco
-            LIBRARY DESTINATION ${LIB_INSTALL_DIR}/uca
+            LIBRARY DESTINATION ${UCA_PLUGINDIR}
             COMPONENT ${UCA_CAMERA_NAME})
 endif()
