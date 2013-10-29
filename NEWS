@@ -10,10 +10,18 @@ This release adds experimental support for X-KIT, a Medipix2 and timepix
 detector system developed at IPE/KIT. Note, that this requires a pre-built
 shared library and header files by the chip vendor.
 
-### Minor changes
+### API changes
 
 - `uca_camera_grab` does not set an error when the stream finished in
   readout mode. Now, only `FALSE` is returned.
+
+### Minor changes
+
+- A Travis instance was setup and Clang compilation has been turned on.
+- Performance of `uca-camera-control` has been increased and the GUI received
+  color mapping of grey values.
+- Many fixes for pco.dimax, .edge and .4000.
+- Fix frame order in the GUI.
 
 
 Changes in libuca 1.3
