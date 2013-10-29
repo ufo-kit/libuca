@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 project(uca C)
 
-# --- Set sources -------------------------------------------------------------
+#{{{ Sources
 set(uca_SRCS
     uca-camera.c
     uca-plugin-manager.c
@@ -14,15 +14,8 @@ set(uca_HDRS
 create_enums(uca-enums
              ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums
              ${uca_HDRS})
-
-# --- Configure ---------------------------------------------------------------
-
-find_program(INTROSPECTION_SCANNER "g-ir-scanner")
-find_program(INTROSPECTION_COMPILER "g-ir-compiler")
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
+#}}}
+#{{{ Variables
 set(prefix      ${CMAKE_INSTALL_PREFIX})
 if (CI_INSTALL_PREFIX)
     set(prefix  ${CI_INSTALL_PREFIX})
@@ -32,12 +25,18 @@ set(exec_prefix "\${prefix}")
 set(libdir      ${prefix}/${LIB_INSTALL_DIR})
 set(includedir  "\${prefix}/include")
 set(VERSION     ${UCA_VERSION_STRING})
+#}}}
+#{{{ Configure
+find_program(INTROSPECTION_SCANNER "g-ir-scanner")
+find_program(INTROSPECTION_COMPILER "g-ir-compiler")
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libuca.pc.in"
                "${CMAKE_CURRENT_BINARY_DIR}/libuca.pc" @ONLY IMMEDIATE)
-
-
-# --- Build target ------------------------------------------------------------
+#}}}
+#{{{ Target
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}
                     ${CMAKE_CURRENT_SOURCE_DIR})
@@ -51,10 +50,8 @@ set_target_properties(uca PROPERTIES
       SOVERSION ${UCA_ABI_VERSION})
 
 target_link_libraries(uca ${UCA_DEPS})
-
-
-# --- Build introspection files -----------------------------------------------
-
+#}}}
+#{{{ GObject introspection
 if (INTROSPECTION_SCANNER AND INTROSPECTION_COMPILER)
     option(WITH_GIR "Build introspection files" ON)
 
@@ -97,10 +94,8 @@ if (INTROSPECTION_SCANNER AND INTROSPECTION_COMPILER)
 
     endif()
 endif()
-
-
-# --- Build documentation -----------------------------------------------------
-
+#}}}
+#{{{ Documentation
 pkg_check_modules(GTK_DOC gtk-doc)
 
 if(GTK_DOC_FOUND)
@@ -201,10 +196,8 @@ if(WITH_GIR)
             DESTINATION ${LIB_INSTALL_DIR}/girepository-1.0
             COMPONENT libraries)
 endif()
-
-
-# --- Generate package description --------------------------------------------
-
+#}}}
+#{{{ CPack
 set(CPACK_PACKAGE_DESCRIPTION "Unified Camera Access library")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GObject-based library for accessing scientific cameras")
 set(CPACK_PACKAGE_NAME "libuca")
@@ -226,5 +219,5 @@ set(CPACK_SOURCE_IGNORE_FILES ".git" "tags" ".bzr" ".swp")
 set(CPACK_SOURCE_PACKAGE_FILE_NAME "libuca-${UCA_VERSION_STRING}" CACHE INTERNAL "tarball basename")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${UCA_VERSION_STRING}-${CMAKE_SYSTEM_PROCESSOR}")
 
-
 include(CPack)
+#}}}

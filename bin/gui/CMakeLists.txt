@@ -1,8 +1,6 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 
-add_definitions("--std=c99 -Wall")
-
-# --- Find packages and libraries ---------------------------------------------
+#{{{ Configure
 find_package(PkgConfig)
 
 pkg_check_modules(GTK2 gtk+-2.0>=2.22)
@@ -13,12 +11,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/control.glade
                ${CMAKE_CURRENT_BINARY_DIR})
-
-# --- Build targets -----------------------------------------------------------
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
+#}}}
+#{{{ Target
 if (GTK2_FOUND)
-    include_directories(${GTK2_INCLUDE_DIRS})
+    include_directories(${GTK2_INCLUDE_DIRS}
+                        ${CMAKE_CURRENT_BINARY_DIR})
     set(BINARY "uca-camera-control")
 
     add_executable(${BINARY}
@@ -31,7 +28,7 @@ if (GTK2_FOUND)
         m
         uca
         ringbuffer
-        ${GTK2_LIBRARIES} 
+        ${GTK2_LIBRARIES}
         ${GTHREAD2_LIBRARIES})
 
     install(TARGETS ${BINARY}
@@ -40,3 +37,4 @@ if (GTK2_FOUND)
     install(FILES control.glade
         DESTINATION share/libuca)
 endif()
+#}}}

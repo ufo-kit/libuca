@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 project(ucaxkit CXX)
 
 set(UCA_CAMERA_NAME "xkit")
