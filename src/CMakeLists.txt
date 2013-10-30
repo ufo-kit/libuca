@@ -176,7 +176,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libuca.pc
         COMPONENT libraries)
 
 install(FILES ${uca_HDRS}
-        DESTINATION ${UCA_INCLUDEDIR}
+        DESTINATION ${UCA_INCLUDEDIR}/uca
         COMPONENT headers)
 
 if(WITH_GIR)
