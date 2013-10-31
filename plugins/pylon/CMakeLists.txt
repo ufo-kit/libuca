@@ -8,7 +8,8 @@ if (PYLON_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
                    ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
 
-    include_directories(${LIBPYLONCAM_INCLUDEDIR})
+    include_directories(${LIBPYLONCAM_INCLUDEDIR}
+                        ${UCA_CONFIGDIR})
 
     add_library(ucapylon SHARED
                 uca-pylon-camera.c)

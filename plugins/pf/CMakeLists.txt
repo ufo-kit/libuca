@@ -16,7 +16,8 @@ if (PF_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
 
     include_directories(${PF_INCLUDE_DIRS}
                         ${CLSERME4_INCLUDE_DIR}
-                        ${FGLIB5_INCLUDE_DIR})
+                        ${FGLIB5_INCLUDE_DIR}
+                        ${UCA_CONFIGDIR})
 
     add_library(ucapf SHARED
                 uca-pf-camera.c)

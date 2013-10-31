@@ -14,11 +14,13 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
                    ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
+
     include_directories(${PCO_INCLUDE_DIRS}
                         ${CLSERME4_INCLUDE_DIR}
                         ${FGLIB5_INCLUDE_DIR}
                         ${CMAKE_CURRENT_SOURCE_DIR}
-                        ${CMAKE_CURRENT_BINARY_DIR})
+                        ${CMAKE_CURRENT_BINARY_DIR}
+                        ${UCA_CONFIGDIR})
 
     create_enums(uca-pco-enums
                  ${CMAKE_CURRENT_SOURCE_DIR}/../../src/uca-enums

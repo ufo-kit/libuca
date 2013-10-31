@@ -15,7 +15,9 @@ find_library (XKIT_LIBRARIES
 if (XKIT_INCLUDE_DIR AND XKIT_LIBRARIES)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
                    ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
-    include_directories(${XKIT_INCLUDE_DIR})
+
+    include_directories(${XKIT_INCLUDE_DIR}
+                        ${UCA_CONFIGDIR})
 
     # We have to compile with g++ because the included header files have C++
     # style comments ...

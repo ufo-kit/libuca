@@ -17,7 +17,8 @@ if (DEXELA_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
                    ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
 
-    include_directories(${DEXELA_INCLUDE_DIRS})
+    include_directories(${DEXELA_INCLUDE_DIRS}
+                        ${UCA_CONFIGDIR})
 
     add_library(ucadexela SHARED uca-dexela-camera.c)
 

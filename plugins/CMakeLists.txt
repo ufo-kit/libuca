@@ -1,3 +1,5 @@
+set(UCA_CONFIGDIR "${CMAKE_CURRENT_BINARY_DIR}../src")
+
 add_subdirectory(mock)
 add_subdirectory(pf)
 add_subdirectory(pco)
