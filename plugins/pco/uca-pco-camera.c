@@ -866,7 +866,17 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
 
         case PROP_SENSOR_BITDEPTH:
-            g_value_set_uint(value, 16);
+            switch (priv->description->type) {
+                case CAMERATYPE_PCO4000:
+                    g_value_set_uint(value, 14);
+                    break;
+                case CAMERATYPE_PCO_EDGE:
+                    g_value_set_uint(value, 16);
+                    break;
+                case CAMERATYPE_PCO_DIMAX_STD:
+                    g_value_set_uint(value, 12);
+                    break;
+            }
             break;
 
         case PROP_SENSOR_TEMPERATURE:
