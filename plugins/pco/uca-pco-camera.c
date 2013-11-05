@@ -142,6 +142,8 @@ static gint base_overrideables[] = {
     PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
+    PROP_SENSOR_PIXEL_WIDTH,
+    PROP_SENSOR_PIXEL_HEIGHT,
     PROP_SENSOR_BITDEPTH,
     PROP_SENSOR_HORIZONTAL_BINNING,
     PROP_SENSOR_HORIZONTAL_BINNINGS,
@@ -815,7 +817,7 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
 }
 
 static void
-uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
     guint err = PCO_NOERROR;
@@ -835,6 +837,34 @@ uca_pco_camera_get_property(GObject *object, guint property_id, GValue *value, G
 
         case PROP_SENSOR_HEIGHT:
             g_value_set_uint(value, priv->height);
+            break;
+
+        case PROP_SENSOR_PIXEL_WIDTH:
+            switch (priv->description->type) {
+                case CAMERATYPE_PCO_EDGE:
+                    g_value_set_double (value, 0.0000065);
+                    break;
+                case CAMERATYPE_PCO_DIMAX_STD:
+                    g_value_set_double (value, 0.0000110);
+                    break;
+                case CAMERATYPE_PCO4000:
+                    g_value_set_double (value, 0.0000090);
+                    break;
+            }
+            break;
+
+        case PROP_SENSOR_PIXEL_HEIGHT:
+            switch (priv->description->type) {
+                case CAMERATYPE_PCO_EDGE:
+                    g_value_set_double (value, 0.0000065);
+                    break;
+                case CAMERATYPE_PCO_DIMAX_STD:
+                    g_value_set_double (value, 0.0000110);
+                    break;
+                case CAMERATYPE_PCO4000:
+                    g_value_set_double (value, 0.0000090);
+                    break;
+            }
             break;
 
         case PROP_SENSOR_WIDTH_EXTENDED:
