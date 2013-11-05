@@ -87,13 +87,13 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
     gdouble min;
     gdouble max;
     gdouble factor;
-    gdouble dval;
+    gdouble dval = 0.0;
     gboolean do_log;
     guint8 *output;
     gint i = 0;
     gint zoom;
     gint stride;
-    gint offset;
+    gint offset = 0;
     gint start_wval; 
     gint start_hval;
 

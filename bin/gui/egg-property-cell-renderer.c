@@ -119,7 +119,7 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
     EggPropertyCellRendererPrivate *priv;
     GParamSpec *pspec;
     gchar *text = NULL;
-    gdouble number;
+    gdouble number = 0.0;
 
     priv = EGG_PROPERTY_CELL_RENDERER_GET_PRIVATE (renderer);
     pspec = get_pspec_from_object (priv->object, prop_name);
