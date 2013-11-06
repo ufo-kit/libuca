@@ -35,5 +35,6 @@ target_link_libraries(uca-benchmark ${libs})
 #}}}
 
 install(TARGETS uca-benchmark uca-grab uca-gen-doc
-        RUNTIME DESTINATION ${UCA_BINDIR})
+        RUNTIME DESTINATION ${UCA_BINDIR}
+        COMPONENT executables)
 #}}}

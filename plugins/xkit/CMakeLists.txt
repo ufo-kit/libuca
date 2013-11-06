@@ -3,7 +3,7 @@ project(ucaxkit CXX)
 
 set(UCA_CAMERA_NAME "xkit")
 set(PLUGIN_VERSION "0.1.0")
-set(PLUGIN_REVISION "0")
+set(PLUGIN_REVISION "1")
 set(PLUGIN_REQUIRES "libuca >= 1.2.0")
 
 find_path (XKIT_INCLUDE_DIR

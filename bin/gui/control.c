@@ -47,16 +47,21 @@ typedef struct {
     GtkWidget   *properties_expander;
     GtkWidget   *zoom_box;
     GtkWidget   *colormap_box;
+    GtkWidget   *event_box;
     GtkLabel    *mean_label;
     GtkLabel    *sigma_label;
     GtkLabel    *max_label;
     GtkLabel    *min_label;
+    GtkLabel    *x_label;
+    GtkLabel    *y_label;
+    GtkLabel    *val_label;
 
     GtkDialog       *download_dialog;
     GtkProgressBar  *download_progressbar;
     GtkAdjustment   *download_adjustment;
     GtkAdjustment   *count;
-    GtkAdjustment   *hadjustment, *vadjustment;
+    GtkAdjustment   *hadjustment;
+    GtkAdjustment   *vadjustment;
 
     GtkWidget       *histogram_view;
     GtkToggleButton *histogram_button;
@@ -66,7 +71,6 @@ typedef struct {
     RingBuffer  *buffer;
     guchar      *pixels;
     gint         display_width, display_height;
-    gint         page_width, page_height;
     gint         colormap;
     gdouble      zoom_factor;
     State        state;
@@ -76,6 +80,7 @@ typedef struct {
     gint         timestamp;
     gint         width, height;
     gint         pixel_size;
+    gint         ev_x, ev_y;
 } ThreadData;
 
 static UcaPluginManager *plugin_manager;
@@ -102,28 +107,28 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
     output = data->pixels;
     zoom = (gint) data->zoom_factor;
     stride = (gint) 1 / data->zoom_factor;
+    gint page_width = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->hadjustment));
+    gint page_height = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->vadjustment));
     do_log = gtk_toggle_button_get_active (data->log_button);
 
     if (data->state == RUNNING) {
-        gint page_width = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->hadjustment));
-        gint page_height = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->vadjustment));
         start_wval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->hadjustment));
         start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
-        data->page_width = (page_width + start_wval);
-        data->page_height = (page_height + start_hval);
+        page_width += start_wval;
+        page_height += start_hval;
     }
     else {
         start_wval = 0;
         start_hval = 0;
-        data->page_width = data->display_width;
-        data->page_height = data->display_height;
+        page_width = data->display_width;
+        page_height = data->display_height;
     }
 
     if (data->pixel_size == 1) {
         guint8 *input = (guint8 *) buffer;
 
         for (gint y = 0; y < data->display_height; y++) {
-            if (zoom <= 1){ 
+            if (zoom <= 1) { 
                 offset = y * stride * data->width;
             }
 
@@ -133,8 +138,8 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
                 else
                     offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
 
-                if (y >= start_hval && y < data->page_height) {   
-                    if (x >= start_wval && x < data->page_width) {
+                if (y >= start_hval && y < page_height) {   
+                    if (x >= start_wval && x < page_width) {
 
                         if (do_log)
                             dval = log ((input[offset] - min) * factor);
@@ -203,8 +208,8 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
                 else
                     offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
 
-                if (y >= start_hval && y < data->page_height)  {   
-                    if (x >= start_wval && x < data->page_width) {
+                if (y >= start_hval && y < page_height)  {   
+                    if (x >= start_wval && x < page_width) {
 
                         if (do_log)
                             dval = log ((input[offset] - min) * factor);
@@ -317,6 +322,55 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
 }
 
 static void
+on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
+{
+    gint page_width = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(data->hadjustment));
+    gint page_height = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(data->vadjustment));
+    gint start_wval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->hadjustment));
+    gint start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
+    page_width += start_wval;
+    page_height += start_hval;
+  
+    if ((data->display_width < page_width) && (data->display_height < page_height)) {
+        gint startx = (page_width - data->display_width) / 2;
+        data->ev_x = event->x - startx;
+        gint starty = (page_height - data->display_height) / 2;
+        data->ev_y = event->y - starty;
+    }  
+    else {
+         data->ev_x = event->x;
+         data->ev_y = event->y;
+    }
+
+    if ((data->state != RUNNING) || ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width))) { 
+        gpointer *buffer; 
+        GString *string; 
+        buffer = ring_buffer_get_current_pointer (data->buffer);
+        string = g_string_new_len (NULL, 32);
+        gint i = (data->ev_y / data->zoom_factor) * data->width + data->ev_x / data->zoom_factor;
+
+        if (data->pixel_size == 1) {
+            guint8 *input = (guint8 *) buffer;
+            guint8 val = input[i];   
+            g_string_printf (string, "val = %i", val);
+            gtk_label_set_text (data->val_label, string->str);
+        }
+        else if (data->pixel_size == 2) {
+            guint16 *input = (guint16 *) buffer;
+            guint16 val = input[i];
+            g_string_printf (string, "val = %i", val);
+            gtk_label_set_text (data->val_label, string->str);
+        }
+
+        g_string_printf (string, "x = %i", data->ev_x);
+        gtk_label_set_text (data->x_label, string->str);
+
+        g_string_printf (string, "y = %i", data->ev_y);
+        gtk_label_set_text (data->y_label, string->str);
+    }
+}
+
+static void
 update_pixbuf (ThreadData *data)
 {
     GString *string;
@@ -401,23 +455,50 @@ preview_frames (void *args)
 {
     ThreadData *data = (ThreadData *) args;
     gint counter = 0;
-    GError *error = NULL;;
+    GError *error = NULL;
 
     while (data->state == RUNNING) {
-        gpointer buffer;
+        gpointer *buffer;
 
         buffer = ring_buffer_get_current_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, &error);
 
+ 
         if (error == NULL) {
             up_and_down_scale (data, buffer);
 
             gdk_threads_enter ();
             update_pixbuf (data);
+
+            if ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width)) {
+                GString *string; 
+                string = g_string_new_len (NULL, 32);
+                gint i = (data->ev_y / data->zoom_factor) * data->width + data->ev_x / data->zoom_factor;
+
+                if (data->pixel_size == 1) {
+                    guint8 *input = (guint8 *) buffer;
+                    guint8 val = input[i];   
+                    g_string_printf (string, "val = %i", val);
+                    gtk_label_set_text (data->val_label, string->str); 
+                }
+                else if (data->pixel_size == 2) {
+                    guint16 *input = (guint16 *) buffer;
+                    guint16 val = input[i];
+                    g_string_printf (string, "val = %i", val);
+                    gtk_label_set_text (data->val_label, string->str);  
+                }
+
+                g_string_printf (string, "x = %i", data->ev_x);
+                gtk_label_set_text (data->x_label, string->str);
+
+                g_string_printf (string, "y = %i", data->ev_y);
+                gtk_label_set_text (data->y_label, string->str);
+            }
+
             gdk_threads_leave ();
 
             counter++;
-        }
+            }
         else
             print_and_free_error (&error);
     }
@@ -799,7 +880,6 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (camera, "notify::roi-width", (GCallback) on_roi_width_changed, &td);
     g_signal_connect (camera, "notify::roi-height", (GCallback) on_roi_height_changed, &td);
 
-
     histogram_view      = egg_histogram_view_new (width * height, bits_per_sample, 256);
     property_tree_view  = egg_property_tree_view_new (G_OBJECT (camera));
     image               = GTK_WIDGET (gtk_builder_get_object (builder, "image"));
@@ -823,13 +903,16 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     td.hadjustment      = GTK_ADJUSTMENT (gtk_builder_get_object(builder, "hadjustment"));
     td.vadjustment      = GTK_ADJUSTMENT (gtk_builder_get_object(builder, "vadjustment"));
-    td.page_width       = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(td.hadjustment));
-    td.page_height      = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(td.vadjustment));
+    td.event_box        = GTK_WIDGET (gtk_builder_get_object(builder, "eventbox"));
 
     td.mean_label       = GTK_LABEL (gtk_builder_get_object (builder, "mean-label"));
     td.sigma_label      = GTK_LABEL (gtk_builder_get_object (builder, "sigma-label"));
     td.max_label        = GTK_LABEL (gtk_builder_get_object (builder, "max-label"));
     td.min_label        = GTK_LABEL (gtk_builder_get_object (builder, "min-label"));
+
+    td.x_label          = GTK_LABEL (gtk_builder_get_object (builder, "x-label1"));
+    td.y_label          = GTK_LABEL (gtk_builder_get_object (builder, "y-label1"));
+    td.val_label        = GTK_LABEL (gtk_builder_get_object (builder, "val-label1"));
 
     td.download_dialog  = GTK_DIALOG (gtk_builder_get_object (builder, "download-dialog"));
     td.download_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "download-adjustment"));
@@ -894,7 +977,8 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     g_signal_connect (gtk_builder_get_object (builder, "colormap-box"),
                       "changed", G_CALLBACK (on_colormap_changed), &td);
-
+   
+    g_signal_connect (td.event_box, "motion-notify-event", G_CALLBACK (on_motion_notify), &td);
     g_signal_connect (td.frame_slider, "value-changed", G_CALLBACK (on_frame_slider_changed), &td);
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
