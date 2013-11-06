@@ -35,9 +35,11 @@ if (GTK2_FOUND)
         ${GTHREAD2_LIBRARIES})
 
     install(TARGETS ${BINARY}
-            RUNTIME DESTINATION ${UCA_BINDIR})
+            RUNTIME DESTINATION ${UCA_BINDIR}
+            COMPONENT executables)
 
     install(FILES control.glade
-            DESTINATION ${UCA_GLADEDIR})
+            DESTINATION ${UCA_GLADEDIR}
+            COMPONENT executables)
 endif()
 #}}}
