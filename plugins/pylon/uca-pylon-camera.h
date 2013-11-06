@@ -37,6 +37,12 @@ typedef enum {
     UCA_PYLON_CAMERA_ERROR_UNSUPPORTED,
 } UcaPylonCameraError;
 
+typedef enum {
+    UCA_CAMERA_BALANCE_WHITE_OFF,
+    UCA_CAMERA_BALANCE_WHITE_ONCE,
+    UCA_CAMERA_BALANCE_WHITE_CONTINUOUSLY
+} UcaCameraBalanceWhiteAuto;
+
 typedef struct _UcaPylonCamera           UcaPylonCamera;
 typedef struct _UcaPylonCameraClass      UcaPylonCameraClass;
 typedef struct _UcaPylonCameraPrivate    UcaPylonCameraPrivate;
