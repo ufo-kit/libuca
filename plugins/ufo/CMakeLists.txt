@@ -6,7 +6,7 @@ find_package(IPE)
 if (IPE_FOUND)
     set(UCA_CAMERA_NAME "ufo")
     set(PLUGIN_VERSION "1.0.1")
-    set(PLUGIN_REVISION "0")
+    set(PLUGIN_REVISION "1")
     set(PLUGIN_REQUIRES "libuca >= 1.2.0")
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
