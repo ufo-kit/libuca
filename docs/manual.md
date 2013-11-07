@@ -127,8 +127,8 @@ necessary header files:
 
 ~~~ {.c}
 #include <glib-object.h>
-#include <uca-plugin-manager.h>
-#include <uca-camera.h>
+#include <uca/uca-plugin-manager.h>
+#include <uca/uca-camera.h>
 ~~~
 
 Then you need to setup the type system:
