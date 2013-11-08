@@ -6,4 +6,7 @@ add_subdirectory(pco)
 add_subdirectory(pylon)
 add_subdirectory(ufo)
 add_subdirectory(dexela)
-add_subdirectory(xkit)
+
+if (CMAKE_CXX_COMPILER)
+    add_subdirectory(xkit)
+endif()
