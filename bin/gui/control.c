@@ -22,9 +22,9 @@
 #include <math.h>
 
 #include "config.h"
-#include "ring-buffer.h"
 #include "uca-camera.h"
 #include "uca-plugin-manager.h"
+#include "uca-ring-buffer.h"
 #include "egg-property-tree-view.h"
 #include "egg-histogram-view.h"
 
@@ -68,7 +68,7 @@ typedef struct {
     GtkToggleButton *log_button;
     GtkAdjustment   *frame_slider;
 
-    RingBuffer  *buffer;
+    UcaRingBuffer  *buffer;
     guchar      *pixels;
     gint         display_width, display_height;
     gint         colormap;
@@ -276,7 +276,7 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
     guint n = data->width * data->height;
 
     if (data->pixel_size == 1) {
-        guint8 *input = (guint8 *) ring_buffer_get_current_pointer (data->buffer);
+        guint8 *input = (guint8 *) uca_ring_buffer_get_current_pointer (data->buffer);
 
         for (gint i = 0; i < n; i++) {
             guint8 val = input[i];
@@ -292,7 +292,7 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
         }
     }
     else {
-        guint16 *input = (guint16 *) ring_buffer_get_current_pointer (data->buffer);
+        guint16 *input = (guint16 *) uca_ring_buffer_get_current_pointer (data->buffer);
 
         for (gint i = 0; i < n; i++) {
             guint16 val = input[i];
@@ -345,7 +345,7 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
     if ((data->state != RUNNING) || ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width))) { 
         gpointer *buffer; 
         GString *string; 
-        buffer = ring_buffer_get_current_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_current_pointer (data->buffer);
         string = g_string_new_len (NULL, 32);
         gint i = (data->ev_y / data->zoom_factor) * data->width + data->ev_x / data->zoom_factor;
 
@@ -384,7 +384,7 @@ update_pixbuf (ThreadData *data)
     gtk_widget_queue_draw_area (data->image, 0, 0, data->display_width, data->display_height);
 
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view),
-                               ring_buffer_get_current_pointer (data->buffer));
+                               uca_ring_buffer_get_current_pointer (data->buffer));
 
     get_statistics (data, &mean, &sigma, &max, &min);
     string = g_string_new_len (NULL, 32);
@@ -460,7 +460,7 @@ preview_frames (void *args)
     while (data->state == RUNNING) {
         gpointer *buffer;
 
-        buffer = ring_buffer_get_current_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_current_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, &error);
 
  
@@ -515,7 +515,7 @@ record_frames (gpointer args)
     GError *error = NULL;
 
     data = (ThreadData *) args;
-    ring_buffer_reset (data->buffer);
+    uca_ring_buffer_reset (data->buffer);
 
     data->n_recorded = 0;
     n_max = (guint) gtk_adjustment_get_value (data->count);
@@ -527,11 +527,11 @@ record_frames (gpointer args)
         if (n_max > 0 && n_frames >= n_max)
             break;
 
-        buffer = ring_buffer_get_current_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_current_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, NULL);
 
         if (error == NULL) {
-            ring_buffer_proceed (data->buffer);
+            uca_ring_buffer_proceed (data->buffer);
             n_frames++;
             data->n_recorded++;
         }
@@ -545,7 +545,7 @@ record_frames (gpointer args)
         set_tool_button_state (data);
     }
 
-    n_frames = ring_buffer_get_num_blocks (data->buffer);
+    n_frames = uca_ring_buffer_get_num_blocks (data->buffer);
 
     gdk_threads_enter ();
     gtk_adjustment_set_upper (data->frame_slider, n_frames - 1);
@@ -566,8 +566,7 @@ on_destroy (GtkWidget *widget, ThreadData *data)
 {
     data->state = IDLE;
     g_object_unref (data->camera);
-    ring_buffer_free (data->buffer);
-
+    g_object_unref (data->buffer);
     gtk_main_quit ();
 }
 
@@ -579,15 +578,15 @@ update_current_frame (ThreadData *data)
     guint n_max;
 
     index = (guint) gtk_adjustment_get_value (data->frame_slider);
-    n_max = ring_buffer_get_num_blocks (data->buffer);
+    n_max = uca_ring_buffer_get_num_blocks (data->buffer);
 
     /* Shift index so that we always show the oldest frames first */
     if (n_max > 0)
         index = (index + data->n_recorded - n_max) % n_max;
 
-    ring_buffer_set_current_pointer (data->buffer, index);
+    uca_ring_buffer_set_current_pointer (data->buffer, index);
 
-    buffer = ring_buffer_get_current_pointer (data->buffer);
+    buffer = uca_ring_buffer_get_current_pointer (data->buffer);
     up_and_down_scale (data, buffer);
     update_pixbuf (data);
 }
@@ -600,7 +599,7 @@ on_frame_slider_changed (GtkAdjustment *adjustment, ThreadData *data)
 }
 
 static gboolean
-write_raw_file (const gchar *filename, RingBuffer *buffer)
+write_raw_file (const gchar *filename, UcaRingBuffer *buffer)
 {
     FILE *fp;
     guint n_blocks;
@@ -611,11 +610,11 @@ write_raw_file (const gchar *filename, RingBuffer *buffer)
     if (fp == NULL)
         return FALSE;
 
-    n_blocks = ring_buffer_get_num_blocks (buffer);
-    size = ring_buffer_get_block_size (buffer);
+    n_blocks = uca_ring_buffer_get_num_blocks (buffer);
+    size = uca_ring_buffer_get_block_size (buffer);
 
     for (guint i = 0; i < n_blocks; i++)
-        fwrite (ring_buffer_get_pointer (buffer, i), size , 1, fp);
+        fwrite (uca_ring_buffer_get_pointer (buffer, i), size , 1, fp);
 
     fclose (fp);
     return TRUE;
@@ -724,19 +723,19 @@ download_frames (ThreadData *data)
         return NULL;
     }
 
-    ring_buffer_reset (data->buffer);
+    uca_ring_buffer_reset (data->buffer);
 
     while (error == NULL) {
-        buffer = ring_buffer_get_current_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_current_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, &error);
-        ring_buffer_proceed (data->buffer);
+        uca_ring_buffer_proceed (data->buffer);
         gdk_threads_enter ();
         gtk_adjustment_set_value (data->download_adjustment, current_frame++);
         gdk_threads_leave ();
     }
 
     if (error->code == UCA_CAMERA_ERROR_END_OF_STREAM) {
-        guint n_frames = ring_buffer_get_num_blocks (data->buffer);
+        guint n_frames = uca_ring_buffer_get_num_blocks (data->buffer);
 
         gtk_adjustment_set_upper (data->frame_slider, n_frames - 1);
         gtk_adjustment_set_value (data->frame_slider, n_frames - 1);
@@ -803,7 +802,7 @@ on_zoom_changed (GtkComboBox *widget, ThreadData *data)
     data->zoom_factor = factor;
     update_pixbuf_dimensions (data);
 
-    up_and_down_scale (data, ring_buffer_get_current_pointer (data->buffer));
+    up_and_down_scale (data, uca_ring_buffer_get_current_pointer (data->buffer));
     update_pixbuf (data);
 }
 
@@ -826,7 +825,7 @@ on_colormap_changed (GtkComboBox *widget, ThreadData *data)
     data->colormap = map;
     update_pixbuf_dimensions (data);
 
-    up_and_down_scale (data, ring_buffer_get_current_pointer (data->buffer));
+    up_and_down_scale (data, uca_ring_buffer_get_current_pointer (data->buffer));
     update_pixbuf (data);
 }
 
@@ -856,7 +855,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     GdkPixbuf *pixbuf;
     GtkBox    *histogram_box;
     GtkAdjustment   *max_bin_adjustment;
-    RingBuffer      *ring_buffer;
+    UcaRingBuffer   *ring_buffer;
     gsize image_size;
     guint n_frames;
     guint bits_per_sample;
@@ -921,10 +920,10 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     pixel_size  = bits_per_sample > 8 ? 2 : 1;
     image_size  = pixel_size * width * height;
     n_frames    = mem_size * 1024 * 1024 / image_size;
-    ring_buffer = ring_buffer_new (image_size, n_frames);
+    ring_buffer = uca_ring_buffer_new (image_size, n_frames);
 
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (histogram_view),
-                               ring_buffer_get_current_pointer (ring_buffer));
+                               uca_ring_buffer_get_current_pointer (ring_buffer));
 
     pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, TRUE, 8, width, height);
     gtk_image_set_from_pixbuf (GTK_IMAGE (image), pixbuf);

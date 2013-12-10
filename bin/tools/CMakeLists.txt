@@ -26,7 +26,7 @@ target_link_libraries(uca-gen-doc ${libs})
 #{{{ uca-grab
 add_executable(uca-grab
                grab.c common.c)
-target_link_libraries(uca-grab ringbuffer ${libs})
+target_link_libraries(uca-grab ${libs})
 #}}}
 #{{{ uca-benchmark
 add_executable(uca-benchmark
