@@ -30,7 +30,7 @@
  * By default, any path listed in the %UCA_CAMERA_PATH environment variable is
  * added to the search path.
  *
- * @Since: 1.1
+ * Since: 1.1
  */
 #include <gio/gio.h>
 #include <gmodule.h>
@@ -264,7 +264,7 @@ get_camera_type (UcaPluginManagerPrivate *priv,
  * Create a new camera instance with camera @name.
  *
  * Returns: (transfer full): A new #UcaCamera object.
- * @Since: 1.2
+ * Since: 1.2
  */
 UcaCamera *
 uca_plugin_manager_get_camerav (UcaPluginManager *manager,
@@ -304,7 +304,7 @@ uca_plugin_manager_get_camerav (UcaPluginManager *manager,
  * Create a new camera instance with camera @name.
  *
  * Returns: (transfer full): A new #UcaCamera object.
- * @Since: 1.2: Pass construction properties.
+ * Since: 1.2: Pass construction properties.
  */
 UcaCamera *
 uca_plugin_manager_get_camera (UcaPluginManager *manager,

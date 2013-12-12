@@ -68,6 +68,16 @@ uca_ring_buffer_get_block_size (UcaRingBuffer *buffer)
     return buffer->priv->block_size;
 }
 
+/**
+ * uca_ring_buffer_get_current_pointer:
+ * @buffer: A #UcaRingBuffer object
+ *
+ * Get a pointer to the data for the block that is currently in use, that means
+ * the number uca_ring_buffer_proceed() has been called modulo the number of
+ * total blocks.
+ *
+ * Return value: (transfer none): Pointer to data block
+ */
 gpointer
 uca_ring_buffer_get_current_pointer (UcaRingBuffer *buffer)
 {
@@ -87,6 +97,16 @@ uca_ring_buffer_set_current_pointer (UcaRingBuffer *buffer,
     buffer->priv->current_index = index;
 }
 
+/**
+ * uca_ring_buffer_get_pointer:
+ * @buffer: A #UcaRingBuffer object
+ * @index: Block index to get the pointer for
+ *
+ * Get a pointer to the data for @index block. @index must be less than
+ * :num-blocks.
+ *
+ * Return value: (transfer none): Pointer to data block
+ */
 gpointer
 uca_ring_buffer_get_pointer (UcaRingBuffer *buffer,
                              guint index)
