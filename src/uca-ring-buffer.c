@@ -47,7 +47,8 @@ uca_ring_buffer_new (gsize block_size,
 
     buffer = g_object_new (UCA_TYPE_RING_BUFFER,
                            "block-size", (guint64) block_size,
-                           "num-blocks", n_blocks);
+                           "num-blocks", n_blocks,
+                           NULL);
     return buffer;
 }
 
