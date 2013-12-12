@@ -597,6 +597,22 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
 }
 
 /**
+ * uca_camera_is_recording:
+ * @camera: A #UcaCamera object
+ *
+ * Convenience function to ask the current recording status
+ *
+ * Return value: %TRUE if recording is ongoing
+ * Since: 1.5
+ */
+gboolean
+uca_camera_is_recording (UcaCamera *camera)
+{
+    g_return_val_if_fail (UCA_IS_CAMERA (camera), FALSE);
+    return camera->priv->is_recording;
+}
+
+/**
  * uca_camera_start_readout:
  * @camera: A #UcaCamera object
  * @error: Location to store a #UcaCameraError error or %NULL

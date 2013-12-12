@@ -143,6 +143,7 @@ void        uca_camera_start_recording  (UcaCamera          *camera,
                                          GError            **error);
 void        uca_camera_stop_recording   (UcaCamera          *camera,
                                          GError            **error);
+gboolean    uca_camera_is_recording     (UcaCamera          *camera);
 void        uca_camera_start_readout    (UcaCamera          *camera,
                                          GError            **error);
 void        uca_camera_stop_readout     (UcaCamera          *camera,
