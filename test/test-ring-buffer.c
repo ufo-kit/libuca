@@ -62,7 +62,7 @@ test_ring (void)
 }
 
 int
-main (int argc, char const* argv[])
+main (int argc, char *argv[])
 {
     g_type_init ();
     g_test_init (&argc, &argv, NULL);
