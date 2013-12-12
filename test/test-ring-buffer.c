@@ -8,7 +8,7 @@ test_new_constructor (void)
     UcaRingBuffer *buffer;
 
     buffer = g_object_new (UCA_TYPE_RING_BUFFER,
-                           "block-size", 512,
+                           "block-size", (guint64) 512,
                            "num-blocks", 2,
                            NULL);
 
