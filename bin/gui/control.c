@@ -496,6 +496,10 @@ update_pixbuf (ThreadData *data)
     gdouble sigma;
     guint min;
     guint max;
+    guint width;
+    guint height;
+    guint x = 0;
+    guint y = 0;
 
     gdk_flush ();
 
@@ -512,6 +516,17 @@ update_pixbuf (ThreadData *data)
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view),
                                uca_ring_buffer_get_current_pointer (data->buffer));
 
+    if ((data->adj_width > 0) && (data->adj_height > 0)) {
+        x = data->from_x;
+        y = data->from_y;
+        width = data->adj_width;
+        height = data->adj_height;
+    }
+    else {
+        width = data->display_width;
+        height = data->display_height;
+    }
+
     get_statistics (data, &mean, &sigma, &max, &min);
     string = g_string_new_len (NULL, 32);
 
@@ -527,16 +542,16 @@ update_pixbuf (ThreadData *data)
     g_string_printf (string, "max = %i", max);
     gtk_label_set_text (data->max_label, string->str);
 
-    g_string_printf (string, "x = %i", data->from_x);
+    g_string_printf (string, "x = %i", x);
     gtk_label_set_text (data->roix_label, string->str);
 
-    g_string_printf (string, "y = %i", data->from_y);
+    g_string_printf (string, "y = %i", y);
     gtk_label_set_text (data->roiy_label, string->str);
 
-    g_string_printf (string, "width = %i", data->adj_width);
+    g_string_printf (string, "width = %i", width);
     gtk_label_set_text (data->roiw_label, string->str);
 
-    g_string_printf (string, "height = %i", data->adj_height);
+    g_string_printf (string, "height = %i", height);
     gtk_label_set_text (data->roih_label, string->str);
 
     g_string_free (string, TRUE);
