@@ -99,7 +99,7 @@ typedef struct {
 } ThreadData;
 
 static UcaPluginManager *plugin_manager;
-static gsize mem_size = 2048; 
+static gsize mem_size = 2048;
 
 static void update_pixbuf (ThreadData *data);
 
@@ -116,7 +116,7 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
     gint zoom;
     gint stride;
     gint offset = 0;
-    gint start_wval; 
+    gint start_wval;
     gint start_hval;
 
     egg_histogram_get_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
@@ -153,77 +153,7 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
         guint8 *input = (guint8 *) buffer;
 
         for (gint y = 0; y < data->display_height; y++) {
-            if (zoom <= 1) { 
-                offset = y * stride * data->width;
-            }
-
-            for (gint x = 0; x < data->display_width; x++) {
-                if (zoom <= 1)
-                    offset += stride; 
-                else
-                    offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
-
-                if (y >= start_hval && y < page_height) {   
-                    if (x >= start_wval && x < page_width) {
-
-                        if (do_log)
-                            dval = log ((input[offset] - min) * factor);
-                        else
-                            dval = (input[offset] - min) * factor;
-                    }
-                }
-                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
-
-                if (data->colormap == 1) {
-                    output[i++] = val;
-                    output[i++] = val;
-                    output[i++] = val;
-                } 
-                else {
-                    val = (float) val; 
-                    float red = 0;
-                    float green = 0;
-                    float blue = 0;
-
-                    if (val == 255) { 
-                        red = 255;
-                        green = 255;
-                        blue = 255; 
-                    }
-                    else if (val == 0) { 
-                    }
-                    else if (val <= 31.875) {  
-                        blue = 255 - 4 * (31.875 - val); 
-                    }
-                    else if (val <= 95.625) {
-                        green = 255 - 4 * (95.625 - val);  
-                        blue = 255;
-                    }    
-                    else if (val <= 159.375) { 
-                        red = 255 - 4 * (159.375 - val);  
-                        green = 255;
-                        blue = 255 + 4 * (95.625 - val); 
-                    }
-                    else if (val <= 223.125) { 
-                        red = 255;
-                        green = 255 + 4 * (159.375 - val); 
-                    } 
-                    else {   
-                        red = 255 + 4 * (223.125 - val); 
-                    }
-                 
-                    output[i++] = (guchar) red;
-                    output[i++] = (guchar) green;
-                    output[i++] = (guchar) blue; 
-                }
-            }
-        }
-    }
-    else if (data->pixel_size == 2) {
-        guint16 *input = (guint16 *) buffer;
-
-        for (gint y = 0; y < data->display_height; y++) {
-            if (zoom <= 1) { 
+            if (zoom <= 1) {
                 offset = y * stride * data->width;
             }
 
@@ -233,7 +163,7 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
                 else
                     offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
 
-                if (y >= start_hval && y < page_height)  {   
+                if (y >= start_hval && y < page_height) {
                     if (x >= start_wval && x < page_width) {
 
                         if (do_log)
@@ -248,44 +178,114 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
                     output[i++] = val;
                     output[i++] = val;
                     output[i++] = val;
-                } 
+                }
                 else {
-                    val = (float) val; 
+                    val = (float) val;
                     float red = 0;
                     float green = 0;
                     float blue = 0;
-  
-                    if (val == 255) { 
-                        red = 65535;
-                        green = 65535;
-                        blue = 65535; 
+
+                    if (val == 255) {
+                        red = 255;
+                        green = 255;
+                        blue = 255;
                     }
-                    else if (val == 0) { 
+                    else if (val == 0) {
                     }
-                    else if (val <= 31.875) {  
-                        blue = (255 - 4 * (31.875 - val)) * 257; 
+                    else if (val <= 31.875) {
+                        blue = 255 - 4 * (31.875 - val);
                     }
                     else if (val <= 95.625) {
-                        green = (255 - 4 * (95.625 - val)) * 257;  
-                        blue = 65535;
-                    }    
-                    else if (val <= 159.375) { 
-                        red = (255 - 4 * (159.375 - val)) * 257;  
-                        green = 65535;
-                        blue = (255 + 4 * (95.625 - val)) * 257; 
+                        green = 255 - 4 * (95.625 - val);
+                        blue = 255;
                     }
-                    else if (val <= 223.125) { 
-                        red = 65535;
-                        green = (255 + 4 * (159.375 - val)) * 257; 
-                    } 
-                    else {   
-                        red = (255 + 4 * (223.125 - val)) * 257; 
+                    else if (val <= 159.375) {
+                        red = 255 - 4 * (159.375 - val);
+                        green = 255;
+                        blue = 255 + 4 * (95.625 - val);
                     }
-                                
+                    else if (val <= 223.125) {
+                        red = 255;
+                        green = 255 + 4 * (159.375 - val);
+                    }
+                    else {
+                        red = 255 + 4 * (223.125 - val);
+                    }
+
                     output[i++] = (guchar) red;
                     output[i++] = (guchar) green;
-                    output[i++] = (guchar) blue; 
-                }   
+                    output[i++] = (guchar) blue;
+                }
+            }
+        }
+    }
+    else if (data->pixel_size == 2) {
+        guint16 *input = (guint16 *) buffer;
+
+        for (gint y = 0; y < data->display_height; y++) {
+            if (zoom <= 1) {
+                offset = y * stride * data->width;
+            }
+
+            for (gint x = 0; x < data->display_width; x++) {
+                if (zoom <= 1)
+                    offset += stride;
+                else
+                    offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
+
+                if (y >= start_hval && y < page_height)  {
+                    if (x >= start_wval && x < page_width) {
+
+                        if (do_log)
+                            dval = log ((input[offset] - min) * factor);
+                        else
+                            dval = (input[offset] - min) * factor;
+                    }
+                }
+                guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
+
+                if (data->colormap == 1) {
+                    output[i++] = val;
+                    output[i++] = val;
+                    output[i++] = val;
+                }
+                else {
+                    val = (float) val;
+                    float red = 0;
+                    float green = 0;
+                    float blue = 0;
+
+                    if (val == 255) {
+                        red = 65535;
+                        green = 65535;
+                        blue = 65535;
+                    }
+                    else if (val == 0) {
+                    }
+                    else if (val <= 31.875) {
+                        blue = (255 - 4 * (31.875 - val)) * 257;
+                    }
+                    else if (val <= 95.625) {
+                        green = (255 - 4 * (95.625 - val)) * 257;
+                        blue = 65535;
+                    }
+                    else if (val <= 159.375) {
+                        red = (255 - 4 * (159.375 - val)) * 257;
+                        green = 65535;
+                        blue = (255 + 4 * (95.625 - val)) * 257;
+                    }
+                    else if (val <= 223.125) {
+                        red = 65535;
+                        green = (255 + 4 * (159.375 - val)) * 257;
+                    }
+                    else {
+                        red = (255 + 4 * (223.125 - val)) * 257;
+                    }
+
+                    output[i++] = (guchar) red;
+                    output[i++] = (guchar) green;
+                    output[i++] = (guchar) blue;
+                }
             }
         }
     }
@@ -355,11 +355,12 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
     gint start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
     page_width += start_wval;
     page_height += start_hval;
-  
+
     if ((data->display_width < page_width) && (data->display_height < page_height)) {
         gint startx = (page_width - data->display_width) / 2;
-        data->ev_x = event->x - startx;
         gint starty = (page_height - data->display_height) / 2;
+
+        data->ev_x = event->x - startx;
         data->ev_y = event->y - starty;
 
         if ((data->adj_width > 0) && (data->adj_height > 0)) {
@@ -370,13 +371,12 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
             data->display_x = data->ev_x;
             data->display_y = data->ev_y;
         }
-    }  
+    }
     else {
         data->ev_x = event->x;
         data->ev_y = event->y;
 
         if ((data->adj_width > 0) && (data->adj_height > 0)) {
-
             if (data->adj_width >= page_width)
                 data->display_x = event->x + data->from_x;
             else
@@ -393,9 +393,9 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
         }
     }
 
-    if ((data->state != RUNNING) || ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width))) { 
-        gpointer *buffer; 
-        GString *string; 
+    if ((data->state != RUNNING) || ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width))) {
+        gpointer *buffer;
+        GString *string;
 
         buffer = uca_ring_buffer_get_current_pointer (data->buffer);
         string = g_string_new_len (NULL, 32);
@@ -403,7 +403,7 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 
         if (data->pixel_size == 1) {
             guint8 *input = (guint8 *) buffer;
-            guint8 val = input[i];   
+            guint8 val = input[i];
             g_string_printf (string, "val = %i", val);
             gtk_label_set_text (data->val_label, string->str);
         }
@@ -421,74 +421,75 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
         gtk_label_set_text (data->y_label, string->str);
 
         g_string_free (string, TRUE);
-    }   
+    }
+}
+
+static void
+normalize_event_coords (ThreadData *data)
+{
+    if (data->ev_x < 0)
+        data->ev_x = 0;
+
+    if (data->ev_y < 0)
+        data->ev_y = 0;
+
+    if (data->ev_x > data->display_width)
+        data->ev_x = data->display_width;
+
+    if (data->ev_y > data->display_height)
+        data->ev_y = data->display_height;
 }
 
 static void
 on_button_press (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 {
-    if (data->ev_x < 0)
-        data->ev_x = 0;
-    if (data->ev_x > data->display_width)
-        data->ev_x = data->display_width;
-    if (data->ev_y < 0)
-        data->ev_y = 0;
-    if (data->ev_y > data->display_height)
-        data->ev_y = data->display_height;
+    normalize_event_coords (data);
 
-    if ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width)) {
-        gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->x_adjustment), data->display_width);
-        gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->y_adjustment), data->display_height);
-        gtk_adjustment_set_value (GTK_ADJUSTMENT (data->x_adjustment), data->ev_x);
-        gtk_adjustment_set_value (GTK_ADJUSTMENT (data->y_adjustment), data->ev_y);
-        data->tmp_fromx = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->x_adjustment));
-        data->tmp_fromy = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->y_adjustment));
-    }
+    gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->x_adjustment), data->display_width);
+    gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->y_adjustment), data->display_height);
+    gtk_adjustment_set_value (GTK_ADJUSTMENT (data->x_adjustment), data->ev_x);
+    gtk_adjustment_set_value (GTK_ADJUSTMENT (data->y_adjustment), data->ev_y);
+
+    data->tmp_fromx = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->x_adjustment));
+    data->tmp_fromy = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->y_adjustment));
+
     data->zoom_before = data->zoom_factor;
 }
 
 static void
 on_button_release (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 {
-    if (data->ev_x < 0)
-        data->ev_x = 0;
-    if (data->ev_x > data->display_width)
-        data->ev_x = data->display_width;
-    if (data->ev_y < 0)
-        data->ev_y = 0;
-    if (data->ev_y > data->display_height)
-        data->ev_y = data->display_height;
+    normalize_event_coords (data);
 
-    if ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width)) {
-        gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->width_adjustment), data->display_width);
-        gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->height_adjustment), data->display_height);
-        gtk_adjustment_set_value (GTK_ADJUSTMENT (data->width_adjustment), data->ev_x);
-        gtk_adjustment_set_value (GTK_ADJUSTMENT (data->height_adjustment), data->ev_y);
-        gint tmp_tox = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->width_adjustment));
-        gint tmp_toy = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->height_adjustment));
-  
-        if (data->tmp_fromx > tmp_tox) {
-            data->from_x = tmp_tox;
-            data->to_x = data->tmp_fromx;
-        }
-        else {
-            data->from_x = data->tmp_fromx;
-            data->to_x = tmp_tox;
-        }
-        if (data->tmp_fromy > tmp_toy) {
-            data->from_y = tmp_toy;
-            data->to_y = data->tmp_fromy;
-        }
-        else {
-            data->from_y = data->tmp_fromy;
-            data->to_y = tmp_toy;
-        }
+    gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->width_adjustment), data->display_width);
+    gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->height_adjustment), data->display_height);
+    gtk_adjustment_set_value (GTK_ADJUSTMENT (data->width_adjustment), data->ev_x);
+    gtk_adjustment_set_value (GTK_ADJUSTMENT (data->height_adjustment), data->ev_y);
 
-        data->adj_width = data->to_x - data->from_x;
-        data->adj_height = data->to_y - data->from_y;
+    gint tmp_tox = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->width_adjustment));
+    gint tmp_toy = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->height_adjustment));
 
-        update_pixbuf (data);     
+    if (data->tmp_fromx > tmp_tox) {
+        data->from_x = tmp_tox;
+        data->to_x = data->tmp_fromx;
     }
+    else {
+        data->from_x = data->tmp_fromx;
+        data->to_x = tmp_tox;
+    }
+    if (data->tmp_fromy > tmp_toy) {
+        data->from_y = tmp_toy;
+        data->to_y = data->tmp_fromy;
+    }
+    else {
+        data->from_y = data->tmp_fromy;
+        data->to_y = tmp_toy;
+    }
+
+    data->adj_width = data->to_x - data->from_x;
+    data->adj_height = data->to_y - data->from_y;
+
+    update_pixbuf (data);
 }
 
 static void
@@ -578,7 +579,7 @@ update_pixbuf_dimensions (ThreadData *data)
         data->to_y = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->height_adjustment)) * zoom;
 
         gint adj_x = data->from_x;
-        gint adj_y = data->from_y;    
+        gint adj_y = data->from_y;
 
         if (data->from_x > data->to_x) {
             data->from_x = data->to_x;
@@ -641,42 +642,44 @@ preview_frames (void *args)
 
         buffer = uca_ring_buffer_get_current_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, &error);
- 
+
         if (error == NULL) {
             up_and_down_scale (data, buffer);
 
             gdk_threads_enter ();
             update_pixbuf (data);
 
-                if ((data->ev_x >= 0) && (data->ev_y >= 0) && (data->ev_y <= data->display_height) && (data->ev_x <= data->display_width)) {
-                    GString *string; 
-                    string = g_string_new_len (NULL, 32);
-                    gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
+            if ((data->ev_x >= 0) && (data->ev_y >= 0) && (data->ev_y <= data->display_height) && (data->ev_x <= data->display_width)) {
+                GString *string;
+                string = g_string_new_len (NULL, 32);
+                gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
 
-                    if (data->pixel_size == 1) {
-                        guint8 *input = (guint8 *) buffer;
-                        guint8 val = input[i];   
-                        g_string_printf (string, "val = %i", val);
-                        gtk_label_set_text (data->val_label, string->str); 
-                    }
-                    else if (data->pixel_size == 2) {
-                        guint16 *input = (guint16 *) buffer;
-                        guint16 val = input[i];
-                        g_string_printf (string, "val = %i", val);
-                        gtk_label_set_text (data->val_label, string->str);   
+                if (data->pixel_size == 1) {
+                    guint8 *input = (guint8 *) buffer;
+                    guint8 val = input[i];
+                    g_string_printf (string, "val = %i", val);
+                    gtk_label_set_text (data->val_label, string->str);
+                }
+                else if (data->pixel_size == 2) {
+                    guint16 *input = (guint16 *) buffer;
+                    guint16 val = input[i];
+                    g_string_printf (string, "val = %i", val);
+                    gtk_label_set_text (data->val_label, string->str);
                 }
 
-                    g_string_printf (string, "x = %i", data->display_x);
-                    gtk_label_set_text (data->x_label, string->str);
+                g_string_printf (string, "x = %i", data->display_x);
+                gtk_label_set_text (data->x_label, string->str);
 
-                    g_string_printf (string, "y = %i", data->display_y);
-                    gtk_label_set_text (data->y_label, string->str);
+                g_string_printf (string, "y = %i", data->display_y);
+                gtk_label_set_text (data->y_label, string->str);
+
+                g_string_free (string, TRUE);
             }
 
             gdk_threads_leave ();
 
             counter++;
-            }
+        }
         else
             print_and_free_error (&error);
     }
@@ -1147,7 +1150,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
                             td.histogram_view, "maximum-bin-value",
                             G_BINDING_BIDIRECTIONAL);
 
-    g_object_bind_property (gtk_builder_get_object (builder, "repeat-checkbutton"), "active", 
+    g_object_bind_property (gtk_builder_get_object (builder, "repeat-checkbutton"), "active",
                             gtk_builder_get_object (builder, "repeat-box"), "sensitive", 0);
 
     g_object_bind_property (camera, "exposure-time",
@@ -1162,7 +1165,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
 
     g_signal_connect (gtk_builder_get_object (builder, "colormap-box"),
                       "changed", G_CALLBACK (on_colormap_changed), &td);
-   
+
     g_signal_connect (td.event_box, "motion-notify-event", G_CALLBACK (on_motion_notify), &td);
     g_signal_connect (td.event_box, "button-press-event", G_CALLBACK (on_button_press), &td);
     g_signal_connect (td.event_box, "button-release-event", G_CALLBACK (on_button_release), &td);
