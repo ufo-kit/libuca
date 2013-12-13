@@ -396,6 +396,7 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
     if ((data->state != RUNNING) || ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width))) { 
         gpointer *buffer; 
         GString *string; 
+
         buffer = uca_ring_buffer_get_current_pointer (data->buffer);
         string = g_string_new_len (NULL, 32);
         gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
@@ -418,6 +419,8 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 
         g_string_printf (string, "y = %i", data->display_y);
         gtk_label_set_text (data->y_label, string->str);
+
+        g_string_free (string, TRUE);
     }   
 }
 
