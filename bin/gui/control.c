@@ -44,9 +44,11 @@ typedef struct {
     GtkWidget   *stop_button;
     GtkWidget   *record_button;
     GtkWidget   *download_button;
+    GtkWidget   *zoom_in_button;
+    GtkWidget   *zoom_out_button;
+    GtkWidget   *zoom_normal_button;
     GtkWidget   *acquisition_expander;
     GtkWidget   *properties_expander;
-    GtkWidget   *zoom_box;
     GtkWidget   *colormap_box;
     GtkWidget   *event_box;
     GtkLabel    *mean_label;
@@ -624,8 +626,6 @@ set_tool_button_state (ThreadData *data)
                               data->state == IDLE);
     gtk_widget_set_sensitive (data->properties_expander,
                               data->state == IDLE);
-    gtk_widget_set_sensitive (data->zoom_box,
-                              data->state == IDLE);
     gtk_widget_set_sensitive (data->colormap_box,
                               data->state == IDLE);
 }
@@ -958,33 +958,39 @@ on_download_button_clicked (GtkWidget *widget, ThreadData *data)
 }
 
 static void
+update_zoomed_pixbuf (ThreadData *data)
+{
+    update_pixbuf_dimensions (data);
+    up_and_down_scale (data, uca_ring_buffer_get_current_pointer (data->buffer));
+    update_pixbuf (data);
+}
+
+static void
+on_zoom_in_button_clicked (GtkWidget *widget, ThreadData *data)
+{
+    data->zoom_factor *= 2;
+    update_zoomed_pixbuf (data);
+}
+
+static void
+on_zoom_out_button_clicked (GtkWidget *widget, ThreadData *data)
+{
+    data->zoom_factor /= 2;
+    update_zoomed_pixbuf (data);
+}
+
+static void
+on_zoom_normal_button_clicked (GtkWidget *widget, ThreadData *data)
+{
+    data->zoom_factor = 1.0;
+    update_zoomed_pixbuf (data);
+}
+
+static void
 on_histogram_changed (EggHistogramView *view, ThreadData *data)
 {
     if (data->state == IDLE)
         update_current_frame (data);
-}
-
-static void
-on_zoom_changed (GtkComboBox *widget, ThreadData *data)
-{
-    GtkTreeModel *model;
-    GtkTreeIter iter;
-    gdouble factor;
-
-    enum {
-        DISPLAY_COLUMN,
-        FACTOR_COLUMN
-    };
-
-    model = gtk_combo_box_get_model (widget);
-    gtk_combo_box_get_active_iter (widget, &iter);
-    gtk_tree_model_get (model, &iter, FACTOR_COLUMN, &factor, -1);
-
-    data->zoom_factor = factor;
-    update_pixbuf_dimensions (data);
-
-    up_and_down_scale (data, uca_ring_buffer_get_current_pointer (data->buffer));
-    update_pixbuf (data);
 }
 
 static void
@@ -1070,11 +1076,14 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.acquisition_expander = GTK_WIDGET (gtk_builder_get_object (builder, "acquisition-expander"));
     td.properties_expander  = GTK_WIDGET (gtk_builder_get_object (builder, "properties-expander"));
 
-    td.zoom_box         = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-box"));
     td.colormap_box     = GTK_WIDGET (gtk_builder_get_object (builder, "colormap-box"));
     td.start_button     = GTK_WIDGET (gtk_builder_get_object (builder, "start-button"));
     td.stop_button      = GTK_WIDGET (gtk_builder_get_object (builder, "stop-button"));
     td.record_button    = GTK_WIDGET (gtk_builder_get_object (builder, "record-button"));
+    td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
+    td.zoom_in_button   = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-in-button"));
+    td.zoom_out_button  = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-out-button"));
+    td.zoom_normal_button = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-normal-button"));
     td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
     td.log_button       = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "logarithm-checkbutton"));
@@ -1160,9 +1169,6 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (gtk_builder_get_object (builder, "save-item"),
                       "activate", G_CALLBACK (on_save), &td);
 
-    g_signal_connect (gtk_builder_get_object (builder, "zoom-box"),
-                      "changed", G_CALLBACK (on_zoom_changed), &td);
-
     g_signal_connect (gtk_builder_get_object (builder, "colormap-box"),
                       "changed", G_CALLBACK (on_colormap_changed), &td);
 
@@ -1174,6 +1180,9 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
     g_signal_connect (td.record_button, "clicked", G_CALLBACK (on_record_button_clicked), &td);
     g_signal_connect (td.download_button, "clicked", G_CALLBACK (on_download_button_clicked), &td);
+    g_signal_connect (td.zoom_in_button, "clicked", G_CALLBACK (on_zoom_in_button_clicked), &td);
+    g_signal_connect (td.zoom_out_button, "clicked", G_CALLBACK (on_zoom_out_button_clicked), &td);
+    g_signal_connect (td.zoom_normal_button, "clicked", G_CALLBACK (on_zoom_normal_button_clicked), &td);
     g_signal_connect (histogram_view, "changed", G_CALLBACK (on_histogram_changed), &td);
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
 
