@@ -7,9 +7,9 @@ find_package(ClSerMe4)
 
 if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
     set(UCA_CAMERA_NAME "pco")
-    set(PLUGIN_VERSION "1.1.0")
+    set(PLUGIN_VERSION "1.2.0")
     set(PLUGIN_REVISION "1")
-    set(PLUGIN_REQUIRES "libuca >= 1.1.0")
+    set(PLUGIN_REQUIRES "libuca >= 1.5.0")
     set(PLUGIN_SUMMARY "libpco plugin for libuca")
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in

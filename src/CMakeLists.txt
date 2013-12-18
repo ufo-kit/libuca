@@ -5,11 +5,14 @@ project(uca C)
 set(uca_SRCS
     uca-camera.c
     uca-plugin-manager.c
+    uca-ring-buffer.c
     )
 
 set(uca_HDRS
     uca-camera.h
-    uca-plugin-manager.h)
+    uca-plugin-manager.h
+    uca-ring-buffer.h
+    )
 
 create_enums(uca-enums
              ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums

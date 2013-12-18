@@ -22,3 +22,4 @@ before_script:
 script:
     - make
     - ./test/test-mock
+    - ./test/test-ring-buffer

@@ -93,18 +93,11 @@ particular camera support not built.
 If you want to customize the build process you can pass several variables to
 CMake:
 
-    cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DLIB_SUFFIX=64
+    cmake .. -DPREFIX=/usr -DLIBDIR=/usr/lib64
 
 The former tells CMake to install into `/usr` instead of `/usr/local` and the
-latter that 64 should be appended to any library paths. This is necessary on
-Linux distributions that expect 64-bit libraries in `/usr[/local]/lib64`.
-
-It is also highly recommended to set the the install prefix to `/usr` when
-using the language bindings because GObject introspection will only look for
-type libraries in `/usr/lib/girepository-1.0`. If you want to install in another
-directory, you can also set the `GI_TYPELIB_PATH` environment variable to the
-path were the `Ufo-x.y.typelib` is located.
-
+latter that we want to install the libraries and plugins into the `lib64` subdir
+instead of the default `lib` subdir as it is common on SUSE systems.
 
 #### Building this manual
 
@@ -127,8 +120,8 @@ necessary header files:
 
 ~~~ {.c}
 #include <glib-object.h>
-#include <uca-plugin-manager.h>
-#include <uca-camera.h>
+#include <uca/uca-plugin-manager.h>
+#include <uca/uca-camera.h>
 ~~~
 
 Then you need to setup the type system:

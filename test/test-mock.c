@@ -136,16 +136,14 @@ test_recording_property (Fixture *fixture, gconstpointer data)
 
     gboolean is_recording = FALSE;
     uca_camera_start_recording (camera, NULL);
-    g_object_get (G_OBJECT (camera),
-            "is-recording", &is_recording,
-            NULL);
+    g_object_get (G_OBJECT (camera), "is-recording", &is_recording, NULL);
     g_assert (is_recording == TRUE);
+    g_assert (uca_camera_is_recording (camera));
 
     uca_camera_stop_recording (camera, NULL);
-    g_object_get (G_OBJECT (camera),
-            "is-recording", &is_recording,
-            NULL);
+    g_object_get (G_OBJECT (camera), "is-recording", &is_recording, NULL);
     g_assert (is_recording == FALSE);
+    g_assert (!uca_camera_is_recording (camera));
 }
 
 static void

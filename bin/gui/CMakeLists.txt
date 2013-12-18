@@ -30,7 +30,6 @@ if (GTK2_FOUND)
     target_link_libraries(${BINARY}
         m
         uca
-        ringbuffer
         ${GTK2_LIBRARIES}
         ${GTHREAD2_LIBRARIES})
 

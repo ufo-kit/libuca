@@ -819,8 +819,18 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
 static void
 uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
+    UcaPcoCameraPrivate *priv;
     guint err = PCO_NOERROR;
+
+    priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
+
+    /* Should fix #20 */
+    if (uca_camera_is_recording (UCA_CAMERA (object))) {
+        if (priv->description->type == CAMERATYPE_PCO_EDGE ||
+            priv->description->type == CAMERATYPE_PCO4000) {
+            return;
+        }
+    }
 
     switch (property_id) {
         case PROP_SENSOR_EXTENDED:

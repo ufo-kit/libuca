@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include "uca-plugin-manager.h"
 #include "uca-camera.h"
-#include "ring-buffer.h"
+#include "uca-ring-buffer.h"
 #include "common.h"
 
 #ifdef HAVE_LIBTIFF
@@ -48,7 +48,7 @@ get_bytes_per_pixel (guint bits_per_pixel)
 
 #ifdef HAVE_LIBTIFF
 static void
-write_tiff (RingBuffer *buffer,
+write_tiff (UcaRingBuffer *buffer,
             Options *opts,
             guint width,
             guint height,
@@ -65,7 +65,7 @@ write_tiff (RingBuffer *buffer,
     else
         tif = TIFFOpen ("frames.tif", "w");
 
-    n_frames = ring_buffer_get_num_blocks (buffer);
+    n_frames = uca_ring_buffer_get_num_blocks (buffer);
     rows_per_strip = TIFFDefaultStripSize (tif, (guint32) - 1);
     bytes_per_pixel = get_bytes_per_pixel (bits_per_pixel);
     bits_per_sample = bits_per_pixel > 8 ? 16 : 8;
@@ -77,7 +77,7 @@ write_tiff (RingBuffer *buffer,
         gpointer data;
         gsize offset = 0;
 
-        data = ring_buffer_get_pointer (buffer, i);
+        data = uca_ring_buffer_get_pointer (buffer, i);
 
         TIFFSetField (tif, TIFFTAG_IMAGEWIDTH, width);
         TIFFSetField (tif, TIFFTAG_IMAGELENGTH, height);
@@ -99,14 +99,14 @@ write_tiff (RingBuffer *buffer,
 #endif
 
 static void
-write_raw (RingBuffer *buffer,
+write_raw (UcaRingBuffer *buffer,
            Options *opts)
 {
     guint n_frames;
     gsize size;
 
-    size = ring_buffer_get_block_size (buffer);
-    n_frames = ring_buffer_get_num_blocks (buffer);
+    size = uca_ring_buffer_get_block_size (buffer);
+    n_frames = uca_ring_buffer_get_num_blocks (buffer);
 
     for (gint i = 0; i < n_frames; i++) {
         FILE *fp;
@@ -119,7 +119,7 @@ write_raw (RingBuffer *buffer,
             filename = g_strdup_printf ("frame-%08i.raw", i);
 
         fp = fopen(filename, "wb");
-        data = ring_buffer_get_pointer (buffer, i);
+        data = uca_ring_buffer_get_pointer (buffer, i);
 
         fwrite (data, size, 1, fp);
         fclose (fp);
@@ -138,7 +138,7 @@ record_frames (UcaCamera *camera, Options *opts)
     gint n_frames;
     guint n_allocated;
     GTimer *timer;
-    RingBuffer *buffer;
+    UcaRingBuffer *buffer;
     GError *error = NULL;
     gdouble last_printed;
 
@@ -151,7 +151,7 @@ record_frames (UcaCamera *camera, Options *opts)
     pixel_size = get_bytes_per_pixel (bits);
     size = roi_width * roi_height * pixel_size;
     n_allocated = opts->n_frames > 0 ? opts->n_frames : 256;
-    buffer = ring_buffer_new (size, n_allocated);
+    buffer = uca_ring_buffer_new (size, n_allocated);
     timer = g_timer_new();
 
     g_print("Start recording: %ix%i at %i bits/pixel\n",
@@ -169,8 +169,8 @@ record_frames (UcaCamera *camera, Options *opts)
     while (1) {
         gdouble elapsed;
 
-        uca_camera_grab (camera, ring_buffer_get_current_pointer (buffer), &error);
-        ring_buffer_proceed (buffer);
+        uca_camera_grab (camera, uca_ring_buffer_get_current_pointer (buffer), &error);
+        uca_ring_buffer_proceed (buffer);
 
         if (error != NULL)
             return error;
@@ -202,7 +202,7 @@ record_frames (UcaCamera *camera, Options *opts)
     write_raw (buffer, opts);
 #endif
 
-    ring_buffer_free (buffer);
+    g_object_unref (buffer);
     g_timer_destroy (timer);
 
     return error;
