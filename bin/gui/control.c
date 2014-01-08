@@ -432,6 +432,16 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 
         g_string_free (string, TRUE);
     }
+    if (data->cr != NULL) {
+        gdouble dash = 5.0;
+        cairo_set_source_rgb (data->cr, data->red, data->green, data->blue);
+        gint rect_width = data->rect_evx - data->rect_x;
+        gint rect_height = data->rect_evy - data->rect_y;
+        cairo_rectangle (data->cr, data->rect_x, data->rect_y, rect_width, rect_height);
+        cairo_set_dash (data->cr, &dash, 1, 0);
+        cairo_stroke (data->cr);
+        gtk_widget_queue_draw (event_box);
+    }
 }
 
 static void
@@ -474,6 +484,7 @@ static void
 on_button_release (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 {
     cairo_destroy (data->cr);
+    data->cr = NULL;
 
     normalize_event_coords (data);
 
