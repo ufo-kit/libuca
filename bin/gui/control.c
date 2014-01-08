@@ -20,6 +20,7 @@
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 #include <math.h>
+#include <cairo.h>
 
 #include "config.h"
 #include "uca-camera.h"
@@ -47,6 +48,7 @@ typedef struct {
     GtkWidget   *zoom_in_button;
     GtkWidget   *zoom_out_button;
     GtkWidget   *zoom_normal_button;
+    GtkWidget   *rect_color_button;
     GtkWidget   *acquisition_expander;
     GtkWidget   *properties_expander;
     GtkWidget   *colormap_box;
@@ -98,6 +100,10 @@ typedef struct {
     gint         from_x, from_y;
     gint         to_x, to_y;
     gint         adj_width, adj_height;
+    gint         rect_x, rect_y;
+    gint         rect_evx, rect_evy;
+    cairo_t      *cr;
+    gdouble      red, green, blue;
 } ThreadData;
 
 static UcaPluginManager *plugin_manager;
@@ -357,6 +363,8 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
     gint start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
     page_width += start_wval;
     page_height += start_hval;
+    data->rect_evx = event->x;
+    data->rect_evy = event->y;
 
     if ((data->display_width < page_width) && (data->display_height < page_height)) {
         gint startx = (page_width - data->display_width) / 2;
@@ -424,6 +432,16 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 
         g_string_free (string, TRUE);
     }
+    if (data->cr != NULL) {
+        gdouble dash = 5.0;
+        cairo_set_source_rgb (data->cr, data->red, data->green, data->blue);
+        gint rect_width = data->rect_evx - data->rect_x;
+        gint rect_height = data->rect_evy - data->rect_y;
+        cairo_rectangle (data->cr, data->rect_x, data->rect_y, rect_width, rect_height);
+        cairo_set_dash (data->cr, &dash, 1, 0);
+        cairo_stroke (data->cr);
+        gtk_widget_queue_draw (event_box);
+    }
 }
 
 static void
@@ -445,6 +463,10 @@ normalize_event_coords (ThreadData *data)
 static void
 on_button_press (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 {
+    data->cr = gdk_cairo_create(event_box->window);
+    data->rect_x = event->x;
+    data->rect_y = event->y;
+
     normalize_event_coords (data);
 
     gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->x_adjustment), data->display_width);
@@ -461,6 +483,9 @@ on_button_press (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 static void
 on_button_release (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 {
+    cairo_destroy (data->cr);
+    data->cr = NULL;
+
     normalize_event_coords (data);
 
     gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->width_adjustment), data->display_width);
@@ -492,6 +517,22 @@ on_button_release (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data
     data->adj_height = data->to_y - data->from_y;
 
     update_pixbuf (data);
+}
+
+static gboolean
+on_expose (GtkWidget *event_box, GdkEventExpose *event, ThreadData *data)
+{
+    if (data->cr != NULL) {
+        gdouble dash = 5.0;
+        cairo_set_source_rgb (data->cr, data->red, data->green, data->blue);
+        gint rect_width = data->rect_evx - data->rect_x;
+        gint rect_height = data->rect_evy - data->rect_y;
+        cairo_rectangle (data->cr, data->rect_x, data->rect_y, rect_width, rect_height);
+        cairo_set_dash (data->cr, &dash, 1, 0);
+        cairo_stroke (data->cr);
+        gtk_widget_queue_draw (event_box);
+    }
+    return FALSE;
 }
 
 static void
@@ -987,6 +1028,21 @@ on_zoom_normal_button_clicked (GtkWidget *widget, ThreadData *data)
 }
 
 static void
+on_rect_color_button_clicked (GtkWidget *widget, ThreadData *data)
+{
+    if ((data->red == 0.0 && data->green == 0.0) && data->blue == 0.0) {
+        data->red = 1.0;
+        data->green = 1.0;
+        data->blue = 1.0;
+    }
+    else {
+        data->red = 0.0;
+        data->green = 0.0;
+        data->blue = 0.0;
+    }
+}
+
+static void
 on_histogram_changed (EggHistogramView *view, ThreadData *data)
 {
     if (data->state == IDLE)
@@ -1084,6 +1140,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.zoom_in_button   = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-in-button"));
     td.zoom_out_button  = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-out-button"));
     td.zoom_normal_button = GTK_WIDGET (gtk_builder_get_object (builder, "zoom-normal-button"));
+    td.rect_color_button = GTK_WIDGET (gtk_builder_get_object (builder, "rectangle-button"));
     td.download_button  = GTK_WIDGET (gtk_builder_get_object (builder, "download-button"));
     td.histogram_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "histogram-checkbutton"));
     td.log_button       = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "logarithm-checkbutton"));
@@ -1175,6 +1232,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (td.event_box, "motion-notify-event", G_CALLBACK (on_motion_notify), &td);
     g_signal_connect (td.event_box, "button-press-event", G_CALLBACK (on_button_press), &td);
     g_signal_connect (td.event_box, "button-release-event", G_CALLBACK (on_button_release), &td);
+    g_signal_connect (td.event_box, "expose-event", G_CALLBACK (on_expose), &td);
     g_signal_connect (td.frame_slider, "value-changed", G_CALLBACK (on_frame_slider_changed), &td);
     g_signal_connect (td.start_button, "clicked", G_CALLBACK (on_start_button_clicked), &td);
     g_signal_connect (td.stop_button, "clicked", G_CALLBACK (on_stop_button_clicked), &td);
@@ -1183,6 +1241,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     g_signal_connect (td.zoom_in_button, "clicked", G_CALLBACK (on_zoom_in_button_clicked), &td);
     g_signal_connect (td.zoom_out_button, "clicked", G_CALLBACK (on_zoom_out_button_clicked), &td);
     g_signal_connect (td.zoom_normal_button, "clicked", G_CALLBACK (on_zoom_normal_button_clicked), &td);
+    g_signal_connect (td.rect_color_button, "clicked", G_CALLBACK (on_rect_color_button_clicked), &td);
     g_signal_connect (histogram_view, "changed", G_CALLBACK (on_histogram_changed), &td);
     g_signal_connect (window, "destroy", G_CALLBACK (on_destroy), &td);
 
