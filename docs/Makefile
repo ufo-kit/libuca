@@ -14,7 +14,7 @@ clean:
 	rm -f manual.pdf manual.html
 
 manual.pdf: $(INPUTS)
-	$(PANDOC) $(OPTS) $(INPUTS) -o $@
+	$(PANDOC) $(OPTS) $(INPUTS) --latex-engine=xelatex -o $@
 
 manual.html: $(INPUTS) style.css
 	$(PANDOC) $(OPTS) $(INPUTS) -H webfonts.html -c style.css -o $@
