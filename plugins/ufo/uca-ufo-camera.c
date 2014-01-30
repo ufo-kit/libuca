@@ -227,7 +227,7 @@ setup_pcilib (UcaUfoCameraPrivate *priv)
                                                   NULL, g_free);
     N_PROPERTIES = update_properties (priv);
     priv->height = read_register_value (priv->handle, "cmosis_number_lines") + 1;
-    priv->frequency = read_register_value (priv->handle, "bit_mode") >> 31;
+    priv->frequency = read_register_value (priv->handle, "control") >> 31;
     adc_resolution = read_register_value (priv->handle, "adc_resolution");
 
     switch (adc_resolution) {
