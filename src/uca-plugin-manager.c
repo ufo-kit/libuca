@@ -35,6 +35,7 @@
 #include <gio/gio.h>
 #include <gmodule.h>
 #include "uca-plugin-manager.h"
+#include "config.h"
 
 G_DEFINE_TYPE (UcaPluginManager, uca_plugin_manager, G_TYPE_OBJECT)
 
@@ -397,8 +398,5 @@ uca_plugin_manager_init (UcaPluginManager *manager)
     if (uca_camera_path != NULL)
         uca_plugin_manager_add_path (manager, uca_camera_path);
 
-    uca_plugin_manager_add_path (manager, "/usr/lib/uca");
-    uca_plugin_manager_add_path (manager, "/usr/lib64/uca");
-    uca_plugin_manager_add_path (manager, "/usr/local/lib/uca");
-    uca_plugin_manager_add_path (manager, "/usr/local/lib64/uca");
+    uca_plugin_manager_add_path (manager, UCA_PLUGINDIR);
 }
