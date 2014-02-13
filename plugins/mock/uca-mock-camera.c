@@ -22,6 +22,7 @@
 #include "uca-mock-camera.h"
 
 #define UCA_MOCK_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_MOCK_CAMERA, UcaMockCameraPrivate))
+#define __CREATE_RANDOM_IMAGE_DATA__
 
 static void uca_mock_initable_iface_init (GInitableIface *iface);
 
@@ -140,7 +141,12 @@ print_number (gchar *buffer, guint number, guint x, guint y, guint width)
 {
     for (int i = 0; i < DIGIT_WIDTH; i++) {
         for (int j = 0; j < DIGIT_HEIGHT; j++) {
-            buffer[(y+j)*width + (x+i)] = g_digits[number][j*DIGIT_WIDTH+i];
+            char val = (char) g_digits[number][j*DIGIT_WIDTH+i];
+            if(val != 0x00) {
+                //This should make the frame counter appear in a bright yellow
+                val = 0xBE;
+            }
+            buffer[(y+j)*width + (x+i)] = (guint8) val;
         }
     }
 }
@@ -151,8 +157,6 @@ print_current_frame (UcaMockCameraPrivate *priv, gchar *buffer)
     guint number = priv->current_frame;
     guint divisor = 10000000;
     int x = 1;
-    const double mean = 128.0;
-    const double std = 32.0;
 
     while (divisor > 0) {
         print_number(buffer, number / divisor, x, 1, priv->width);
@@ -161,16 +165,45 @@ print_current_frame (UcaMockCameraPrivate *priv, gchar *buffer)
         x += DIGIT_WIDTH + 1;
     }
 
+
+    //Rainbow pattern is the same for every row. Just calculate one single
+    //Scanline, so we can reuse it and dont have to do the whole calculation
+    //for every row again.
+    char default_line[priv->width];
+    for (int p = 0; p < priv->width; p++) {
+        default_line[p] = (char) ((p*256) / (priv->width));
+    }
+
+
+    //Use memcpy to quickly fill every row with the precalculated rainbow
+    //pattern
     for (guint y = 16; y < priv->height; y++) {
         guint index = y * priv->width;
-
-        for (guint i = 0; i < priv->width; i++, index++) {
-            double u1 = g_rand_double (priv->rand);
-            double u2 = g_rand_double (priv->rand);
-            double r = sqrt(-2 * log(u1)) * cos(2 * G_PI * u2);
-            buffer[index] = (guint8) (r * std + mean);
-        }
+        memcpy(&buffer[index], &default_line[0], priv->width);
     }
+    
+    #ifdef __CREATE_RANDOM_IMAGE_DATA__
+    
+        //This block will fill a square at the center of the image with noraml
+        //distributed random data
+        const double mean = 128.0;
+        const double std = 32.0;
+    
+        for (guint y = (priv->height/3); y < ((priv->height*2)/3); y++) {
+            guint row_start = y * priv->width;
+            for (guint i = (priv->width/3); i < ((priv->width*2)/3); i++) {
+                int index = row_start + i;
+                double u1 = g_rand_double(priv->rand);
+                double u2 = g_rand_double(priv->rand);
+                double r = sqrt(-2 * log(u1)) * cos(2 * G_PI * u2);
+                buffer[index] = (guint8) (r * std + mean);
+            }
+        }
+        
+    #endif
+    
+    
+    
 }
 
 static gpointer
