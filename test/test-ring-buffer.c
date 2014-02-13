@@ -43,12 +43,14 @@ test_ring (void)
 
     data = uca_ring_buffer_get_write_pointer (buffer);
     data[0] = 0xBADF00D;
+    uca_ring_buffer_write_advance (buffer);
 
     g_assert (uca_ring_buffer_available (buffer));
     g_assert (uca_ring_buffer_get_num_blocks (buffer) == 1);
 
     data = uca_ring_buffer_get_write_pointer (buffer);
     data[0] = 0xDEADBEEF;
+    uca_ring_buffer_write_advance (buffer);
 
     g_assert (uca_ring_buffer_get_num_blocks (buffer) == 2);
     
@@ -74,9 +76,11 @@ test_overwrite (void)
 
     data = uca_ring_buffer_get_write_pointer (buffer);
     data[0] = 0xBADF00D;
+    uca_ring_buffer_write_advance (buffer);
 
     data = uca_ring_buffer_get_write_pointer (buffer);
     data[0] = 0xDEADBEEF;
+    uca_ring_buffer_write_advance (buffer);
 
     data = uca_ring_buffer_get_read_pointer (buffer);
     g_assert (data[0] == 0xDEADBEEF);

@@ -24,8 +24,10 @@
  */
 
 #include <glib.h>
+#include <string.h>
 #include "config.h"
 #include "uca-camera.h"
+#include "uca-ring-buffer.h"
 #include "uca-enums.h"
 
 #define UCA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_CAMERA, UcaCameraPrivate))
@@ -108,7 +110,9 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "recorded-frames",
     "transfer-asynchronously",
     "is-recording",
-    "is-readout"
+    "is-readout",
+    "buffered",
+    "num-buffers",
 };
 
 static GParamSpec *camera_properties[N_BASE_PROPERTIES] = { NULL, };
@@ -118,6 +122,10 @@ struct _UcaCameraPrivate {
     gboolean is_recording;
     gboolean is_readout;
     gboolean transfer_async;
+    gboolean buffered;
+    guint num_buffers;
+    GThread *read_thread;
+    UcaRingBuffer *ring_buffer;
     UcaCameraTrigger trigger;
     GValueArray *h_binnings;
     GValueArray *v_binnings;
@@ -155,6 +163,14 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
 
         case PROP_TRIGGER_MODE:
             priv->trigger = g_value_get_enum (value);
+            break;
+
+        case PROP_BUFFERED:
+            priv->buffered = g_value_get_boolean (value);
+            break;
+
+        case PROP_NUM_BUFFERS:
+            priv->num_buffers = g_value_get_uint (value);
             break;
 
         default:
@@ -231,9 +247,40 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             g_value_set_uint (value, 1);
             break;
 
+        case PROP_BUFFERED:
+            g_value_set_boolean (value, priv->buffered);
+            break;
+
+        case PROP_NUM_BUFFERS:
+            g_value_set_uint (value, priv->num_buffers);
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
+}
+
+static void
+uca_camera_dispose (GObject *object)
+{
+    UcaCameraPrivate *priv;
+
+    priv = UCA_CAMERA_GET_PRIVATE (object);
+
+    if (priv->is_recording) {
+        GError *error;
+
+        uca_camera_stop_recording (UCA_CAMERA (object), &error);
+        g_warning ("Could not stop recording: %s", error->message);
+        g_error_free (error);
+    }
+
+    if (priv->ring_buffer != NULL) {
+        g_object_unref (priv->ring_buffer);
+        priv->ring_buffer = NULL;
+    }
+
+    G_OBJECT_CLASS (uca_camera_parent_class)->dispose (object);
 }
 
 static void
@@ -254,6 +301,7 @@ uca_camera_class_init (UcaCameraClass *klass)
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_camera_set_property;
     gobject_class->get_property = uca_camera_get_property;
+    gobject_class->dispose = uca_camera_dispose;
     gobject_class->finalize = uca_camera_finalize;
 
     klass->start_recording = NULL;
@@ -451,6 +499,19 @@ uca_camera_class_init (UcaCameraClass *klass)
             "Is camera in readout mode",
             FALSE, G_PARAM_READABLE);
 
+    camera_properties[PROP_BUFFERED] =
+        g_param_spec_boolean(uca_camera_props[PROP_BUFFERED],
+            "TRUE if libuca should buffer frames",
+            "TRUE if libuca should buffer frames",
+            FALSE, G_PARAM_READWRITE);
+
+    camera_properties[PROP_NUM_BUFFERS] =
+        g_param_spec_uint(uca_camera_props[PROP_NUM_BUFFERS],
+            "Number of frame buffers in the ring buffer ",
+            "Number of frame buffers in the ring buffer ",
+            0, G_MAXUINT, 4,
+            G_PARAM_READWRITE);
+
     for (guint id = PROP_0 + 1; id < N_BASE_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, camera_properties[id]);
 
@@ -471,6 +532,9 @@ uca_camera_init (UcaCamera *camera)
     camera->priv->trigger = UCA_CAMERA_TRIGGER_AUTO;
     camera->priv->h_binnings = g_value_array_new (1);
     camera->priv->v_binnings = g_value_array_new (1);
+    camera->priv->buffered = FALSE;
+    camera->priv->num_buffers = 4;
+    camera->priv->ring_buffer = NULL;
 
     g_value_init (&val, G_TYPE_UINT);
     g_value_set_uint (&val, 1);
@@ -496,6 +560,28 @@ uca_camera_init (UcaCamera *camera)
     uca_camera_set_property_unit (camera_properties[PROP_RECORDED_FRAMES], UCA_UNIT_COUNT);
 }
 
+static gpointer
+buffer_thread (UcaCamera *camera)
+{
+    UcaCameraClass *klass;
+    GError *error = NULL;
+
+    klass = UCA_CAMERA_GET_CLASS (camera);
+
+    while (camera->priv->is_recording) {
+        gpointer buffer;
+
+        buffer = uca_ring_buffer_get_write_pointer (camera->priv->ring_buffer);
+
+        if (!(*klass->grab) (camera, buffer, &error))
+            break;
+
+        uca_ring_buffer_write_advance (camera->priv->ring_buffer);
+    }
+
+    return error;
+}
+
 /**
  * uca_camera_start_recording:
  * @camera: A #UcaCamera object
@@ -509,6 +595,7 @@ void
 uca_camera_start_recording (UcaCamera *camera, GError **error)
 {
     UcaCameraClass *klass;
+    UcaCameraPrivate *priv;
     GError *tmp_error = NULL;
     static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
@@ -519,17 +606,19 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
     g_return_if_fail (klass != NULL);
     g_return_if_fail (klass->start_recording != NULL);
 
+    priv = camera->priv;
+
     g_static_mutex_lock (&mutex);
 
-    if (camera->priv->is_recording) {
+    if (priv->is_recording) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                "Camera is already recording");
+                     "Camera is already recording");
         goto start_recording_unlock;
     }
 
-    if (camera->priv->transfer_async && (camera->grab_func == NULL)) {
+    if (priv->transfer_async && (camera->grab_func == NULL)) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NO_GRAB_FUNC,
-                "No grab callback function set");
+                     "No grab callback function set");
         goto start_recording_unlock;
     }
 
@@ -538,13 +627,31 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
     g_static_mutex_unlock (&access_lock);
 
     if (tmp_error == NULL) {
-        camera->priv->is_readout = FALSE;
-        camera->priv->is_recording = TRUE;
+        priv->is_readout = FALSE;
+        priv->is_recording = TRUE;
         /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
         g_object_notify (G_OBJECT (camera), "is-recording");
     }
     else
         g_propagate_error (error, tmp_error);
+
+    if (priv->buffered) {
+        guint width, height, bitdepth;
+        guint pixel_size;
+
+        g_object_get (camera,
+                      "roi-width", &width,
+                      "roi-height", &height,
+                      "sensor-bitdepth", &bitdepth,
+                      NULL);
+
+        pixel_size = bitdepth <= 8 ? 1 : 2;
+        priv->ring_buffer = uca_ring_buffer_new (width * height * pixel_size,
+                                                         priv->num_buffers);
+
+        /* Let's read out the frames from another thread */
+        priv->read_thread = g_thread_new ("read-thread", (GThreadFunc) buffer_thread, camera);
+    }
 
 start_recording_unlock:
     g_static_mutex_unlock (&mutex);
@@ -561,6 +668,8 @@ void
 uca_camera_stop_recording (UcaCamera *camera, GError **error)
 {
     UcaCameraClass *klass;
+    UcaCameraPrivate *priv;
+    GError *tmp_error = NULL;
     static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
     g_return_if_fail (UCA_IS_CAMERA (camera));
@@ -570,29 +679,40 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
     g_return_if_fail (klass != NULL);
     g_return_if_fail (klass->stop_recording != NULL);
 
+    priv = camera->priv;
+
     g_static_mutex_lock (&mutex);
 
-    if (!camera->priv->is_recording) {
+    if (!priv->is_recording) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
                      "Camera is not recording");
-    }
-    else {
-        GError *tmp_error = NULL;
-
-        g_static_mutex_lock (&access_lock);
-        (*klass->stop_recording)(camera, &tmp_error);
-        g_static_mutex_unlock (&access_lock);
-
-        if (tmp_error == NULL) {
-            camera->priv->is_readout = FALSE;
-            camera->priv->is_recording = FALSE;
-            /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-            g_object_notify (G_OBJECT (camera), "is-recording");
-        }
-        else
-            g_propagate_error (error, tmp_error);
+        goto error_stop_recording;
     }
 
+    g_static_mutex_lock (&access_lock);
+    (*klass->stop_recording)(camera, &tmp_error);
+    g_static_mutex_unlock (&access_lock);
+
+    if (tmp_error == NULL) {
+        priv->is_readout = FALSE;
+        priv->is_recording = FALSE;
+        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
+        g_object_notify (G_OBJECT (camera), "is-recording");
+    }
+    else
+        g_propagate_error (error, tmp_error);
+
+    if (priv->buffered) {
+        g_thread_join (priv->read_thread);
+        priv->read_thread = NULL;
+    }
+
+    if (camera->priv->ring_buffer != NULL) {
+        g_object_unref (camera->priv->ring_buffer);
+        camera->priv->ring_buffer = NULL;
+    }
+
+error_stop_recording:
     g_static_mutex_unlock (&mutex);
 }
 
@@ -786,17 +906,43 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     g_return_val_if_fail (klass->grab != NULL, FALSE);
     g_return_val_if_fail (data != NULL, FALSE);
 
-    g_static_mutex_lock (&mutex);
+    if (!camera->priv->buffered) {
+        g_static_mutex_lock (&mutex);
 
-    if (!camera->priv->is_recording && !camera->priv->is_readout)
-        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is neither recording nor in readout mode");
-    else {
-        g_static_mutex_lock (&access_lock);
-        result = (*klass->grab) (camera, data, error);
-        g_static_mutex_unlock (&access_lock);
+        if (!camera->priv->is_recording && !camera->priv->is_readout) {
+            g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
+                         "Camera is neither recording nor in readout mode");
+        }
+        else {
+            g_static_mutex_lock (&access_lock);
+            result = (*klass->grab) (camera, data, error);
+            g_static_mutex_unlock (&access_lock);
+        }
+
+        g_static_mutex_unlock (&mutex);
     }
+    else {
+        gpointer buffer;
 
-    g_static_mutex_unlock (&mutex);
+        /*
+         * Spin-lock until we can read something. This shouldn't happen to
+         * often, as buffering is usually used in those cases when the camera is
+         * faster than the software.
+         */
+        while (!uca_ring_buffer_available (camera->priv->ring_buffer))
+            ;
+
+        buffer = uca_ring_buffer_get_read_pointer (camera->priv->ring_buffer);
+
+        if (buffer == NULL) {
+            g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
+                         "Ring buffer is empty");
+        }
+        else {
+            memcpy (data, buffer, uca_ring_buffer_get_block_size (camera->priv->ring_buffer));
+            result = TRUE;
+        }
+    }
     return result;
 }
 

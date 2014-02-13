@@ -170,6 +170,7 @@ record_frames (UcaCamera *camera, Options *opts)
         gdouble elapsed;
 
         uca_camera_grab (camera, uca_ring_buffer_get_write_pointer (buffer), &error);
+        uca_ring_buffer_write_advance (buffer);
 
         if (error != NULL)
             return error;
