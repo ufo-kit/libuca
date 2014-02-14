@@ -155,6 +155,7 @@ static void
 print_current_frame (UcaMockCameraPrivate *priv, gchar *buffer)
 {
     guint number = priv->current_frame;
+    char default_line[priv->width];
     guint divisor = 10000000;
     int x = 1;
 
@@ -165,45 +166,33 @@ print_current_frame (UcaMockCameraPrivate *priv, gchar *buffer)
         x += DIGIT_WIDTH + 1;
     }
 
-
-    //Rainbow pattern is the same for every row. Just calculate one single
-    //Scanline, so we can reuse it and dont have to do the whole calculation
-    //for every row again.
-    char default_line[priv->width];
     for (int p = 0; p < priv->width; p++) {
         default_line[p] = (char) ((p*256) / (priv->width));
     }
 
-
-    //Use memcpy to quickly fill every row with the precalculated rainbow
-    //pattern
     for (guint y = 16; y < priv->height; y++) {
         guint index = y * priv->width;
-        memcpy(&buffer[index], &default_line[0], priv->width);
+        memcpy (&buffer[index], &default_line[0], priv->width);
     }
     
-    #ifdef __CREATE_RANDOM_IMAGE_DATA__
-    
-        //This block will fill a square at the center of the image with noraml
-        //distributed random data
-        const double mean = 128.0;
-        const double std = 32.0;
-    
-        for (guint y = (priv->height/3); y < ((priv->height*2)/3); y++) {
-            guint row_start = y * priv->width;
-            for (guint i = (priv->width/3); i < ((priv->width*2)/3); i++) {
-                int index = row_start + i;
-                double u1 = g_rand_double(priv->rand);
-                double u2 = g_rand_double(priv->rand);
-                double r = sqrt(-2 * log(u1)) * cos(2 * G_PI * u2);
-                buffer[index] = (guint8) (r * std + mean);
-            }
+#ifdef __CREATE_RANDOM_IMAGE_DATA__
+    //This block will fill a square at the center of the image with noraml
+    //distributed random data
+    const double mean = 128.0;
+    const double std = 32.0;
+
+    for (guint y = (priv->height/3); y < ((priv->height*2)/3); y++) {
+        guint row_start = y * priv->width;
+
+        for (guint i = (priv->width/3); i < ((priv->width*2)/3); i++) {
+            int index = row_start + i;
+            double u1 = g_rand_double (priv->rand);
+            double u2 = g_rand_double (priv->rand);
+            double r = sqrt (-2 * log(u1)) * cos(2 * G_PI * u2);
+            buffer[index] = (guint8) (r * std + mean);
         }
-        
-    #endif
-    
-    
-    
+    }
+#endif
 }
 
 static gpointer

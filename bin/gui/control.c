@@ -309,7 +309,7 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
     guint n = data->width * data->height;
 
     if (data->pixel_size == 1) {
-        guint8 *input = (guint8 *) uca_ring_buffer_get_current_pointer (data->buffer);
+        guint8 *input = (guint8 *) uca_ring_buffer_peek_pointer (data->buffer);
 
         for (gint i = 0; i < n; i++) {
             guint8 val = input[i];
@@ -325,7 +325,7 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
         }
     }
     else {
-        guint16 *input = (guint16 *) uca_ring_buffer_get_current_pointer (data->buffer);
+        guint16 *input = (guint16 *) uca_ring_buffer_peek_pointer (data->buffer);
 
         for (gint i = 0; i < n; i++) {
             guint16 val = input[i];
@@ -407,7 +407,7 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
         gpointer *buffer;
         GString *string;
 
-        buffer = uca_ring_buffer_get_current_pointer (data->buffer);
+        buffer = uca_ring_buffer_peek_pointer (data->buffer);
         string = g_string_new_len (NULL, 32);
         gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
 
@@ -560,9 +560,6 @@ update_pixbuf (ThreadData *data)
 
     gtk_widget_queue_draw_area (data->image, 0, 0, data->display_width, data->display_height);
 
-    egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view),
-                               uca_ring_buffer_get_current_pointer (data->buffer));
-
     if ((data->adj_width > 0) && (data->adj_height > 0)) {
         x = data->from_x;
         y = data->from_y;
@@ -681,48 +678,52 @@ preview_frames (void *args)
     while (data->state == RUNNING) {
         gpointer *buffer;
 
-        buffer = uca_ring_buffer_get_current_pointer (data->buffer);
+        buffer = uca_ring_buffer_peek_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, &error);
 
-        if (error == NULL) {
-            up_and_down_scale (data, buffer);
+        if (error != NULL) {
+            print_and_free_error (&error);
+            continue;
+        }
 
-            gdk_threads_enter ();
-            update_pixbuf (data);
+        up_and_down_scale (data, buffer);
 
-            if ((data->ev_x >= 0) && (data->ev_y >= 0) && (data->ev_y <= data->display_height) && (data->ev_x <= data->display_width)) {
-                GString *string;
-                string = g_string_new_len (NULL, 32);
-                gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
+        gdk_threads_enter ();
 
-                if (data->pixel_size == 1) {
-                    guint8 *input = (guint8 *) buffer;
-                    guint8 val = input[i];
-                    g_string_printf (string, "val = %i", val);
-                    gtk_label_set_text (data->val_label, string->str);
-                }
-                else if (data->pixel_size == 2) {
-                    guint16 *input = (guint16 *) buffer;
-                    guint16 val = input[i];
-                    g_string_printf (string, "val = %i", val);
-                    gtk_label_set_text (data->val_label, string->str);
-                }
+        update_pixbuf (data);
+        egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), buffer);
 
-                g_string_printf (string, "x = %i", data->display_x);
-                gtk_label_set_text (data->x_label, string->str);
+        if ((data->ev_x >= 0) && (data->ev_y >= 0) &&
+            (data->ev_y <= data->display_height) && (data->ev_x <= data->display_width)) {
+            GString *string;
+            string = g_string_new_len (NULL, 32);
+            gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
 
-                g_string_printf (string, "y = %i", data->display_y);
-                gtk_label_set_text (data->y_label, string->str);
-
-                g_string_free (string, TRUE);
+            if (data->pixel_size == 1) {
+                guint8 *input = (guint8 *) buffer;
+                guint8 val = input[i];
+                g_string_printf (string, "val = %i", val);
+                gtk_label_set_text (data->val_label, string->str);
+            }
+            else if (data->pixel_size == 2) {
+                guint16 *input = (guint16 *) buffer;
+                guint16 val = input[i];
+                g_string_printf (string, "val = %i", val);
+                gtk_label_set_text (data->val_label, string->str);
             }
 
-            gdk_threads_leave ();
+            g_string_printf (string, "x = %i", data->display_x);
+            gtk_label_set_text (data->x_label, string->str);
 
-            counter++;
+            g_string_printf (string, "y = %i", data->display_y);
+            gtk_label_set_text (data->y_label, string->str);
+
+            g_string_free (string, TRUE);
         }
-        else
-            print_and_free_error (&error);
+
+        gdk_threads_leave ();
+
+        counter++;
     }
     return NULL;
 }
@@ -749,11 +750,10 @@ record_frames (gpointer args)
         if (n_max > 0 && n_frames >= n_max)
             break;
 
-        buffer = uca_ring_buffer_get_current_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_write_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, NULL);
 
         if (error == NULL) {
-            uca_ring_buffer_proceed (data->buffer);
             n_frames++;
             data->n_recorded++;
         }
@@ -806,9 +806,8 @@ update_current_frame (ThreadData *data)
     if (n_max > 0)
         index = (index + data->n_recorded - n_max) % n_max;
 
-    uca_ring_buffer_set_current_pointer (data->buffer, index);
-
-    buffer = uca_ring_buffer_get_current_pointer (data->buffer);
+    buffer = uca_ring_buffer_get_pointer (data->buffer, index);
+    egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), buffer);
     up_and_down_scale (data, buffer);
     update_pixbuf (data);
 }
@@ -948,9 +947,9 @@ download_frames (ThreadData *data)
     uca_ring_buffer_reset (data->buffer);
 
     while (error == NULL) {
-        buffer = uca_ring_buffer_get_current_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_write_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, &error);
-        uca_ring_buffer_proceed (data->buffer);
+
         gdk_threads_enter ();
         gtk_adjustment_set_value (data->download_adjustment, current_frame++);
         gdk_threads_leave ();
@@ -1002,7 +1001,7 @@ static void
 update_zoomed_pixbuf (ThreadData *data)
 {
     update_pixbuf_dimensions (data);
-    up_and_down_scale (data, uca_ring_buffer_get_current_pointer (data->buffer));
+    up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
     update_pixbuf (data);
 }
 
@@ -1068,7 +1067,7 @@ on_colormap_changed (GtkComboBox *widget, ThreadData *data)
     data->colormap = map;
     update_pixbuf_dimensions (data);
 
-    up_and_down_scale (data, uca_ring_buffer_get_current_pointer (data->buffer));
+    up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
     update_pixbuf (data);
 }
 
@@ -1178,7 +1177,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     ring_buffer = uca_ring_buffer_new (image_size, n_frames);
 
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (histogram_view),
-                               uca_ring_buffer_get_current_pointer (ring_buffer));
+                               uca_ring_buffer_peek_pointer (ring_buffer));
 
     pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, TRUE, 8, width, height);
     gtk_image_set_from_pixbuf (GTK_IMAGE (image), pixbuf);
