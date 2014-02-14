@@ -752,6 +752,7 @@ record_frames (gpointer args)
 
         buffer = uca_ring_buffer_get_write_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, NULL);
+        uca_ring_buffer_write_advance (data->buffer);
 
         if (error == NULL) {
             n_frames++;
@@ -949,6 +950,7 @@ download_frames (ThreadData *data)
     while (error == NULL) {
         buffer = uca_ring_buffer_get_write_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, &error);
+        uca_ring_buffer_write_advance (data->buffer);
 
         gdk_threads_enter ();
         gtk_adjustment_set_value (data->download_adjustment, current_frame++);

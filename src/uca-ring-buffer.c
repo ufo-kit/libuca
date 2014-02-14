@@ -30,7 +30,6 @@ struct _UcaRingBufferPrivate {
     guint    read_index;
     guint    read;
     guint    written;
-    gboolean full;
 };
 
 enum {
@@ -62,7 +61,6 @@ uca_ring_buffer_reset (UcaRingBuffer *buffer)
 
     buffer->priv->write_index = 0;
     buffer->priv->read_index = 0;
-    buffer->priv->full = FALSE;
 }
 
 gsize
@@ -97,6 +95,8 @@ uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer)
 
     g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), NULL);
     priv = buffer->priv;
+
+    g_return_val_if_fail (priv->read_index != priv->write_index, NULL);
     data = priv->data + (priv->read_index % priv->n_blocks_total) * priv->block_size;
     priv->read_index++;
     return data;
@@ -112,12 +112,15 @@ uca_ring_buffer_get_write_pointer (UcaRingBuffer *buffer)
 
     priv = buffer->priv;
     data = priv->data + (priv->write_index % priv->n_blocks_total) * priv->block_size;
-    priv->write_index++;
-
-    if ((priv->write_index - priv->read_index) == priv->n_blocks_total)
-        priv->full = TRUE;
 
     return data;
+}
+
+void
+uca_ring_buffer_write_advance (UcaRingBuffer *buffer)
+{
+    g_return_if_fail (UCA_IS_RING_BUFFER (buffer));
+    buffer->priv->write_index++;
 }
 
 gpointer
