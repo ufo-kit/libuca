@@ -746,12 +746,8 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                             break;
                         }
 
-
                         gdouble timebase = convert_timebase(suitable_timebase);
                         guint32 timesteps = time / timebase;
-
-                        g_print ("timebase: %i, time %u\n", suitable_timebase, timesteps);
-
                         err = pco_set_exposure_time(priv->pco, timesteps);
                     }
                 }
