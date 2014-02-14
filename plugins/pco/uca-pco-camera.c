@@ -208,6 +208,9 @@ struct _UcaPcoCameraPrivate {
     guint16 active_segment;
     guint num_recorded_images;
     guint current_image;
+
+    guint16 delay_timebase;
+    guint16 exposure_timebase;
 };
 
 static pco_cl_map_entry pco_cl_map[] = {
@@ -313,6 +316,64 @@ override_maximum_adcs(UcaPcoCameraPrivate *priv)
     spec->maximum = pco_get_maximum_number_of_adcs(priv->pco);
 }
 
+static gdouble
+convert_timebase(guint16 timebase)
+{
+    switch (timebase) {
+        case TIMEBASE_NS:
+            return 1e-9;
+        case TIMEBASE_US:
+            return 1e-6;
+        case TIMEBASE_MS:
+            return 1e-3;
+        default:
+            g_warning("Unknown timebase");
+    }
+    return 1e-3;
+}
+
+static void
+read_timebase(UcaPcoCameraPrivate *priv)
+{
+    pco_get_timebase(priv->pco, &priv->delay_timebase, &priv->exposure_timebase);
+}
+
+static gboolean
+check_timebase (gdouble time, gdouble scale)
+{
+    const gdouble EPSILON = 1e-3;
+    gdouble scaled = time * scale;
+    return scaled >= 1.0 && (scaled - ((int) scaled)) < EPSILON;
+}
+
+static guint16
+get_suitable_timebase(gdouble time)
+{
+    if (check_timebase (time, 1e3))
+        return TIMEBASE_MS;
+    if (check_timebase (time, 1e6))
+        return TIMEBASE_US;
+    if (check_timebase (time, 1e9))
+        return TIMEBASE_NS;
+    return TIMEBASE_INVALID;
+}
+
+static gdouble
+get_internal_delay (UcaPcoCamera *camera)
+{
+    if (camera->priv->description->type == CAMERATYPE_PCO_DIMAX_STD) {
+        guint sensor_rate;
+        g_object_get (camera, "sensor-pixelrate", &sensor_rate, NULL);
+
+        if (sensor_rate == 55000000.0)
+            return 0.000079;
+        else if (sensor_rate == 62500000.0)
+            return 0.000036;
+    }
+
+    return 0.0;
+}
+
 static int
 fg_callback(frameindex_t frame, struct fg_apc_data *apc)
 {
@@ -356,8 +417,7 @@ check_pco_property_error (guint err, guint property_id)
 {
     if (err != PCO_NOERROR) {
         g_warning ("Call to libpco failed with error code %x for property `%s'",
-                   err,
-                   pco_properties[property_id]->name);
+                   err, pco_properties[property_id]->name);
     }
 }
 
@@ -664,23 +724,78 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
 
         case PROP_EXPOSURE_TIME:
             {
-                uint32_t exposure;
-                uint32_t framerate;
+                if (priv->description->type == CAMERATYPE_PCO4000) {
+                    const gdouble time = g_value_get_double(value);
 
-                err = pco_get_framerate (priv->pco, &framerate, &exposure);
-                exposure = (uint32_t) (g_value_get_double (value) * 1000 * 1000 * 1000);
-                err = pco_set_framerate (priv->pco, framerate, exposure, false);
+                    if (priv->exposure_timebase == TIMEBASE_INVALID)
+                        read_timebase(priv);
+
+                    /*
+                     * Lets check if we can express the time in the current time
+                     * base. If not, we need to adjust that.
+                     */
+                    guint16 suitable_timebase = get_suitable_timebase(time);
+
+                    if (suitable_timebase == TIMEBASE_INVALID) {
+                        g_warning("Cannot set such a small exposure time");
+                    }
+                    else {
+                        if (suitable_timebase != priv->exposure_timebase) {
+                            priv->exposure_timebase = suitable_timebase;
+                            err = pco_set_timebase(priv->pco, priv->delay_timebase, suitable_timebase);
+                            break;
+                        }
+
+
+                        gdouble timebase = convert_timebase(suitable_timebase);
+                        guint32 timesteps = time / timebase;
+
+                        g_print ("timebase: %i, time %u\n", suitable_timebase, timesteps);
+
+                        err = pco_set_exposure_time(priv->pco, timesteps);
+                    }
+                }
+                else {
+                    uint32_t exposure;
+                    uint32_t framerate;
+
+                    err = pco_get_framerate (priv->pco, &framerate, &exposure);
+                    exposure = (uint32_t) (g_value_get_double (value) * 1000 * 1000 * 1000);
+                    err = pco_set_framerate (priv->pco, framerate, exposure, false);
+                }
             }
             break;
 
         case PROP_FRAMES_PER_SECOND:
             {
-                uint32_t exposure;
-                uint32_t framerate;
+                if (priv->description->type == CAMERATYPE_PCO4000) {
+                    gdouble n_frames_per_second;
+                    gdouble exposure_time;
+                    gdouble delay;
 
-                err = pco_get_framerate (priv->pco, &framerate, &exposure);
-                framerate = (uint32_t) (g_value_get_double (value) * 1000);
-                err = pco_set_framerate (priv->pco, framerate, exposure, true);
+                    /*
+                     * We want to expose n frames in one second, each frame takes
+                     * exposure time + delay time. Thus we have
+                     *
+                     * 1s = n * (t_exp + t_delay) <=> t_exp = 1s/n - t_delay.
+                     */
+                    delay = get_internal_delay (UCA_PCO_CAMERA (object));
+                    n_frames_per_second = g_value_get_double (value);
+                    exposure_time = 1.0 / n_frames_per_second - delay;
+
+                    if (exposure_time <= 0.0)
+                        g_warning ("Too many frames per second requested.");
+                    else
+                        g_object_set (object, "exposure-time", exposure_time, NULL);
+                }
+                else {
+                    uint32_t exposure;
+                    uint32_t framerate;
+
+                    err = pco_get_framerate (priv->pco, &framerate, &exposure);
+                    framerate = (uint32_t) (g_value_get_double (value) * 1000);
+                    err = pco_set_framerate (priv->pco, framerate, exposure, true);
+                }
             }
             break;
 
@@ -960,21 +1075,43 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
 
         case PROP_EXPOSURE_TIME:
             {
-                uint32_t exposure;
-                uint32_t framerate;
+                if (priv->description->type == CAMERATYPE_PCO4000) {
+                    uint32_t exposure_time;
+                    err = pco_get_exposure_time(priv->pco, &exposure_time);
 
-                err = pco_get_framerate (priv->pco, &framerate, &exposure);
-                g_value_set_double (value, exposure / 1000. / 1000. / 1000.);
+                    if (priv->exposure_timebase == TIMEBASE_INVALID)
+                        read_timebase(priv);
+
+                    g_value_set_double(value, convert_timebase(priv->exposure_timebase) * exposure_time);
+                }
+                else {
+                    uint32_t exposure;
+                    uint32_t framerate;
+
+                    err = pco_get_framerate (priv->pco, &framerate, &exposure);
+                    g_print ("err=%i exposure: %u\n", err, exposure);
+                    g_value_set_double (value, exposure / 1000. / 1000. / 1000.);
+                }
             }
             break;
 
         case PROP_FRAMES_PER_SECOND:
             {
-                uint32_t exposure;
-                uint32_t framerate;
+                if (priv->description->type == CAMERATYPE_PCO4000) {
+                    gdouble exposure_time;
+                    gdouble delay;
 
-                err = pco_get_framerate (priv->pco, &framerate, &exposure);
-                g_value_set_double (value, framerate / 1000.);
+                    delay = get_internal_delay (UCA_PCO_CAMERA (object));
+                    g_object_get (object, "exposure-time", &exposure_time, NULL);
+                    g_value_set_double (value, 1.0 / (exposure_time + delay));
+                }
+                else {
+                    uint32_t exposure;
+                    uint32_t framerate;
+
+                    err = pco_get_framerate (priv->pco, &framerate, &exposure);
+                    g_value_set_double (value, framerate / 1000.);
+                }
             }
             break;
 
@@ -1541,6 +1678,8 @@ uca_pco_camera_init (UcaPcoCamera *self)
     priv->description = NULL;
     priv->last_frame = 0;
     priv->grab_buffer = NULL;
+    priv->delay_timebase = TIMEBASE_INVALID;
+    priv->exposure_timebase = TIMEBASE_INVALID;
     priv->construct_error = NULL;
 
     if (!setup_pco_camera (priv))
