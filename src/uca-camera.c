@@ -26,6 +26,7 @@
 #include <glib.h>
 #include <string.h>
 #include "config.h"
+#include "compat.h"
 #include "uca-camera.h"
 #include "uca-ring-buffer.h"
 #include "uca-enums.h"
