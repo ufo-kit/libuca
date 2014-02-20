@@ -489,21 +489,30 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_FRAMES_PER_SECOND:
             {
+                const gdouble clock_period = priv->frequency == FPGA_40MHZ ? 1 / 40.0 : 1 / 48.0;
                 gdouble exposure_time;
-                gdouble fps;
+                gdouble readout_time, image_readout_time;
+                gdouble overhead_time, delay_time;
+                gdouble framerate;
+                gdouble foo;
+                guint output_mode;
                 guint trigger_period;
                 guint roi_height;
 
                 g_object_get (object,
                               "exposure-time", &exposure_time,
-                              "ufo-trigger-period", &trigger_period,
+                              "ufo-cmosis-output-mode", &output_mode,
                               "roi-height", &roi_height,
+                              "ufo-trigger-period", &trigger_period,
                               NULL);
 
-                fps = 1. / (exposure_time + 
-                            (roi_height / 1088. * 2924. * 1e-6)+
-                            (trigger_period * 8. * 1e-9));
-                g_value_set_double(value, fps);
+                foo = pow(2, output_mode);
+                image_readout_time = (129 * clock_period * foo) * roi_height;
+                overhead_time = (10 /* reg73 */ + 2 * foo) * 129 * clock_period;
+                readout_time = exposure_time + overhead_time + image_readout_time;
+                delay_time = trigger_period * 8.0 * 1e-9;
+                framerate = 1.0 / (readout_time + delay_time);
+                g_value_set_double(value, framerate);
             }
             break;
         case PROP_HAS_STREAMING:
