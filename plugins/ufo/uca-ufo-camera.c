@@ -22,6 +22,7 @@
 #include <string.h>
 #include <pcilib.h>
 #include <errno.h>
+#include <math.h>
 #include "uca-camera.h"
 #include "uca-ufo-camera.h"
 
@@ -512,6 +513,7 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
                 readout_time = exposure_time + overhead_time + image_readout_time;
                 delay_time = trigger_period * 8.0 * 1e-9;
                 framerate = 1.0 / (readout_time + delay_time);
+                framerate *= 1000 * 1000;   /* clock_period is in MHz */
                 g_value_set_double(value, framerate);
             }
             break;
