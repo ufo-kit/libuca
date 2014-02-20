@@ -400,6 +400,29 @@ uca_ufo_camera_trigger (UcaCamera *camera, GError **error)
     pcilib_trigger (priv->handle, PCILIB_EVENT0, 0, NULL);
 }
 
+static gdouble
+total_readout_time (UcaUfoCamera *camera)
+{
+    gdouble clock_period;
+    gdouble exposure_time;
+    gdouble foo;
+    guint output_mode;
+    guint roi_height;
+
+    g_object_get (G_OBJECT (camera),
+                  "exposure-time", &exposure_time,
+                  "ufo-cmosis-output-mode", &output_mode,
+                  "roi-height", &roi_height,
+                  NULL);
+
+    clock_period = camera->priv->frequency == FPGA_40MHZ ? 1 / 40000000.0 : 1 / 48000000.0;
+    foo = pow (2, output_mode);
+    image_readout_time = (129 * clock_period * foo) * roi_height;
+    overhead_time = (10 /* reg73 */ + 2 * foo) * 129 * clock_period;
+
+    return exposure_time + overhead_time + image_readout_time;
+}
+
 static void
 uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
@@ -412,6 +435,19 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
                 const gdouble user_exposure_time = g_value_get_double(value);
                 pcilib_register_value_t reg_value = (pcilib_register_value_t) ((1e6 * user_exposure_time * frequency) / 129.0);
                 pcilib_write_register(priv->handle, NULL, "cmosis_exp_time", reg_value);
+            }
+            break;
+        case PROP_FRAME_RATE:
+            {
+                gdouble readout_time;
+                gdouble frame_rate;
+                guint trigger_period;
+
+                frame_rate = g_value_get_double (value);
+                readout_time = total_readout_time (UCA_UFO_CAMERA (object));
+                trigger_period = (guint) (1. / ((frame_rate - 1. / readout_time) * 8 * 1e-9));
+
+                g_object_set (object, "ufo-trigger-period", &trigger_period, NULL);
             }
             break;
         case PROP_ROI_X:
@@ -442,7 +478,6 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
             return;
     }
 }
-
 
 static void
 uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
@@ -490,30 +525,14 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_FRAMES_PER_SECOND:
             {
-                const gdouble clock_period = priv->frequency == FPGA_40MHZ ? 1 / 40.0 : 1 / 48.0;
-                gdouble exposure_time;
-                gdouble readout_time, image_readout_time;
-                gdouble overhead_time, delay_time;
+                gdouble delay_time;
                 gdouble framerate;
-                gdouble foo;
-                guint output_mode;
                 guint trigger_period;
-                guint roi_height;
 
-                g_object_get (object,
-                              "exposure-time", &exposure_time,
-                              "ufo-cmosis-output-mode", &output_mode,
-                              "roi-height", &roi_height,
-                              "ufo-trigger-period", &trigger_period,
-                              NULL);
+                g_object_get (object, "ufo-trigger-period", &trigger_period, NULL);
 
-                foo = pow(2, output_mode);
-                image_readout_time = (129 * clock_period * foo) * roi_height;
-                overhead_time = (10 /* reg73 */ + 2 * foo) * 129 * clock_period;
-                readout_time = exposure_time + overhead_time + image_readout_time;
                 delay_time = trigger_period * 8.0 * 1e-9;
-                framerate = 1.0 / (readout_time + delay_time);
-                framerate *= 1000 * 1000;   /* clock_period is in MHz */
+                framerate = 1.0 / (total_readout_time (UCA_UFO_CAMERA (object)) + delay_time);
                 g_value_set_double(value, framerate);
             }
             break;
