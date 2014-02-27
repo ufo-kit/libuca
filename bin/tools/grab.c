@@ -77,7 +77,7 @@ write_tiff (UcaRingBuffer *buffer,
         gpointer data;
         gsize offset = 0;
 
-        data = uca_ring_buffer_get_pointer (buffer, i);
+        data = uca_ring_buffer_get_read_pointer (buffer);
 
         TIFFSetField (tif, TIFFTAG_IMAGEWIDTH, width);
         TIFFSetField (tif, TIFFTAG_IMAGELENGTH, height);
@@ -119,7 +119,7 @@ write_raw (UcaRingBuffer *buffer,
             filename = g_strdup_printf ("frame-%08i.raw", i);
 
         fp = fopen(filename, "wb");
-        data = uca_ring_buffer_get_pointer (buffer, i);
+        data = uca_ring_buffer_get_read_pointer (buffer);
 
         fwrite (data, size, 1, fp);
         fclose (fp);
@@ -169,8 +169,8 @@ record_frames (UcaCamera *camera, Options *opts)
     while (1) {
         gdouble elapsed;
 
-        uca_camera_grab (camera, uca_ring_buffer_get_current_pointer (buffer), &error);
-        uca_ring_buffer_proceed (buffer);
+        uca_camera_grab (camera, uca_ring_buffer_get_write_pointer (buffer), &error);
+        uca_ring_buffer_write_advance (buffer);
 
         if (error != NULL)
             return error;
