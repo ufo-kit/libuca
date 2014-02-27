@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 project(ucamock C)
 
 set(UCA_CAMERA_NAME "mock")
-set(PLUGIN_VERSION "1.0.0")
+set(PLUGIN_VERSION "1.0.1")
 set(PLUGIN_REVISION "1")
 set(PLUGIN_REQUIRES "libuca >= 1.2.0")
 set(PLUGIN_SUMMARY "Mock plugin for libuca")
