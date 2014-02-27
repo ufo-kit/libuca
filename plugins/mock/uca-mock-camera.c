@@ -137,7 +137,7 @@ static const guint DIGIT_WIDTH = 4;
 static const guint DIGIT_HEIGHT = 5;
 
 static void
-print_number (gchar *buffer, guint number, guint x, guint y, guint width)
+print_number (guint8 *buffer, guint number, guint x, guint y, guint width)
 {
     for (int i = 0; i < DIGIT_WIDTH; i++) {
         for (int j = 0; j < DIGIT_HEIGHT; j++) {
@@ -152,39 +152,40 @@ print_number (gchar *buffer, guint number, guint x, guint y, guint width)
 }
 
 static void
-print_current_frame (UcaMockCameraPrivate *priv, gchar *buffer)
+print_current_frame (UcaMockCameraPrivate *priv, guint8 *buffer)
 {
     guint number = priv->current_frame;
     char default_line[priv->width];
     guint divisor = 10000000;
     int x = 1;
 
+    memset(buffer, 0, 15 * priv->roi_width);
     while (divisor > 0) {
-        print_number(buffer, number / divisor, x, 1, priv->width);
+        print_number(buffer, number / divisor, x, 1, priv->roi_width);
         number = number % divisor;
         divisor = divisor / 10;
         x += DIGIT_WIDTH + 1;
     }
 
-    for (int p = 0; p < priv->width; p++) {
-        default_line[p] = (char) ((p*256) / (priv->width));
+    for (int p = 0; p < priv->roi_width; p++) {
+        default_line[p] = (char) ((p*256) / (priv->roi_width));
     }
 
-    for (guint y = 16; y < priv->height; y++) {
-        guint index = y * priv->width;
-        memcpy (&buffer[index], &default_line[0], priv->width);
+    for (guint y = 16; y < priv->roi_height; y++) {
+        guint index = y * priv->roi_width;
+        memcpy (&buffer[index], &default_line[0], priv->roi_width);
     }
-    
+
 #ifdef __CREATE_RANDOM_IMAGE_DATA__
     //This block will fill a square at the center of the image with noraml
     //distributed random data
     const double mean = 128.0;
     const double std = 32.0;
 
-    for (guint y = (priv->height/3); y < ((priv->height*2)/3); y++) {
-        guint row_start = y * priv->width;
+    for (guint y = (priv->roi_height / 3); y < ((priv->roi_height * 2) / 3); y++) {
+        guint row_start = y * priv->roi_width;
 
-        for (guint i = (priv->width/3); i < ((priv->width*2)/3); i++) {
+        for (guint i = (priv->roi_width / 3); i < ((priv->roi_width * 2) / 3); i++) {
             int index = row_start + i;
             double u1 = g_rand_double (priv->rand);
             double u2 = g_rand_double (priv->rand);
@@ -277,9 +278,9 @@ uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
 
-    g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height);
-    print_current_frame (priv, data);
+    print_current_frame (priv, priv->dummy_data);
     priv->current_frame++;
+    g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height);
 
     return TRUE;
 }
