@@ -1085,7 +1085,6 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
                     uint32_t framerate;
 
                     err = pco_get_framerate (priv->pco, &framerate, &exposure);
-                    g_print ("err=%i exposure: %u\n", err, exposure);
                     g_value_set_double (value, exposure / 1000. / 1000. / 1000.);
                 }
             }
