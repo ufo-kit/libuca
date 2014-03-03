@@ -129,6 +129,7 @@ enum {
     PROP_RECORD_MODE,
     PROP_STORAGE_MODE,
     PROP_ACQUIRE_MODE,
+    PROP_FAST_SCAN,
     PROP_COOLING_POINT,
     PROP_COOLING_POINT_MIN,
     PROP_COOLING_POINT_MAX,
@@ -816,6 +817,9 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
 
                 if (pixel_rate != 0) {
                     err = pco_set_pixelrate(priv->pco, pixel_rate);
+
+                    if (err != PCO_NOERROR)
+                        err = pco_reset(priv->pco);
                 }
                 else
                     g_warning("%i Hz is not possible. Please check the \"sensor-pixelrates\" property", desired_pixel_rate);
@@ -878,6 +882,15 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
                     err = pco_set_acquire_mode(priv->pco, ACQUIRE_MODE_EXTERNAL);
                 else
                     g_warning("Unknown acquire mode");
+            }
+            break;
+
+        case PROP_FAST_SCAN:
+            {
+                guint32 mode;
+
+                mode = g_value_get_boolean (value) ? PCO_SCANMODE_FAST : PCO_SCANMODE_SLOW;
+                pco_set_scan_mode (priv->pco, mode);
             }
             break;
 
@@ -1184,6 +1197,14 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
                     g_value_set_enum(value, UCA_PCO_CAMERA_ACQUIRE_MODE_EXTERNAL);
                 else
                     g_warning("pco acquire mode not handled");
+            }
+            break;
+
+        case PROP_FAST_SCAN:
+            {
+                guint32 mode;
+                err = pco_get_scan_mode (priv->pco, &mode);
+                g_value_set_boolean (value, mode == PCO_SCANMODE_FAST);
             }
             break;
 
@@ -1495,6 +1516,12 @@ uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Acquire mode",
             UCA_TYPE_PCO_CAMERA_ACQUIRE_MODE, UCA_PCO_CAMERA_ACQUIRE_MODE_AUTO,
             G_PARAM_READWRITE);
+
+    pco_properties[PROP_FAST_SCAN] =
+        g_param_spec_boolean("fast-scan",
+            "Use fast scan mode",
+            "Use fast scan mode with less dynamic range",
+            FALSE, G_PARAM_READWRITE);
 
     pco_properties[PROP_NOISE_FILTER] =
         g_param_spec_boolean("noise-filter",
