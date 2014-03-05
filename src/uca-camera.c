@@ -830,8 +830,8 @@ uca_camera_stop_readout (UcaCamera *camera, GError **error)
 /**
  * uca_camera_set_grab_func:
  * @camera: A #UcaCamera object
- * @func: A #UcaCameraGrabFunc callback function
- * @user_data: Data that is passed on to #func
+ * @func: (scope call): A #UcaCameraGrabFunc callback function
+ * @user_data: (closure): Data that is passed on to #func
  *
  * Set the grab function that is called whenever a frame is readily transfered.
  */

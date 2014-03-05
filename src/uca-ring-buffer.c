@@ -78,14 +78,13 @@ uca_ring_buffer_available (UcaRingBuffer *buffer)
 }
 
 /**
- * uca_ring_buffer_get_current_pointer:
+ * uca_ring_buffer_get_read_pointer:
  * @buffer: A #UcaRingBuffer object
  *
- * Get a pointer to the data for the block that is currently in use, that means
- * the number uca_ring_buffer_proceed() has been called modulo the number of
- * total blocks.
+ * Get pointer to current read location. If no data is available, %NULL is
+ * returned.
  *
- * Return value: (transfer none): Pointer to data block
+ * Return value: (transfer none): Pointer to current read location
  */
 gpointer
 uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer)
@@ -102,6 +101,14 @@ uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer)
     return data;
 }
 
+/**
+ * uca_ring_buffer_get_write_pointer:
+ * @buffer: A #UcaRingBuffer object
+ *
+ * Get pointer to current write location.
+ *
+ * Return value: (transfer none): Pointer to current write location
+ */
 gpointer
 uca_ring_buffer_get_write_pointer (UcaRingBuffer *buffer)
 {
@@ -123,6 +130,14 @@ uca_ring_buffer_write_advance (UcaRingBuffer *buffer)
     buffer->priv->write_index++;
 }
 
+/**
+ * uca_ring_buffer_peek_pointer:
+ * @buffer: A #UcaRingBuffer object
+ *
+ * Get pointer to current write location without advancing.
+ *
+ * Return value: (transfer none): Pointer to current write location
+ */
 gpointer
 uca_ring_buffer_peek_pointer (UcaRingBuffer *buffer)
 {
@@ -132,6 +147,15 @@ uca_ring_buffer_peek_pointer (UcaRingBuffer *buffer)
     return ((guint8 *) priv->data) + ((priv->write_index % priv->n_blocks_total) * priv->block_size);
 }
 
+/**
+ * uca_ring_buffer_get_pointer:
+ * @buffer: A #UcaRingBuffer object
+ * @index: Block index of queried pointer
+ *
+ * Get pointer to read location identified by @index.
+ *
+ * Return value: (transfer none): Pointer to indexed read location
+ */
 gpointer
 uca_ring_buffer_get_pointer (UcaRingBuffer *buffer,
                              guint          index)
