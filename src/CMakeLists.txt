@@ -74,6 +74,7 @@ if (INTROSPECTION_SCANNER AND INTROSPECTION_COMPILER)
                     --include=GModule-2.0
                     --output ${GIR_XML}
                     --warn-all
+                    --quiet
                     ${_gir_input}
             DEPENDS ${uca_SRCS}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
