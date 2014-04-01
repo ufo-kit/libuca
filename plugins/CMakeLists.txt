@@ -6,10 +6,7 @@ add_subdirectory(pco)
 add_subdirectory(pylon)
 add_subdirectory(ufo)
 add_subdirectory(dexela)
-
-if (CMAKE_CXX_COMPILER)
-    add_subdirectory(xkit)
-endif()
+add_subdirectory(xkit)
 
 message("-- Building the following plugins:")
 set(_plugins "mock;pf;pco;pylon;ufo;dexela;xkit")

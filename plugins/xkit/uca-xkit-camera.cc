@@ -15,14 +15,14 @@
    with this library; if not, write to the Free Software Foundation, Inc., 51
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
-#include <dll_api.h>
+#include <stdlib.h>
+#include <xkit/dll_api.h>
 
 #undef FALSE
 #undef TRUE
 
 #include <gio/gio.h>
 #include <gmodule.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>

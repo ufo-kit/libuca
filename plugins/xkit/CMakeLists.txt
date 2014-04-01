@@ -6,17 +6,16 @@ set(PLUGIN_VERSION "0.1.0")
 set(PLUGIN_REVISION "1")
 set(PLUGIN_REQUIRES "libuca >= 1.2.0")
 
-find_path (XKIT_INCLUDE_DIR
-           NAMES dll_api.h mpxhw.h)
+find_package(PkgConfig)
+pkg_check_modules(XKIT xkit>=0.1.0)
 
-find_library (XKIT_LIBRARIES
-              NAMES xKIT)
-
-if (XKIT_INCLUDE_DIR AND XKIT_LIBRARIES)
+if (XKIT_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
                    ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
 
-    include_directories(${XKIT_INCLUDE_DIR}
+    message("includedir: ${XKIT_LIBRARIES}")
+
+    include_directories(${XKIT_INCLUDEDIR}
                         ${UCA_CONFIGDIR})
 
     # We have to compile with g++ because the included header files have C++
