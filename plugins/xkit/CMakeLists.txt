@@ -1,33 +1,23 @@
 cmake_minimum_required(VERSION 2.6)
-project(ucaxkit CXX)
+project(ucaxkit C)
 
 set(UCA_CAMERA_NAME "xkit")
 set(PLUGIN_VERSION "0.1.0")
 set(PLUGIN_REVISION "1")
 set(PLUGIN_REQUIRES "libuca >= 1.2.0")
 
-find_package(PkgConfig)
-pkg_check_modules(XKIT xkit>=0.1.0)
 
-if (XKIT_FOUND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
-                   ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
 
-    message("includedir: ${XKIT_LIBRARIES}")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
+               ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
 
-    include_directories(${XKIT_INCLUDEDIR}
-                        ${UCA_CONFIGDIR})
+include_directories(${UCA_CONFIGDIR})
 
-    # We have to compile with g++ because the included header files have C++
-    # style comments ...
-    add_library(ucaxkit SHARED
-                uca-xkit-camera.cc)
+add_library(ucaxkit SHARED uca-xkit-camera.c)
 
-    target_link_libraries(ucaxkit
-                          ${UCA_DEPS}
-                          ${XKIT_LIBRARIES})
+target_link_libraries(ucaxkit ${UCA_DEPS})
 
-    install(TARGETS ucaxkit
-            LIBRARY DESTINATION ${UCA_PLUGINDIR}
-            COMPONENT ${UCA_CAMERA_NAME})
-endif ()
+install(TARGETS ucaxkit
+        LIBRARY DESTINATION ${UCA_PLUGINDIR}
+        COMPONENT ${UCA_CAMERA_NAME})
