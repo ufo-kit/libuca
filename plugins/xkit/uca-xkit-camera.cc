@@ -67,16 +67,31 @@ static gint base_overrideables[] = {
     0,
 };
 
-static GParamSpec *xkit_properties[N_PROPERTIES] = { NULL, };
+static GParamSpec *xkit_properties[N_PROPERTIES] = { NULL, };     
+//xkit_properties unused ?
 
 struct _UcaXkitCameraPrivate {
     GError  *construct_error;
+    guint    acq_time_cycles;
+    guint    fps_time;
+    //guchar   FSRs;
+    //gint     ids;
+    //gsize_t  n_chips;
+    //gushort  pixel_data;
+    guchar  *mode;
+    guint   *value;
+    gushort  adc_channel;
 };
-
 
 static gboolean
 setup_xkit (UcaXkitCameraPrivate *priv)
 {
+    init ();
+    //read_FSR(FSRs, ids, n_chips); 
+    //set_fast_shift_register(FSRs, n_chips);
+    reset_sensors();
+    initialize_matrix();
+
     return TRUE;
 }
 
@@ -85,6 +100,7 @@ uca_xkit_camera_start_recording (UcaCamera *camera,
                                  GError **error)
 {
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
+    start_acquisition(0x00);
 }
 
 static void
@@ -99,13 +115,16 @@ uca_xkit_camera_start_readout (UcaCamera *camera,
                                GError **error)
 {
     g_return_if_fail( UCA_IS_XKIT_CAMERA (camera));
+    //serial_matrix_readout(pixel_data, n_chips, param);
 }
 
 static void
 uca_xkit_camera_stop_readout (UcaCamera *camera,
                               GError **error)
 {
+    UcaXkitCameraPrivate *priv;
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
+    dac_value(priv->value, priv->adc_channel);
 }
 
 static gboolean
@@ -114,6 +133,12 @@ uca_xkit_camera_grab (UcaCamera *camera,
                       GError **error)
 {
     g_return_val_if_fail (UCA_IS_XKIT_CAMERA (camera), FALSE);
+    UcaXkitCameraPrivate *priv;
+
+    //serial_matrix_readout(pixel_data, n_chips, param);
+    set_exposure_time(priv->acq_time_cycles);
+    set_fps_time(priv->fps_time);
+    read_acquisition_mode(priv->mode);
 
     return TRUE;
 }
