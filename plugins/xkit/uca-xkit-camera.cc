@@ -71,37 +71,12 @@ static GParamSpec *xkit_properties[N_PROPERTIES] = { NULL, };
 
 struct _UcaXkitCameraPrivate {
     GError  *construct_error;
-    Mpx2Interface *interface;
-    gint devices[4];
-    gint n_devices;
-    gint device;
-
-    DevInfo info;
-    AcqParams acq;
 };
 
 
 static gboolean
 setup_xkit (UcaXkitCameraPrivate *priv)
 {
-
-    priv->interface = getMpx2Interface();
-    priv->interface->findDevices (priv->devices, &priv->n_devices);
-
-    if (priv->n_devices > 0)
-        priv->interface->init (priv->devices[0]);
-
-    priv->device = priv->devices[0];
-    priv->interface->getDevInfo (priv->device, &priv->info);
-
-    /* TODO: find some sensible defaults */
-    priv->acq.useHwTimer = TRUE;
-    priv->acq.enableCst = FALSE;
-    priv->acq.polarityPositive = TRUE;
-    priv->acq.mode = ACQMODE_ACQSTART_TIMERSTOP;
-    priv->acq.acqCount = 1;
-    priv->acq.time = 1.0;
-
     return TRUE;
 }
 
@@ -109,15 +84,7 @@ static void
 uca_xkit_camera_start_recording (UcaCamera *camera,
                                  GError **error)
 {
-    UcaXkitCameraPrivate *priv;
-
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
-    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
-
-    if (priv->interface->setAcqPars (priv->device, &priv->acq)) {
-        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                             "Could not set acquisition parameters");
-    }
 }
 
 static void
@@ -146,33 +113,7 @@ uca_xkit_camera_grab (UcaCamera *camera,
                       gpointer data,
                       GError **error)
 {
-    UcaXkitCameraPrivate *priv;
-    guint32 size;
     g_return_val_if_fail (UCA_IS_XKIT_CAMERA (camera), FALSE);
-
-    /* XXX: For now we trigger on our own because the X-KIT chip does not
-     * provide auto triggering */
-
-    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
-    size = priv->info.pixCount;
-
-    if (priv->interface->startAcquisition (priv->device)) {
-        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                             "Could not pre-trigger");
-        return FALSE;
-    }
-
-    if (priv->interface->readMatrix (priv->device, (gint16 *) data, size)) {
-        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                             "Could not grab frame");
-        return FALSE;
-    }
-
-    if (priv->interface->stopAcquisition (priv->device)) {
-        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                             "Could stop acquisition");
-        return FALSE;
-    }
 
     return TRUE;
 }
@@ -190,15 +131,7 @@ uca_xkit_camera_set_property (GObject *object,
                               const GValue *value,
                               GParamSpec *pspec)
 {
-    UcaXkitCameraPrivate *priv = UCA_XKIT_CAMERA_GET_PRIVATE(object);
-
     switch (property_id) {
-        case PROP_EXPOSURE_TIME:
-            priv->acq.time = g_value_get_double (value);
-            break;
-        case PROP_POSITIVE_POLARITY:
-            priv->acq.polarityPositive = g_value_get_boolean (value);
-            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
@@ -211,27 +144,24 @@ uca_xkit_camera_get_property (GObject *object,
                               GValue *value,
                               GParamSpec *pspec)
 {
-    UcaXkitCameraPrivate *priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
-
     switch (property_id) {
         case PROP_NAME:
-            g_value_set_string (value, priv->info.ifaceName);
+            g_value_set_string (value, "xkit");
             break;
         case PROP_SENSOR_MAX_FRAME_RATE:
-            /* TODO: pretty arbitrary, huh? */
             g_value_set_float (value, 150.0f);
             break;
         case PROP_SENSOR_WIDTH:
-            g_value_set_uint (value, priv->info.rowLen);
+            g_value_set_uint (value, 256);
             break;
         case PROP_SENSOR_HEIGHT:
-            g_value_set_uint (value, priv->info.numberOfRows * MEDIPIX_SENSOR_HEIGHT);
+            g_value_set_uint (value, 256);
             break;
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint (value, 11);
             break;
         case PROP_EXPOSURE_TIME:
-            g_value_set_double (value, priv->acq.time);
+            g_value_set_double (value, 0.5);
             break;
         case PROP_HAS_STREAMING:
             g_value_set_boolean (value, TRUE);
@@ -246,13 +176,10 @@ uca_xkit_camera_get_property (GObject *object,
             g_value_set_uint (value, 0);
             break;
         case PROP_ROI_WIDTH:
-            g_value_set_uint (value, priv->info.rowLen);
+            g_value_set_uint (value, 256);
             break;
         case PROP_ROI_HEIGHT:
-            g_value_set_uint (value, priv->info.numberOfRows * MEDIPIX_SENSOR_HEIGHT);
-            break;
-        case PROP_POSITIVE_POLARITY:
-            g_value_set_boolean (value, priv->acq.polarityPositive);
+            g_value_set_uint (value, 256);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -326,14 +253,8 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property (oclass, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
 
-    xkit_properties[PROP_POSITIVE_POLARITY] =
-        g_param_spec_boolean ("positive-polarity",
-                              "Is polarity positive",
-                              "Is polarity positive",
-                              TRUE, (GParamFlags) G_PARAM_READWRITE);
-
-    for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
-        g_object_class_install_property (oclass, id, xkit_properties[id]);
+    // for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
+    //     g_object_class_install_property (oclass, id, xkit_properties[id]);
 
     g_type_class_add_private (klass, sizeof(UcaXkitCameraPrivate));
 }

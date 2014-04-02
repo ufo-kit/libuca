@@ -13,8 +13,6 @@ if (XKIT_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
                    ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
 
-    message("includedir: ${XKIT_LIBRARIES}")
-
     include_directories(${XKIT_INCLUDEDIR}
                         ${UCA_CONFIGDIR})
 
