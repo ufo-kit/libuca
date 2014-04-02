@@ -33,7 +33,7 @@
 
 #define UCA_XKIT_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_XKIT_CAMERA, UcaXkitCameraPrivate))
 
-#define MEDIPIX_SENSOR_HEIGHT   256
+#define MEDIPIX_SENSOR_SIZE   256
 
 static void uca_xkit_camera_initable_iface_init (GInitableIface *iface);
 
@@ -47,7 +47,7 @@ GQuark uca_xkit_camera_error_quark()
 }
 
 enum {
-    PROP_POSITIVE_POLARITY = N_BASE_PROPERTIES,
+    PROP_NUM_CHIPS = N_BASE_PROPERTIES,
     N_PROPERTIES
 };
 
@@ -68,29 +68,20 @@ static gint base_overrideables[] = {
 };
 
 static GParamSpec *xkit_properties[N_PROPERTIES] = { NULL, };     
-//xkit_properties unused ?
 
 struct _UcaXkitCameraPrivate {
     GError  *construct_error;
-    guint    acq_time_cycles;
-    guint    fps_time;
-    //guchar   FSRs;
-    //gint     ids;
-    //gsize_t  n_chips;
-    //gushort  pixel_data;
-    guchar  *mode;
-    guint   *value;
-    gushort  adc_channel;
+    gsize    n_chips;
 };
 
 static gboolean
 setup_xkit (UcaXkitCameraPrivate *priv)
 {
-    init ();
-    //read_FSR(FSRs, ids, n_chips); 
-    //set_fast_shift_register(FSRs, n_chips);
-    reset_sensors();
-    initialize_matrix();
+    priv->n_chips = 1;
+
+    x_kit_init ();
+    x_kit_reset_sensors ();
+    x_kit_initialize_matrix ();
 
     return TRUE;
 }
@@ -100,7 +91,7 @@ uca_xkit_camera_start_recording (UcaCamera *camera,
                                  GError **error)
 {
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
-    start_acquisition(0x00);
+    x_kit_start_acquisition (X_KIT_ACQUIRE_CONTINUOUS);
 }
 
 static void
@@ -115,16 +106,13 @@ uca_xkit_camera_start_readout (UcaCamera *camera,
                                GError **error)
 {
     g_return_if_fail( UCA_IS_XKIT_CAMERA (camera));
-    //serial_matrix_readout(pixel_data, n_chips, param);
 }
 
 static void
 uca_xkit_camera_stop_readout (UcaCamera *camera,
                               GError **error)
 {
-    UcaXkitCameraPrivate *priv;
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
-    dac_value(priv->value, priv->adc_channel);
 }
 
 static gboolean
@@ -135,11 +123,9 @@ uca_xkit_camera_grab (UcaCamera *camera,
     g_return_val_if_fail (UCA_IS_XKIT_CAMERA (camera), FALSE);
     UcaXkitCameraPrivate *priv;
 
-    //serial_matrix_readout(pixel_data, n_chips, param);
-    set_exposure_time(priv->acq_time_cycles);
-    set_fps_time(priv->fps_time);
-    read_acquisition_mode(priv->mode);
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
 
+    x_kit_serial_matrix_readout ((guint16 **) &data, &priv->n_chips, X_KIT_READOUT_DEFAULT);
     return TRUE;
 }
 
@@ -169,6 +155,10 @@ uca_xkit_camera_get_property (GObject *object,
                               GValue *value,
                               GParamSpec *pspec)
 {
+    UcaXkitCameraPrivate *priv;
+
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
+
     switch (property_id) {
         case PROP_NAME:
             g_value_set_string (value, "xkit");
@@ -177,10 +167,10 @@ uca_xkit_camera_get_property (GObject *object,
             g_value_set_float (value, 150.0f);
             break;
         case PROP_SENSOR_WIDTH:
-            g_value_set_uint (value, 256);
+            g_value_set_uint (value, priv->n_chips * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_SENSOR_HEIGHT:
-            g_value_set_uint (value, 256);
+            g_value_set_uint (value, MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint (value, 11);
@@ -205,6 +195,9 @@ uca_xkit_camera_get_property (GObject *object,
             break;
         case PROP_ROI_HEIGHT:
             g_value_set_uint (value, 256);
+            break;
+        case PROP_NUM_CHIPS:
+            g_value_set_uint (value, priv->n_chips);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -278,8 +271,15 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property (oclass, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
 
-    // for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
-    //     g_object_class_install_property (oclass, id, xkit_properties[id]);
+    xkit_properties[PROP_NUM_CHIPS] =
+        g_param_spec_uint("num-chips",
+            "Number of chips",
+            "Number of chips",
+            1, 6, 1,
+            G_PARAM_READABLE);
+
+    for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
+        g_object_class_install_property (oclass, id, xkit_properties[id]);
 
     g_type_class_add_private (klass, sizeof(UcaXkitCameraPrivate));
 }
