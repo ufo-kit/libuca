@@ -272,9 +272,9 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
         g_object_class_override_property (oclass, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
 
     xkit_properties[PROP_NUM_CHIPS] =
-        g_param_spec_uint("num-chips",
-            "Number of chips",
-            "Number of chips",
+        g_param_spec_uint("num-sensor-chips",
+            "Number of sensor chips",
+            "Number of sensor chips",
             1, 6, 1,
             G_PARAM_READABLE);
 
