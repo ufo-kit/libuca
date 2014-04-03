@@ -33,7 +33,9 @@
 
 #define UCA_XKIT_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_XKIT_CAMERA, UcaXkitCameraPrivate))
 
-#define MEDIPIX_SENSOR_SIZE   256
+#define MEDIPIX_SENSOR_SIZE     256
+#define CHIPS_PER_ROW           3
+#define CHIPS_PER_COLUMN        2
 
 static void uca_xkit_camera_initable_iface_init (GInitableIface *iface);
 
@@ -70,14 +72,22 @@ static gint base_overrideables[] = {
 static GParamSpec *xkit_properties[N_PROPERTIES] = { NULL, };     
 
 struct _UcaXkitCameraPrivate {
-    GError  *construct_error;
-    gsize    n_chips;
+    GError *construct_error;
+    gsize n_chips;
+    gsize n_max_chips;
+    guint16 **buffers;
+    UcaCameraTrigger trigger;
 };
 
 static gboolean
 setup_xkit (UcaXkitCameraPrivate *priv)
 {
-    priv->n_chips = 1;
+    priv->n_max_chips = priv->n_chips = 6;
+
+    priv->buffers = g_new0 (guint16 *, priv->n_max_chips);
+
+    for (guint i = 0; i < priv->n_max_chips; i++)
+        priv->buffers[i] = (guint16 *) g_malloc0 (MEDIPIX_SENSOR_SIZE * MEDIPIX_SENSOR_SIZE * sizeof(guint16));
 
     x_kit_init ();
     x_kit_reset_sensors ();
@@ -87,11 +97,46 @@ setup_xkit (UcaXkitCameraPrivate *priv)
 }
 
 static void
+compose_image (guint16 *output, guint16 **buffers, gsize n)
+{
+    gsize stride;
+    gsize cx = 0;
+    gsize cy = 0;
+
+    stride = CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE;
+
+    for (gsize i = 0; i < n; i++) {
+        guint16 *dst;
+        guint16 *src;
+
+        if (cx == CHIPS_PER_ROW) {
+            cx = 0;
+            cy++;
+        }
+
+        src = buffers[i];
+        dst = output + (cy * MEDIPIX_SENSOR_SIZE * stride + cx * MEDIPIX_SENSOR_SIZE);
+
+        for (gsize row = 0; row < 256; row++) {
+            memcpy (dst, src, MEDIPIX_SENSOR_SIZE * sizeof (guint16));
+            dst += stride;
+            src += MEDIPIX_SENSOR_SIZE;
+        }
+
+        cx++;
+    }
+}
+
+static void
 uca_xkit_camera_start_recording (UcaCamera *camera,
                                  GError **error)
 {
+    UcaXkitCameraPrivate *priv;
+
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
-    x_kit_start_acquisition (X_KIT_ACQUIRE_CONTINUOUS);
+
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
+    g_object_get (camera, "trigger-mode", &priv->trigger, NULL);
 }
 
 static void
@@ -125,7 +170,12 @@ uca_xkit_camera_grab (UcaCamera *camera,
 
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
 
-    x_kit_serial_matrix_readout ((guint16 **) &data, &priv->n_chips, X_KIT_READOUT_DEFAULT);
+    if (priv->trigger == UCA_CAMERA_TRIGGER_AUTO)
+        x_kit_start_acquisition (X_KIT_ACQUIRE_CONTINUOUS);
+
+    x_kit_serial_matrix_readout (priv->buffers, &priv->n_chips, X_KIT_READOUT_DEFAULT);
+    compose_image ((guint16 *) data, priv->buffers, priv->n_chips);
+
     return TRUE;
 }
 
@@ -134,6 +184,7 @@ uca_xkit_camera_trigger (UcaCamera *camera,
                          GError **error)
 {
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
+    x_kit_start_acquisition (X_KIT_ACQUIRE_CONTINUOUS);
 }
 
 static void
@@ -167,13 +218,13 @@ uca_xkit_camera_get_property (GObject *object,
             g_value_set_float (value, 150.0f);
             break;
         case PROP_SENSOR_WIDTH:
-            g_value_set_uint (value, priv->n_chips * MEDIPIX_SENSOR_SIZE);
+            g_value_set_uint (value, CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_SENSOR_HEIGHT:
-            g_value_set_uint (value, MEDIPIX_SENSOR_SIZE);
+            g_value_set_uint (value, CHIPS_PER_COLUMN * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_SENSOR_BITDEPTH:
-            g_value_set_uint (value, 11);
+            g_value_set_uint (value, 16);
             break;
         case PROP_EXPOSURE_TIME:
             g_value_set_double (value, 0.5);
@@ -191,10 +242,10 @@ uca_xkit_camera_get_property (GObject *object,
             g_value_set_uint (value, 0);
             break;
         case PROP_ROI_WIDTH:
-            g_value_set_uint (value, 256);
+            g_value_set_uint (value, CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_ROI_HEIGHT:
-            g_value_set_uint (value, 256);
+            g_value_set_uint (value, CHIPS_PER_COLUMN * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_NUM_CHIPS:
             g_value_set_uint (value, priv->n_chips);
@@ -212,6 +263,11 @@ uca_xkit_camera_finalize(GObject *object)
 
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
     g_clear_error (&priv->construct_error);
+
+    for (guint i = 0; i < priv->n_max_chips; i++)
+        g_free (priv->buffers[i]);
+
+    g_free (priv->buffers);
 
     G_OBJECT_CLASS (uca_xkit_camera_parent_class)->finalize (object);
 }
@@ -275,7 +331,7 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
         g_param_spec_uint("num-sensor-chips",
             "Number of sensor chips",
             "Number of sensor chips",
-            1, 6, 1,
+            1, 6, 6,
             G_PARAM_READABLE);
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
