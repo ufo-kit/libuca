@@ -36,6 +36,7 @@
 #define MEDIPIX_SENSOR_SIZE     256
 #define CHIPS_PER_ROW           3
 #define CHIPS_PER_COLUMN        2
+#define NUM_CHIPS               CHIPS_PER_ROW * CHIPS_PER_COLUMN
 
 static void uca_xkit_camera_initable_iface_init (GInitableIface *iface);
 
@@ -50,6 +51,12 @@ GQuark uca_xkit_camera_error_quark()
 
 enum {
     PROP_NUM_CHIPS = N_BASE_PROPERTIES,
+    PROP_FLIP_CHIP_0,
+    PROP_FLIP_CHIP_1,
+    PROP_FLIP_CHIP_2,
+    PROP_FLIP_CHIP_3,
+    PROP_FLIP_CHIP_4,
+    PROP_FLIP_CHIP_5,
     N_PROPERTIES
 };
 
@@ -77,12 +84,13 @@ struct _UcaXkitCameraPrivate {
     gsize n_max_chips;
     guint16 **buffers;
     UcaCameraTrigger trigger;
+    gboolean flip[NUM_CHIPS];
 };
 
 static gboolean
 setup_xkit (UcaXkitCameraPrivate *priv)
 {
-    priv->n_max_chips = priv->n_chips = 6;
+    priv->n_max_chips = priv->n_chips = NUM_CHIPS;
 
     priv->buffers = g_new0 (guint16 *, priv->n_max_chips);
 
@@ -97,30 +105,39 @@ setup_xkit (UcaXkitCameraPrivate *priv)
 }
 
 static void
-compose_image (guint16 *output, guint16 **buffers, gsize n)
+compose_image (guint16 *output, guint16 **buffers, gboolean *flip, gsize n)
 {
-    gsize stride;
+    gsize dst_stride;
     gsize cx = 0;
     gsize cy = 0;
 
-    stride = CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE;
+    dst_stride = CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE;
 
     for (gsize i = 0; i < n; i++) {
         guint16 *dst;
         guint16 *src;
+        gsize src_stride;
 
         if (cx == CHIPS_PER_ROW) {
             cx = 0;
             cy++;
         }
 
-        src = buffers[i];
-        dst = output + (cy * MEDIPIX_SENSOR_SIZE * stride + cx * MEDIPIX_SENSOR_SIZE);
+        if (flip[i]) {
+            src = buffers[i] + MEDIPIX_SENSOR_SIZE * MEDIPIX_SENSOR_SIZE;
+            src_stride = -MEDIPIX_SENSOR_SIZE;
+        }
+        else {
+            src = buffers[i];
+            src_stride = MEDIPIX_SENSOR_SIZE;
+        }
+
+        dst = output + (cy * MEDIPIX_SENSOR_SIZE * dst_stride + cx * MEDIPIX_SENSOR_SIZE);
 
         for (gsize row = 0; row < 256; row++) {
             memcpy (dst, src, MEDIPIX_SENSOR_SIZE * sizeof (guint16));
-            dst += stride;
-            src += MEDIPIX_SENSOR_SIZE;
+            dst += dst_stride;
+            src += src_stride;
         }
 
         cx++;
@@ -174,7 +191,7 @@ uca_xkit_camera_grab (UcaCamera *camera,
         x_kit_start_acquisition (X_KIT_ACQUIRE_CONTINUOUS);
 
     x_kit_serial_matrix_readout (priv->buffers, &priv->n_chips, X_KIT_READOUT_DEFAULT);
-    compose_image ((guint16 *) data, priv->buffers, priv->n_chips);
+    compose_image ((guint16 *) data, priv->buffers, priv->flip, priv->n_chips);
 
     return TRUE;
 }
@@ -193,7 +210,19 @@ uca_xkit_camera_set_property (GObject *object,
                               const GValue *value,
                               GParamSpec *pspec)
 {
+    UcaXkitCameraPrivate *priv;
+
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
+
     switch (property_id) {
+        case PROP_FLIP_CHIP_0:
+        case PROP_FLIP_CHIP_1:
+        case PROP_FLIP_CHIP_2:
+        case PROP_FLIP_CHIP_3:
+        case PROP_FLIP_CHIP_4:
+        case PROP_FLIP_CHIP_5:
+            priv->flip[property_id - PROP_FLIP_CHIP_0] = g_value_get_boolean (value);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
@@ -250,6 +279,16 @@ uca_xkit_camera_get_property (GObject *object,
         case PROP_NUM_CHIPS:
             g_value_set_uint (value, priv->n_chips);
             break;
+
+        case PROP_FLIP_CHIP_0:
+        case PROP_FLIP_CHIP_1:
+        case PROP_FLIP_CHIP_2:
+        case PROP_FLIP_CHIP_3:
+        case PROP_FLIP_CHIP_4:
+        case PROP_FLIP_CHIP_5:
+            g_value_set_boolean (value, priv->flip[property_id - PROP_FLIP_CHIP_0]);
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             break;
@@ -334,6 +373,17 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
             1, 6, 6,
             G_PARAM_READABLE);
 
+    for (guint i = 0; i < NUM_CHIPS; i++) {
+        gchar *prop_name;
+
+        prop_name = g_strdup_printf ("flip-chip-%i", i);
+
+        xkit_properties[PROP_FLIP_CHIP_0 + i] =
+            g_param_spec_boolean (prop_name, "Flip chip", "Flip chip", FALSE, (GParamFlags) G_PARAM_READWRITE);
+
+        g_free (prop_name);
+    }
+
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property (oclass, id, xkit_properties[id]);
 
@@ -347,6 +397,9 @@ uca_xkit_camera_init (UcaXkitCamera *self)
 
     self->priv = priv = UCA_XKIT_CAMERA_GET_PRIVATE (self);
     priv->construct_error = NULL;
+
+    for (guint i = 0; i < NUM_CHIPS; i++)
+        priv->flip[i] = FALSE;
 
     if (!setup_xkit (priv))
         return;
