@@ -268,6 +268,8 @@ main (int argc, char *argv[])
     if (error != NULL)
         g_print ("Error: %s\n", error->message);
 
+    g_option_context_free (context);
+
 cleanup_camera:
     g_object_unref (camera);
 
