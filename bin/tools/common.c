@@ -42,6 +42,7 @@ get_camera_list (UcaPluginManager *manager)
         g_string_append (str, "]");
     }
 
+    g_list_free_full (types, g_free);
     g_object_unref (manager);
     return g_string_free (str, FALSE);
 }
