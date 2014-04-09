@@ -126,12 +126,8 @@ static void uca_pylon_camera_stop_recording(UcaCamera *camera, GError **error)
 static gboolean uca_pylon_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
     g_return_val_if_fail(UCA_IS_PYLON_CAMERA(camera), FALSE);
-    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(camera);
 
-    if (data == NULL) {
-        data = g_malloc0(priv->roi_width * priv->roi_height * priv->num_bytes);
-    }
-    pylon_camera_grab(&data, error);
+    pylon_camera_grab(data, error);
     return TRUE;
 }
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 project(ucapylon C)
-set(VERSION "1.1.0")
+set(VERSION "1.1.1")
 
 find_package(Pylon)
 
@@ -11,7 +11,7 @@ if (PYLON_FOUND)
     set(PLUGIN_SUMMARY "Pylon plugin for libuca")
     set(PLUGIN_CHANGELOG "${CMAKE_CURRENT_SOURCE_DIR}/changelog.txt")
     set(PLUGIN_DESCRIPTION "Plugin for the Basler GigE CCD Camera.")
-    set(PLUGIN_REQUIRES "libuca >= 1.3.0, libpyloncam >= 0.2.3")
+    set(PLUGIN_REQUIRES "libuca >= 1.3.0, libpyloncam >= 0.3.0")
     set(PLUGIN_VENDOR "ANKA Computing Group")
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
