@@ -1,11 +1,11 @@
 
-# Try to find libpco.so
+# Try to find libpylon.so
 #
 # Defines
 #
-# PYLON_FOUND - system has libpco
-# PYLON_INCLUDE_DIR - libpco include directory
-# PYLON_LIB - pco library
+# PYLON_FOUND - system has libpylon
+# PYLON_INCLUDE_DIR - libpylon include directory
+# PYLON_LIB - pylon library
 
 # check for environment variable PYLON_ROOT
 find_package(YAT)

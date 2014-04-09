@@ -71,8 +71,6 @@ struct _UcaPylonCameraClass {
     UcaCameraClass parent;
 };
 
-UcaPylonCamera *uca_pylon_camera_new(GError **error);
-
 GType uca_pylon_camera_get_type(void);
 
 G_END_DECLS

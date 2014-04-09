@@ -20,12 +20,17 @@
 #include <string.h>
 #include <libpyloncam/pylon_camera.h>
 #include <gmodule.h>
+#include <gio/gio.h>
 #include "uca-pylon-camera.h"
 #include "uca-pylon-enums.h"
 
 #define UCA_PYLON_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PYLON_CAMERA, UcaPylonCameraPrivate))
 
-G_DEFINE_TYPE(UcaPylonCamera, uca_pylon_camera, UCA_TYPE_CAMERA)
+static void uca_pylon_camera_initable_iface_init (GInitableIface *iface);
+
+G_DEFINE_TYPE_WITH_CODE (UcaPylonCamera, uca_pylon_camera, UCA_TYPE_CAMERA,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
+                                                uca_pylon_camera_initable_iface_init))
 
 #define PROP_GAIN_MIN 300
 #define PROP_GAIN_MAX 400
@@ -50,7 +55,7 @@ enum {
     PROP_ROI_HEIGHT_DEFAULT,
     PROP_GAIN,
     PROP_BALANCE_WHITE_AUTO,
-    N_PROPERTIES 
+    N_PROPERTIES
 };
 
 static gint base_overrideables[] = {
@@ -103,29 +108,6 @@ static void pylon_set_roi(GObject *object, GError** error)
     pylon_camera_set_roi(priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height, error);
 }
 
-UcaPylonCamera *uca_pylon_camera_new(GError **error)
-{
-    UcaPylonCamera *camera = g_object_new(UCA_TYPE_PYLON_CAMERA, NULL);
-    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(camera);
-
-    gchar* pylon_camera_ip = getenv("PYLON_CAMERA_IP");
-    if(!pylon_camera_ip) {
-      g_error("no environment variable PYLON_CAMERA_IP found");
-    }
-
-    pylon_camera_new("/usr/local/lib64", pylon_camera_ip, error);
-
-    if (*error != NULL)
-        return NULL;
-
-    pylon_camera_get_sensor_size(&priv->width, &priv->height, error);
-
-    if (*error != NULL)
-        return NULL;
-
-    return camera;
-}
-
 static void uca_pylon_camera_start_recording(UcaCamera *camera, GError **error)
 {
     g_return_if_fail(UCA_IS_PYLON_CAMERA(camera));
@@ -133,7 +115,6 @@ static void uca_pylon_camera_start_recording(UcaCamera *camera, GError **error)
 
     priv->num_bytes = 2;
     pylon_camera_start_acquision(error);
-
 }
 
 static void uca_pylon_camera_stop_recording(UcaCamera *camera, GError **error)
@@ -142,15 +123,16 @@ static void uca_pylon_camera_stop_recording(UcaCamera *camera, GError **error)
     pylon_camera_stop_acquision(error);
 }
 
-static void uca_pylon_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static gboolean uca_pylon_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
-    g_return_if_fail(UCA_IS_PYLON_CAMERA(camera));
+    g_return_val_if_fail(UCA_IS_PYLON_CAMERA(camera), FALSE);
     UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(camera);
 
-    if (*data == NULL) {
-        *data = g_malloc0(priv->roi_width * priv->roi_height * priv->num_bytes); 
+    if (data == NULL) {
+        data = g_malloc0(priv->roi_width * priv->roi_height * priv->num_bytes);
     }
-    pylon_camera_grab(data, error);
+    pylon_camera_grab(&data, error);
+    return TRUE;
 }
 
 static void uca_pylon_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
@@ -166,9 +148,9 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
         case PROP_TRIGGER_MODE:
           break;
         case PROP_BALANCE_WHITE_AUTO:
-	      {
-	          pylon_camera_set_int_attribute("BalanceWhiteAuto", g_value_get_enum(value), &error);
-	      }
+          {
+              pylon_camera_set_int_attribute("BalanceWhiteAuto", g_value_get_enum(value), &error);
+          }
           break;
 
         case PROP_ROI_X:
@@ -211,12 +193,12 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
     }
-    
+
     if (error) {
       if(error->message) {
-	g_warning("failed to set property %d: %s", property_id, error->message);
+    g_warning("failed to set property %d: %s", property_id, error->message);
       } else {
-	g_warning("failed to set property %d", property_id);
+    g_warning("failed to set property %d", property_id);
       }
     }
 }
@@ -228,13 +210,13 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
 
     switch (property_id) {
         case PROP_BALANCE_WHITE_AUTO:
-	      {
-  	        gint enum_value = UCA_CAMERA_BALANCE_WHITE_OFF;
-	        pylon_camera_get_int_attribute("BalanceWhiteAuto", &enum_value, &error);
-	        UcaCameraBalanceWhiteAuto mode = enum_value;
-	        g_value_set_enum(value, mode);
-	        break;
-	      }    
+          {
+            gint enum_value = UCA_CAMERA_BALANCE_WHITE_OFF;
+            pylon_camera_get_int_attribute("BalanceWhiteAuto", &enum_value, &error);
+            UcaCameraBalanceWhiteAuto mode = enum_value;
+            g_value_set_enum(value, mode);
+            break;
+          }
         case PROP_SENSOR_WIDTH:
             pylon_camera_get_sensor_size(&priv->width, &priv->height, &error);
             g_value_set_uint(value, priv->width);
@@ -345,11 +327,11 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             break;
 
         case PROP_NAME:
-	    {
-	      const gchar* name = NULL;
-	      pylon_camera_get_string_attribute("ModelName", &name, &error);
-	      g_value_set_string(value, name);
-	    }
+        {
+          const gchar* name = NULL;
+          pylon_camera_get_string_attribute("ModelName", &name, &error);
+          g_value_set_string(value, name);
+        }
             break;
 
         default:
@@ -358,9 +340,9 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
     }
     if (error) {
       if(error->message) {
-	g_warning("failed to get property %d: %s", property_id, error->message);
+    g_warning("failed to get property %d: %s", property_id, error->message);
       } else {
-	g_warning("failed to get property %d", property_id);
+    g_warning("failed to get property %d", property_id);
       }
     }
     //g_debug("pylon_get_property end\n");
@@ -373,6 +355,42 @@ static void uca_pylon_camera_finalize(GObject *object)
 
     G_OBJECT_CLASS(uca_pylon_camera_parent_class)->finalize(object);
 }
+
+static gboolean uca_pylon_camera_initable_init(GInitable *initable, GCancellable *cancellable, GError **error)
+{
+    g_return_val_if_fail (UCA_IS_PYLON_CAMERA (initable), FALSE);
+
+    if (cancellable != NULL) {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                             "Cancellable initialization not supported");
+        return FALSE;
+    }
+
+    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(initable);
+
+    gchar* pylon_camera_ip = getenv("PYLON_CAMERA_IP");
+    if(!pylon_camera_ip) {
+        g_error("no environment variable PYLON_CAMERA_IP found");
+    }
+
+    pylon_camera_new("/usr/local/lib64", pylon_camera_ip, error);
+    if (*error != NULL) {
+        return FALSE;
+    }
+
+    pylon_camera_get_sensor_size(&priv->width, &priv->height, error);
+    if (*error != NULL) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void uca_pylon_camera_initable_iface_init(GInitableIface *iface)
+{
+    iface->init = uca_pylon_camera_initable_init;
+}
+
 
 static void uca_pylon_camera_class_init(UcaPylonCameraClass *klass)
 {
@@ -430,6 +448,7 @@ static void uca_pylon_camera_class_init(UcaPylonCameraClass *klass)
 
 static void uca_pylon_camera_init(UcaPylonCamera *self)
 {
+
     self->priv = UCA_PYLON_CAMERA_GET_PRIVATE(self);
 
     /* binnings */
@@ -440,8 +459,8 @@ static void uca_pylon_camera_init(UcaPylonCamera *self)
     g_value_array_append(self->priv->binnings, &val);
 }
 
-G_MODULE_EXPORT UcaCamera *
-uca_camera_impl_new (GError **error)
+G_MODULE_EXPORT GType
+uca_camera_get_type (void)
 {
-    return UCA_CAMERA(uca_pylon_camera_new(error));
+    return UCA_TYPE_PYLON_CAMERA;
 }

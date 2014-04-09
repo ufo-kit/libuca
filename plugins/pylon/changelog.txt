@@ -1,4 +1,6 @@
-* Tue Oct 15 2013 Mihael Koep <mihael.koep@softwareschneiderei.de> 1.0.0-2
+* Wed Apr 9 2014 Mihael Koep <mihael.koep@softwareschneiderei.de> 1.1.0-1
+- make compatible with current libuca
+* Tue Oct 15 2013 Mihael Koep <mihael.koep@softwareschneiderei.de> 1.0.2-2
 - updated to libuca 1.3.0
 * Tue Apr 23 2013 Vasili Kvockin <vasili.kvockin@softwareschneiderei.de> 1.0.0-1
 - repackaged as part of libuca 1.*
