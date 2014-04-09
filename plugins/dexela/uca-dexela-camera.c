@@ -18,7 +18,7 @@
 #include <string.h>
 #include <gmodule.h>
 #include "uca-dexela-camera.h"
-#include "dexela_api.h"
+#include "dexela/dexela_api.h"
 
 #define UCA_DEXELA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_DEXELA_CAMERA, UcaDexelaCameraPrivate))
 
@@ -147,7 +147,7 @@ UcaDexelaCamera *uca_dexela_camera_new(GError **error)
     */
     GObjectClass *camera_class = G_OBJECT_CLASS (UCA_CAMERA_GET_CLASS (camera));
     // TODO implement error checking
-    dexela_open_detector("/usr/share/dexela/dexela-1207_32.fmt");
+    dexela_open_detector(DEFAULT_FMT_FILE_PATH);
     dexela_init_serial_connection();
     priv->bits = dexela_get_bit_depth();
     priv->width = dexela_get_width();

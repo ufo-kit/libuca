@@ -8,7 +8,7 @@
 
 find_package(PackageHandleStandardArgs)
 
-find_path(DEXELA_INCLUDE_DIRS dexela_api.h PATHS /usr/include)
+find_path(DEXELA_INCLUDE_DIRS dexela_api.h PATHS /usr/include /usr/include/dexela)
 find_library(DEXELA_LIBRARIES dexela)
 
 find_package_handle_standard_args(DEXELA DEFAULT_MSG DEXELA_LIBRARIES DEXELA_INCLUDE_DIRS)
