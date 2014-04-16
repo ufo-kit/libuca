@@ -1002,9 +1002,16 @@ on_download_button_clicked (GtkWidget *widget, ThreadData *data)
 static void
 update_zoomed_pixbuf (ThreadData *data)
 {
-    update_pixbuf_dimensions (data);
-    up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
-    update_pixbuf (data);
+    if (data->state == RUNNING) {
+        up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
+        update_pixbuf (data);
+        update_pixbuf_dimensions (data);
+    }
+    else {
+        update_pixbuf_dimensions (data);
+        up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
+        update_pixbuf (data);
+    }
 }
 
 static void
