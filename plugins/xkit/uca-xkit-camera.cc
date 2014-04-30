@@ -37,6 +37,7 @@
 #define CHIPS_PER_ROW           3
 #define CHIPS_PER_COLUMN        2
 #define NUM_CHIPS               CHIPS_PER_ROW * CHIPS_PER_COLUMN
+#define NUM_FSRS                256
 
 static void uca_xkit_camera_initable_iface_init (GInitableIface *iface);
 
@@ -57,6 +58,9 @@ enum {
     PROP_FLIP_CHIP_3,
     PROP_FLIP_CHIP_4,
     PROP_FLIP_CHIP_5,
+    PROP_READOUT_BIG_ENDIAN,
+    PROP_READOUT_MIRRORED,
+    PROP_READOUT_INCREMENTAL_GREYSCALE,
     N_PROPERTIES
 };
 
@@ -67,6 +71,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_SENSOR_BITDEPTH,
     PROP_EXPOSURE_TIME,
+    PROP_TRIGGER_MODE,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -85,19 +90,40 @@ struct _UcaXkitCameraPrivate {
     guint16 **buffers;
     UcaCameraTrigger trigger;
     gboolean flip[NUM_CHIPS];
+    gsize n_fsrs;
+    gsize n_max_fsrs;
+    guint16 **fsr_buffers;
+    gboolean shift[NUM_FSRS];
+    gdouble exposure_time;
+    guint acq_time_cycles;
+    gboolean endian;
+    gboolean mirrored;
+    gboolean incremental;
+    guint readout;
+    XKitAcquistionMode mode;
+    XKitReadoutOptions options;
 };
 
 static gboolean
 setup_xkit (UcaXkitCameraPrivate *priv)
 {
     priv->n_max_chips = priv->n_chips = NUM_CHIPS;
-
     priv->buffers = g_new0 (guint16 *, priv->n_max_chips);
+
+    priv->n_max_fsrs = priv->n_fsrs = NUM_FSRS;
+    priv->fsr_buffers = g_new0 (guint16 *, priv->n_max_fsrs);
 
     for (guint i = 0; i < priv->n_max_chips; i++)
         priv->buffers[i] = (guint16 *) g_malloc0 (MEDIPIX_SENSOR_SIZE * MEDIPIX_SENSOR_SIZE * sizeof(guint16));
 
+    for (guint j = 0; j < priv->n_max_fsrs; j++)
+        priv->fsr_buffers[j] = (guint16 *) g_malloc0 (16 * 1 * sizeof(guint16));
+
     x_kit_init ();
+
+    //guint ids = 0x00112340;
+    //x_kit_read_FSR (priv->fsr_buffers, ids, priv->n_chips);
+
     x_kit_reset_sensors ();
     x_kit_initialize_matrix ();
 
@@ -187,10 +213,17 @@ uca_xkit_camera_grab (UcaCamera *camera,
 
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
 
-    if (priv->trigger == UCA_CAMERA_TRIGGER_AUTO)
-        x_kit_start_acquisition (X_KIT_ACQUIRE_CONTINUOUS);
-
-    x_kit_serial_matrix_readout (priv->buffers, &priv->n_chips, X_KIT_READOUT_DEFAULT);
+    if (priv->mode == X_KIT_ACQUIRE_TRIGGERED) {
+        priv->exposure_time = x_kit_set_exposure_time(priv->acq_time_cycles);
+     /**   '6' SET FSR if hardware
+        x_kit_set_fast_shift_register (priv->n_fsrs, priv->n_chips);
+           '9' WRITE MATRIX if hardware
+        x_kit_write_matrix (priv->buffers, &priv->n_chips, priv->mode);*/
+    }
+    
+    x_kit_start_acquisition (priv->mode);
+    priv->options = (XKitReadoutOptions) priv->readout;
+    x_kit_serial_matrix_readout (priv->buffers, &priv->n_chips, priv->options);
     compose_image ((guint16 *) data, priv->buffers, priv->flip, priv->n_chips);
 
     return TRUE;
@@ -201,7 +234,10 @@ uca_xkit_camera_trigger (UcaCamera *camera,
                          GError **error)
 {
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
-    x_kit_start_acquisition (X_KIT_ACQUIRE_CONTINUOUS);
+
+    UcaXkitCameraPrivate *priv;
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
+    x_kit_start_acquisition (priv->mode);
 }
 
 static void
@@ -215,6 +251,19 @@ uca_xkit_camera_set_property (GObject *object,
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
 
     switch (property_id) {
+        case PROP_EXPOSURE_TIME:
+            priv->exposure_time = g_value_get_double(value);
+            break;
+
+        case PROP_TRIGGER_MODE:
+            if (priv->trigger == UCA_CAMERA_TRIGGER_AUTO)
+                priv->mode = X_KIT_ACQUIRE_CONTINUOUS;
+            else if (priv->trigger == UCA_CAMERA_TRIGGER_SOFTWARE)
+                priv->mode = X_KIT_ACQUIRE_NORMAL;
+            else if (priv->trigger == UCA_CAMERA_TRIGGER_EXTERNAL)
+                priv->mode = X_KIT_ACQUIRE_TRIGGERED;
+            break;
+
         case PROP_FLIP_CHIP_0:
         case PROP_FLIP_CHIP_1:
         case PROP_FLIP_CHIP_2:
@@ -223,6 +272,31 @@ uca_xkit_camera_set_property (GObject *object,
         case PROP_FLIP_CHIP_5:
             priv->flip[property_id - PROP_FLIP_CHIP_0] = g_value_get_boolean (value);
             break;
+
+        case PROP_READOUT_BIG_ENDIAN:
+            priv->endian = g_value_get_boolean (value);
+            if (priv->endian == TRUE)
+                priv->readout |= X_KIT_READOUT_BIG_ENDIAN;
+            else
+                priv->readout &= ~X_KIT_READOUT_BIG_ENDIAN;
+            break;
+
+        case PROP_READOUT_MIRRORED:
+            priv->mirrored = g_value_get_boolean (value);
+            if (priv->mirrored == TRUE)
+                priv->readout |= X_KIT_READOUT_MIRRORED;
+            else
+                priv->readout &= ~X_KIT_READOUT_MIRRORED;
+            break;
+
+        case PROP_READOUT_INCREMENTAL_GREYSCALE:
+            priv->incremental = g_value_get_boolean (value);
+            if (priv->incremental == TRUE)
+                priv->readout |= X_KIT_READOUT_INCREMENTAL_GREYSCALE;
+            else
+                priv->readout &= ~X_KIT_READOUT_INCREMENTAL_GREYSCALE;
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
@@ -256,7 +330,10 @@ uca_xkit_camera_get_property (GObject *object,
             g_value_set_uint (value, 16);
             break;
         case PROP_EXPOSURE_TIME:
-            g_value_set_double (value, 0.5);
+            g_value_set_double (value, priv->exposure_time);
+            break;
+        case PROP_TRIGGER_MODE:
+            g_value_set_enum (value, priv->trigger);
             break;
         case PROP_HAS_STREAMING:
             g_value_set_boolean (value, TRUE);
@@ -289,6 +366,16 @@ uca_xkit_camera_get_property (GObject *object,
             g_value_set_boolean (value, priv->flip[property_id - PROP_FLIP_CHIP_0]);
             break;
 
+        case PROP_READOUT_BIG_ENDIAN:
+            g_value_set_boolean (value, priv->endian);
+            break;
+        case PROP_READOUT_MIRRORED:
+            g_value_set_boolean (value, priv->mirrored);
+            break;
+        case PROP_READOUT_INCREMENTAL_GREYSCALE:
+            g_value_set_boolean (value, priv->incremental);
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             break;
@@ -306,7 +393,11 @@ uca_xkit_camera_finalize(GObject *object)
     for (guint i = 0; i < priv->n_max_chips; i++)
         g_free (priv->buffers[i]);
 
+    for (guint j = 0; j < priv->n_max_fsrs; j++)
+        g_free (priv->fsr_buffers[j]);
+
     g_free (priv->buffers);
+    g_free (priv->fsr_buffers);
 
     G_OBJECT_CLASS (uca_xkit_camera_parent_class)->finalize (object);
 }
@@ -373,6 +464,27 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
             1, 6, 6,
             G_PARAM_READABLE);
 
+    xkit_properties[PROP_READOUT_BIG_ENDIAN] =
+        g_param_spec_boolean("big-endian-readout",
+            "Big Endian Readout",
+            "Big Endian Readout",
+            FALSE,
+            (GParamFlags) G_PARAM_READWRITE);
+
+    xkit_properties[PROP_READOUT_MIRRORED] =
+        g_param_spec_boolean("mirrored-readout",
+            "Mirrored Readout",
+            "Mirrored Readout",
+            FALSE, 
+            (GParamFlags) G_PARAM_READWRITE);
+
+    xkit_properties[PROP_READOUT_INCREMENTAL_GREYSCALE] =
+        g_param_spec_boolean("incremental-greyscale-readout",
+            "Incremental Greyscale Readout",
+            "Incremental Greyscale Readout",
+            FALSE,
+            (GParamFlags) G_PARAM_READWRITE);
+
     for (guint i = 0; i < NUM_CHIPS; i++) {
         gchar *prop_name;
 
@@ -396,10 +508,14 @@ uca_xkit_camera_init (UcaXkitCamera *self)
     UcaXkitCameraPrivate *priv;
 
     self->priv = priv = UCA_XKIT_CAMERA_GET_PRIVATE (self);
+    self->priv->exposure_time = 0.5;
     priv->construct_error = NULL;
 
     for (guint i = 0; i < NUM_CHIPS; i++)
         priv->flip[i] = FALSE;
+
+    for (guint j = 0; j < NUM_FSRS; j++)
+        priv->shift[j] = FALSE;
 
     if (!setup_xkit (priv))
         return;
