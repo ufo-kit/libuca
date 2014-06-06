@@ -584,7 +584,7 @@ egg_property_cell_renderer_init (EggPropertyCellRenderer *renderer)
             G_CALLBACK (egg_property_cell_renderer_spin_edited_cb), priv);
 
     g_signal_connect (priv->text_renderer, "edited",
-            G_CALLBACK (egg_property_cell_renderer_text_edited_cb), NULL);
+            G_CALLBACK (egg_property_cell_renderer_text_edited_cb), priv);
 
     g_signal_connect (priv->toggle_renderer, "toggled",
             G_CALLBACK (egg_property_cell_renderer_toggle_cb), priv);
