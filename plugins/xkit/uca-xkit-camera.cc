@@ -35,7 +35,7 @@
 
 #define MEDIPIX_SENSOR_SIZE     256
 #define CHIPS_PER_ROW           3
-#define CHIPS_PER_COLUMN        2
+#define CHIPS_PER_COLUMN        1
 #define NUM_CHIPS               CHIPS_PER_ROW * CHIPS_PER_COLUMN
 #define NUM_FSRS                256
 
@@ -96,9 +96,6 @@ struct _UcaXkitCameraPrivate {
     gboolean shift[NUM_FSRS];
     gdouble exposure_time;
     guint acq_time_cycles;
-    gboolean endian;
-    gboolean mirrored;
-    gboolean incremental;
     guint readout;
     XKitAcquistionMode mode;
     XKitReadoutOptions options;
@@ -214,7 +211,7 @@ uca_xkit_camera_grab (UcaCamera *camera,
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
 
     if (priv->mode == X_KIT_ACQUIRE_TRIGGERED) {
-        priv->exposure_time = x_kit_set_exposure_time(priv->acq_time_cycles);
+        priv->exposure_time = x_kit_set_exposure_time (priv->acq_time_cycles);
      /**   '6' SET FSR if hardware
         x_kit_set_fast_shift_register (priv->n_fsrs, priv->n_chips);
            '9' WRITE MATRIX if hardware
@@ -274,24 +271,21 @@ uca_xkit_camera_set_property (GObject *object,
             break;
 
         case PROP_READOUT_BIG_ENDIAN:
-            priv->endian = g_value_get_boolean (value);
-            if (priv->endian == TRUE)
+            if (g_value_get_boolean (value))
                 priv->readout |= X_KIT_READOUT_BIG_ENDIAN;
             else
                 priv->readout &= ~X_KIT_READOUT_BIG_ENDIAN;
             break;
 
         case PROP_READOUT_MIRRORED:
-            priv->mirrored = g_value_get_boolean (value);
-            if (priv->mirrored == TRUE)
+            if (g_value_get_boolean (value))
                 priv->readout |= X_KIT_READOUT_MIRRORED;
             else
                 priv->readout &= ~X_KIT_READOUT_MIRRORED;
             break;
 
         case PROP_READOUT_INCREMENTAL_GREYSCALE:
-            priv->incremental = g_value_get_boolean (value);
-            if (priv->incremental == TRUE)
+            if (g_value_get_boolean (value))
                 priv->readout |= X_KIT_READOUT_INCREMENTAL_GREYSCALE;
             else
                 priv->readout &= ~X_KIT_READOUT_INCREMENTAL_GREYSCALE;
@@ -327,7 +321,7 @@ uca_xkit_camera_get_property (GObject *object,
             g_value_set_uint (value, CHIPS_PER_COLUMN * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_SENSOR_BITDEPTH:
-            g_value_set_uint (value, 16);
+            g_value_set_uint (value, 14);
             break;
         case PROP_EXPOSURE_TIME:
             g_value_set_double (value, priv->exposure_time);
@@ -356,7 +350,6 @@ uca_xkit_camera_get_property (GObject *object,
         case PROP_NUM_CHIPS:
             g_value_set_uint (value, priv->n_chips);
             break;
-
         case PROP_FLIP_CHIP_0:
         case PROP_FLIP_CHIP_1:
         case PROP_FLIP_CHIP_2:
@@ -365,15 +358,14 @@ uca_xkit_camera_get_property (GObject *object,
         case PROP_FLIP_CHIP_5:
             g_value_set_boolean (value, priv->flip[property_id - PROP_FLIP_CHIP_0]);
             break;
-
         case PROP_READOUT_BIG_ENDIAN:
-            g_value_set_boolean (value, priv->endian);
+            g_value_set_boolean (value, priv->readout & X_KIT_READOUT_BIG_ENDIAN);
             break;
         case PROP_READOUT_MIRRORED:
-            g_value_set_boolean (value, priv->mirrored);
+            g_value_set_boolean (value, priv->readout & X_KIT_READOUT_MIRRORED);
             break;
         case PROP_READOUT_INCREMENTAL_GREYSCALE:
-            g_value_set_boolean (value, priv->incremental);
+            g_value_set_boolean (value, priv->readout & X_KIT_READOUT_INCREMENTAL_GREYSCALE);
             break;
 
         default:
@@ -465,21 +457,21 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
             G_PARAM_READABLE);
 
     xkit_properties[PROP_READOUT_BIG_ENDIAN] =
-        g_param_spec_boolean("big-endian-readout",
+        g_param_spec_boolean("big-endian",
             "Big Endian Readout",
             "Big Endian Readout",
             FALSE,
             (GParamFlags) G_PARAM_READWRITE);
 
     xkit_properties[PROP_READOUT_MIRRORED] =
-        g_param_spec_boolean("mirrored-readout",
+        g_param_spec_boolean("mirrored",
             "Mirrored Readout",
             "Mirrored Readout",
             FALSE, 
             (GParamFlags) G_PARAM_READWRITE);
 
     xkit_properties[PROP_READOUT_INCREMENTAL_GREYSCALE] =
-        g_param_spec_boolean("incremental-greyscale-readout",
+        g_param_spec_boolean("incremental-greyscale",
             "Incremental Greyscale Readout",
             "Incremental Greyscale Readout",
             FALSE,
