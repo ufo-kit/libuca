@@ -103,7 +103,7 @@ set(UCA_ENUM_HDRS
     ${CMAKE_CURRENT_SOURCE_DIR}/plugins/pco/uca-pco-camera.h)
 #}}}
 #{{{ Common definitions
-add_definitions("-std=c99 -Wall")
+add_definitions("-std=c99 -Wall -g")
 #}}}
 #{{{ Subdirectories
 add_subdirectory(src)
