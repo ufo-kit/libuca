@@ -14,7 +14,7 @@ matrix:
           env: BUILD_TYPE=Release
 
 before_script:
-    - sudo apt-get install cmake libglib2.0-dev
+    - sudo apt-get install cmake libglib2.0-dev libtiff4-dev
     - mkdir build
     - cd build
     - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
