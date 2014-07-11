@@ -1,6 +1,8 @@
 Application Programming Interface
 =================================
 
+.. highlight:: c
+
 In the introduction we had a quick glance over the basic API used to communicate
 with a camera. Now we will go into more detail and explain required background
 to understand the execution model.

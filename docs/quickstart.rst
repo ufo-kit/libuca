@@ -219,10 +219,3 @@ In a similar way, properties are set with ``g_object_set``::
 Each property can be associated with a physical unit. To query for the
 unit call ``uca_camera_get_unit`` and pass a property name. The function
 will then return a value from the ``UcaUnit`` enum.
-
-Several essential camera parameters *must* be implemented by all
-cameras. To get a list of them consult the API reference for
-```UcaCamera`` <http://ufo.kit.edu/extra/libuca/reference/UcaCamera.html#UcaCamera.properties>`__.
-For camera specific parameters you need to consult the corresponding API
-reference for ``UfoFooCamera``. The latest nightly built reference can
-be found `here <http://ufo.kit.edu/extra/libuca/reference/>`__.

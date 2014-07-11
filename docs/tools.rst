@@ -6,8 +6,8 @@ of them are located in ``build/test/`` and some of them are installed
 with ``make installed``.
 
 
-``uca-camera-control`` -- simple graphical user interface
----------------------------------------------------------
+uca-camera-control -- simple graphical user interface
+-----------------------------------------------------
 
 Records and shows frames. Moreover, you can change the camera properties in a
 side pane:
@@ -15,8 +15,8 @@ side pane:
 .. image:: uca-gui.png
 
 
-``uca-grab`` -- grabbing frames
--------------------------------
+uca-grab -- grabbing frames
+---------------------------
 
 Grab with frames with ::
 
@@ -37,8 +37,8 @@ in fractions of seconds::
     $ uca-grab --duration=0.25 camera-model
 
 
-``uca-benchmark`` -- check bandwidth
-------------------------------------
+uca-benchmark -- check bandwidth
+--------------------------------
 
 Measure the memory bandwidth by taking subsequent frames and averaging
 the grabbing time::
