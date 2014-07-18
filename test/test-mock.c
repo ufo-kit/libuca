@@ -291,6 +291,41 @@ test_can_be_written (Fixture *fixture, gconstpointer data)
     g_assert_no_error (error);
 }
 
+static void
+test_factory_hashtable (Fixture *fixture, gconstpointer data)
+{
+    GError *error = NULL;
+
+    guint checkvalue = 42;
+
+    gchar *foo = "roi-width";
+    gchar *bar = "roi-height";
+    GValue baz = G_VALUE_INIT;
+    g_value_init(&baz, G_TYPE_UINT);
+    g_value_set_uint(&baz, checkvalue);
+
+    GHashTable *ght = g_hash_table_new (NULL, NULL);
+    g_hash_table_insert(ght, foo, &baz);
+    g_hash_table_insert(ght, bar, &baz);
+
+    UcaCamera *camera = uca_plugin_manager_get_camerah (fixture->manager,
+                                                     "mock", ght, &error);
+    g_hash_table_destroy(ght);
+
+    g_assert (error == NULL);
+    g_assert (camera);
+
+    guint roi_width = 0;
+    g_object_get (G_OBJECT (camera), "roi-width", &roi_width, NULL);
+    g_assert (roi_width == checkvalue);
+
+    guint roi_height = 0;
+    g_object_get (G_OBJECT (camera), "roi-height", &roi_height, NULL);
+    g_assert (roi_height == checkvalue);
+
+    g_object_unref(camera);
+}
+
 int main (int argc, char *argv[])
 {
     gsize n_tests;
@@ -308,6 +343,7 @@ int main (int argc, char *argv[])
     }
     tests[] = {
         {"/factory", test_factory},
+        {"/factory/hashtable", test_factory_hashtable},
         {"/signal", test_signal},
         {"/recording", test_recording},
         {"/recording/signal", test_recording_signal},
