@@ -421,7 +421,7 @@ uca_camera_class_init (UcaCameraClass *klass)
                 G_PARAM_READABLE), G_PARAM_READABLE);
 
     camera_properties[PROP_TRIGGER_MODE] =
-        g_param_spec_enum("trigger-mode",
+        g_param_spec_enum(uca_camera_props[PROP_TRIGGER_MODE],
             "Trigger mode",
             "Trigger mode",
             UCA_TYPE_CAMERA_TRIGGER, UCA_CAMERA_TRIGGER_AUTO,
