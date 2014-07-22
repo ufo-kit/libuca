@@ -33,7 +33,11 @@
 
 #define UCA_XKIT_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_XKIT_CAMERA, UcaXkitCameraPrivate))
 
-#define MEDIPIX_SENSOR_HEIGHT   256
+#define MEDIPIX_SENSOR_SIZE     256
+#define CHIPS_PER_ROW           3
+#define CHIPS_PER_COLUMN        1
+#define NUM_CHIPS               CHIPS_PER_ROW * CHIPS_PER_COLUMN
+#define NUM_FSRS                256
 
 static void uca_xkit_camera_initable_iface_init (GInitableIface *iface);
 
@@ -47,7 +51,16 @@ GQuark uca_xkit_camera_error_quark()
 }
 
 enum {
-    PROP_POSITIVE_POLARITY = N_BASE_PROPERTIES,
+    PROP_NUM_CHIPS = N_BASE_PROPERTIES,
+    PROP_FLIP_CHIP_0,
+    PROP_FLIP_CHIP_1,
+    PROP_FLIP_CHIP_2,
+    PROP_FLIP_CHIP_3,
+    PROP_FLIP_CHIP_4,
+    PROP_FLIP_CHIP_5,
+    PROP_READOUT_BIG_ENDIAN,
+    PROP_READOUT_MIRRORED,
+    PROP_READOUT_INCREMENTAL_GREYSCALE,
     N_PROPERTIES
 };
 
@@ -58,6 +71,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_MAX_FRAME_RATE,
     PROP_SENSOR_BITDEPTH,
     PROP_EXPOSURE_TIME,
+    PROP_TRIGGER_MODE,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -67,42 +81,90 @@ static gint base_overrideables[] = {
     0,
 };
 
-static GParamSpec *xkit_properties[N_PROPERTIES] = { NULL, };
+static GParamSpec *xkit_properties[N_PROPERTIES] = { NULL, };     
 
 struct _UcaXkitCameraPrivate {
-    GError  *construct_error;
-    Mpx2Interface *interface;
-    gint devices[4];
-    gint n_devices;
-    gint device;
-
-    DevInfo info;
-    AcqParams acq;
+    GError *construct_error;
+    gsize n_chips;
+    gsize n_max_chips;
+    guint16 **buffers;
+    UcaCameraTrigger trigger;
+    gboolean flip[NUM_CHIPS];
+    gsize n_fsrs;
+    gsize n_max_fsrs;
+    guint16 **fsr_buffers;
+    gboolean shift[NUM_FSRS];
+    gdouble exposure_time;
+    guint acq_time_cycles;
+    guint readout;
+    XKitAcquistionMode mode;
+    XKitReadoutOptions options;
 };
-
 
 static gboolean
 setup_xkit (UcaXkitCameraPrivate *priv)
 {
+    priv->n_max_chips = priv->n_chips = NUM_CHIPS;
+    priv->buffers = g_new0 (guint16 *, priv->n_max_chips);
 
-    priv->interface = getMpx2Interface();
-    priv->interface->findDevices (priv->devices, &priv->n_devices);
+    priv->n_max_fsrs = priv->n_fsrs = NUM_FSRS;
+    priv->fsr_buffers = g_new0 (guint16 *, priv->n_max_fsrs);
 
-    if (priv->n_devices > 0)
-        priv->interface->init (priv->devices[0]);
+    for (guint i = 0; i < priv->n_max_chips; i++)
+        priv->buffers[i] = (guint16 *) g_malloc0 (MEDIPIX_SENSOR_SIZE * MEDIPIX_SENSOR_SIZE * sizeof(guint16));
 
-    priv->device = priv->devices[0];
-    priv->interface->getDevInfo (priv->device, &priv->info);
+    for (guint j = 0; j < priv->n_max_fsrs; j++)
+        priv->fsr_buffers[j] = (guint16 *) g_malloc0 (16 * 1 * sizeof(guint16));
 
-    /* TODO: find some sensible defaults */
-    priv->acq.useHwTimer = TRUE;
-    priv->acq.enableCst = FALSE;
-    priv->acq.polarityPositive = TRUE;
-    priv->acq.mode = ACQMODE_ACQSTART_TIMERSTOP;
-    priv->acq.acqCount = 1;
-    priv->acq.time = 1.0;
+    x_kit_init ();
+
+    //guint ids = 0x00112340;
+    //x_kit_read_FSR (priv->fsr_buffers, ids, priv->n_chips);
+
+    x_kit_reset_sensors ();
+    x_kit_initialize_matrix ();
 
     return TRUE;
+}
+
+static void
+compose_image (guint16 *output, guint16 **buffers, gboolean *flip, gsize n)
+{
+    gsize dst_stride;
+    gsize cx = 0;
+    gsize cy = 0;
+
+    dst_stride = CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE;
+
+    for (gsize i = 0; i < n; i++) {
+        guint16 *dst;
+        guint16 *src;
+        gsize src_stride;
+
+        if (cx == CHIPS_PER_ROW) {
+            cx = 0;
+            cy++;
+        }
+
+        if (flip[i]) {
+            src = buffers[i] + MEDIPIX_SENSOR_SIZE * MEDIPIX_SENSOR_SIZE;
+            src_stride = -MEDIPIX_SENSOR_SIZE;
+        }
+        else {
+            src = buffers[i];
+            src_stride = MEDIPIX_SENSOR_SIZE;
+        }
+
+        dst = output + (cy * MEDIPIX_SENSOR_SIZE * dst_stride + cx * MEDIPIX_SENSOR_SIZE);
+
+        for (gsize row = 0; row < 256; row++) {
+            memcpy (dst, src, MEDIPIX_SENSOR_SIZE * sizeof (guint16));
+            dst += dst_stride;
+            src += src_stride;
+        }
+
+        cx++;
+    }
 }
 
 static void
@@ -112,12 +174,9 @@ uca_xkit_camera_start_recording (UcaCamera *camera,
     UcaXkitCameraPrivate *priv;
 
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
-    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
 
-    if (priv->interface->setAcqPars (priv->device, &priv->acq)) {
-        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                             "Could not set acquisition parameters");
-    }
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
+    g_object_get (camera, "trigger-mode", &priv->trigger, NULL);
 }
 
 static void
@@ -146,33 +205,23 @@ uca_xkit_camera_grab (UcaCamera *camera,
                       gpointer data,
                       GError **error)
 {
-    UcaXkitCameraPrivate *priv;
-    guint32 size;
     g_return_val_if_fail (UCA_IS_XKIT_CAMERA (camera), FALSE);
-
-    /* XXX: For now we trigger on our own because the X-KIT chip does not
-     * provide auto triggering */
+    UcaXkitCameraPrivate *priv;
 
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
-    size = priv->info.pixCount;
 
-    if (priv->interface->startAcquisition (priv->device)) {
-        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                             "Could not pre-trigger");
-        return FALSE;
+    if (priv->mode == X_KIT_ACQUIRE_TRIGGERED) {
+        priv->exposure_time = x_kit_set_exposure_time (priv->acq_time_cycles);
+     /**   '6' SET FSR if hardware
+        x_kit_set_fast_shift_register (priv->n_fsrs, priv->n_chips);
+           '9' WRITE MATRIX if hardware
+        x_kit_write_matrix (priv->buffers, &priv->n_chips, priv->mode);*/
     }
-
-    if (priv->interface->readMatrix (priv->device, (gint16 *) data, size)) {
-        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                             "Could not grab frame");
-        return FALSE;
-    }
-
-    if (priv->interface->stopAcquisition (priv->device)) {
-        g_set_error_literal (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                             "Could stop acquisition");
-        return FALSE;
-    }
+    
+    x_kit_start_acquisition (priv->mode);
+    priv->options = (XKitReadoutOptions) priv->readout;
+    x_kit_serial_matrix_readout (priv->buffers, &priv->n_chips, priv->options);
+    compose_image ((guint16 *) data, priv->buffers, priv->flip, priv->n_chips);
 
     return TRUE;
 }
@@ -182,6 +231,10 @@ uca_xkit_camera_trigger (UcaCamera *camera,
                          GError **error)
 {
     g_return_if_fail (UCA_IS_XKIT_CAMERA (camera));
+
+    UcaXkitCameraPrivate *priv;
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
+    x_kit_start_acquisition (priv->mode);
 }
 
 static void
@@ -190,15 +243,54 @@ uca_xkit_camera_set_property (GObject *object,
                               const GValue *value,
                               GParamSpec *pspec)
 {
-    UcaXkitCameraPrivate *priv = UCA_XKIT_CAMERA_GET_PRIVATE(object);
+    UcaXkitCameraPrivate *priv;
+
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
 
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
-            priv->acq.time = g_value_get_double (value);
+            priv->exposure_time = g_value_get_double(value);
             break;
-        case PROP_POSITIVE_POLARITY:
-            priv->acq.polarityPositive = g_value_get_boolean (value);
+
+        case PROP_TRIGGER_MODE:
+            if (priv->trigger == UCA_CAMERA_TRIGGER_AUTO)
+                priv->mode = X_KIT_ACQUIRE_CONTINUOUS;
+            else if (priv->trigger == UCA_CAMERA_TRIGGER_SOFTWARE)
+                priv->mode = X_KIT_ACQUIRE_NORMAL;
+            else if (priv->trigger == UCA_CAMERA_TRIGGER_EXTERNAL)
+                priv->mode = X_KIT_ACQUIRE_TRIGGERED;
             break;
+
+        case PROP_FLIP_CHIP_0:
+        case PROP_FLIP_CHIP_1:
+        case PROP_FLIP_CHIP_2:
+        case PROP_FLIP_CHIP_3:
+        case PROP_FLIP_CHIP_4:
+        case PROP_FLIP_CHIP_5:
+            priv->flip[property_id - PROP_FLIP_CHIP_0] = g_value_get_boolean (value);
+            break;
+
+        case PROP_READOUT_BIG_ENDIAN:
+            if (g_value_get_boolean (value))
+                priv->readout |= X_KIT_READOUT_BIG_ENDIAN;
+            else
+                priv->readout &= ~X_KIT_READOUT_BIG_ENDIAN;
+            break;
+
+        case PROP_READOUT_MIRRORED:
+            if (g_value_get_boolean (value))
+                priv->readout |= X_KIT_READOUT_MIRRORED;
+            else
+                priv->readout &= ~X_KIT_READOUT_MIRRORED;
+            break;
+
+        case PROP_READOUT_INCREMENTAL_GREYSCALE:
+            if (g_value_get_boolean (value))
+                priv->readout |= X_KIT_READOUT_INCREMENTAL_GREYSCALE;
+            else
+                priv->readout &= ~X_KIT_READOUT_INCREMENTAL_GREYSCALE;
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
@@ -211,27 +303,31 @@ uca_xkit_camera_get_property (GObject *object,
                               GValue *value,
                               GParamSpec *pspec)
 {
-    UcaXkitCameraPrivate *priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
+    UcaXkitCameraPrivate *priv;
+
+    priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
 
     switch (property_id) {
         case PROP_NAME:
-            g_value_set_string (value, priv->info.ifaceName);
+            g_value_set_string (value, "xkit");
             break;
         case PROP_SENSOR_MAX_FRAME_RATE:
-            /* TODO: pretty arbitrary, huh? */
             g_value_set_float (value, 150.0f);
             break;
         case PROP_SENSOR_WIDTH:
-            g_value_set_uint (value, priv->info.rowLen);
+            g_value_set_uint (value, CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_SENSOR_HEIGHT:
-            g_value_set_uint (value, priv->info.numberOfRows * MEDIPIX_SENSOR_HEIGHT);
+            g_value_set_uint (value, CHIPS_PER_COLUMN * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_SENSOR_BITDEPTH:
-            g_value_set_uint (value, 11);
+            g_value_set_uint (value, 14);
             break;
         case PROP_EXPOSURE_TIME:
-            g_value_set_double (value, priv->acq.time);
+            g_value_set_double (value, priv->exposure_time);
+            break;
+        case PROP_TRIGGER_MODE:
+            g_value_set_enum (value, priv->trigger);
             break;
         case PROP_HAS_STREAMING:
             g_value_set_boolean (value, TRUE);
@@ -246,14 +342,32 @@ uca_xkit_camera_get_property (GObject *object,
             g_value_set_uint (value, 0);
             break;
         case PROP_ROI_WIDTH:
-            g_value_set_uint (value, priv->info.rowLen);
+            g_value_set_uint (value, CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE);
             break;
         case PROP_ROI_HEIGHT:
-            g_value_set_uint (value, priv->info.numberOfRows * MEDIPIX_SENSOR_HEIGHT);
+            g_value_set_uint (value, CHIPS_PER_COLUMN * MEDIPIX_SENSOR_SIZE);
             break;
-        case PROP_POSITIVE_POLARITY:
-            g_value_set_boolean (value, priv->acq.polarityPositive);
+        case PROP_NUM_CHIPS:
+            g_value_set_uint (value, priv->n_chips);
             break;
+        case PROP_FLIP_CHIP_0:
+        case PROP_FLIP_CHIP_1:
+        case PROP_FLIP_CHIP_2:
+        case PROP_FLIP_CHIP_3:
+        case PROP_FLIP_CHIP_4:
+        case PROP_FLIP_CHIP_5:
+            g_value_set_boolean (value, priv->flip[property_id - PROP_FLIP_CHIP_0]);
+            break;
+        case PROP_READOUT_BIG_ENDIAN:
+            g_value_set_boolean (value, priv->readout & X_KIT_READOUT_BIG_ENDIAN);
+            break;
+        case PROP_READOUT_MIRRORED:
+            g_value_set_boolean (value, priv->readout & X_KIT_READOUT_MIRRORED);
+            break;
+        case PROP_READOUT_INCREMENTAL_GREYSCALE:
+            g_value_set_boolean (value, priv->readout & X_KIT_READOUT_INCREMENTAL_GREYSCALE);
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             break;
@@ -267,6 +381,15 @@ uca_xkit_camera_finalize(GObject *object)
 
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (object);
     g_clear_error (&priv->construct_error);
+
+    for (guint i = 0; i < priv->n_max_chips; i++)
+        g_free (priv->buffers[i]);
+
+    for (guint j = 0; j < priv->n_max_fsrs; j++)
+        g_free (priv->fsr_buffers[j]);
+
+    g_free (priv->buffers);
+    g_free (priv->fsr_buffers);
 
     G_OBJECT_CLASS (uca_xkit_camera_parent_class)->finalize (object);
 }
@@ -326,11 +449,44 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property (oclass, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
 
-    xkit_properties[PROP_POSITIVE_POLARITY] =
-        g_param_spec_boolean ("positive-polarity",
-                              "Is polarity positive",
-                              "Is polarity positive",
-                              TRUE, (GParamFlags) G_PARAM_READWRITE);
+    xkit_properties[PROP_NUM_CHIPS] =
+        g_param_spec_uint("num-sensor-chips",
+            "Number of sensor chips",
+            "Number of sensor chips",
+            1, 6, 6,
+            G_PARAM_READABLE);
+
+    xkit_properties[PROP_READOUT_BIG_ENDIAN] =
+        g_param_spec_boolean("big-endian",
+            "Big Endian Readout",
+            "Big Endian Readout",
+            FALSE,
+            (GParamFlags) G_PARAM_READWRITE);
+
+    xkit_properties[PROP_READOUT_MIRRORED] =
+        g_param_spec_boolean("mirrored",
+            "Mirrored Readout",
+            "Mirrored Readout",
+            FALSE, 
+            (GParamFlags) G_PARAM_READWRITE);
+
+    xkit_properties[PROP_READOUT_INCREMENTAL_GREYSCALE] =
+        g_param_spec_boolean("incremental-greyscale",
+            "Incremental Greyscale Readout",
+            "Incremental Greyscale Readout",
+            FALSE,
+            (GParamFlags) G_PARAM_READWRITE);
+
+    for (guint i = 0; i < NUM_CHIPS; i++) {
+        gchar *prop_name;
+
+        prop_name = g_strdup_printf ("flip-chip-%i", i);
+
+        xkit_properties[PROP_FLIP_CHIP_0 + i] =
+            g_param_spec_boolean (prop_name, "Flip chip", "Flip chip", FALSE, (GParamFlags) G_PARAM_READWRITE);
+
+        g_free (prop_name);
+    }
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property (oclass, id, xkit_properties[id]);
@@ -344,7 +500,14 @@ uca_xkit_camera_init (UcaXkitCamera *self)
     UcaXkitCameraPrivate *priv;
 
     self->priv = priv = UCA_XKIT_CAMERA_GET_PRIVATE (self);
+    self->priv->exposure_time = 0.5;
     priv->construct_error = NULL;
+
+    for (guint i = 0; i < NUM_CHIPS; i++)
+        priv->flip[i] = FALSE;
+
+    for (guint j = 0; j < NUM_FSRS; j++)
+        priv->shift[j] = FALSE;
 
     if (!setup_xkit (priv))
         return;
