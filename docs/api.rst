@@ -173,7 +173,7 @@ thing is to get the data pointer from a Numpy array to pass it to
 
 
 Integrating new cameras
-=======================
+-----------------------
 
 A new camera is integrated by
 `sub-classing <http://developer.gnome.org/gobject/stable/howto-gobject.html>`__

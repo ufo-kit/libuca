@@ -4,47 +4,36 @@ Quickstart
 Installation
 ------------
 
-Before installing ``libuca`` itself, you should install any drivers and
-SDKs needed to access the cameras you want to access through ``libuca``.
-Now you have two options: install pre-built packages or build from
-source.
+Before installing *libuca* itself, you should install any drivers and SDKs
+needed to access the cameras you want to access through *libuca*.  Now you have
+two options: install pre-built packages or build from source.
 
 
 Installing packages
 ~~~~~~~~~~~~~~~~~~~
 
 Packages for the core library and all plugins are currently provided for
-openSUSE. To install them run ``zypper``:
-
-::
-
-    sudo zypper in libuca-x.y.z-x86_64.rpm
-    sudo zypper in uca-plugin-*.rpm
-
-To install development files such as headers, you have to install the
-``libuca-x.y.z-devel.rpm`` package.
+openSUSE and can be obtained from the openSUSE Build Service at
+https://build.opensuse.org/package/show/home:ufo-kit/libuca.
 
 
 Building from source
 ~~~~~~~~~~~~~~~~~~~~
 
-Building the library and installing from source is simple and
-straightforward. Make sure you have
+In order to build *libuca* from source, you need
 
--  CMake,
--  a C compiler,
--  GLib and GObject development libraries and
--  necessary camera SDKs
-
-installed.
+- CMake,
+- a C compiler (currently tested with gcc and clang),
+- GLib and GObject development libraries and
+- any required camera SDKs.
 
 For the base system, install ::
 
     [Debian] sudo apt-get install libglib2.0 cmake gcc
     [openSUSE] sudo zypper in glib2-devel cmake gcc
 
-In case you want to use the graphical user interface you also need the
-Gtk+ development libraries::
+In case you want to use the graphical user interface you also need the Gtk+
+development libraries::
 
     [Debian] sudo apt-get install libgtk+2.0-dev
     [openSUSE] sudo zypper in gtk2-devel
@@ -64,7 +53,7 @@ Untar the distribution ::
 
 or clone the repository ::
 
-    git clone http://ufo.kit.edu/git/libuca
+    git clone https://github.com/ufo-kit/libuca
 
 and create a new, empty build directory inside::
 
@@ -75,15 +64,14 @@ and create a new, empty build directory inside::
 Configuring and building
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Now you need to create the Makefile with CMake. Go into the build
-directory and point CMake to the ``libuca`` top-level directory::
+Now you need to create the Makefile with CMake. Go into the build directory and
+point CMake to the ``libuca`` top-level directory::
 
     cd build/
     cmake ..
 
 As long as the last line reads "Build files have been written to", the
-configuration stage is successful. In this case you can build ``libuca``
-with ::
+configuration stage is successful. In this case you can build ``libuca`` with ::
 
     make
 
@@ -91,21 +79,19 @@ and install with ::
 
     sudo make install
 
-If an *essential* dependency could not be found, the configuration stage
-will stop and build files will not be written. If a *non-essential*
-dependency (such as a certain camera SDK) is not found, the
-configuration stage will continue but that particular camera support not
-built.
+If an *essential* dependency could not be found, the configuration stage will
+stop and build files will not be written. If a *non-essential* dependency (such
+as a certain camera SDK) is not found, the configuration stage will continue but
+that particular camera support not built.
 
-If you want to customize the build process you can pass several
-variables to CMake::
+If you want to customize the build process you can pass several variables to
+CMake::
 
     cmake .. -DPREFIX=/usr -DLIBDIR=/usr/lib64
 
-The former tells CMake to install into ``/usr`` instead of
-``/usr/local`` and the latter that we want to install the libraries and
-plugins into the ``lib64`` subdir instead of the default ``lib`` subdir
-as it is common on SUSE systems.
+The former tells CMake to install into ``/usr`` instead of ``/usr/local`` and
+the latter that we want to install the libraries and plugins into the ``lib64``
+subdir instead of the default ``lib`` subdir as it is common on SUSE systems.
 
 
 Usage
