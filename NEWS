@@ -1,6 +1,32 @@
 Changelog
 =========
 
+Changes in libuca 1.5
+---------------------
+
+Released on July 22nd 2013.
+
+### API additions
+
+The base camera class has a new "buffered" property. If it is set to TRUE, a
+thread acquires data into an internal ring buffer. The readout API via
+uca_camera_grab has not changed. You can customize the number of pre-allocated
+buffers with the "num-buffers" property.
+
+A new uca_camera_is_recording call reflecting the "is-recording" property has
+been added.
+
+### Minor changes
+
+- The GUI is more streamlined now and features region-of-interest selection and
+  simpler zooming.
+- A new file "camera" can read a directory of TIFFs. This is an experimental
+  implementation that only supports 8 or 16 bit TIFFs.
+- The xkit plugin does not depend on any third-party code any more but
+  uses direct UDP communication.
+- The Dexela and Pylon plugins have been updated.
+
+
 Changes in libuca 1.4
 ---------------------
 
