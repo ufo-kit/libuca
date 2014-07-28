@@ -60,4 +60,8 @@ struct _UcaKiroCameraClass {
 
 G_END_DECLS
 
+
+void uca_kiro_camera_clone_interface (const gchar* address, UcaKiroCamera *kiro_camera);
+
+
 #endif
