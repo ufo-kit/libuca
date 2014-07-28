@@ -5,6 +5,8 @@ find_package(PkgConfig)
 pkg_check_modules(KIRO kiro>=0.1)
 pkg_check_modules(TANGO tango>=8)
 
+message(STATUS "TANGO INCLUDES: " ${TANGO_INCLUDE_DIRS})
+
 if(KIRO_FOUND AND TANGO_FOUND)
     set(UCA_CAMERA_NAME "kiro")
     set(PLUGIN_VERSION "0.1")

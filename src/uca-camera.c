@@ -214,6 +214,8 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
 {
     UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE (object);
 
+    g_print("BASE CLASS GET PROPERTY\n");
+
     switch (property_id) {
         case PROP_IS_RECORDING:
             g_value_set_boolean (value, priv->is_recording);
