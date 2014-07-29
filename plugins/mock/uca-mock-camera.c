@@ -31,8 +31,7 @@ G_DEFINE_TYPE_WITH_CODE (UcaMockCamera, uca_mock_camera, UCA_TYPE_CAMERA,
                                                 uca_mock_initable_iface_init))
 
 enum {
-    PROP_FRAMERATE = N_BASE_PROPERTIES,
-    N_PROPERTIES
+    N_PROPERTIES = N_BASE_PROPERTIES,
 };
 
 static const gint mock_overrideables[] = {
@@ -57,7 +56,6 @@ struct _UcaMockCameraPrivate {
     guint width;
     guint height;
     guint roi_x, roi_y, roi_width, roi_height;
-    gfloat frame_rate;
     gfloat max_frame_rate;
     gdouble exposure_time;
     guint8 *dummy_data;
@@ -204,7 +202,9 @@ mock_grab_func(gpointer data)
 
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(mock_camera);
     UcaCamera *camera = UCA_CAMERA(mock_camera);
-    const gulong sleep_time = (gulong) G_USEC_PER_SEC / priv->frame_rate;
+    gfloat fps = 0;
+    g_object_get (G_OBJECT (data), "frames-per-second", &fps, NULL);
+    const gulong sleep_time = (gulong) G_USEC_PER_SEC / fps;
 
     while (priv->thread_running) {
         camera->grab_func(priv->dummy_data, camera->user_data);
@@ -293,10 +293,20 @@ uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *
 
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
-            priv->exposure_time = g_value_get_double(value);
-            break;
-        case PROP_FRAMERATE:
-            priv->frame_rate = g_value_get_float(value);
+            {
+                gdouble exp_t;
+                exp_t = g_value_get_double(value);
+
+                gfloat max_framerate;
+                g_object_get (object, "sensor-max-frame-rate", &max_framerate, NULL);
+
+                gdouble min_exposure_time = 1. / max_framerate;
+
+                if (exp_t < min_exposure_time)
+                    exp_t = min_exposure_time;
+
+                priv->exposure_time = exp_t;
+            }
             break;
         case PROP_ROI_X:
             priv->roi_x = g_value_get_uint(value);
@@ -358,9 +368,6 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
         case PROP_HAS_CAMRAM_RECORDING:
             g_value_set_boolean(value, FALSE);
             break;
-        case PROP_FRAMERATE:
-            g_value_set_float(value, priv->frame_rate);
-            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -417,13 +424,6 @@ uca_mock_camera_class_init(UcaMockCameraClass *klass)
     for (guint i = 0; mock_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, mock_overrideables[i], uca_camera_props[mock_overrideables[i]]);
 
-    mock_properties[PROP_FRAMERATE] =
-        g_param_spec_float("frame-rate",
-                "Frame rate",
-                "Number of frames per second that are taken",
-                1.0f, 100.0f, 100.0f,
-                G_PARAM_READWRITE);
-
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, mock_properties[id]);
 
@@ -438,11 +438,11 @@ uca_mock_camera_init(UcaMockCamera *self)
     self->priv->roi_y = 0;
     self->priv->width = self->priv->roi_width = 512;
     self->priv->height = self->priv->roi_height = 512;
-    self->priv->frame_rate = self->priv->max_frame_rate = 100000.0f;
+    self->priv->max_frame_rate = 100000.0f;
     self->priv->grab_thread = NULL;
     self->priv->current_frame = 0;
     self->priv->exposure_time = 0.05;
-
+    
     self->priv->binnings = g_value_array_new(1);
     self->priv->rand = g_rand_new ();
 
@@ -450,8 +450,6 @@ uca_mock_camera_init(UcaMockCamera *self)
     g_value_init(&val, G_TYPE_UINT);
     g_value_set_uint(&val, 1);
     g_value_array_append(self->priv->binnings, &val);
-
-    uca_camera_register_unit (UCA_CAMERA (self), "frame-rate", UCA_UNIT_COUNT);
 }
 
 G_MODULE_EXPORT GType
