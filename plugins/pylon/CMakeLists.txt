@@ -30,9 +30,7 @@ if (PYLON_FOUND)
                 uca-pylon-camera.c
                 uca-pylon-enums.c)
 
-    target_link_libraries(ucapylon
-                          ${UCA_DEPS}
-                          ${LIBPYLONCAM_LIBRARIES})
+    target_link_libraries(ucapylon ${UCA_DEPS} ${LIBPYLONCAM_LIBRARIES})
 
     install(TARGETS ucapylon
             LIBRARY DESTINATION ${UCA_PLUGINDIR}
