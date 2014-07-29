@@ -156,8 +156,14 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
         case PROP_FRAMES_PER_SECOND:
             {
                 gdouble frames_per_second;
-
                 frames_per_second = g_value_get_double (value);
+
+                gfloat max_framerate;
+                g_object_get (object, "sensor-max-frame-rate", &max_framerate, NULL);
+
+                if (max_framerate < frames_per_second)
+                    frames_per_second = max_framerate;
+
                 g_object_set (object, "exposure-time", 1. / frames_per_second, NULL);
             }
             break;
@@ -206,7 +212,16 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
                 gdouble exposure_time;
 
                 g_object_get (object, "exposure-time", &exposure_time, NULL);
-                g_value_set_double (value, 1. / exposure_time);
+                if (exposure_time > 0)
+                {
+                    g_value_set_double (value, 1. / exposure_time);
+                }
+                else
+                {
+                    gfloat max_framerate;
+                    g_object_get (object, "sensor-max-frame-rate", &max_framerate, NULL);
+                    g_value_set_double (value, max_framerate);
+                }
             }
             break;
 
@@ -453,7 +468,7 @@ uca_camera_class_init (UcaCameraClass *klass)
         g_param_spec_double(uca_camera_props[PROP_FRAMES_PER_SECOND],
             "Frames per second",
             "Frames per second",
-            0.0, G_MAXDOUBLE, 1.0,
+            G_MINDOUBLE, G_MAXDOUBLE, 1.0,
             G_PARAM_READWRITE);
 
     camera_properties[PROP_HAS_STREAMING] =
