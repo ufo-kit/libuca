@@ -202,7 +202,7 @@ mock_grab_func(gpointer data)
 
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(mock_camera);
     UcaCamera *camera = UCA_CAMERA(mock_camera);
-    gfloat fps = 0;
+    gdouble fps = 0;
     g_object_get (G_OBJECT (data), "frames-per-second", &fps, NULL);
     const gulong sleep_time = (gulong) G_USEC_PER_SEC / fps;
 
