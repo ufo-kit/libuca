@@ -110,7 +110,7 @@ test_recording_async (Fixture *fixture, gconstpointer data)
     uca_camera_set_grab_func (camera, grab_func, &count);
 
     g_object_set (G_OBJECT (camera),
-            "frame-rate", 10.0,
+            "frames-per-second", 10.0,
             "transfer-asynchronously", TRUE,
             NULL);
 
@@ -191,7 +191,7 @@ test_property_units (Fixture *fixture, gconstpointer data)
     g_assert (uca_camera_get_unit (fixture->camera, "name") == UCA_UNIT_NA);
 
     /* Mock-specific properties */
-    g_assert (uca_camera_get_unit (fixture->camera, "frame-rate") == UCA_UNIT_COUNT);
+    g_assert (uca_camera_get_unit (fixture->camera, "frames-per-second") == UCA_UNIT_COUNT);
 }
 
 static void
@@ -214,9 +214,9 @@ test_signal (Fixture *fixture, gconstpointer data)
 {
     UcaCamera *camera = UCA_CAMERA (fixture->camera);
     gboolean success = FALSE;
-    g_signal_connect (camera, "notify::frame-rate", (GCallback) on_property_change, &success);
+    g_signal_connect (camera, "notify::frames-per-second", (GCallback) on_property_change, &success);
     g_object_set (G_OBJECT (camera),
-            "frame-rate", 30.0,
+            "frames-per-second", 30.0,
             NULL);
     g_assert (success == TRUE);
 }
