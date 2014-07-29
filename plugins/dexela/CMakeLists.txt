@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 project(ucadexela C)
-set(VERSION "1.0.3")
+set(VERSION "1.2.0")
 
 find_package(DEXELA)
 
@@ -11,7 +11,7 @@ if (DEXELA_FOUND)
     set(PLUGIN_SUMMARY "Dexela plugin for libuca")
     set(PLUGIN_CHANGELOG "${CMAKE_CURRENT_SOURCE_DIR}/changelog.txt")
     set(PLUGIN_DESCRIPTION "Plugin for the Dexela 1207 detector.")
-    set(PLUGIN_REQUIRES "libuca = 1.3.0, libdexela >= 1.1.0")
+    set(PLUGIN_REQUIRES "libuca >= 1.3.0, libdexela >= 1.1.0")
     set(PLUGIN_VENDOR "ANKA Computing Group")
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in

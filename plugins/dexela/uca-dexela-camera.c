@@ -16,13 +16,18 @@
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #include <string.h>
+#include <gio/gio.h>
 #include <gmodule.h>
 #include "uca-dexela-camera.h"
 #include "dexela/dexela_api.h"
 
 #define UCA_DEXELA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_DEXELA_CAMERA, UcaDexelaCameraPrivate))
 
-G_DEFINE_TYPE(UcaDexelaCamera, uca_dexela_camera, UCA_TYPE_CAMERA)
+static void uca_dexela_camera_initable_iface_init (GInitableIface *iface);
+
+G_DEFINE_TYPE_WITH_CODE (UcaDexelaCamera, uca_dexela_camera, UCA_TYPE_CAMERA,
+                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
+                                                uca_dexela_camera_initable_iface_init))
 /**
  * UcaDexelaCameraError:
  * @UCA_DEXELA_CAMERA_ERROR_LIBDEXELA_INIT: Initializing libdexela failed
@@ -134,26 +139,6 @@ static gboolean is_binning_allowed(UcaDexelaCameraPrivate *priv, guint binning)
         }
     }
     return FALSE;
-}
-
-UcaDexelaCamera *uca_dexela_camera_new(GError **error)
-{
-    UcaDexelaCamera *camera = g_object_new(UCA_TYPE_DEXELA_CAMERA, NULL);
-    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
-    fill_binnings(priv);
-    /*
-    * Here we override property ranges because we didn't know them at property
-    * installation time.
-    */
-    GObjectClass *camera_class = G_OBJECT_CLASS (UCA_CAMERA_GET_CLASS (camera));
-    // TODO implement error checking
-    dexela_open_detector(DEFAULT_FMT_FILE_PATH);
-    dexela_init_serial_connection();
-    priv->bits = dexela_get_bit_depth();
-    priv->width = dexela_get_width();
-    priv->height = dexela_get_height();
-    priv->num_bytes = 2;
-    return camera;
 }
 
 static void uca_dexela_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
@@ -334,17 +319,13 @@ static void uca_dexela_camera_stop_recording(UcaCamera *camera, GError **error)
     dexela_stop_acquisition();
 }
 
-static void uca_dexela_camera_grab(UcaCamera *camera, gpointer *data, GError **error)
+static gboolean uca_dexela_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
     g_debug("grab called");
     g_return_if_fail(UCA_IS_DEXELA_CAMERA(camera));
     UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
-    if (*data == NULL) {
-        g_debug("Allocating buffer");
-        *data = g_malloc0(priv->width * priv->height * priv->num_bytes);
-    }
-    // TODO: copy to the data buffer
-    memcpy((gchar *) *data, dexela_grab(), priv->width * priv->height * priv->num_bytes);
+    memcpy((gchar *) data, dexela_grab(), priv->width * priv->height * priv->num_bytes);
+    return TRUE;
 }
 
 static void uca_dexela_camera_finalize(GObject *object)
@@ -353,6 +334,23 @@ static void uca_dexela_camera_finalize(GObject *object)
     g_value_array_free(priv->binnings);
 
     G_OBJECT_CLASS(uca_dexela_camera_parent_class)->finalize(object);
+}
+
+static gboolean uca_dexela_camera_initable_init(GInitable *initable, GCancellable *cancellable, GError **error)
+{
+    g_return_val_if_fail (UCA_IS_DEXELA_CAMERA (initable), FALSE);
+
+    if (cancellable != NULL) {
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                             "Cancellable initialization not supported");
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void uca_dexela_camera_initable_iface_init(GInitableIface *iface)
+{
+    iface->init = uca_dexela_camera_initable_init;
 }
 
 static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
@@ -388,7 +386,22 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
 
 static void uca_dexela_camera_init(UcaDexelaCamera *self)
 {
-    self->priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
+    self->priv = priv;
+    fill_binnings(priv);
+    // TODO implement error checking
+    dexela_open_detector(DEFAULT_FMT_FILE_PATH);
+    dexela_init_serial_connection();
+    priv->bits = dexela_get_bit_depth();
+    priv->width = dexela_get_width();
+    priv->height = dexela_get_height();
+    priv->num_bytes = 2;
+}
+
+G_MODULE_EXPORT GType
+uca_camera_get_type (void)
+{
+    return UCA_TYPE_DEXELA_CAMERA;
 }
 
 G_MODULE_EXPORT UcaCamera *
