@@ -235,7 +235,9 @@ main (int argc, char *argv[])
         { NULL }
     };
 
+#if !(GLIB_CHECK_VERSION (2, 36, 0))
     g_type_init();
+#endif
 
     manager = uca_plugin_manager_new ();
     context = uca_option_context_new (manager);

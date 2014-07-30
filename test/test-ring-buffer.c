@@ -53,7 +53,7 @@ test_ring (void)
     uca_ring_buffer_write_advance (buffer);
 
     g_assert (uca_ring_buffer_get_num_blocks (buffer) == 2);
-    
+
     data = uca_ring_buffer_get_read_pointer (buffer);
     g_assert (data[0] == 0xBADF00D);
 
@@ -89,7 +89,10 @@ test_overwrite (void)
 int
 main (int argc, char *argv[])
 {
+#if !(GLIB_CHECK_VERSION (2, 36, 0))
     g_type_init ();
+#endif
+
     g_test_init (&argc, &argv, NULL);
 
     g_test_add_func ("/ringbuffer/new/constructor", test_new_constructor);
