@@ -364,7 +364,7 @@ static gboolean uca_pylon_camera_initable_init(GInitable *initable, GCancellable
         g_error("no environment variable PYLON_CAMERA_IP found");
     }
 
-    pylon_camera_new("/usr/local/lib64", pylon_camera_ip, error);
+    pylon_camera_new(pylon_camera_ip, error);
     if (*error != NULL) {
         return FALSE;
     }
