@@ -221,6 +221,16 @@ test_signal (Fixture *fixture, gconstpointer data)
     g_assert (success == TRUE);
 }
 
+static void
+test_overwriting_units (Fixture *fixture, gconstpointer data)
+{
+    UcaUnit unit;
+
+    uca_camera_register_unit (fixture->camera, "frames-per-second", UCA_UNIT_PIXEL);
+    unit = uca_camera_get_unit (fixture->camera, "frames-per-second");
+    g_assert (unit != UCA_UNIT_PIXEL);
+}
+
 int main (int argc, char *argv[])
 {
 #if !(GLIB_CHECK_VERSION (2, 36, 0))

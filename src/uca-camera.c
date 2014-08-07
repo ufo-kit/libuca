@@ -306,10 +306,21 @@ static void
 uca_camera_finalize (GObject *object)
 {
     UcaCameraPrivate *priv;
+    GParamSpec **props;
+    guint n_props;
 
     priv = UCA_CAMERA_GET_PRIVATE (object);
     g_value_array_free (priv->h_binnings);
     g_value_array_free (priv->v_binnings);
+
+    /* We will reset property units of all subclassed objects  */
+    props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object), &n_props);
+
+    for (guint i = 0; i < n_props; i++) {
+        g_param_spec_set_qdata (props[i], UCA_UNIT_QUARK, NULL);
+    }
+
+    g_free (props);
 
     G_OBJECT_CLASS (uca_camera_parent_class)->finalize (object);
 }
