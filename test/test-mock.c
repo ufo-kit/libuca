@@ -225,6 +225,34 @@ test_overwriting_units (Fixture *fixture, gconstpointer data)
     uca_camera_register_unit (fixture->camera, "sensor-width", UCA_UNIT_PIXEL);
 }
 
+static void
+test_can_be_written (Fixture *fixture, gconstpointer data)
+{
+    GError *error = NULL;
+
+    /* read-only cannot ever be written */
+    g_assert (!uca_camera_is_writable_during_acquisition (fixture->camera, "name"));
+
+    /* unset properties cannot be written */
+    g_assert (!uca_camera_is_writable_during_acquisition (fixture->camera, "roi-width"));
+
+    /* check trivial cases */
+    uca_camera_set_writable (fixture->camera, "roi-width", TRUE);
+    g_assert (uca_camera_is_writable_during_acquisition (fixture->camera, "roi-width"));
+
+    uca_camera_set_writable (fixture->camera, "roi-height", FALSE);
+    g_assert (!uca_camera_is_writable_during_acquisition (fixture->camera, "roi-height"));
+
+    /* Now, do a real test */
+    uca_camera_set_writable (fixture->camera, "roi-height", TRUE);
+    uca_camera_start_recording (fixture->camera, &error);
+    g_assert_no_error (error);
+
+    g_object_set (fixture->camera, "roi-height", 128, NULL);
+    uca_camera_stop_recording (fixture->camera, &error);
+    g_assert_no_error (error);
+}
+
 int main (int argc, char *argv[])
 {
     gsize n_tests;
@@ -251,7 +279,8 @@ int main (int argc, char *argv[])
         {"/properties/binnings", test_binnings_properties},
         {"/properties/frames-per-second", test_fps_property},
         {"/properties/units", test_property_units},
-        {"/properties/units/overwrite", test_overwriting_units}
+        {"/properties/units/overwrite", test_overwriting_units},
+        {"/properties/can-be-written", test_can_be_written},
     };
 
     n_tests = sizeof(tests) / sizeof(tests[0]);

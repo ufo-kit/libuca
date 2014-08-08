@@ -76,6 +76,11 @@ GQuark uca_unit_quark ()
     return g_quark_from_static_string ("uca-unit-quark");
 }
 
+GQuark uca_writable_quark ()
+{
+    return g_quark_from_static_string ("uca-writable-quark");
+}
+
 enum {
     LAST_SIGNAL
 };
@@ -1050,3 +1055,53 @@ uca_camera_get_unit (UcaCamera *camera,
     return data == NULL ? UCA_UNIT_NA : GPOINTER_TO_INT (data);
 }
 
+/**
+ * uca_camera_set_writable:
+ * @camera: A #UcaCamera object
+ * @prop_name: Name of property
+ * @writable: %TRUE if property can be written during acquisition
+ *
+ * Sets a flag that defines if @prop_name can be written during an acquisition.
+ *
+ * Since: 1.6
+ */
+void
+uca_camera_set_writable (UcaCamera *camera,
+                         const gchar *prop_name,
+                         gboolean writable)
+{
+    GParamSpec *pspec;
+
+    pspec = get_param_spec_by_name (camera, prop_name);
+
+    if (pspec != NULL) {
+        if (g_param_spec_get_qdata (pspec, UCA_WRITABLE_QUARK) != NULL)
+            g_warning ("::%s is already fixed", pspec->name);
+        else
+            g_param_spec_set_qdata (pspec, UCA_WRITABLE_QUARK, GINT_TO_POINTER (writable));
+    }
+}
+
+/**
+ * uca_camera_is_writable_during_acquisition:
+ * @camera: A #UcaCamera object
+ * @prop_name: Name of property
+ *
+ * Check if @prop_name can be written at run-time. This is %FALSE if the
+ * property is read-only, if uca_camera_set_writable() has not been called or
+ * uca_camera_set_writable() was called with %FALSE.
+ *
+ * Returns: %TRUE if the property can be written at acquisition time.
+ * Since: 1.6
+ */
+gboolean
+uca_camera_is_writable_during_acquisition (UcaCamera *camera,
+                                           const gchar *prop_name)
+{
+    GParamSpec *pspec;
+
+    pspec = get_param_spec_by_name (camera, prop_name);
+
+    return (pspec->flags & G_PARAM_WRITABLE) &&
+            g_param_spec_get_qdata (pspec, UCA_WRITABLE_QUARK);
+}
