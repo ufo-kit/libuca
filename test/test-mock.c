@@ -215,9 +215,7 @@ test_signal (Fixture *fixture, gconstpointer data)
     UcaCamera *camera = UCA_CAMERA (fixture->camera);
     gboolean success = FALSE;
     g_signal_connect (camera, "notify::frames-per-second", (GCallback) on_property_change, &success);
-    g_object_set (G_OBJECT (camera),
-            "frames-per-second", 30.0,
-            NULL);
+    g_object_set (G_OBJECT (camera), "frames-per-second", 30.0, NULL);
     g_assert (success == TRUE);
 }
 
@@ -229,6 +227,8 @@ test_overwriting_units (Fixture *fixture, gconstpointer data)
 
 int main (int argc, char *argv[])
 {
+    gsize n_tests;
+
 #if !(GLIB_CHECK_VERSION (2, 36, 0))
     g_type_init ();
 #endif
@@ -236,17 +236,28 @@ int main (int argc, char *argv[])
     g_test_init (&argc, &argv, NULL);
     g_test_bug_base ("http://ufo.kit.edu/ufo/ticket");
 
-    g_test_add ("/factory", Fixture, NULL, fixture_setup, test_factory, fixture_teardown);
-    g_test_add ("/recording", Fixture, NULL, fixture_setup, test_recording, fixture_teardown);
-    g_test_add ("/recording/signal", Fixture, NULL, fixture_setup, test_recording_signal, fixture_teardown);
-    g_test_add ("/recording/asynchronous", Fixture, NULL, fixture_setup, test_recording_async, fixture_teardown);
-    g_test_add ("/properties/base", Fixture, NULL, fixture_setup, test_base_properties, fixture_teardown);
-    g_test_add ("/properties/recording", Fixture, NULL, fixture_setup, test_recording_property, fixture_teardown);
-    g_test_add ("/properties/binnings", Fixture, NULL, fixture_setup, test_binnings_properties, fixture_teardown);
-    g_test_add ("/properties/frames-per-second", Fixture, NULL, fixture_setup, test_fps_property, fixture_teardown);
-    g_test_add ("/properties/units", Fixture, NULL, fixture_setup, test_property_units, fixture_teardown);
-    g_test_add ("/properties/units/overwrite", Fixture, NULL, fixture_setup, test_overwriting_units, fixture_teardown);
-    g_test_add ("/signal", Fixture, NULL, fixture_setup, test_signal, fixture_teardown);
+    struct {
+        const gchar *name;
+        void (*test_func) (Fixture *fixture, gconstpointer data);
+    }
+    tests[] = {
+        {"/factory", test_factory},
+        {"/signal", test_signal},
+        {"/recording", test_recording},
+        {"/recording/signal", test_recording_signal},
+        {"/recording/asynchronous", test_recording_async},
+        {"/properties/base", test_base_properties},
+        {"/properties/recording", test_recording_property},
+        {"/properties/binnings", test_binnings_properties},
+        {"/properties/frames-per-second", test_fps_property},
+        {"/properties/units", test_property_units},
+        {"/properties/units/overwrite", test_overwriting_units}
+    };
+
+    n_tests = sizeof(tests) / sizeof(tests[0]);
+
+    for (gsize i = 0; i < n_tests; i++)
+        g_test_add (tests[i].name, Fixture, NULL, fixture_setup, tests[i].test_func, fixture_teardown);
 
     return g_test_run ();
 }
