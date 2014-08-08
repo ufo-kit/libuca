@@ -980,6 +980,26 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     return result;
 }
 
+static GParamSpec *
+get_param_spec_by_name (UcaCamera *camera,
+                        const gchar *prop_name)
+{
+    UcaCameraClass *klass;
+    GObjectClass *oclass;
+    GParamSpec *pspec;
+
+    klass  = UCA_CAMERA_GET_CLASS (camera);
+    oclass = G_OBJECT_CLASS (klass);
+    pspec  = g_object_class_find_property (oclass, prop_name);
+
+    if (pspec == NULL) {
+        g_warning ("Camera does not have property `%s'", prop_name);
+        return NULL;
+    }
+
+    return pspec;
+}
+
 /**
  * uca_camera_register_unit:
  * @camera: A #UcaCamera object
@@ -995,20 +1015,12 @@ uca_camera_register_unit (UcaCamera *camera,
                           const gchar *prop_name,
                           UcaUnit unit)
 {
-    UcaCameraClass *klass;
-    GObjectClass *oclass;
     GParamSpec *pspec;
 
-    klass  = UCA_CAMERA_GET_CLASS (camera);
-    oclass = G_OBJECT_CLASS (klass);
-    pspec  = g_object_class_find_property (oclass, prop_name);
+    pspec = get_param_spec_by_name (camera, prop_name);
 
-    if (pspec == NULL) {
-        g_warning ("Camera does not have property `%s'", prop_name);
-        return;
-    }
-
-    uca_camera_set_property_unit (pspec, unit);
+    if (pspec != NULL)
+        uca_camera_set_property_unit (pspec, unit);
 }
 
 /**
@@ -1026,19 +1038,13 @@ UcaUnit
 uca_camera_get_unit (UcaCamera *camera,
                      const gchar *prop_name)
 {
-    UcaCameraClass *klass;
-    GObjectClass *oclass;
     GParamSpec *pspec;
     gpointer data;
 
-    klass  = UCA_CAMERA_GET_CLASS (camera);
-    oclass = G_OBJECT_CLASS (klass);
-    pspec  = g_object_class_find_property (oclass, prop_name);
+    pspec  = get_param_spec_by_name (camera, prop_name);
 
-    if (pspec == NULL) {
-        g_warning ("Camera does not have property `%s'", prop_name);
+    if (pspec == NULL)
         return UCA_UNIT_NA;
-    }
 
     data = g_param_spec_get_qdata (pspec, UCA_UNIT_QUARK);
     return data == NULL ? UCA_UNIT_NA : GPOINTER_TO_INT (data);
