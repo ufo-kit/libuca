@@ -26,7 +26,7 @@ G_BEGIN_DECLS
 #define UCA_TYPE_KIRO_CAMERA             (uca_kiro_camera_get_type())
 #define UCA_KIRO_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_KIRO_CAMERA, UcaKiroCamera))
 #define UCA_IS_KIRO_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_KIRO_CAMERA))
-#define UCA_KIRO_CAMERA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), UFO_TYPE_MOCK_CAMERA, UfoMockCameraClass))
+#define UCA_KIRO_CAMERA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), UCA_TYPE_KIRO_CAMERA, UcaKiroCameraClass))
 #define UCA_IS_KIRO_CAMERA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), UCA_TYPE_KIRO_CAMERA))
 #define UCA_KIRO_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_KIRO_CAMERA, UcaKiroCameraClass))
 
