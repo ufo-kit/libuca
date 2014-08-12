@@ -28,8 +28,7 @@ extern "C" {
 #include "uca-kiro-camera.h"
 } // EXTERN  C
 
-#define UCA_KIRO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_KIRO_CAMERA, UcaKiroCameraPrivate))
-#undef __CREATE_RANDOM_IMAGE_DATA__
+#define UCA_KIRO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), UCA_TYPE_KIRO_CAMERA, UcaKiroCameraPrivate))
 
 static void uca_kiro_initable_iface_init (GInitableIface *iface);
 
@@ -50,18 +49,16 @@ static const gint kiro_overrideables[] = {
 };
 
 static GParamSpec *kiro_properties[N_PROPERTIES] = { NULL, };
-GParamSpec **kiro_dynamics;
 
 struct _UcaKiroCameraPrivate {
-    gfloat frame_rate;
-    
     guint8 *dummy_data;
     guint current_frame;
     gchar *kiro_address;
     gchar *kiro_port;
     guint kiro_port_uint;
     gchar *kiro_tango_address;
-    GList *kiro_dynamic_properties;
+    Tango::DeviceProxy *tango_device;
+    GParamSpec **kiro_dynamic_attributes;
 
     gboolean thread_running;
     gboolean kiroclient_started;
@@ -70,21 +67,26 @@ struct _UcaKiroCameraPrivate {
     GThread *grab_thread;
     KiroTrb *receive_buffer;
     KiroClient *kiro_receiver;
+
+    guint roi_height;
+    guint roi_width;
 };
 
 static gpointer
 kiro_grab_func(gpointer data)
 {
-    UcaKiroCamera *kiro_camera = UCA_KIRO_CAMERA(data);
-    g_return_val_if_fail(UCA_IS_KIRO_CAMERA(kiro_camera), NULL);
+    UcaKiroCamera *kiro_camera = UCA_KIRO_CAMERA (data);
+    g_return_val_if_fail (UCA_IS_KIRO_CAMERA (kiro_camera), NULL);
 
-    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE(kiro_camera);
-    UcaCamera *camera = UCA_CAMERA(kiro_camera);
-    const gulong sleep_time = (gulong) G_USEC_PER_SEC / priv->frame_rate;
+    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (kiro_camera);
+    UcaCamera *camera = UCA_CAMERA (kiro_camera);
+    gdouble fps;
+    g_object_get (G_OBJECT (data), "frames-per-second", &fps, NULL);
+    const gulong sleep_time = (gulong) G_USEC_PER_SEC / fps;
 
     while (priv->thread_running) {
-        camera->grab_func(priv->dummy_data, camera->user_data);
-        g_usleep(sleep_time);
+        camera->grab_func (priv->dummy_data, camera->user_data);
+        g_usleep (sleep_time);
     }
 
     return NULL;
@@ -95,14 +97,14 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
 {
     gboolean transfer_async = FALSE;
     UcaKiroCameraPrivate *priv;
-    g_return_if_fail(UCA_IS_KIRO_CAMERA(camera));
+    g_return_if_fail(UCA_IS_KIRO_CAMERA (camera));
 
-    priv = UCA_KIRO_CAMERA_GET_PRIVATE(camera);
+    priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
     
-    kiro_client_sync(priv->kiro_receiver);
-    kiro_trb_adopt(priv->receive_buffer, kiro_client_get_memory(priv->kiro_receiver));
+    kiro_client_sync (priv->kiro_receiver);
+    kiro_trb_adopt (priv->receive_buffer, kiro_client_get_memory (priv->kiro_receiver));
         
-    g_object_get(G_OBJECT(camera),
+    g_object_get (G_OBJECT(camera),
             "transfer-asynchronously", &transfer_async,
             NULL);
 
@@ -113,11 +115,11 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
     if (transfer_async) {
         GError *tmp_error = NULL;
         priv->thread_running = TRUE;
-        priv->grab_thread = g_thread_create(kiro_grab_func, camera, TRUE, &tmp_error);
+        priv->grab_thread = g_thread_create (kiro_grab_func, camera, TRUE, &tmp_error);
 
         if (tmp_error != NULL) {
             priv->thread_running = FALSE;
-            g_propagate_error(error, tmp_error);
+            g_propagate_error (error, tmp_error);
         }
     }
 }
@@ -127,19 +129,19 @@ uca_kiro_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     gboolean transfer_async = FALSE;
     UcaKiroCameraPrivate *priv;
-    g_return_if_fail(UCA_IS_KIRO_CAMERA(camera));
+    g_return_if_fail(UCA_IS_KIRO_CAMERA (camera));
 
-    priv = UCA_KIRO_CAMERA_GET_PRIVATE(camera);
-    g_free(priv->dummy_data);
+    priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
+    g_free (priv->dummy_data);
     kiro_trb_purge(priv->receive_buffer, FALSE);
 
-    g_object_get(G_OBJECT(camera),
+    g_object_get(G_OBJECT (camera),
             "transfer-asynchronously", &transfer_async,
             NULL);
 
     if (transfer_async) {
         priv->thread_running = FALSE;
-        g_thread_join(priv->grab_thread);
+        g_thread_join (priv->grab_thread);
     }
 }
 
@@ -151,36 +153,268 @@ uca_kiro_camera_trigger (UcaCamera *camera, GError **error)
 static gboolean
 uca_kiro_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 {
-    g_return_val_if_fail (UCA_IS_KIRO_CAMERA(camera), FALSE);
+    g_return_val_if_fail (UCA_IS_KIRO_CAMERA (camera), FALSE);
 
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
 
-    kiro_client_sync(priv->kiro_receiver);
-    kiro_trb_refresh(priv->receive_buffer);
+    kiro_client_sync (priv->kiro_receiver);
+    kiro_trb_refresh (priv->receive_buffer);
     priv->current_frame++;
+
     //Element 0 is always about to be written, Element -1 is currently being written
     //Therefore, we take Element -2, to be sure this one is finished
-    size_t index = kiro_trb_get_max_elements(priv->receive_buffer) - 2;
-    g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height);
+    //size_t index = kiro_trb_get_max_elements (priv->receive_buffer) - 2;
+    //g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height);
 
     return TRUE;
 }
 
-static void
-uca_kiro_camera_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
-{
-    g_return_if_fail(UCA_IS_KIRO_CAMERA(object));
-    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE(object);
 
-    switch (property_id) {
-        case PROP_FRAMERATE:
-            priv->frame_rate = g_value_get_float(value);
+
+// ---------------------------------------------------------- //
+//                      TANGO <-> GLib                        //
+// ---------------------------------------------------------- //
+#define T_TO_G_CONVERT(GTYPE, T_ATTR, FUNCTION, TARGET) { \
+    GTYPE t_val; \
+    T_ATTR >> t_val; \
+    FUNCTION (TARGET, t_val); \
+}
+
+void
+try_handle_read_tango_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+{
+    Tango::DeviceAttribute t_attr;
+    UcaKiroCamera *camera = UCA_KIRO_CAMERA (object);
+    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
+
+    bool property_is_handled = (property_id >= N_PROPERTIES) ? (bool)priv->kiro_dynamic_attributes[property_id] : (bool)kiro_properties[property_id];
+
+    if (property_is_handled) {
+        try {
+            priv->tango_device->read_attribute (pspec->name, t_attr);
+        }
+        catch (Tango::DevFailed &e) {
+            g_warning ("Property '%s' could not be read due to an unexpected TANGO error...\n", pspec->name);
+            Tango::Except::print_exception (e);
+            return;
+        }
+
+        switch (value->g_type) {
+        case G_TYPE_INT:
+            T_TO_G_CONVERT (gint, t_attr, g_value_set_int, value);
             break;
-        case PROP_KIRO_TANGO_ADDRESS:
-            priv->kiro_tango_address = g_value_dup_string(value);
+        case G_TYPE_FLOAT:
+            T_TO_G_CONVERT (gfloat, t_attr, g_value_set_float, value);
+            break;
+        case G_TYPE_DOUBLE:
+            T_TO_G_CONVERT (gdouble, t_attr, g_value_set_double, value);
+            break;
+        case G_TYPE_UINT:
+            T_TO_G_CONVERT (guint, t_attr, g_value_set_uint, value);
+            break;
+        case G_TYPE_ULONG:
+            T_TO_G_CONVERT (gulong, t_attr, g_value_set_ulong, value);
+            break;
+        case G_TYPE_UCHAR:
+            T_TO_G_CONVERT (guchar, t_attr, g_value_set_uchar, value);
+            break;
+        case G_TYPE_INT64:
+            T_TO_G_CONVERT (gint64, t_attr, g_value_set_int64, value);
+            break;
+        case G_TYPE_UINT64:
+            T_TO_G_CONVERT (guint64, t_attr, g_value_set_uint64, value);
+            break;
+        case G_TYPE_LONG:
+            T_TO_G_CONVERT (glong, t_attr, g_value_set_long, value);
+            break;
+        case G_TYPE_BOOLEAN:
+            {
+                bool t_val;
+                t_attr >> t_val;
+                g_value_set_boolean (value, (t_val ? TRUE : FALSE));
+            }
+            break;
+        case G_TYPE_STRING:
+            {
+                string t_val;
+                t_attr >> t_val;
+                g_value_set_string (value, t_val.c_str ());
+            }
             break;
         default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            {
+                if (g_type_parent (value->g_type) == G_TYPE_ENUM) {
+                    T_TO_G_CONVERT (gint, t_attr, g_value_set_enum, value);
+                    break;
+                }
+
+                if (G_TYPE_VALUE_ARRAY == value->g_type) {
+                    if (Tango::AttrDataFormat::SPECTRUM != t_attr.get_data_format ()) {
+                        g_warning ("TANGO attribute '%s' is not of type SPECTRUM! (Not a 1-dimensional array, yet libuca was expecting one.)\n", pspec->name);
+                        return;
+                    }
+
+                    GType value_type = ((GParamSpecValueArray*)pspec)->element_spec->value_type;
+                    if (G_TYPE_UINT != value_type) {
+                        g_print ("Array type attribue '%s' holds elements of type '%s' which can't be handled.\n", pspec->name, g_type_name (value_type) );
+                        return;
+                    }
+
+                    guint array_length = t_attr.get_dim_x ();
+                    GValueArray *gvalarray = g_value_array_new (array_length);
+                    vector<guint> t_vect;
+                    t_attr >> t_vect;
+
+                    for (guint idx = 0; idx < array_length; idx++) {
+                        g_value_array_append (gvalarray, NULL);
+                        GValue *val = g_value_array_get_nth (gvalarray, idx);
+                        g_value_init (val, value_type);
+                        g_value_set_uint (val, t_vect[idx]);
+                    }
+
+                    g_value_set_boxed_take_ownership (value, gvalarray);
+                    return;
+                }
+
+                GType unhandled = pspec->value_type;
+                if (G_TYPE_GTYPE == unhandled) {
+                    unhandled = ((GParamSpecGType*)pspec)->is_a_type;
+                }
+                g_print ("GType '%s' can't be handled...\n", g_type_name (unhandled));
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+            }
+        }
+    }
+    else {
+        g_print ("Unhandled property...\n");
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+    }
+}
+
+
+void
+try_handle_write_tango_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+{
+    Tango::DeviceAttribute t_attr;
+    UcaKiroCamera *camera = UCA_KIRO_CAMERA (object);
+    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
+
+    bool property_is_handled = (property_id > N_PROPERTIES) ? (bool)priv->kiro_dynamic_attributes[property_id] : (bool)kiro_properties[property_id];
+
+    if (property_is_handled) {
+        switch (value->g_type) {
+            case G_TYPE_BOOLEAN:
+                {
+                    bool t_val = (g_value_get_boolean (value) == TRUE);
+                    t_attr << t_val;
+                }
+                break;
+            case G_TYPE_INT:
+                t_attr << g_value_get_int (value);
+                break;
+            case G_TYPE_FLOAT:
+                t_attr << g_value_get_float (value);
+                break;
+            case G_TYPE_DOUBLE:
+                t_attr << g_value_get_double (value);
+                break;
+            case G_TYPE_UINT:
+                t_attr << g_value_get_uint (value);
+                break;
+            case G_TYPE_ULONG:
+                t_attr << g_value_get_ulong (value);
+                break;
+            case G_TYPE_STRING:
+                t_attr << g_value_get_string (value);
+                break;
+            case G_TYPE_UCHAR:
+                t_attr << g_value_get_uchar (value);
+                break;
+            case G_TYPE_INT64:
+                t_attr << g_value_get_int64 (value);
+                break;
+            case G_TYPE_UINT64:
+                t_attr << g_value_get_uint64 (value);
+                break;
+            case G_TYPE_LONG:
+                t_attr << g_value_get_long (value);
+                break;
+            case G_TYPE_ENUM:
+                t_attr << g_value_get_enum (value);
+                break;
+            default:
+                {
+                    if (g_type_parent (value->g_type) == G_TYPE_ENUM) {
+                        t_attr << g_value_get_enum (value);
+                        break;
+                    }
+
+                    if (value->g_type == G_TYPE_VALUE_ARRAY) {
+                        //ToDo: For some reason %value sometimes holds an inconsistent/uninitialized array that will crash during readout...
+                        //I am not sure if this only happens in a Python environment or if i am missing something fundamental here.
+                        //Better to not support writing of GValueArrays until this is fixed!
+                        g_print ("Writing of array-type attributes is not yet supported.\n");
+                        return;
+
+                        GType value_type = ((GParamSpecValueArray*)pspec)->element_spec->value_type;
+                        if (G_TYPE_UINT != value_type) {
+                            g_print ("Array type attribue '%s' holds elements of type '%s' which can't be handled.\n", pspec->name, g_type_name (value_type) );
+                            return;
+                        }
+
+                        GValueArray *gvalarray = (GValueArray*)value;
+                        guint array_length = gvalarray->n_values;
+                        vector<guint> t_vect (array_length);
+
+                        for (guint idx = 0; idx < array_length; idx++) {
+                            GValue *val = g_value_array_get_nth (gvalarray, idx);
+                            g_print ("Value holds: %s\n", g_type_name (val->g_type));
+                            t_vect[idx] = g_value_get_uint (val);
+                        }
+
+                        t_attr << t_vect;
+                        t_attr.data_format = Tango::AttrDataFormat::SPECTRUM;
+                        t_attr.dim_x = array_length;
+                    }
+
+                    GType unhandled = value->g_type;
+                    if (G_TYPE_GTYPE == unhandled) {
+                        unhandled = ((GParamSpecGType*)pspec)->is_a_type;
+                    }
+                    g_print ("GType '%s' can't be handled...\n", g_type_name (unhandled));
+                    G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+                }
+                break;
+        }
+
+        t_attr.set_name (pspec->name);
+
+        try {
+            priv->tango_device->write_attribute (t_attr);
+        }
+        catch (Tango::DevFailed &e) {
+            g_warning ("Property '%s' could not be written due to an unexpected TANGO error...\n", pspec->name);
+            Tango::Except::print_exception (e);
+            return;
+        }
+    }
+    else
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+
+static void
+uca_kiro_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+{
+    g_return_if_fail(UCA_IS_KIRO_CAMERA (object));
+    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (object);
+
+    switch (property_id) {
+        case PROP_KIRO_TANGO_ADDRESS:
+            priv->kiro_tango_address = g_value_dup_string (value);
+            break;
+        default:
+            try_handle_write_tango_property (object, property_id, value, pspec);
             return;
     }
 }
@@ -188,28 +422,23 @@ uca_kiro_camera_set_property (GObject *object, guint property_id, const GValue *
 static void
 uca_kiro_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
-    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE(object);
-
-    g_print("KIRO GET PROPERTY\n");
+    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (object);
     
     switch (property_id) {
         case PROP_NAME:
-            g_value_set_string(value, "KIRO camera");
-            break;
-        case PROP_FRAMERATE:
-            g_value_set_float(value, priv->frame_rate);
+            g_value_set_string (value, "KIRO camera");
             break;
         case PROP_KIRO_ADDRESS:
-            g_value_set_string(value, priv->kiro_address);
+            g_value_set_string (value, priv->kiro_address);
             break;
         case PROP_KIRO_PORT:
-            g_value_set_uint(value, priv->kiro_port_uint);
+            g_value_set_uint (value, priv->kiro_port_uint);
             break;
         case PROP_KIRO_TANGO_ADDRESS:
-            g_value_set_string(value, priv->kiro_tango_address);
+            g_value_set_string (value, priv->kiro_tango_address);
             break;
         default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            try_handle_read_tango_property (object, property_id, value, pspec);
             break;
     }
 }
@@ -219,39 +448,36 @@ uca_kiro_camera_finalize(GObject *object)
 {
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE(object);
 
-    g_rand_free (priv->rand);
-
     if (priv->thread_running) {
         priv->thread_running = FALSE;
-        g_thread_join(priv->grab_thread);
+        g_thread_join (priv->grab_thread);
     }
 
     if (priv->kiro_receiver) {
-        g_object_unref(priv->kiro_receiver);
+        g_object_unref (priv->kiro_receiver);
         priv->kiro_receiver = NULL;
     }
-    
+
     if (priv->receive_buffer) {
-        g_object_unref(priv->receive_buffer);
+        g_object_unref (priv->receive_buffer);
         priv->receive_buffer = NULL;
     }
 
     if (priv->dummy_data) {
-        g_free(priv->dummy_data);
+        g_free (priv->dummy_data);
         priv->dummy_data = NULL;
     }
-    
-    if (priv->kiro_dynamic_properties)
-    {
-        g_list_free(priv->kiro_dynamic_properties);
-        priv->kiro_dynamic_properties = NULL;
-    }
-    
-    g_free(priv->kiro_address);
-    g_free(priv->kiro_port);
-    g_free(priv->kiro_tango_address);
 
-    G_OBJECT_CLASS(uca_kiro_camera_parent_class)->finalize(object);
+    if (priv->tango_device) {
+        delete (priv->tango_device);
+        priv->tango_device = NULL;
+    }
+
+    g_free (priv->kiro_address);
+    g_free (priv->kiro_port);
+    g_free (priv->kiro_tango_address);
+
+    G_OBJECT_CLASS (uca_kiro_camera_parent_class)->finalize(object);
 }
 
 static gboolean
@@ -288,28 +514,24 @@ uca_kiro_camera_constructed (GObject *object)
     
     GValue address = G_VALUE_INIT;
     g_value_init(&address, G_TYPE_STRING);
-    uca_kiro_camera_get_property(object, PROP_KIRO_TANGO_ADDRESS, &address, NULL);
+    uca_kiro_camera_get_property (object, PROP_KIRO_TANGO_ADDRESS, &address, NULL);
     gint address_not_none = g_strcmp0(g_value_get_string (&address), "NONE");
-    if (0 == address_not_none)
-    {
+    if (0 == address_not_none) {
         g_print("kiro-tango-address was not set! Can not connect to server...\n");
         priv->construction_error = TRUE;
     }
-    else
-    {
-        uca_kiro_camera_clone_interface(g_value_get_string (&address), self);
+    else {
+        uca_kiro_camera_clone_interface (g_value_get_string (&address), self);
     }
     
     /*
-    if (0 > kiro_client_connect(priv->kiro_receiver, g_value_get_string(&address), g_value_get_string(&port)))
-    {
+    if (0 > kiro_client_connect(priv->kiro_receiver, g_value_get_string(&address), g_value_get_string(&port))) {
         g_print("Unable to connect to server at address: %s, port: %s\n", g_value_get_string(&address), g_value_get_string(&port));
         return FALSE;
     }
     */
-    
-    
-    G_OBJECT_CLASS(uca_kiro_camera_parent_class)->constructed(object);    
+
+    G_OBJECT_CLASS (uca_kiro_camera_parent_class)->constructed(object);
 }
 
 
@@ -317,27 +539,20 @@ uca_kiro_camera_constructed (GObject *object)
 static void
 uca_kiro_camera_class_init(UcaKiroCameraClass *klass)
 {
-    GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
+    GObjectClass *gobject_class = G_OBJECT_CLASS( klass);
     gobject_class->set_property = uca_kiro_camera_set_property;
     gobject_class->get_property = uca_kiro_camera_get_property;
     gobject_class->finalize = uca_kiro_camera_finalize;
     gobject_class->constructed = uca_kiro_camera_constructed;
 
-    UcaCameraClass *camera_class = UCA_CAMERA_CLASS(klass);
+    UcaCameraClass *camera_class = UCA_CAMERA_CLASS (klass);
     camera_class->start_recording = uca_kiro_camera_start_recording;
     camera_class->stop_recording = uca_kiro_camera_stop_recording;
     camera_class->grab = uca_kiro_camera_grab;
     camera_class->trigger = uca_kiro_camera_trigger;
 
     for (guint i = 0; kiro_overrideables[i] != 0; i++)
-        g_object_class_override_property(gobject_class, kiro_overrideables[i], uca_camera_props[kiro_overrideables[i]]);
-
-    kiro_properties[PROP_FRAMERATE] =
-        g_param_spec_float("frame-rate",
-                "Frame rate",
-                "Number of frames per second that are taken",
-                1.0f, 100.0f, 100.0f,
-                (GParamFlags) G_PARAM_READWRITE);
+        g_object_class_override_property (gobject_class, kiro_overrideables[i], uca_camera_props[kiro_overrideables[i]]);
                 
     kiro_properties[PROP_KIRO_ADDRESS] =
         g_param_spec_string("kiro-address",
@@ -361,9 +576,9 @@ uca_kiro_camera_class_init(UcaKiroCameraClass *klass)
                 (GParamFlags) (G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
-        g_object_class_install_property(gobject_class, id, kiro_properties[id]);
+        g_object_class_install_property (gobject_class, id, kiro_properties[id]);
 
-    g_type_class_add_private(klass, sizeof(UcaKiroCameraPrivate));
+    g_type_class_add_private (klass, sizeof(UcaKiroCameraPrivate));
 }
 
 static void
@@ -372,18 +587,15 @@ uca_kiro_camera_init(UcaKiroCamera *self)
     self->priv = UCA_KIRO_CAMERA_GET_PRIVATE(self);
     self->priv->grab_thread = NULL;
     self->priv->current_frame = 0;
-    self->priv->frame_rate = 100.0;
-    self->priv->kiro_address = g_strdup("NONE");
-    self->priv->kiro_port = g_strdup("NONE");
+    self->priv->kiro_address = g_strdup ("NONE");
+    self->priv->kiro_port = g_strdup ("NONE");
     self->priv->kiro_port_uint = 60010;
-    self->priv->kiro_tango_address = g_strdup("NONE");
+    self->priv->kiro_tango_address = g_strdup ("NONE");
     self->priv->construction_error = FALSE;
-    self->priv->kiro_dynamic_properties = NULL;
+    self->priv->kiro_dynamic_attributes = NULL;
 
-    self->priv->receive_buffer = KIRO_TRB (g_object_new(KIRO_TYPE_TRB, NULL));
-    self->priv->kiro_receiver = KIRO_CLIENT (g_object_new(KIRO_TYPE_CLIENT, NULL));
-
-    uca_camera_register_unit (UCA_CAMERA (self), "frame-rate", UCA_UNIT_COUNT);        
+    self->priv->receive_buffer = KIRO_TRB (g_object_new (KIRO_TYPE_TRB, NULL));
+    self->priv->kiro_receiver = KIRO_CLIENT (g_object_new (KIRO_TYPE_CLIENT, NULL));
 }
 
 G_MODULE_EXPORT GType
@@ -412,10 +624,14 @@ gtype_from_tango_type (Tango::CmdArgType t)
                 return G_TYPE_FLOAT;
             case DEV_DOUBLE:
                 return G_TYPE_DOUBLE;
+            case DEV_ULONG:
+                //return G_TYPE_ULONG;
+                //Fall-through intentional
+                //NOTE: There seems to be a bug somewhere either in TANGO or in GLib or in Pyhton that
+                //Breaks the functionality of the G_TYPE_ULONG properties. Using a G_TYPE_UINT instead
+                //works around this problem but might provoke potential overflows...
             case DEV_USHORT:
                 return G_TYPE_UINT;
-            case DEV_ULONG:
-                return G_TYPE_ULONG;
             case CONST_DEV_STRING:
                 //Fall-through intentional
             case DEV_STRING:
@@ -426,8 +642,9 @@ gtype_from_tango_type (Tango::CmdArgType t)
                 return G_TYPE_INT64;
             case DEV_ULONG64:
                 return G_TYPE_UINT64;
+            case DEV_STATE:
+                return G_TYPE_UINT;
             /*
-            DEV_STATE
             DEV_ENCODED
             DEVVAR_CHARARRAY
             DEVVAR_SHORTARRAY
@@ -449,36 +666,179 @@ gtype_from_tango_type (Tango::CmdArgType t)
 }
 
 
+gint
+get_property_id_from_name(const gchar* name)
+{
+    guint idx = 0;
+    gboolean found = FALSE;
+    for (;idx < N_PROPERTIES; ++idx) {
+        if (0 == g_strcmp0(name, uca_camera_props[idx])) {
+            found = TRUE;
+            break;
+        }
+    }
+    return (TRUE == found) ? idx : -1;
+}
+
+void
+build_param_spec(GParamSpec **pspec, const Tango::AttributeInfoEx *attrInfo)
+{
+    GType type = gtype_from_tango_type ((Tango::CmdArgType)attrInfo->data_type);
+    const gchar *name = attrInfo->name.c_str ();
+    GParamFlags flags = G_PARAM_READABLE;
+    if (attrInfo->writable == Tango::AttrWriteType::WRITE)
+        flags = (GParamFlags) G_PARAM_READWRITE;
+
+    switch (type) {
+        case G_TYPE_BOOLEAN:
+            *pspec =
+            g_param_spec_boolean (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                FALSE,
+                flags);
+            break;
+        case G_TYPE_INT:
+            *pspec =
+            g_param_spec_int (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                G_MININT32, G_MAXINT32, 0,
+                flags);
+            break;
+        case G_TYPE_FLOAT:
+            *pspec =
+            g_param_spec_float (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                G_MINFLOAT, G_MAXFLOAT, 0.,
+                flags);
+            break;
+        case G_TYPE_DOUBLE:
+            *pspec =
+            g_param_spec_double (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                G_MINDOUBLE, G_MAXDOUBLE, 0.,
+                flags);
+            break;
+        case G_TYPE_UINT:
+            *pspec =
+            g_param_spec_uint (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                0, G_MAXUINT, 0,
+                flags);
+            break;
+        case G_TYPE_ULONG:
+            *pspec =
+            g_param_spec_ulong (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                0, G_MAXULONG, 0,
+                flags);
+            break;
+        case G_TYPE_STRING:
+            *pspec =
+            g_param_spec_string (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                "DEFAULT",
+                flags);
+            break;
+        case G_TYPE_UCHAR:
+            *pspec =
+            g_param_spec_uchar (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                0x00, 0xff, 0x42,
+                flags);
+            break;
+        case G_TYPE_INT64:
+            *pspec =
+            g_param_spec_int64 (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                G_MININT64, G_MAXINT64, 0,
+                flags);
+            break;
+        case G_TYPE_UINT64:
+            *pspec =
+            g_param_spec_uint64 (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                0, G_MAXUINT64, 0,
+                flags);
+            break;
+        case G_TYPE_LONG:
+            *pspec =
+            g_param_spec_long (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                G_MININT64, G_MAXINT64, 1,
+                flags);
+            break;
+        case G_TYPE_ENUM:
+            *pspec =
+            g_param_spec_uint (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                0, G_MAXUINT, 0,
+                flags);
+            break;
+        default:
+            *pspec =
+            g_param_spec_gtype (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                type,
+                flags);
+    }
+
+}
 
 void 
-uca_kiro_camera_clone_interface (const gchar* address, UcaKiroCamera *kiro_camera)
+uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera)
 {
-    g_print("%s\n", address);
+    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (kiro_camera);
+    UcaKiroCameraClass *klass = UCA_KIRO_CAMERA_GET_CLASS (kiro_camera);
+    GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
        
-    try
-    {
-        Tango::DeviceProxy *device = new Tango::DeviceProxy(address);
-        vector<string> *list = device->get_attribute_list();
+    try {
+        priv->tango_device = new Tango::DeviceProxy(address);
+        vector<string> *list = priv->tango_device->get_attribute_list ();
+        GList *non_base_attributes = NULL;
+        guint non_base_attributes_count = 0;
         
-        for ( vector<string>::iterator iter = list->begin(); iter != list->end(); ++iter )
-        {
-            GType type = gtype_from_tango_type((Tango::CmdArgType)device->attribute_query(*iter).data_type);
-            if (G_TYPE_INVALID != type)
-                g_print("%s TYPE is: %u\n", (*iter).c_str(), (unsigned int)type);
-            else
-                g_print("%s TYPE is INVALID (TANGO Type: %u)\n", (*iter).c_str(), (unsigned int)device->attribute_query(*iter).data_type);
+        for (vector<string>::iterator iter = list->begin (); iter != list->end (); ++iter) {
+            Tango::AttributeInfoEx attrInfo =  priv->tango_device->attribute_query (*iter);
+            gint uca_base_prop_id = get_property_id_from_name ((*iter).c_str ());
+            if (-1 < uca_base_prop_id) {
+                kiro_properties[uca_base_prop_id] = g_object_class_find_property (gobject_class, uca_camera_props[uca_base_prop_id]);
+                g_object_class_override_property(G_OBJECT_CLASS (UCA_KIRO_CAMERA_GET_CLASS (kiro_camera)), uca_base_prop_id, uca_camera_props[uca_base_prop_id]);
+            }
+            else {
+                non_base_attributes = g_list_append (non_base_attributes, (gpointer)(*iter).c_str ());
+                non_base_attributes_count++;
+            }
         }
         
-        size_t properties = list->size();
-        kiro_dynamics = new GParamSpec* [properties];
-        
-        
-        
-        
+        if (non_base_attributes_count > 0) {
+            priv->kiro_dynamic_attributes = new GParamSpec* [N_PROPERTIES + non_base_attributes_count];
+            UcaKiroCameraClass *klass = UCA_KIRO_CAMERA_GET_CLASS (kiro_camera);
+            GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+
+            for (guint idx = 0; idx < non_base_attributes_count; idx++) {
+                const gchar *attr_name = (const gchar*)g_list_nth_data (non_base_attributes, idx);
+                Tango::AttributeInfoEx attrInfo = priv->tango_device->attribute_query (string(attr_name));
+                build_param_spec (&(priv->kiro_dynamic_attributes[N_PROPERTIES + idx]), &attrInfo);
+                g_object_class_install_property (gobject_class, N_PROPERTIES + idx, priv->kiro_dynamic_attributes[N_PROPERTIES + idx]);
+            }
+        }
     }
-    catch (Tango::DevFailed &e) 
-    { 
-        Tango::Except::print_exception(e); 
+    catch (Tango::DevFailed &e) {
+        Tango::Except::print_exception (e);
+        priv->construction_error = TRUE;
     }
 }
 
