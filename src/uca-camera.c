@@ -135,8 +135,12 @@ struct _UcaCameraPrivate {
 static void
 uca_camera_set_property_unit (GParamSpec *pspec, UcaUnit unit)
 {
-    if (g_param_spec_get_qdata (pspec, UCA_UNIT_QUARK) != NULL)
-        g_warning ("::%s already has a unit", pspec->name);
+    UcaUnit old_unit;
+
+    old_unit = (UcaUnit) GPOINTER_TO_INT (g_param_spec_get_qdata (pspec, UCA_UNIT_QUARK));
+
+    if (old_unit != unit && old_unit != UCA_UNIT_NA)
+        g_warning ("::%s already has a different unit", pspec->name);
     else
         g_param_spec_set_qdata (pspec, UCA_UNIT_QUARK, GINT_TO_POINTER (unit));
 }

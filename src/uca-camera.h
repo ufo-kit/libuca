@@ -51,7 +51,7 @@ typedef enum {
 } UcaCameraTrigger;
 
 typedef enum {
-    UCA_UNIT_NA,
+    UCA_UNIT_NA = 0,
     UCA_UNIT_METER,
     UCA_UNIT_SECOND,
     UCA_UNIT_PIXEL,

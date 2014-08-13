@@ -224,11 +224,7 @@ test_signal (Fixture *fixture, gconstpointer data)
 static void
 test_overwriting_units (Fixture *fixture, gconstpointer data)
 {
-    UcaUnit unit;
-
-    uca_camera_register_unit (fixture->camera, "frames-per-second", UCA_UNIT_PIXEL);
-    unit = uca_camera_get_unit (fixture->camera, "frames-per-second");
-    g_assert (unit != UCA_UNIT_PIXEL);
+    uca_camera_register_unit (fixture->camera, "sensor-width", UCA_UNIT_PIXEL);
 }
 
 int main (int argc, char *argv[])
@@ -249,6 +245,7 @@ int main (int argc, char *argv[])
     g_test_add ("/properties/binnings", Fixture, NULL, fixture_setup, test_binnings_properties, fixture_teardown);
     g_test_add ("/properties/frames-per-second", Fixture, NULL, fixture_setup, test_fps_property, fixture_teardown);
     g_test_add ("/properties/units", Fixture, NULL, fixture_setup, test_property_units, fixture_teardown);
+    g_test_add ("/properties/units/overwrite", Fixture, NULL, fixture_setup, test_overwriting_units, fixture_teardown);
     g_test_add ("/signal", Fixture, NULL, fixture_setup, test_signal, fixture_teardown);
 
     return g_test_run ();
