@@ -1117,7 +1117,12 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     camera = uca_plugin_manager_get_camera (plugin_manager, camera_name, &error, NULL);
 
     if ((camera == NULL) || (error != NULL)) {
-        g_error ("%s\n", error->message);
+        if (error) {
+            g_error ("%s\n", error->message);
+        }
+        else {
+            g_error ("Failed to load '%s' camera plugin for an unknown reason\n", camera_name);
+        }
         gtk_main_quit ();
     }
 
