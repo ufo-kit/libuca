@@ -31,9 +31,11 @@ G_BEGIN_DECLS
 
 #define UCA_CAMERA_ERROR    uca_camera_error_quark()
 #define UCA_UNIT_QUARK      uca_unit_quark()
+#define UCA_WRITABLE_QUARK  uca_writable_quark()
 
 GQuark uca_camera_error_quark(void);
 GQuark uca_unit_quark(void);
+GQuark uca_writable_quark(void);
 
 typedef enum {
     UCA_CAMERA_ERROR_NOT_FOUND,
@@ -162,6 +164,13 @@ void        uca_camera_register_unit    (UcaCamera          *camera,
                                          UcaUnit             unit);
 UcaUnit     uca_camera_get_unit         (UcaCamera          *camera,
                                          const gchar        *prop_name);
+void        uca_camera_set_writable     (UcaCamera          *camera,
+                                         const gchar        *prop_name,
+                                         gboolean            writable);
+gboolean    uca_camera_is_writable_during_acquisition
+                                        (UcaCamera          *camera,
+                                         const gchar        *prop_name);
+
 
 GType uca_camera_get_type(void);
 
