@@ -135,9 +135,6 @@ struct _UcaCameraClass {
     void (*stop_readout)    (UcaCamera *camera, GError **error);
     void (*trigger)         (UcaCamera *camera, GError **error);
     gboolean (*grab)        (UcaCamera *camera, gpointer data, GError **error);
-
-    void (*recording_started) (UcaCamera *camera);
-    void (*recording_stopped) (UcaCamera *camera);
 };
 
 UcaCamera * uca_camera_new              (const gchar        *type,
