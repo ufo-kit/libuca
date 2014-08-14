@@ -30,6 +30,19 @@ G_BEGIN_DECLS
 #define UCA_IS_KIRO_CAMERA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), UCA_TYPE_KIRO_CAMERA))
 #define UCA_KIRO_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_KIRO_CAMERA, UcaKiroCameraClass))
 
+#define UCA_KIRO_CAMERA_ERROR    uca_kiro_camera_error_quark()
+
+GQuark uca_kiro_camera_error_quark(void);
+
+typedef enum {
+    UCA_KIRO_CAMERA_ERROR_MISSING_TANGO_ADDRESS = UCA_CAMERA_ERROR_END_OF_STREAM,
+    UCA_KIRO_CAMERA_ERROR_TANGO_CONNECTION_FAILED,
+    UCA_KIRO_CAMERA_ERROR_KIRO_CONNECTION_FAILED,
+    UCA_KIRO_CAMERA_ERROR_TANGO_EXCEPTION_OCCURED,
+    UCA_KIRO_CAMERA_ERROR_BAD_CAMERA_INTERFACE
+} UcaKiroCameraError;
+
+
 typedef struct _UcaKiroCamera           UcaKiroCamera;
 typedef struct _UcaKiroCameraClass      UcaKiroCameraClass;
 typedef struct _UcaKiroCameraPrivate    UcaKiroCameraPrivate;
