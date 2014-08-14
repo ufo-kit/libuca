@@ -31,10 +31,26 @@ extern "C" {
 #define UCA_KIRO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), UCA_TYPE_KIRO_CAMERA, UcaKiroCameraPrivate))
 
 static void uca_kiro_initable_iface_init (GInitableIface *iface);
+GError *initable_iface_error = NULL;
 
 G_DEFINE_TYPE_WITH_CODE (UcaKiroCamera, uca_kiro_camera, UCA_TYPE_CAMERA,
                          G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
                                                 uca_kiro_initable_iface_init))
+
+
+/**
+ * UcaCameraError:
+   @UCA_KIRO_CAMERA_ERROR_MISSING_TANGO_ADDRESS: No TANGO address ('kiro-tango-address') property was supplied during camera creation
+   @UCA_KIRO_CAMERA_ERROR_TANGO_CONNECTION_FAILED: Could not connect to the given TANGO address
+   @UCA_KIRO_CAMERA_ERROR_KIRO_CONNECTION_FAILED: Failed to establish a KIRO connection to the given TANGO server
+   @UCA_KIRO_CAMERA_ERROR_TANGO_EXCEPTION_OCCURED: A TANGO exception was raised during communication with the server
+   @UCA_KIRO_CAMERA_ERROR_BAD_CAMERA_INTERFACE: The given TANGO server does not expose the expected UcaCamera base interface
+ */
+GQuark uca_kiro_camera_error_quark()
+{
+    return g_quark_from_static_string ("uca-kiro-camera-error-quark");
+}
+
 
 enum {
     PROP_KIRO_ADDRESS = N_BASE_PROPERTIES,
@@ -61,7 +77,7 @@ struct _UcaKiroCameraPrivate {
     GParamSpec **kiro_dynamic_attributes;
 
     gboolean thread_running;
-    gboolean kiroclient_started;
+    gboolean kiro_connected;
     gboolean construction_error;
 
     GThread *grab_thread;
@@ -108,6 +124,25 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
             "transfer-asynchronously", &transfer_async,
             NULL);
 
+    //'Cache' ROI settings from TANGO World
+    g_object_get (G_OBJECT(camera),
+            "roi-width", &priv->roi_width,
+            NULL);
+    g_object_get (G_OBJECT(camera),
+            "roi-height", &priv->roi_height,
+            NULL);
+
+    try {
+        priv->tango_device->command_inout ("StartRecording");
+    }
+    catch (Tango::DevFailed &e) {
+        g_warning ("Failed to execute 'StartRecording' on the remote camera due to a TANGO exception.\n");
+        g_set_error (error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_TANGO_EXCEPTION_OCCURED,
+                     "A TANGO exception was raised: '%s'", (const char *)e.errors[0].desc);
+        return;
+    }
+
+
     /*
      * In case asynchronous transfer is requested, we start a new thread that
      * invokes the grab callback, otherwise nothing will be done here.
@@ -120,6 +155,12 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
         if (tmp_error != NULL) {
             priv->thread_running = FALSE;
             g_propagate_error (error, tmp_error);
+            try {
+                priv->tango_device->command_inout ("StopRecording");
+            }
+            catch (Tango::DevFailed &e) {
+                g_warning ("Failed to execute 'StopRecording' on the remote camera due to a TANGO exception: '%s'\n", (const char *)e.errors[0].desc);
+            }
         }
     }
 }
@@ -127,14 +168,20 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
 static void
 uca_kiro_camera_stop_recording(UcaCamera *camera, GError **error)
 {
-    gboolean transfer_async = FALSE;
-    UcaKiroCameraPrivate *priv;
     g_return_if_fail(UCA_IS_KIRO_CAMERA (camera));
-
+    UcaKiroCameraPrivate *priv;
     priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
-    g_free (priv->dummy_data);
-    kiro_trb_purge(priv->receive_buffer, FALSE);
 
+    try {
+        priv->tango_device->command_inout ("StopRecording");
+    }
+    catch (Tango::DevFailed &e) {
+        g_warning ("Failed to execute 'StopRecording' on the remote camera due to a TANGO exception.\n");
+        g_set_error (error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_TANGO_EXCEPTION_OCCURED,
+                     "A TANGO exception was raised: '%s'", (const char *)e.errors[0].desc);
+    }
+
+    gboolean transfer_async = FALSE;
     g_object_get(G_OBJECT (camera),
             "transfer-asynchronously", &transfer_async,
             NULL);
@@ -143,6 +190,9 @@ uca_kiro_camera_stop_recording(UcaCamera *camera, GError **error)
         priv->thread_running = FALSE;
         g_thread_join (priv->grab_thread);
     }
+
+    g_free (priv->dummy_data);
+    kiro_trb_purge(priv->receive_buffer, FALSE);
 }
 
 static void
@@ -163,8 +213,8 @@ uca_kiro_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 
     //Element 0 is always about to be written, Element -1 is currently being written
     //Therefore, we take Element -2, to be sure this one is finished
-    //size_t index = kiro_trb_get_max_elements (priv->receive_buffer) - 2;
-    //g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height);
+    size_t index = kiro_trb_get_max_elements (priv->receive_buffer) - 2;
+    g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height);
 
     return TRUE;
 }
@@ -393,7 +443,7 @@ try_handle_write_tango_property(GObject *object, guint property_id, const GValue
             priv->tango_device->write_attribute (t_attr);
         }
         catch (Tango::DevFailed &e) {
-            g_warning ("Property '%s' could not be written due to an unexpected TANGO error...\n", pspec->name);
+            g_warning ("Property '%s' could not be written due to a TANGO exception: '%s'\n", pspec->name, (const char *)e.errors[0].desc);
             Tango::Except::print_exception (e);
             return;
         }
@@ -457,6 +507,7 @@ uca_kiro_camera_finalize(GObject *object)
         g_object_unref (priv->kiro_receiver);
         priv->kiro_receiver = NULL;
     }
+    priv->kiro_connected = FALSE;
 
     if (priv->receive_buffer) {
         g_object_unref (priv->receive_buffer);
@@ -488,8 +539,10 @@ ufo_kiro_camera_initable_init (GInitable *initable,
     g_return_val_if_fail (UCA_IS_KIRO_CAMERA (initable), FALSE);
     
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (UCA_KIRO_CAMERA (initable));
-    if(priv->construction_error)
+    if(priv->construction_error) {
+        g_propagate_error (error, initable_iface_error);
         return FALSE;
+    }
     
     return TRUE;
 }
@@ -517,19 +570,40 @@ uca_kiro_camera_constructed (GObject *object)
     uca_kiro_camera_get_property (object, PROP_KIRO_TANGO_ADDRESS, &address, NULL);
     gint address_not_none = g_strcmp0(g_value_get_string (&address), "NONE");
     if (0 == address_not_none) {
-        g_print("kiro-tango-address was not set! Can not connect to server...\n");
+        g_warning ("kiro-tango-address was not set! Can not connect to server...\n");
         priv->construction_error = TRUE;
+        g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_MISSING_TANGO_ADDRESS,
+             "'kiro-tango-address' property was not set during construction.");
     }
     else {
-        uca_kiro_camera_clone_interface (g_value_get_string (&address), self);
+        try {
+            priv->tango_device = new Tango::DeviceProxy(g_value_get_string (&address));
+            Tango::DbData kiro_credentials;
+            kiro_credentials.push_back (Tango::DbDatum("LocalAddress"));
+            kiro_credentials.push_back (Tango::DbDatum("LocalPort"));
+            priv->tango_device->get_property(kiro_credentials);
+            string kiro_address, kiro_port;
+            kiro_credentials[0] >> kiro_address;
+            kiro_credentials[1] >> kiro_port;
+
+            if (0 > kiro_client_connect(priv->kiro_receiver, kiro_address.c_str (), kiro_port.c_str ())) {
+                g_warning ("Unable to connect to server at address: %s, port: %s\n", kiro_address.c_str (), kiro_port.c_str ());
+                priv->construction_error = TRUE;
+                g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_KIRO_CONNECTION_FAILED,
+                             "Failed to establish a KIRO InfiniBand connection.");
+            }
+            else {
+                priv->kiro_connected = TRUE;
+                uca_kiro_camera_clone_interface (g_value_get_string (&address), self);
+            }
+        }
+        catch (Tango::DevFailed &e) {
+            Tango::Except::print_exception (e);
+            g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_TANGO_EXCEPTION_OCCURED,
+                             "A TANGO exception was raised: '%s'", (const char *)e.errors[0].desc);
+            priv->construction_error = TRUE;
+        }
     }
-    
-    /*
-    if (0 > kiro_client_connect(priv->kiro_receiver, g_value_get_string(&address), g_value_get_string(&port))) {
-        g_print("Unable to connect to server at address: %s, port: %s\n", g_value_get_string(&address), g_value_get_string(&port));
-        return FALSE;
-    }
-    */
 
     G_OBJECT_CLASS (uca_kiro_camera_parent_class)->constructed(object);
 }
@@ -794,7 +868,6 @@ build_param_spec(GParamSpec **pspec, const Tango::AttributeInfoEx *attrInfo)
                 type,
                 flags);
     }
-
 }
 
 void 
@@ -803,14 +876,42 @@ uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (kiro_camera);
     UcaKiroCameraClass *klass = UCA_KIRO_CAMERA_GET_CLASS (kiro_camera);
     GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-       
+    gboolean start_found, stop_found, unit_found = FALSE;
+
     try {
-        priv->tango_device = new Tango::DeviceProxy(address);
-        vector<string> *list = priv->tango_device->get_attribute_list ();
+        Tango::CommandInfoList *cmd_list = priv->tango_device->command_list_query ();
+        for (vector<Tango::CommandInfo>::iterator iter = cmd_list->begin (); iter != cmd_list->end (); ++iter) {
+            //g_print ("Command: '%s'\n", (*iter).cmd_name.c_str ());
+            gint start_cmp = g_strcmp0((*iter).cmd_name.c_str (), "StartRecording");
+            if (0 == start_cmp) {
+                start_found = TRUE;
+                //g_print ("StartRecording has been found\n");
+            }
+            gint stop_cmp = g_strcmp0 ((*iter).cmd_name.c_str (), "StopRecording");
+            if (0 == stop_cmp) {
+                stop_found = TRUE;
+                //g_print ("StopRecording has been found\n");
+            }
+            gint unit_cmp = g_strcmp0((*iter).cmd_name.c_str (), "GetAttributeUnit");
+            if (0 == unit_cmp) {
+                unit_found = TRUE;
+                //g_print ("GetAttributeUnit has been found\n");
+            }
+        }
+
+        if ( !start_found || !stop_found ) {
+            g_warning ("The Server at '%s' does not provide the necessary 'StartRecording' and 'StopRecording' interface\n", priv->kiro_tango_address);
+            g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_BAD_CAMERA_INTERFACE,
+                         "The Server at '%s' does not provide the necessary 'StartRecording' and 'StopRecording' interface\n", priv->kiro_tango_address);
+            priv->construction_error = TRUE;
+            return;
+        }
+
+        vector<string> *attr_list = priv->tango_device->get_attribute_list ();
         GList *non_base_attributes = NULL;
         guint non_base_attributes_count = 0;
-        
-        for (vector<string>::iterator iter = list->begin (); iter != list->end (); ++iter) {
+
+        for (vector<string>::iterator iter = attr_list->begin (); iter != attr_list->end (); ++iter) {
             Tango::AttributeInfoEx attrInfo =  priv->tango_device->attribute_query (*iter);
             gint uca_base_prop_id = get_property_id_from_name ((*iter).c_str ());
             if (-1 < uca_base_prop_id) {
@@ -822,7 +923,7 @@ uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera
                 non_base_attributes_count++;
             }
         }
-        
+
         if (non_base_attributes_count > 0) {
             priv->kiro_dynamic_attributes = new GParamSpec* [N_PROPERTIES + non_base_attributes_count];
             UcaKiroCameraClass *klass = UCA_KIRO_CAMERA_GET_CLASS (kiro_camera);
@@ -838,6 +939,8 @@ uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera
     }
     catch (Tango::DevFailed &e) {
         Tango::Except::print_exception (e);
+        g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_TANGO_EXCEPTION_OCCURED,
+                     "A TANGO exception was raised: '%s'", (const char *)e.errors[0].desc);
         priv->construction_error = TRUE;
     }
 }
