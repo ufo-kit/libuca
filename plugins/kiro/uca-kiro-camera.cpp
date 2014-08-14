@@ -934,6 +934,15 @@ uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera
                 Tango::AttributeInfoEx attrInfo = priv->tango_device->attribute_query (string(attr_name));
                 build_param_spec (&(priv->kiro_dynamic_attributes[N_PROPERTIES + idx]), &attrInfo);
                 g_object_class_install_property (gobject_class, N_PROPERTIES + idx, priv->kiro_dynamic_attributes[N_PROPERTIES + idx]);
+
+                if (unit_found) {
+                    Tango::DeviceData arg_name;
+                    arg_name << attr_name;
+                    Tango::DeviceData cmd_reply = priv->tango_device->command_inout("GetAttributeUnit", arg_name);
+                    gint unit;
+                    cmd_reply >> unit;
+                    uca_camera_register_unit (UCA_CAMERA (kiro_camera), attr_name, (UcaUnit)unit);
+                }
             }
         }
     }
