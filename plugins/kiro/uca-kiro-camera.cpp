@@ -56,6 +56,7 @@ enum {
     PROP_KIRO_ADDRESS = N_BASE_PROPERTIES,
     PROP_KIRO_PORT,
     PROP_KIRO_TANGO_ADDRESS,
+    PROP_KIRO_REMOTE_NAME,
     N_PROPERTIES
 };
 
@@ -73,6 +74,7 @@ struct _UcaKiroCameraPrivate {
     gchar *kiro_port;
     guint kiro_port_uint;
     gchar *kiro_tango_address;
+    gchar *remote_name;
     Tango::DeviceProxy *tango_device;
     GParamSpec **kiro_dynamic_attributes;
 
@@ -487,6 +489,9 @@ uca_kiro_camera_get_property(GObject *object, guint property_id, GValue *value, 
         case PROP_KIRO_TANGO_ADDRESS:
             g_value_set_string (value, priv->kiro_tango_address);
             break;
+        case PROP_KIRO_REMOTE_NAME:
+            g_value_set_string (value, priv->remote_name);
+            break;
         default:
             try_handle_read_tango_property (object, property_id, value, pspec);
             break;
@@ -649,6 +654,13 @@ uca_kiro_camera_class_init(UcaKiroCameraClass *klass)
                 "NONE",
                 (GParamFlags) (G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
 
+    kiro_properties[PROP_KIRO_REMOTE_NAME] =
+        g_param_spec_string("remote-name",
+                "Name of the remot camera",
+                "Name of the camera plugin that is loaded on the KIRO remote site",
+                "NONE",
+                G_PARAM_READABLE);
+
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property (gobject_class, id, kiro_properties[id]);
 
@@ -663,6 +675,7 @@ uca_kiro_camera_init(UcaKiroCamera *self)
     self->priv->current_frame = 0;
     self->priv->kiro_address = g_strdup ("NONE");
     self->priv->kiro_port = g_strdup ("NONE");
+    self->priv->remote_name = g_strdup ("NONE");
     self->priv->kiro_port_uint = 60010;
     self->priv->kiro_tango_address = g_strdup ("NONE");
     self->priv->construction_error = FALSE;
@@ -915,6 +928,15 @@ uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera
             Tango::AttributeInfoEx attrInfo =  priv->tango_device->attribute_query (*iter);
             gint uca_base_prop_id = get_property_id_from_name ((*iter).c_str ());
             if (-1 < uca_base_prop_id) {
+                guint is_name_attr = g_strcmp0 ((*iter).c_str (), "name");
+                if (0 == is_name_attr) {
+                    Tango::DeviceAttribute t_attr;
+                    priv->tango_device->read_attribute ("name", t_attr);
+                    string reply_name;
+                    t_attr >> reply_name;
+                    g_free (priv->remote_name);
+                    priv->remote_name = g_strdup (reply_name.c_str ());
+                }
                 kiro_properties[uca_base_prop_id] = g_object_class_find_property (gobject_class, uca_camera_props[uca_base_prop_id]);
                 g_object_class_override_property(G_OBJECT_CLASS (UCA_KIRO_CAMERA_GET_CLASS (kiro_camera)), uca_base_prop_id, uca_camera_props[uca_base_prop_id]);
             }
