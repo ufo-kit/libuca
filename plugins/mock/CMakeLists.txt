@@ -13,9 +13,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
 add_library(ucamock SHARED
             uca-mock-camera.c)
 
-target_link_libraries(ucamock
-                      uca
-                      ${UCA_DEPS})
+target_link_libraries(ucamock uca m ${UCA_DEPS})
 
 install(TARGETS ucamock
         LIBRARY DESTINATION ${UCA_PLUGINDIR}
