@@ -424,31 +424,25 @@ try_handle_write_tango_property(GObject *object, guint property_id, const GValue
                     }
 
                     if (value->g_type == G_TYPE_VALUE_ARRAY) {
-                        //ToDo: For some reason %value sometimes holds an inconsistent/uninitialized array that will crash during readout...
-                        //I am not sure if this only happens in a Python environment or if i am missing something fundamental here.
-                        //Better to not support writing of GValueArrays until this is fixed!
-                        g_print ("Writing of array-type attributes is not yet supported.\n");
-                        return;
-
                         GType value_type = ((GParamSpecValueArray*)pspec)->element_spec->value_type;
                         if (G_TYPE_UINT != value_type) {
                             g_print ("Array type attribue '%s' holds elements of type '%s' which can't be handled.\n", pspec->name, g_type_name (value_type) );
                             return;
                         }
 
-                        GValueArray *gvalarray = (GValueArray*)value;
+                        GValueArray *gvalarray = (GValueArray *) g_value_get_boxed (value);
                         guint array_length = gvalarray->n_values;
                         vector<guint> t_vect (array_length);
 
                         for (guint idx = 0; idx < array_length; idx++) {
                             GValue *val = g_value_array_get_nth (gvalarray, idx);
-                            g_print ("Value holds: %s\n", g_type_name (val->g_type));
                             t_vect[idx] = g_value_get_uint (val);
                         }
 
                         t_attr << t_vect;
                         t_attr.data_format = Tango::AttrDataFormat::SPECTRUM;
                         t_attr.dim_x = array_length;
+                        break;
                     }
 
                     GType unhandled = value->g_type;
