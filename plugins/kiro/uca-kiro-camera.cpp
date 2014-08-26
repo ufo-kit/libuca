@@ -134,8 +134,13 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
             "roi-height", &priv->roi_height,
             NULL);
 
+    Tango::DevState state;
+    g_object_get (G_OBJECT(camera),
+            "State", &state,
+            NULL);
     try {
-        priv->tango_device->command_inout ("StartRecording");
+        if (Tango::DevState::STANDBY == state)
+            priv->tango_device->command_inout ("StartRecording");
     }
     catch (Tango::DevFailed &e) {
         g_warning ("Failed to execute 'StartRecording' on the remote camera due to a TANGO exception.\n");
@@ -174,8 +179,14 @@ uca_kiro_camera_stop_recording(UcaCamera *camera, GError **error)
     UcaKiroCameraPrivate *priv;
     priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
 
+    Tango::DevState state;
+    g_object_get (G_OBJECT(camera),
+            "State", &state,
+            NULL);
+
     try {
-        priv->tango_device->command_inout ("StopRecording");
+        if (Tango::DevState::RUNNING == state)
+            priv->tango_device->command_inout ("StopRecording");
     }
     catch (Tango::DevFailed &e) {
         g_warning ("Failed to execute 'StopRecording' on the remote camera due to a TANGO exception.\n");
@@ -254,7 +265,7 @@ try_handle_read_tango_property(GObject *object, guint property_id, GValue *value
         //Stupid workaround for TANGO::State attribute...
         //Because they just HAD to make a special case
         //for that one specific Enum...
-        if (0 == g_strcmp0(pspec->name, "State")) {
+        if (0 == g_strcmp0 (pspec->name, "State")) {
             Tango::DevState state;
             t_attr >> state;
             g_value_set_uint (value, (unsigned int)state);
