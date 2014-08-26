@@ -826,6 +826,12 @@ uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera
             for (guint idx = 0; idx < non_base_attributes_count; idx++) {
                 const gchar *attr_name = (const gchar*)g_list_nth_data (non_base_attributes, idx);
                 Tango::AttributeInfoEx attrInfo = priv->tango_device->attribute_query (string(attr_name));
+                
+                if (Tango::AttrDataFormat::IMAGE == attrInfo.data_format || Tango::AttrDataFormat::FMT_UNKNOWN == attrInfo.data_format) {
+                    g_print ("Attribute '%s' has unknown DataFormat. Skipping.\n", attr_name);
+                    continue;
+                }
+                
                 build_param_spec (&(priv->kiro_dynamic_attributes[N_PROPERTIES + idx]), &attrInfo);
                 g_object_class_install_property (gobject_class, N_PROPERTIES + idx, priv->kiro_dynamic_attributes[N_PROPERTIES + idx]);
 
