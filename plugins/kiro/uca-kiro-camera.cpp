@@ -237,11 +237,96 @@ uca_kiro_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 // ---------------------------------------------------------- //
 //                      TANGO <-> GLib                        //
 // ---------------------------------------------------------- //
-#define T_TO_G_CONVERT(GTYPE, T_ATTR, FUNCTION, TARGET) { \
-    GTYPE t_val; \
-    T_ATTR >> t_val; \
-    FUNCTION (TARGET, t_val); \
+gboolean
+unpack_gvaluearray_from_tango (GValue *value, Tango::DeviceAttribute &t_attr, GParamSpec *pspec)
+{
+    GType value_type = ((GParamSpecValueArray*)pspec)->element_spec->value_type;
+    if (G_TYPE_UINT != value_type) {
+        g_print ("Array type attribue '%s' holds elements of type '%s' which can't be handled.\n", pspec->name, g_type_name (value_type) );
+        return FALSE;
+    }
+
+    guint array_length = t_attr.get_dim_x ();
+    GValueArray *gvalarray = g_value_array_new (array_length);
+
+    //Convenience Macro to prevent either having to rewrite this block
+    //of code over and over again, or creating two almost identical
+    // switch-cases...
+    //UNPACK TANGO GVALUEARRAY
+    #define __U_T_GVA(__GTYPE, __GFUNC) { \
+        vector<__GTYPE> t_vect; \
+        t_attr >> t_vect; \
+        for (guint idx = 0; idx < array_length; idx++) { \
+            g_value_array_append (gvalarray, NULL); \
+            GValue *val = g_value_array_get_nth (gvalarray, idx); \
+            g_value_init (val, value_type); \
+            __GFUNC (val, t_vect[idx]); \
+        } \
+    }
+
+    switch (value_type) {
+        case G_TYPE_BOOLEAN:
+            //We need to to this manualy since there is no implicit conversion from c++ bool to gboolean
+            {
+                vector<bool> t_vect;
+                t_attr >> t_vect;
+                for (guint idx = 0; idx < array_length; idx++) {
+                    g_value_array_append (gvalarray, NULL);
+                    GValue *val = g_value_array_get_nth (gvalarray, idx);
+                    g_value_init (val, value_type);
+                    g_value_set_boolean (val, (t_vect[idx] ? TRUE : FALSE));
+                }
+            }
+            break;
+        case G_TYPE_STRING:
+            //We need to to this manualy since there is no implicit conversion from c++ string to gchar*
+            {
+                vector<string> t_vect;
+                t_attr >> t_vect;
+                for (guint idx = 0; idx < array_length; idx++) {
+                    g_value_array_append (gvalarray, NULL);
+                    GValue *val = g_value_array_get_nth (gvalarray, idx);
+                    g_value_init (val, value_type);
+                    g_value_set_string (val, t_vect[idx].c_str ());
+                }
+            }
+            break;
+        case G_TYPE_UCHAR:
+            __U_T_GVA (guchar, g_value_set_uchar);
+            break;
+        case G_TYPE_INT:
+            __U_T_GVA (gint, g_value_set_int);
+            break;
+        case G_TYPE_UINT:
+            __U_T_GVA (guint, g_value_set_uint);
+            break;
+        case G_TYPE_INT64:
+            __U_T_GVA (gint64, g_value_set_int64);
+            break;
+        case G_TYPE_UINT64:
+            __U_T_GVA (guint64, g_value_set_uint64);
+            break;
+        case G_TYPE_LONG:
+            __U_T_GVA (glong, g_value_set_long);
+            break;
+        case G_TYPE_ULONG:
+            __U_T_GVA (gulong, g_value_set_ulong);
+            break;
+        case G_TYPE_FLOAT:
+            __U_T_GVA (gfloat, g_value_set_float);
+            break;
+        case G_TYPE_DOUBLE:
+            __U_T_GVA (gdouble, g_value_set_double);
+            break;
+        default:
+            g_print ("Array type attribue '%s' holds elements of type '%s' which can't be handled.\n", pspec->name, g_type_name (value_type) );
+            return FALSE;
+    }
+
+    g_value_set_boxed_take_ownership (value, gvalarray);
+    return TRUE;
 }
+
 
 void
 try_handle_read_tango_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
@@ -272,6 +357,13 @@ try_handle_read_tango_property(GObject *object, guint property_id, GValue *value
             return;
         }
 
+        //Convenience Macro to prevent having to write this block
+        //of code over and over again
+        #define T_TO_G_CONVERT(GTYPE, T_ATTR, FUNCTION, TARGET) { \
+            GTYPE t_val; \
+            T_ATTR >> t_val; \
+            FUNCTION (TARGET, t_val); \
+        }
 
         switch (value->g_type) {
         case G_TYPE_INT:
@@ -328,25 +420,9 @@ try_handle_read_tango_property(GObject *object, guint property_id, GValue *value
                         return;
                     }
 
-                    GType value_type = ((GParamSpecValueArray*)pspec)->element_spec->value_type;
-                    if (G_TYPE_UINT != value_type) {
-                        g_print ("Array type attribue '%s' holds elements of type '%s' which can't be handled.\n", pspec->name, g_type_name (value_type) );
-                        return;
-                    }
+                    if (0 == unpack_gvaluearray_from_tango (value, t_attr, pspec))
+                        g_warning ("Failed to read property '%s'\n", pspec->name);
 
-                    guint array_length = t_attr.get_dim_x ();
-                    GValueArray *gvalarray = g_value_array_new (array_length);
-                    vector<guint> t_vect;
-                    t_attr >> t_vect;
-
-                    for (guint idx = 0; idx < array_length; idx++) {
-                        g_value_array_append (gvalarray, NULL);
-                        GValue *val = g_value_array_get_nth (gvalarray, idx);
-                        g_value_init (val, value_type);
-                        g_value_set_uint (val, t_vect[idx]);
-                    }
-
-                    g_value_set_boxed_take_ownership (value, gvalarray);
                     return;
                 }
 
@@ -363,6 +439,75 @@ try_handle_read_tango_property(GObject *object, guint property_id, GValue *value
         g_print ("Unhandled property...\n");
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
+
+#undef T_TO_G_CONVERT
+}
+
+
+gboolean
+pack_gvaluearray_to_tango (const GValue *value, Tango::DeviceAttribute &t_attr, GParamSpec *pspec)
+{
+
+    GType value_type = ((GParamSpecValueArray*)pspec)->element_spec->value_type;
+    GValueArray *gvalarray = (GValueArray *) g_value_get_boxed (value);
+    guint array_length = gvalarray->n_values;
+
+    //Convenience Macro to prevent either having to rewrite this block
+    //of code over and over again, or creating two almost identical
+    // switch-cases...
+    #define __P_GVA_T(__GTYPE, __GFUNC) { \
+        vector<__GTYPE> t_vect (array_length); \
+        for (guint idx = 0; idx < array_length; idx++) { \
+            GValue *val = g_value_array_get_nth (gvalarray, idx); \
+            t_vect[idx] = __GFUNC (val); \
+        } \
+        t_attr << t_vect; \
+    }
+
+    switch (value_type) {
+        case G_TYPE_BOOLEAN:
+            __P_GVA_T (bool, g_value_get_boolean); //This relys on the implicit conversion from int to c++ bool
+            break;
+        case G_TYPE_UCHAR:
+            __P_GVA_T (guchar, g_value_get_uchar);
+            break;
+        case G_TYPE_STRING:
+            __P_GVA_T (string, g_value_get_string); //This relys on the implicit conversion from char* to c++ string
+            break;
+        case G_TYPE_INT:
+            __P_GVA_T (gint, g_value_get_int);
+            break;
+        case G_TYPE_UINT:
+            __P_GVA_T (guint, g_value_get_uint);
+            break;
+        case G_TYPE_INT64:
+            __P_GVA_T (gint64, g_value_get_int64);
+            break;
+        case G_TYPE_UINT64:
+            __P_GVA_T (guint64, g_value_get_uint64);
+            break;
+        case G_TYPE_LONG:
+            __P_GVA_T (glong, g_value_get_long);
+            break;
+        case G_TYPE_ULONG:
+            __P_GVA_T (gulong, g_value_get_ulong);
+            break;
+        case G_TYPE_FLOAT:
+            __P_GVA_T (gfloat, g_value_get_float);
+            break;
+        case G_TYPE_DOUBLE:
+            __P_GVA_T (gdouble, g_value_get_double);
+            break;
+        default:
+            g_print ("Array type attribue '%s' holds elements of type '%s' which can't be handled.\n", pspec->name, g_type_name (value_type) );
+            return FALSE;
+    }
+
+    t_attr.data_format = Tango::AttrDataFormat::SPECTRUM;
+    t_attr.dim_x = array_length;
+    return TRUE;
+
+#undef __P_GVA_T
 }
 
 
@@ -424,24 +569,10 @@ try_handle_write_tango_property(GObject *object, guint property_id, const GValue
                     }
 
                     if (value->g_type == G_TYPE_VALUE_ARRAY) {
-                        GType value_type = ((GParamSpecValueArray*)pspec)->element_spec->value_type;
-                        if (G_TYPE_UINT != value_type) {
-                            g_print ("Array type attribue '%s' holds elements of type '%s' which can't be handled.\n", pspec->name, g_type_name (value_type) );
+                        if (0 == pack_gvaluearray_to_tango (value, t_attr, pspec)) {
+                            g_warning ("Failed to write property '%s'.\n", pspec->name);
                             return;
                         }
-
-                        GValueArray *gvalarray = (GValueArray *) g_value_get_boxed (value);
-                        guint array_length = gvalarray->n_values;
-                        vector<guint> t_vect (array_length);
-
-                        for (guint idx = 0; idx < array_length; idx++) {
-                            GValue *val = g_value_array_get_nth (gvalarray, idx);
-                            t_vect[idx] = g_value_get_uint (val);
-                        }
-
-                        t_attr << t_vect;
-                        t_attr.data_format = Tango::AttrDataFormat::SPECTRUM;
-                        t_attr.dim_x = array_length;
                         break;
                     }
 
@@ -471,6 +602,257 @@ try_handle_write_tango_property(GObject *object, guint property_id, const GValue
 }
 
 
+GType
+gtype_from_tango_type (Tango::CmdArgType t)
+{
+    using namespace Tango;
+        switch (t) {
+            case DEV_VOID:
+                return G_TYPE_NONE;
+            case DEV_BOOLEAN:
+                return G_TYPE_BOOLEAN;
+            case DEV_SHORT:
+                //Fall-through intentional
+            case DEV_INT:
+                //Fall-through intentional
+            case DEV_LONG:
+                return G_TYPE_INT;
+            case DEV_FLOAT:
+                return G_TYPE_FLOAT;
+            case DEV_DOUBLE:
+                return G_TYPE_DOUBLE;
+            case DEV_ULONG:
+                //return G_TYPE_ULONG;
+                //Fall-through intentional
+                //NOTE: There seems to be a bug somewhere either in TANGO or in GLib or in Pyhton that
+                //Breaks the functionality of the G_TYPE_ULONG properties. Using a G_TYPE_UINT instead
+                //works around this problem but might provoke potential overflows...
+            case DEV_USHORT:
+                return G_TYPE_UINT;
+            case CONST_DEV_STRING:
+                //Fall-through intentional
+            case DEV_STRING:
+                return G_TYPE_STRING;
+            case DEV_UCHAR:
+                return G_TYPE_UCHAR;
+            case DEV_LONG64:
+                return G_TYPE_INT64;
+            case DEV_ULONG64:
+                return G_TYPE_UINT64;
+            case DEV_STATE:
+                return G_TYPE_UINT;
+            /*
+            DEV_ENCODED
+            DEVVAR_CHARARRAY
+            DEVVAR_SHORTARRAY
+            DEVVAR_LONGARRAY
+            DEVVAR_FLOATARRAY
+            DEVVAR_DOUBLEARRAY
+            DEVVAR_USHORTARRAY
+            DEVVAR_ULONGARRAY
+            DEVVAR_STRINGARRAY
+            DEVVAR_LONGSTRINGARRAY
+            DEVVAR_DOUBLESTRINGARRAY
+            DEVVAR_BOOLEANARRAY
+            DEVVAR_LONG64ARRAY
+            DEVVAR_ULONG64ARRAY
+            */
+            default:
+                return G_TYPE_INVALID;
+        };
+}
+
+
+gint
+get_property_id_from_name(const gchar* name)
+{
+    guint idx = 0;
+    gboolean found = FALSE;
+    for (;idx < N_PROPERTIES; ++idx) {
+        if (0 == g_strcmp0(name, uca_camera_props[idx])) {
+            found = TRUE;
+            break;
+        }
+    }
+    return (TRUE == found) ? idx : -1;
+}
+
+
+void
+build_param_spec(GParamSpec **pspec, const Tango::AttributeInfoEx *attrInfo)
+{
+    GType type = gtype_from_tango_type ((Tango::CmdArgType)attrInfo->data_type);
+    const gchar *name = attrInfo->name.c_str ();
+    GParamFlags flags = G_PARAM_READABLE;
+    if (attrInfo->writable == Tango::AttrWriteType::WRITE)
+        flags = (GParamFlags) G_PARAM_READWRITE;
+
+
+    //Convenience Macro to prevent having to rewrite this block
+    //of code over and over again..
+    #define __M_PSCPEC(__SPEC_TYPE, __LIMITS_1, __LIMITS_2, __LIMITS_3) { \
+        *pspec = \
+        __SPEC_TYPE (name, \
+            attrInfo->description.c_str (), \
+            g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL), \
+            __LIMITS_1, __LIMITS_2, __LIMITS_3,\
+            flags); \
+    }
+
+    switch (type) {
+        case G_TYPE_INT:
+            __M_PSCPEC (g_param_spec_int, G_MININT32, G_MAXINT32, 0);
+            break;
+        case G_TYPE_FLOAT:
+            __M_PSCPEC (g_param_spec_float, G_MINFLOAT, G_MAXFLOAT, 0.);
+            break;
+        case G_TYPE_DOUBLE:
+            __M_PSCPEC (g_param_spec_double, G_MINDOUBLE, G_MAXDOUBLE, 0.)
+            break;
+        case G_TYPE_UINT:
+            __M_PSCPEC (g_param_spec_uint, 0, G_MAXUINT, 0)
+            break;
+        case G_TYPE_ULONG:
+            __M_PSCPEC (g_param_spec_ulong, 0, G_MAXULONG, 0)
+            break;
+        case G_TYPE_UCHAR:
+            __M_PSCPEC (g_param_spec_uchar, 0x00, 0xff, 0x42)
+            break;
+        case G_TYPE_INT64:
+            __M_PSCPEC (g_param_spec_int64, G_MININT64, G_MAXINT64, 0)
+            break;
+        case G_TYPE_UINT64:
+            __M_PSCPEC (g_param_spec_uint64, 0, G_MAXUINT64, 0)
+            break;
+        case G_TYPE_LONG:
+            __M_PSCPEC (g_param_spec_long, G_MININT64, G_MAXINT64, 1)
+            break;
+        case G_TYPE_ENUM:
+            __M_PSCPEC (g_param_spec_int, 0, G_MAXUINT, 0)
+            break;
+        case G_TYPE_STRING:
+            *pspec =
+            g_param_spec_string (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                "DEFAULT",
+                flags);
+            break;
+        case G_TYPE_BOOLEAN:
+            *pspec =
+            g_param_spec_boolean (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                FALSE,
+                flags);
+            break;
+        default:
+            *pspec =
+            g_param_spec_gtype (name,
+                attrInfo->description.c_str (),
+                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
+                type,
+                flags);
+    }
+
+#undef __M_PSCPEC
+}
+
+
+void
+uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera)
+{
+    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (kiro_camera);
+    UcaKiroCameraClass *klass = UCA_KIRO_CAMERA_GET_CLASS (kiro_camera);
+    GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+    gboolean start_found, stop_found, unit_found = FALSE;
+
+    try {
+        Tango::CommandInfoList *cmd_list = priv->tango_device->command_list_query ();
+        for (vector<Tango::CommandInfo>::iterator iter = cmd_list->begin (); iter != cmd_list->end (); ++iter) {
+            gint start_cmp = g_strcmp0((*iter).cmd_name.c_str (), "StartRecording");
+            if (0 == start_cmp) {
+                start_found = TRUE;
+            }
+            gint stop_cmp = g_strcmp0 ((*iter).cmd_name.c_str (), "StopRecording");
+            if (0 == stop_cmp) {
+                stop_found = TRUE;
+            }
+            gint unit_cmp = g_strcmp0((*iter).cmd_name.c_str (), "GetAttributeUnit");
+            if (0 == unit_cmp) {
+                unit_found = TRUE;
+            }
+        }
+
+        if ( !start_found || !stop_found ) {
+            g_warning ("The Server at '%s' does not provide the necessary 'StartRecording' and 'StopRecording' interface\n", priv->kiro_tango_address);
+            g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_BAD_CAMERA_INTERFACE,
+                         "The Server at '%s' does not provide the necessary 'StartRecording' and 'StopRecording' interface\n", priv->kiro_tango_address);
+            priv->construction_error = TRUE;
+            return;
+        }
+
+        vector<string> *attr_list = priv->tango_device->get_attribute_list ();
+        GList *non_base_attributes = NULL;
+        guint non_base_attributes_count = 0;
+
+        for (vector<string>::iterator iter = attr_list->begin (); iter != attr_list->end (); ++iter) {
+            Tango::AttributeInfoEx attrInfo =  priv->tango_device->attribute_query (*iter);
+            gint uca_base_prop_id = get_property_id_from_name ((*iter).c_str ());
+            if (-1 < uca_base_prop_id) {
+                guint is_name_attr = g_strcmp0 ((*iter).c_str (), "name");
+                if (0 == is_name_attr) {
+                    Tango::DeviceAttribute t_attr;
+                    priv->tango_device->read_attribute ("name", t_attr);
+                    string reply_name;
+                    t_attr >> reply_name;
+                    g_free (priv->remote_name);
+                    priv->remote_name = g_strdup (reply_name.c_str ());
+                }
+                kiro_properties[uca_base_prop_id] = g_object_class_find_property (gobject_class, uca_camera_props[uca_base_prop_id]);
+                g_object_class_override_property(G_OBJECT_CLASS (UCA_KIRO_CAMERA_GET_CLASS (kiro_camera)), uca_base_prop_id, uca_camera_props[uca_base_prop_id]);
+            }
+            else {
+                non_base_attributes = g_list_append (non_base_attributes, (gpointer)(*iter).c_str ());
+                non_base_attributes_count++;
+            }
+        }
+
+        if (non_base_attributes_count > 0) {
+            priv->kiro_dynamic_attributes = new GParamSpec* [N_PROPERTIES + non_base_attributes_count];
+            UcaKiroCameraClass *klass = UCA_KIRO_CAMERA_GET_CLASS (kiro_camera);
+            GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+
+            for (guint idx = 0; idx < non_base_attributes_count; idx++) {
+                const gchar *attr_name = (const gchar*)g_list_nth_data (non_base_attributes, idx);
+                Tango::AttributeInfoEx attrInfo = priv->tango_device->attribute_query (string(attr_name));
+                build_param_spec (&(priv->kiro_dynamic_attributes[N_PROPERTIES + idx]), &attrInfo);
+                g_object_class_install_property (gobject_class, N_PROPERTIES + idx, priv->kiro_dynamic_attributes[N_PROPERTIES + idx]);
+
+                if (unit_found) {
+                    Tango::DeviceData arg_name;
+                    arg_name << attr_name;
+                    Tango::DeviceData cmd_reply = priv->tango_device->command_inout("GetAttributeUnit", arg_name);
+                    gint unit;
+                    cmd_reply >> unit;
+                    uca_camera_register_unit (UCA_CAMERA (kiro_camera), attr_name, (UcaUnit)unit);
+                }
+            }
+        }
+    }
+    catch (Tango::DevFailed &e) {
+        Tango::Except::print_exception (e);
+        g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_TANGO_EXCEPTION_OCCURED,
+                     "A TANGO exception was raised: '%s'", (const char *)e.errors[0].desc);
+        priv->construction_error = TRUE;
+    }
+}
+// ---------------------------------------------------------- //
+//                  END: TANGO <-> GLib                       //
+// ---------------------------------------------------------- //
+
+
+
 static void
 uca_kiro_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
@@ -487,11 +869,12 @@ uca_kiro_camera_set_property(GObject *object, guint property_id, const GValue *v
     }
 }
 
+
 static void
 uca_kiro_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (object);
-    
+
     switch (property_id) {
         case PROP_NAME:
             g_value_set_string (value, "KIRO camera");
@@ -701,294 +1084,10 @@ uca_kiro_camera_init(UcaKiroCamera *self)
     self->priv->kiro_receiver = KIRO_CLIENT (g_object_new (KIRO_TYPE_CLIENT, NULL));
 }
 
+
 G_MODULE_EXPORT GType
 uca_camera_get_type (void)
 {
     return UCA_TYPE_KIRO_CAMERA;
-}
-
-
-GType
-gtype_from_tango_type (Tango::CmdArgType t)
-{
-    using namespace Tango;
-        switch (t) {
-            case DEV_VOID:
-                return G_TYPE_NONE;
-            case DEV_BOOLEAN:
-                return G_TYPE_BOOLEAN;
-            case DEV_SHORT:
-                //Fall-through intentional
-            case DEV_INT:
-                //Fall-through intentional
-            case DEV_LONG:
-                return G_TYPE_INT;
-            case DEV_FLOAT:
-                return G_TYPE_FLOAT;
-            case DEV_DOUBLE:
-                return G_TYPE_DOUBLE;
-            case DEV_ULONG:
-                //return G_TYPE_ULONG;
-                //Fall-through intentional
-                //NOTE: There seems to be a bug somewhere either in TANGO or in GLib or in Pyhton that
-                //Breaks the functionality of the G_TYPE_ULONG properties. Using a G_TYPE_UINT instead
-                //works around this problem but might provoke potential overflows...
-            case DEV_USHORT:
-                return G_TYPE_UINT;
-            case CONST_DEV_STRING:
-                //Fall-through intentional
-            case DEV_STRING:
-                return G_TYPE_STRING;
-            case DEV_UCHAR:
-                return G_TYPE_UCHAR;
-            case DEV_LONG64:
-                return G_TYPE_INT64;
-            case DEV_ULONG64:
-                return G_TYPE_UINT64;
-            case DEV_STATE:
-                return G_TYPE_UINT;
-            /*
-            DEV_ENCODED
-            DEVVAR_CHARARRAY
-            DEVVAR_SHORTARRAY
-            DEVVAR_LONGARRAY
-            DEVVAR_FLOATARRAY
-            DEVVAR_DOUBLEARRAY
-            DEVVAR_USHORTARRAY
-            DEVVAR_ULONGARRAY
-            DEVVAR_STRINGARRAY
-            DEVVAR_LONGSTRINGARRAY
-            DEVVAR_DOUBLESTRINGARRAY
-            DEVVAR_BOOLEANARRAY
-            DEVVAR_LONG64ARRAY
-            DEVVAR_ULONG64ARRAY
-            */
-            default:
-                return G_TYPE_INVALID;
-        };
-}
-
-
-gint
-get_property_id_from_name(const gchar* name)
-{
-    guint idx = 0;
-    gboolean found = FALSE;
-    for (;idx < N_PROPERTIES; ++idx) {
-        if (0 == g_strcmp0(name, uca_camera_props[idx])) {
-            found = TRUE;
-            break;
-        }
-    }
-    return (TRUE == found) ? idx : -1;
-}
-
-void
-build_param_spec(GParamSpec **pspec, const Tango::AttributeInfoEx *attrInfo)
-{
-    GType type = gtype_from_tango_type ((Tango::CmdArgType)attrInfo->data_type);
-    const gchar *name = attrInfo->name.c_str ();
-    GParamFlags flags = G_PARAM_READABLE;
-    if (attrInfo->writable == Tango::AttrWriteType::WRITE)
-        flags = (GParamFlags) G_PARAM_READWRITE;
-
-    switch (type) {
-        case G_TYPE_BOOLEAN:
-            *pspec =
-            g_param_spec_boolean (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                FALSE,
-                flags);
-            break;
-        case G_TYPE_INT:
-            *pspec =
-            g_param_spec_int (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                G_MININT32, G_MAXINT32, 0,
-                flags);
-            break;
-        case G_TYPE_FLOAT:
-            *pspec =
-            g_param_spec_float (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                G_MINFLOAT, G_MAXFLOAT, 0.,
-                flags);
-            break;
-        case G_TYPE_DOUBLE:
-            *pspec =
-            g_param_spec_double (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                G_MINDOUBLE, G_MAXDOUBLE, 0.,
-                flags);
-            break;
-        case G_TYPE_UINT:
-            *pspec =
-            g_param_spec_uint (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                0, G_MAXUINT, 0,
-                flags);
-            break;
-        case G_TYPE_ULONG:
-            *pspec =
-            g_param_spec_ulong (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                0, G_MAXULONG, 0,
-                flags);
-            break;
-        case G_TYPE_STRING:
-            *pspec =
-            g_param_spec_string (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                "DEFAULT",
-                flags);
-            break;
-        case G_TYPE_UCHAR:
-            *pspec =
-            g_param_spec_uchar (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                0x00, 0xff, 0x42,
-                flags);
-            break;
-        case G_TYPE_INT64:
-            *pspec =
-            g_param_spec_int64 (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                G_MININT64, G_MAXINT64, 0,
-                flags);
-            break;
-        case G_TYPE_UINT64:
-            *pspec =
-            g_param_spec_uint64 (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                0, G_MAXUINT64, 0,
-                flags);
-            break;
-        case G_TYPE_LONG:
-            *pspec =
-            g_param_spec_long (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                G_MININT64, G_MAXINT64, 1,
-                flags);
-            break;
-        case G_TYPE_ENUM:
-            *pspec =
-            g_param_spec_uint (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                0, G_MAXUINT, 0,
-                flags);
-            break;
-        default:
-            *pspec =
-            g_param_spec_gtype (name,
-                attrInfo->description.c_str (),
-                g_strconcat ("KIRO TANGO <-> GLib interface of ", name, NULL),
-                type,
-                flags);
-    }
-}
-
-void 
-uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera)
-{
-    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (kiro_camera);
-    UcaKiroCameraClass *klass = UCA_KIRO_CAMERA_GET_CLASS (kiro_camera);
-    GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-    gboolean start_found, stop_found, unit_found = FALSE;
-
-    try {
-        Tango::CommandInfoList *cmd_list = priv->tango_device->command_list_query ();
-        for (vector<Tango::CommandInfo>::iterator iter = cmd_list->begin (); iter != cmd_list->end (); ++iter) {
-            //g_print ("Command: '%s'\n", (*iter).cmd_name.c_str ());
-            gint start_cmp = g_strcmp0((*iter).cmd_name.c_str (), "StartRecording");
-            if (0 == start_cmp) {
-                start_found = TRUE;
-                //g_print ("StartRecording has been found\n");
-            }
-            gint stop_cmp = g_strcmp0 ((*iter).cmd_name.c_str (), "StopRecording");
-            if (0 == stop_cmp) {
-                stop_found = TRUE;
-                //g_print ("StopRecording has been found\n");
-            }
-            gint unit_cmp = g_strcmp0((*iter).cmd_name.c_str (), "GetAttributeUnit");
-            if (0 == unit_cmp) {
-                unit_found = TRUE;
-                //g_print ("GetAttributeUnit has been found\n");
-            }
-        }
-
-        if ( !start_found || !stop_found ) {
-            g_warning ("The Server at '%s' does not provide the necessary 'StartRecording' and 'StopRecording' interface\n", priv->kiro_tango_address);
-            g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_BAD_CAMERA_INTERFACE,
-                         "The Server at '%s' does not provide the necessary 'StartRecording' and 'StopRecording' interface\n", priv->kiro_tango_address);
-            priv->construction_error = TRUE;
-            return;
-        }
-
-        vector<string> *attr_list = priv->tango_device->get_attribute_list ();
-        GList *non_base_attributes = NULL;
-        guint non_base_attributes_count = 0;
-
-        for (vector<string>::iterator iter = attr_list->begin (); iter != attr_list->end (); ++iter) {
-            Tango::AttributeInfoEx attrInfo =  priv->tango_device->attribute_query (*iter);
-            gint uca_base_prop_id = get_property_id_from_name ((*iter).c_str ());
-            if (-1 < uca_base_prop_id) {
-                guint is_name_attr = g_strcmp0 ((*iter).c_str (), "name");
-                if (0 == is_name_attr) {
-                    Tango::DeviceAttribute t_attr;
-                    priv->tango_device->read_attribute ("name", t_attr);
-                    string reply_name;
-                    t_attr >> reply_name;
-                    g_free (priv->remote_name);
-                    priv->remote_name = g_strdup (reply_name.c_str ());
-                }
-                kiro_properties[uca_base_prop_id] = g_object_class_find_property (gobject_class, uca_camera_props[uca_base_prop_id]);
-                g_object_class_override_property(G_OBJECT_CLASS (UCA_KIRO_CAMERA_GET_CLASS (kiro_camera)), uca_base_prop_id, uca_camera_props[uca_base_prop_id]);
-            }
-            else {
-                non_base_attributes = g_list_append (non_base_attributes, (gpointer)(*iter).c_str ());
-                non_base_attributes_count++;
-            }
-        }
-
-        if (non_base_attributes_count > 0) {
-            priv->kiro_dynamic_attributes = new GParamSpec* [N_PROPERTIES + non_base_attributes_count];
-            UcaKiroCameraClass *klass = UCA_KIRO_CAMERA_GET_CLASS (kiro_camera);
-            GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-            for (guint idx = 0; idx < non_base_attributes_count; idx++) {
-                const gchar *attr_name = (const gchar*)g_list_nth_data (non_base_attributes, idx);
-                Tango::AttributeInfoEx attrInfo = priv->tango_device->attribute_query (string(attr_name));
-                build_param_spec (&(priv->kiro_dynamic_attributes[N_PROPERTIES + idx]), &attrInfo);
-                g_object_class_install_property (gobject_class, N_PROPERTIES + idx, priv->kiro_dynamic_attributes[N_PROPERTIES + idx]);
-
-                if (unit_found) {
-                    Tango::DeviceData arg_name;
-                    arg_name << attr_name;
-                    Tango::DeviceData cmd_reply = priv->tango_device->command_inout("GetAttributeUnit", arg_name);
-                    gint unit;
-                    cmd_reply >> unit;
-                    uca_camera_register_unit (UCA_CAMERA (kiro_camera), attr_name, (UcaUnit)unit);
-                }
-            }
-        }
-    }
-    catch (Tango::DevFailed &e) {
-        Tango::Except::print_exception (e);
-        g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_TANGO_EXCEPTION_OCCURED,
-                     "A TANGO exception was raised: '%s'", (const char *)e.errors[0].desc);
-        priv->construction_error = TRUE;
-    }
 }
 
