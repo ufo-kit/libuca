@@ -251,6 +251,17 @@ try_handle_read_tango_property(GObject *object, guint property_id, GValue *value
             return;
         }
 
+        //Stupid workaround for TANGO::State attribute...
+        //Because they just HAD to make a special case
+        //for that one specific Enum...
+        if (0 == g_strcmp0(pspec->name, "State")) {
+            Tango::DevState state;
+            t_attr >> state;
+            g_value_set_uint (value, (unsigned int)state);
+            return;
+        }
+
+
         switch (value->g_type) {
         case G_TYPE_INT:
             T_TO_G_CONVERT (gint, t_attr, g_value_set_int, value);
