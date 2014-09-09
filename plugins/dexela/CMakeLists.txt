@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 project(ucadexela C)
-set(VERSION "1.2.0")
+set(VERSION "1.3.0")
 
 find_package(DEXELA)
 
@@ -20,7 +20,7 @@ if (DEXELA_FOUND)
     include_directories(${DEXELA_INCLUDE_DIRS}
                         ${UCA_CONFIGDIR})
 
-    add_library(ucadexela SHARED uca-dexela-camera.c)
+    add_library(ucadexela SHARED uca-dexela-camera.c software-roi.c)
 
     target_link_libraries(ucadexela ${UCA_DEPS} ${DEXELA_LIBRARIES})
 

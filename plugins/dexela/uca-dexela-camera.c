@@ -20,6 +20,7 @@
 #include <gmodule.h>
 #include "uca-dexela-camera.h"
 #include "dexela/dexela_api.h"
+#include "software-roi.h"
 
 #define UCA_DEXELA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_DEXELA_CAMERA, UcaDexelaCameraPrivate))
 
@@ -73,6 +74,10 @@ struct _UcaDexelaCameraPrivate {
     GValueArray *binnings;
     guint width;
     guint height;
+    guint roi_x;
+    guint roi_y;
+    guint roi_width;
+    guint roi_height;
     guint bits;
     gsize num_bytes;
 };
@@ -182,14 +187,24 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
             g_value_set_uint(value, priv->height);
             break;
         }
+        case PROP_ROI_X:
+        {
+            g_value_set_uint(value, priv->roi_x);
+            break;
+        }
+        case PROP_ROI_Y:
+        {
+            g_value_set_uint(value, priv->roi_y);
+            break;
+        }
         case PROP_ROI_WIDTH:
         {
-            g_value_set_uint(value, dexela_get_width());
+            g_value_set_uint(value, priv->roi_width);
             break;
         }
         case PROP_ROI_HEIGHT:
         {
-            g_value_set_uint(value, dexela_get_height());
+            g_value_set_uint(value, priv->roi_height);
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -244,6 +259,26 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
         {
             const gdouble exposureTimeInSeconds = g_value_get_double(value);
             dexela_set_exposure_time_micros((gint) (exposureTimeInSeconds * MICROS_TO_SECONDS_FACTOR));
+            break;
+        }
+        case PROP_ROI_X:
+        {
+            priv->roi_x = g_value_get_uint(value);
+            break;
+        }
+        case PROP_ROI_Y:
+        {
+            priv->roi_y = g_value_get_uint(value);
+            break;
+        }
+        case PROP_ROI_WIDTH:
+        {
+            priv->roi_width = g_value_get_uint(value);
+            break;
+        }
+        case PROP_ROI_HEIGHT:
+        {
+            priv->roi_height = g_value_get_uint(value);
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -315,9 +350,10 @@ static void uca_dexela_camera_stop_recording(UcaCamera *camera, GError **error)
 static gboolean uca_dexela_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 {
     g_debug("grab called");
-    g_return_if_fail(UCA_IS_DEXELA_CAMERA(camera));
+    g_return_val_if_fail(UCA_IS_DEXELA_CAMERA(camera), FALSE);
     UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
-    memcpy((gchar *) data, dexela_grab(), priv->width * priv->height * priv->num_bytes);
+    guchar* fullFrame = dexela_grab();
+    apply_software_roi(fullFrame, priv->width, data, priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height);
     return TRUE;
 }
 
@@ -361,12 +397,12 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
     for (guint i = 0; base_overrideables[i] != 0; i++) {
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
     }
-    dexela_properties[PROP_GAIN_MODE] = 
+    dexela_properties[PROP_GAIN_MODE] =
         g_param_spec_uint("gain-mode",
             "High or Low Full Well",
             "High (1) or Low (0) Full Well",
             0, 1, 0, G_PARAM_READWRITE);
-    dexela_properties[PROP_TEST_MODE] = 
+    dexela_properties[PROP_TEST_MODE] =
         g_param_spec_boolean("test-mode",
             "Enable or disable test mode",
             "Enable (true) or disable (false) test mode",
@@ -388,6 +424,10 @@ static void uca_dexela_camera_init(UcaDexelaCamera *self)
     priv->bits = dexela_get_bit_depth();
     priv->width = dexela_get_width();
     priv->height = dexela_get_height();
+    priv->roi_x = 0;
+    priv->roi_y = 0;
+    priv->roi_width = priv->width;
+    priv->roi_height = priv->height;
     priv->num_bytes = 2;
 }
 
