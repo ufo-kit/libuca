@@ -18,6 +18,7 @@
 #include <string.h>
 #include <gio/gio.h>
 #include <gmodule.h>
+#include <math.h>
 #include "uca-dexela-camera.h"
 #include "dexela/dexela_api.h"
 #include "software-roi.h"
@@ -69,6 +70,7 @@ static gint base_overrideables[] = {
 static GParamSpec *dexela_properties[N_PROPERTIES] = { NULL, };
 
 static const gdouble MICROS_TO_SECONDS_FACTOR = 1e6d;
+static const gdouble MINIMUM_EXPOSURE_TIME_IN_SECONDS = 0.017d; // 17ms as per documentation
 
 struct _UcaDexelaCameraPrivate {
     GValueArray *binnings;
@@ -257,7 +259,7 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
         {
-            const gdouble exposureTimeInSeconds = g_value_get_double(value);
+            const gdouble exposureTimeInSeconds = fmax(MINIMUM_EXPOSURE_TIME_IN_SECONDS, g_value_get_double(value));
             dexela_set_exposure_time_micros((gint) (exposureTimeInSeconds * MICROS_TO_SECONDS_FACTOR));
             break;
         }
