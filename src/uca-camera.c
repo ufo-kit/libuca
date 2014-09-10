@@ -101,7 +101,6 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "sensor-horizontal-binnings",
     "sensor-vertical-binning",
     "sensor-vertical-binnings",
-    "sensor-max-frame-rate",
     "trigger-mode",
     "exposure-time",
     "frames-per-second",
@@ -169,13 +168,6 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
             {
                 gdouble frames_per_second;
                 frames_per_second = g_value_get_double (value);
-
-                gfloat max_framerate;
-                g_object_get (object, "sensor-max-frame-rate", &max_framerate, NULL);
-
-                if (max_framerate < frames_per_second)
-                    frames_per_second = max_framerate;
-
                 g_object_set (object, "exposure-time", 1. / frames_per_second, NULL);
             }
             break;
@@ -224,16 +216,11 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
                 gdouble exposure_time;
 
                 g_object_get (object, "exposure-time", &exposure_time, NULL);
-                if (exposure_time > 0)
-                {
+
+                if (exposure_time > 0.0)
                     g_value_set_double (value, 1. / exposure_time);
-                }
                 else
-                {
-                    gfloat max_framerate;
-                    g_object_get (object, "sensor-max-frame-rate", &max_framerate, NULL);
-                    g_value_set_double (value, max_framerate);
-                }
+                    g_warning ("Invalid `::exposure-time' set");
             }
             break;
 
@@ -424,13 +411,6 @@ uca_camera_class_init (UcaCameraClass *klass)
                 1, G_MAXUINT, 1,
                 G_PARAM_READABLE), G_PARAM_READABLE);
 
-    camera_properties[PROP_SENSOR_MAX_FRAME_RATE] =
-        g_param_spec_float(uca_camera_props[PROP_SENSOR_MAX_FRAME_RATE],
-            "Maximum frame rate",
-            "Maximum frame rate at full frame resolution",
-            0.0f, G_MAXFLOAT, 1.0f,
-            G_PARAM_READABLE);
-
     camera_properties[PROP_TRIGGER_MODE] =
         g_param_spec_enum("trigger-mode",
             "Trigger mode",
@@ -587,7 +567,6 @@ uca_camera_init (UcaCamera *camera)
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_BITDEPTH], UCA_UNIT_COUNT);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HORIZONTAL_BINNING], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_VERTICAL_BINNING], UCA_UNIT_PIXEL);
-    uca_camera_set_property_unit (camera_properties[PROP_SENSOR_MAX_FRAME_RATE], UCA_UNIT_COUNT);
     uca_camera_set_property_unit (camera_properties[PROP_EXPOSURE_TIME], UCA_UNIT_SECOND);
     uca_camera_set_property_unit (camera_properties[PROP_FRAMES_PER_SECOND], UCA_UNIT_COUNT);
     uca_camera_set_property_unit (camera_properties[PROP_ROI_X], UCA_UNIT_PIXEL);

@@ -71,7 +71,6 @@ static gint base_overrideables[] = {
     PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
-    PROP_SENSOR_MAX_FRAME_RATE,
     PROP_SENSOR_BITDEPTH,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
@@ -418,9 +417,6 @@ uca_xkit_camera_get_property (GObject *object,
     switch (property_id) {
         case PROP_NAME:
             g_value_set_string (value, "xkit");
-            break;
-        case PROP_SENSOR_MAX_FRAME_RATE:
-            g_value_set_float (value, 150.0f);
             break;
         case PROP_SENSOR_WIDTH:
             g_value_set_uint (value, CHIPS_PER_ROW * MEDIPIX_SENSOR_SIZE);

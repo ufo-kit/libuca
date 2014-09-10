@@ -44,7 +44,6 @@ static const gint mock_overrideables[] = {
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
     PROP_ROI_HEIGHT,
-    PROP_SENSOR_MAX_FRAME_RATE,
     PROP_HAS_STREAMING,
     PROP_HAS_CAMRAM_RECORDING,
     0,
@@ -293,20 +292,7 @@ uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *
 
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
-            {
-                gdouble exp_t;
-                exp_t = g_value_get_double(value);
-
-                gfloat max_framerate;
-                g_object_get (object, "sensor-max-frame-rate", &max_framerate, NULL);
-
-                gdouble min_exposure_time = 1. / max_framerate;
-
-                if (exp_t < min_exposure_time)
-                    exp_t = min_exposure_time;
-
-                priv->exposure_time = exp_t;
-            }
+            priv->exposure_time = g_value_get_double (value);
             break;
         case PROP_ROI_X:
             priv->roi_x = g_value_get_uint(value);
@@ -358,9 +344,6 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
             break;
         case PROP_ROI_HEIGHT:
             g_value_set_uint(value, priv->roi_height);
-            break;
-        case PROP_SENSOR_MAX_FRAME_RATE:
-            g_value_set_float(value, priv->max_frame_rate);
             break;
         case PROP_HAS_STREAMING:
             g_value_set_boolean(value, TRUE);

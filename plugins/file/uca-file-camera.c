@@ -39,7 +39,6 @@ static const gint file_overrideables[] = {
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
     PROP_SENSOR_BITDEPTH,
-    PROP_SENSOR_MAX_FRAME_RATE,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
@@ -236,9 +235,6 @@ uca_file_camera_get_property(GObject *object, guint property_id, GValue *value, 
             break;
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint (value, priv->bitdepth);
-            break;
-        case PROP_SENSOR_MAX_FRAME_RATE:
-            g_value_set_float (value, 100.0f);
             break;
         case PROP_ROI_X:
             g_value_set_uint (value, 0);
