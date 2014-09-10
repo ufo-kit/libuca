@@ -63,16 +63,16 @@ property:
 
 1. ``UCA_CAMERA_TRIGGER_AUTO``: Exposure is triggered by the camera
    itself.
-2. ``UCA_CAMERA_TRIGGER_INTERNAL``: Exposure is triggered via software.
+2. ``UCA_CAMERA_TRIGGER_SOFTWARE``: Exposure is triggered via software.
 3. ``UCA_CAMERA_TRIGGER_EXTERNAL``: Exposure is triggered by an external
    hardware mechanism.
 
-With ``UCA_CAMERA_TRIGGER_INTERNAL`` you have to trigger with
+With ``UCA_CAMERA_TRIGGER_SOFTWARE`` you have to trigger with
 ``uca_camera_trigger``::
 
         /* thread A */
         g_object_set (G_OBJECT (camera),
-                      "trigger-mode", UCA_CAMERA_TRIGGER_INTERNAL,
+                      "trigger-mode", UCA_CAMERA_TRIGGER_SOFTWARE,
                       NULL);
 
         uca_camera_start_recording (camera, NULL);
