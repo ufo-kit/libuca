@@ -81,7 +81,6 @@ static gint base_overrideables[] = {
     PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
-    PROP_SENSOR_MAX_FRAME_RATE,
     PROP_SENSOR_BITDEPTH,
     PROP_EXPOSURE_TIME,
     PROP_FRAMES_PER_SECOND,
@@ -497,9 +496,6 @@ uca_ufo_camera_get_property(GObject *object, guint property_id, GValue *value, G
             break;
         case PROP_SENSOR_BITDEPTH:
             g_value_set_uint (value, priv->n_bits);
-            break;
-        case PROP_SENSOR_MAX_FRAME_RATE:
-            g_value_set_float(value, 340.0);
             break;
         case PROP_SENSOR_TEMPERATURE:
             {

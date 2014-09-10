@@ -52,7 +52,6 @@ static gint base_overrideables[] = {
     PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
-    PROP_SENSOR_MAX_FRAME_RATE,
     PROP_EXPOSURE_TIME,
     PROP_TRIGGER_MODE,
     PROP_ROI_X,
@@ -211,12 +210,6 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         case PROP_SENSOR_VERTICAL_BINNINGS:
         {
             g_value_set_boxed(value, priv->binnings);
-            break;
-        }
-        case PROP_SENSOR_MAX_FRAME_RATE:
-        {
-            // TODO: we do not know how to compute the correct value, so just return 0 for now
-            g_value_set_float(value, 0.0f);
             break;
         }
         case PROP_GAIN_MODE:
