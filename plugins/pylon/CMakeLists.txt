@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 project(ucapylon C)
-set(VERSION "1.2.0")
+set(VERSION "1.2.1")
 
 find_package(Pylon)
 
