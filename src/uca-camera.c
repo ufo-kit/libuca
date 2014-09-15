@@ -707,23 +707,24 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
         goto error_stop_recording;
     }
 
+    priv->is_recording = FALSE;
+
+    if (priv->buffered) {
+        g_thread_join (priv->read_thread);
+        priv->read_thread = NULL;
+    }
+
     g_static_mutex_lock (&access_lock);
     (*klass->stop_recording)(camera, &tmp_error);
     g_static_mutex_unlock (&access_lock);
 
     if (tmp_error == NULL) {
         priv->is_readout = FALSE;
-        priv->is_recording = FALSE;
         /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
         g_object_notify (G_OBJECT (camera), "is-recording");
     }
     else
         g_propagate_error (error, tmp_error);
-
-    if (priv->buffered) {
-        g_thread_join (priv->read_thread);
-        priv->read_thread = NULL;
-    }
 
     if (camera->priv->ring_buffer != NULL) {
         g_object_unref (camera->priv->ring_buffer);
