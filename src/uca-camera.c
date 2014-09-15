@@ -599,6 +599,26 @@ uca_camera_init (UcaCamera *camera)
     uca_camera_set_property_unit (camera_properties[PROP_RECORDED_FRAMES], UCA_UNIT_COUNT);
 }
 
+
+static void
+create_new_buffer (UcaCamera *camera, gpointer *buff_ptr, guint num_buffers)
+{
+    guint width, height, bitdepth;
+    guint pixel_size;
+
+    g_object_get (camera,
+                  "roi-width", &width,
+                  "roi-height", &height,
+                  "sensor-bitdepth", &bitdepth,
+                  NULL);
+
+    pixel_size = bitdepth <= 8 ? 1 : 2;
+
+    *buff_ptr = uca_ring_buffer_new (width * height * pixel_size,
+                                                     num_buffers);
+}
+
+
 static gpointer
 buffer_thread (UcaCamera *camera)
 {
@@ -610,6 +630,9 @@ buffer_thread (UcaCamera *camera)
     while (camera->priv->is_recording) {
         gpointer buffer;
 
+        if (!camera->priv->ring_buffer)
+            create_new_buffer (camera, (gpointer*)&(camera->priv->ring_buffer), camera->priv->num_buffers);
+
         buffer = uca_ring_buffer_get_write_pointer (camera->priv->ring_buffer);
 
         if (!(*klass->grab) (camera, buffer, &error))
@@ -620,6 +643,7 @@ buffer_thread (UcaCamera *camera)
 
     return error;
 }
+
 
 /**
  * uca_camera_start_recording:
@@ -675,19 +699,7 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
         g_propagate_error (error, tmp_error);
 
     if (priv->buffered) {
-        guint width, height, bitdepth;
-        guint pixel_size;
-
-        g_object_get (camera,
-                      "roi-width", &width,
-                      "roi-height", &height,
-                      "sensor-bitdepth", &bitdepth,
-                      NULL);
-
-        pixel_size = bitdepth <= 8 ? 1 : 2;
-        priv->ring_buffer = uca_ring_buffer_new (width * height * pixel_size,
-                                                         priv->num_buffers);
-
+        create_new_buffer (camera, (gpointer*)&(priv->ring_buffer), priv->num_buffers);
         /* Let's read out the frames from another thread */
         priv->read_thread = g_thread_new ("read-thread", (GThreadFunc) buffer_thread, camera);
     }
@@ -968,6 +980,9 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
          * often, as buffering is usually used in those cases when the camera is
          * faster than the software.
          */
+        if (!camera->priv->ring_buffer) {
+            create_new_buffer (camera, (gpointer*)&(camera->priv->ring_buffer), camera->priv->num_buffers);
+        }
         while (!uca_ring_buffer_available (camera->priv->ring_buffer))
             ;
 
