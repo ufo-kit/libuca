@@ -147,6 +147,44 @@ test_recording_property (Fixture *fixture, gconstpointer data)
 }
 
 static void
+test_recording_buffered (Fixture *fixture, gconstpointer data)
+{
+    UcaCamera *camera = UCA_CAMERA (fixture->camera);
+    GError *error = NULL;
+    guint width, height, bitdepth;
+    gsize buffer_size;
+    gchar *buffer;
+
+    g_object_get (G_OBJECT (camera),
+                  "roi-width", &width,
+                  "roi-height", &height,
+                  "sensor-bitdepth", &bitdepth,
+                  NULL);
+
+    buffer_size = width * height * (bitdepth <= 8 ? 1 : 2);
+    buffer = g_malloc0 (buffer_size);
+
+    g_object_set (G_OBJECT (camera),
+                  "buffered", TRUE,
+                  "num-buffers", 5,
+                  NULL);
+
+    uca_camera_start_recording (camera, &error);
+    g_assert_no_error (error);
+
+    for (int i = 0; i < 10; i++) {
+        g_assert (uca_camera_grab (camera, (gpointer) buffer, &error));
+        g_assert_no_error (error);
+    }
+
+    uca_camera_stop_recording (camera, &error);
+    g_assert_no_error (error);
+
+    g_free (buffer);
+}
+
+
+static void
 test_base_properties (Fixture *fixture, gconstpointer data)
 {
     UcaCamera *camera = UCA_CAMERA (fixture->camera);
@@ -274,6 +312,7 @@ int main (int argc, char *argv[])
         {"/recording", test_recording},
         {"/recording/signal", test_recording_signal},
         {"/recording/asynchronous", test_recording_async},
+        {"/recording/buffered", test_recording_buffered},
         {"/properties/base", test_base_properties},
         {"/properties/recording", test_recording_property},
         {"/properties/binnings", test_binnings_properties},
