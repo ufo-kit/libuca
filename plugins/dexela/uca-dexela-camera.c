@@ -49,6 +49,8 @@ static gint base_overrideables[] = {
     PROP_NAME,
     PROP_SENSOR_WIDTH,
     PROP_SENSOR_HEIGHT,
+    PROP_SENSOR_PIXEL_WIDTH,
+    PROP_SENSOR_PIXEL_HEIGHT,
     PROP_SENSOR_BITDEPTH,
     PROP_SENSOR_HORIZONTAL_BINNING,
     PROP_SENSOR_HORIZONTAL_BINNINGS,
@@ -71,6 +73,7 @@ static GParamSpec *dexela_properties[N_PROPERTIES] = { NULL, };
 
 static const gdouble MICROS_TO_SECONDS_FACTOR = 1e6d;
 static const gdouble MINIMUM_EXPOSURE_TIME_IN_SECONDS = 0.017d; // 17ms as per documentation
+static const gdouble PIXEL_SIZE = 74.8e-6; // 74.8µm as per data sheet
 
 struct _UcaDexelaCameraPrivate {
     GValueArray *binnings;
@@ -187,6 +190,16 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
         case PROP_SENSOR_HEIGHT:
         {
             g_value_set_uint(value, priv->height);
+            break;
+        }
+        case PROP_SENSOR_PIXEL_WIDTH:
+        {
+            g_value_set_double(value, PIXEL_SIZE);
+            break;
+        }
+        case PROP_SENSOR_PIXEL_HEIGHT:
+        {
+            g_value_set_double(value, PIXEL_SIZE);
             break;
         }
         case PROP_ROI_X:
