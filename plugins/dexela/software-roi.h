@@ -13,6 +13,6 @@
  * @param roiWidth
  * @param roiHeight
  */
-void apply_software_roi(const guchar* src, guint srcWidth, guchar* dest, guint x, guint y, guint roiWidth, guint roiHeight);
+void apply_software_roi(const guchar* src, guint srcWidth, guint bytesPerPixel, guchar* dest, guint x, guint y, guint roiWidth, guint roiHeight);
 
 #endif // SOFTWAREROI_H

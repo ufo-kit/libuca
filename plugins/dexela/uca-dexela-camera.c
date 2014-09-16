@@ -353,7 +353,7 @@ static gboolean uca_dexela_camera_grab(UcaCamera *camera, gpointer data, GError 
     g_return_val_if_fail(UCA_IS_DEXELA_CAMERA(camera), FALSE);
     UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
     guchar* fullFrame = dexela_grab();
-    apply_software_roi(fullFrame, priv->width, data, priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height);
+    apply_software_roi(fullFrame, priv->width, priv->num_bytes, data, priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height);
     return TRUE;
 }
 
