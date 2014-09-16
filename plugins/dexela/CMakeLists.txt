@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 project(ucadexela C)
-set(VERSION "1.3.0")
+set(VERSION "1.3.1")
 
 find_package(DEXELA)
 
