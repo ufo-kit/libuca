@@ -136,6 +136,7 @@ enum {
     PROP_COOLING_POINT_DEFAULT,
     PROP_NOISE_FILTER,
     PROP_TIMESTAMP_MODE,
+    PROP_VERSION,
     N_PROPERTIES
 };
 
@@ -167,6 +168,8 @@ static gint base_overrideables[] = {
 };
 
 static GParamSpec *pco_properties[N_PROPERTIES] = { NULL, };
+
+static const gchar* DEFAULT_VERSION = "0, 0.0, 0.0";
 
 /*
  * This structure defines type-specific properties of PCO cameras.
@@ -211,6 +214,7 @@ struct _UcaPcoCameraPrivate {
 
     guint16 delay_timebase;
     guint16 exposure_timebase;
+    gchar *version;
 };
 
 static pco_cl_map_entry pco_cl_map[] = {
@@ -1309,6 +1313,10 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
             }
             break;
 
+        case PROP_VERSION:
+            g_value_set_string (value, priv->version);
+            break;
+
         case PROP_IS_RECORDING:
             {
                 bool is_recording;
@@ -1345,6 +1353,11 @@ uca_pco_camera_finalize(GObject *object)
             Fg_FreeMemEx(priv->fg, priv->fg_mem);
 
         Fg_FreeGrabber (priv->fg);
+    }
+
+    if (priv->version) {
+        g_free (priv->version);
+        priv->version = NULL;
     }
 
     if (priv->pco)
@@ -1576,6 +1589,13 @@ uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             UCA_TYPE_PCO_CAMERA_TIMESTAMP, UCA_PCO_CAMERA_TIMESTAMP_NONE,
             G_PARAM_READWRITE);
 
+    pco_properties[PROP_VERSION] =
+        g_param_spec_string("version",
+            "Camera version",
+            "Camera version given as `serial number, hardware major.minor, firmware major.minor'",
+            DEFAULT_VERSION,
+            G_PARAM_READABLE);
+
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, pco_properties[id]);
 
@@ -1589,6 +1609,8 @@ setup_pco_camera (UcaPcoCameraPrivate *priv)
     guint16 roi[4];
     guint16 camera_type;
     guint16 camera_subtype;
+    guint32 serial;
+    guint16 version[4];
 
     priv->pco = pco_init();
 
@@ -1625,6 +1647,10 @@ setup_pco_camera (UcaPcoCameraPrivate *priv)
     priv->roi_width = roi[2] - roi[0] + 1;
     priv->roi_height = roi[3] - roi[1] + 1;
     priv->num_recorded_images = 0;
+
+    pco_get_camera_version (priv->pco, &serial, &version[0], &version[1], &version[2], &version[3]);
+    g_free (priv->version);
+    priv->version = g_strdup_printf ("%u, %u.%u, %u.%u", serial, version[0], version[1], version[2], version[3]);
 
     return TRUE;
 }
@@ -1698,6 +1724,7 @@ uca_pco_camera_init (UcaPcoCamera *self)
     priv->delay_timebase = TIMEBASE_INVALID;
     priv->exposure_timebase = TIMEBASE_INVALID;
     priv->construct_error = NULL;
+    priv->version = g_strdup (DEFAULT_VERSION);
 
     if (!setup_pco_camera (priv))
         return;
