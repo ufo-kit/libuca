@@ -1,10 +1,29 @@
 Changelog
 =========
 
+Changes in libuca 1.6
+---------------------
+
+Released on September 19th 2014
+
+This is mainly a cleanup and bugfix release with the following major updates:
+
+- Updated and fixed the Dexela plugin (v1.3.2).
+- Fixed a race condition for buffered acquisition.
+- Added `version` property to pco cameras.
+- Reset all property units and warn on override
+
+### API changes
+
+- Removed "sensor-max-frame-rate" property.
+- Remove unused virtual `record_` functions.
+- Added `uca_camera_set_writable` and `uca_camera_is_writable_during_acquisition`.
+
+
 Changes in libuca 1.5
 ---------------------
 
-Released on July 22nd 2013.
+Released on July 22nd 2014.
 
 ### API additions
 
