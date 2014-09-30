@@ -137,6 +137,7 @@ enum {
     PROP_NOISE_FILTER,
     PROP_TIMESTAMP_MODE,
     PROP_VERSION,
+    PROP_EDGE_GLOBAL_SHUTTER,
     N_PROPERTIES
 };
 
@@ -944,6 +945,15 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
             }
             break;
 
+        case PROP_EDGE_GLOBAL_SHUTTER:
+            {
+                pco_edge_shutter shutter;
+
+                shutter = g_value_get_boolean (value) ? PCO_EDGE_GLOBAL_SHUTTER : PCO_EDGE_ROLLING_SHUTTER;
+                err = pco_edge_set_shutter (priv->pco, shutter);
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             return;
@@ -1329,6 +1339,14 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
             g_value_set_string (value, priv->version);
             break;
 
+        case PROP_EDGE_GLOBAL_SHUTTER:
+            {
+                pco_edge_shutter shutter;
+                err = pco_edge_get_shutter (priv->pco, &shutter);
+                g_value_set_boolean (value, shutter == PCO_EDGE_GLOBAL_SHUTTER);
+            }
+            break;
+
         case PROP_IS_RECORDING:
             {
                 bool is_recording;
@@ -1607,6 +1625,12 @@ uca_pco_camera_class_init(UcaPcoCameraClass *klass)
             "Camera version given as `serial number, hardware major.minor, firmware major.minor'",
             DEFAULT_VERSION,
             G_PARAM_READABLE);
+
+    pco_properties[PROP_EDGE_GLOBAL_SHUTTER] =
+        g_param_spec_boolean("global-shutter",
+            "Global shutter enabled",
+            "Global shutter enabled",
+            FALSE, G_PARAM_READWRITE);
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, pco_properties[id]);
