@@ -943,6 +943,9 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     else {
         gpointer buffer;
 
+        if (camera->priv->ring_buffer == NULL)
+            return FALSE;
+
         /*
          * Spin-lock until we can read something. This shouldn't happen to
          * often, as buffering is usually used in those cases when the camera is
