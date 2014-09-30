@@ -219,6 +219,7 @@ struct _UcaPcoCameraPrivate {
 
 static pco_cl_map_entry pco_cl_map[] = {
     { CAMERATYPE_PCO_EDGE,       "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
+    { CAMERATYPE_PCO_EDGE_GL,    "libFullAreaGray8.so",  FG_CL_8BIT_FULL_10,        FG_GRAY,     30.0f, FALSE },
     { CAMERATYPE_PCO4000,        "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16,    5.0f, TRUE  },
     { CAMERATYPE_PCO_DIMAX_STD,  "libDualAreaGray16.so", FG_CL_SINGLETAP_16_BIT,    FG_GRAY16, 1279.0f, TRUE  },
     { 0, NULL, 0, 0, 0.0f, FALSE }
@@ -378,6 +379,13 @@ get_internal_delay (UcaPcoCamera *camera)
     return 0.0;
 }
 
+static gboolean
+is_edge (UcaPcoCameraPrivate *priv)
+{
+    const int type = priv->description->type;
+    return type == CAMERATYPE_PCO_EDGE || type == CAMERATYPE_PCO_EDGE_GL;
+}
+
 static int
 fg_callback(frameindex_t frame, struct fg_apc_data *apc)
 {
@@ -385,11 +393,12 @@ fg_callback(frameindex_t frame, struct fg_apc_data *apc)
     UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
     gpointer data = Fg_getImagePtrEx(priv->fg, frame, priv->fg_port, priv->fg_mem);
 
-    if (priv->description->type != CAMERATYPE_PCO_EDGE)
-        camera->grab_func(data, camera->user_data);
-    else {
+    if (is_edge (priv)) {
         pco_get_reorder_func(priv->pco)(priv->grab_buffer, data, priv->frame_width, priv->frame_height);
         camera->grab_func(priv->grab_buffer, camera->user_data);
+    }
+    else {
+        camera->grab_func(data, camera->user_data);
     }
 
     return 0;
@@ -488,7 +497,7 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
     /*     g_warning("Cannot set binning\n"); */
 
     if (priv->frame_width != priv->roi_width || priv->frame_height != priv->roi_height || priv->fg_mem == NULL) {
-        guint fg_width = priv->description->type == CAMERATYPE_PCO_EDGE ? 2 * priv->roi_width : priv->roi_width;
+        guint fg_width = is_edge (priv) ? 2 * priv->roi_width : priv->roi_width;
 
         priv->frame_width = priv->roi_width;
         priv->frame_height = priv->roi_height;
@@ -666,7 +675,7 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 
     frame = Fg_getImagePtrEx (priv->fg, priv->last_frame, priv->fg_port, priv->fg_mem);
 
-    if (priv->description->type == CAMERATYPE_PCO_EDGE)
+    if (is_edge (priv))
         pco_get_reorder_func(priv->pco)((guint16 *) data, frame, priv->frame_width, priv->frame_height);
     else
         memcpy((gchar *) data, (gchar *) frame, priv->buffer_size);
@@ -953,8 +962,7 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
 
     /* Should fix #20 */
     if (uca_camera_is_recording (UCA_CAMERA (object))) {
-        if (priv->description->type == CAMERATYPE_PCO_EDGE ||
-            priv->description->type == CAMERATYPE_PCO4000) {
+        if (priv->description->type == CAMERATYPE_PCO4000) {
             return;
         }
     }
@@ -981,6 +989,9 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
                 case CAMERATYPE_PCO_EDGE:
                     g_value_set_double (value, 0.0000065);
                     break;
+                case CAMERATYPE_PCO_EDGE_GL:
+                    g_value_set_double (value, 0.0000065);
+                    break;
                 case CAMERATYPE_PCO_DIMAX_STD:
                     g_value_set_double (value, 0.0000110);
                     break;
@@ -993,6 +1004,9 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
         case PROP_SENSOR_PIXEL_HEIGHT:
             switch (priv->description->type) {
                 case CAMERATYPE_PCO_EDGE:
+                    g_value_set_double (value, 0.0000065);
+                    break;
+                case CAMERATYPE_PCO_EDGE_GL:
                     g_value_set_double (value, 0.0000065);
                     break;
                 case CAMERATYPE_PCO_DIMAX_STD:
@@ -1034,6 +1048,9 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
                     g_value_set_uint(value, 14);
                     break;
                 case CAMERATYPE_PCO_EDGE:
+                    g_value_set_uint(value, 16);
+                    break;
+                case CAMERATYPE_PCO_EDGE_GL:
                     g_value_set_uint(value, 16);
                     break;
                 case CAMERATYPE_PCO_DIMAX_STD:
@@ -1253,12 +1270,7 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
             break;
 
         case PROP_NAME:
-            {
-                gchar *name = NULL;
-                err = pco_get_name (priv->pco, &name);
-                g_value_set_string (value, name);
-                g_free(name);
-            }
+            g_value_set_string (value, "pco");
             break;
 
         case PROP_COOLING_POINT:
@@ -1674,7 +1686,7 @@ setup_frame_grabber (UcaPcoCameraPrivate *priv)
     FG_TRY_PARAM (priv->fg, &priv->construct_error, FG_CAMERA_LINK_CAMTYP, &priv->description->cl_type, priv->fg_port);
     FG_TRY_PARAM (priv->fg, &priv->construct_error, FG_FORMAT, &priv->description->cl_format, priv->fg_port);
 
-    fg_width = priv->description->type == CAMERATYPE_PCO_EDGE ? priv->width * 2 : priv->width;
+    fg_width = is_edge (priv) ? priv->width * 2 : priv->width;
     FG_TRY_PARAM (priv->fg, &priv->construct_error, FG_WIDTH, &fg_width, priv->fg_port);
 
     fg_height = priv->height;
