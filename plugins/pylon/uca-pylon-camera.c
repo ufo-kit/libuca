@@ -55,6 +55,7 @@ enum {
     PROP_ROI_HEIGHT_DEFAULT,
     PROP_GAIN,
     PROP_BALANCE_WHITE_AUTO,
+    PROP_EXPOSURE_AUTO,
     N_PROPERTIES
 };
 
@@ -89,8 +90,10 @@ struct _UcaPylonCameraPrivate {
 
     guint width;
     guint height;
-    guint16 roi_x, roi_y;
-    guint16 roi_width, roi_height;
+    guint16 roi_x;
+    guint16 roi_y;
+    guint16 roi_width;
+    guint16 roi_height;
     GValueArray *binnings;
 };
 
@@ -136,65 +139,67 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
     GError* error = NULL;
 
     switch (property_id) {
-        case PROP_SENSOR_HORIZONTAL_BINNING:
-          /* intentional fall-through*/
-        case PROP_SENSOR_VERTICAL_BINNING:
-          /* intentional fall-through*/
-        case PROP_TRIGGER_MODE:
-          break;
-        case PROP_BALANCE_WHITE_AUTO:
-          {
-              pylon_camera_set_int_attribute("BalanceWhiteAuto", g_value_get_enum(value), &error);
-          }
-          break;
-
-        case PROP_ROI_X:
-          {
-              priv->roi_x = g_value_get_uint(value);
-              pylon_set_roi(object, &error);
-          }
-          break;
-
-        case PROP_ROI_Y:
-          {
-              priv->roi_y = g_value_get_uint(value);
-              pylon_set_roi(object, &error);
-          }
-          break;
-
-        case PROP_ROI_WIDTH:
-          {
-              priv->roi_width = g_value_get_uint(value);
-              pylon_set_roi(object, &error);
-          }
-          break;
-
-        case PROP_ROI_HEIGHT:
-          {
-              priv->roi_height = g_value_get_uint(value);
-              pylon_set_roi(object, &error);
-          }
-          break;
-
-        case PROP_EXPOSURE_TIME:
-          pylon_camera_set_exposure_time(g_value_get_double(value), &error);
-          break;
-
-        case PROP_GAIN:
-            pylon_camera_set_gain(g_value_get_int(value), &error);
-            break;
-
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-            return;
+    case PROP_SENSOR_HORIZONTAL_BINNING:
+      /* intentional fall-through*/
+    case PROP_SENSOR_VERTICAL_BINNING:
+      /* intentional fall-through*/
+    case PROP_TRIGGER_MODE:
+        break;
+    case PROP_BALANCE_WHITE_AUTO:
+    {
+        pylon_camera_set_int_attribute("BalanceWhiteAuto", g_value_get_enum(value), &error);
+        break;
+    }
+    case PROP_EXPOSURE_AUTO:
+    {
+        pylon_camera_set_int_attribute("ExposureAuto", g_value_get_enum(value), &error);
+        break;
+    }
+    case PROP_ROI_X:
+    {
+        priv->roi_x = g_value_get_uint(value);
+        gint max_roi_width = priv->width - priv->roi_x;
+        priv->roi_width = MIN(priv->roi_width, max_roi_width);
+        pylon_set_roi(object, &error);
+        break;
+    }
+    case PROP_ROI_Y:
+    {
+        priv->roi_y = g_value_get_uint(value);
+        gint max_roi_height = priv->height - priv->roi_y;
+        priv->roi_height = MIN(priv->roi_height, max_roi_height);
+        pylon_set_roi(object, &error);
+        break;
+    }
+    case PROP_ROI_WIDTH:
+    {
+        priv->roi_width = g_value_get_uint(value);
+        pylon_set_roi(object, &error);
+        break;
+    }
+    case PROP_ROI_HEIGHT:
+    {
+        priv->roi_height = g_value_get_uint(value);
+        pylon_set_roi(object, &error);
+        break;
+    }
+    case PROP_EXPOSURE_TIME:
+        pylon_camera_set_exposure_time(g_value_get_double(value), &error);
+        break;
+    case PROP_GAIN:
+        pylon_camera_set_gain(g_value_get_int(value), &error);
+        break;
+    default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+        return;
     }
 
     if (error) {
-      if(error->message) {
-    g_warning("failed to set property %d: %s", property_id, error->message);
-      } else {
-    g_warning("failed to set property %d", property_id);
-      }
+        if (error->message) {
+            g_warning("failed to set property %d: %s", property_id, error->message);
+        } else {
+            g_warning("failed to set property %d", property_id);
+        }
     }
 }
 
@@ -209,6 +214,14 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             gint enum_value = UCA_CAMERA_BALANCE_WHITE_OFF;
             pylon_camera_get_int_attribute("BalanceWhiteAuto", &enum_value, &error);
             UcaCameraBalanceWhiteAuto mode = enum_value;
+            g_value_set_enum(value, mode);
+            break;
+          }
+        case PROP_EXPOSURE_AUTO:
+          {
+            gint enum_value = UCA_CAMERA_EXPOSURE_AUTO_OFF;
+            pylon_camera_get_int_attribute("ExposureAuto", &enum_value, &error);
+            UcaCameraExposureAuto mode = enum_value;
             g_value_set_enum(value, mode);
             break;
           }
@@ -364,7 +377,7 @@ static gboolean uca_pylon_camera_initable_init(GInitable *initable, GCancellable
         g_error("no environment variable PYLON_CAMERA_IP found");
     }
 
-    pylon_camera_new("/usr/local/lib64", pylon_camera_ip, error);
+    pylon_camera_new(pylon_camera_ip, error);
     if (*error != NULL) {
         return FALSE;
     }
@@ -429,6 +442,12 @@ static void uca_pylon_camera_class_init(UcaPylonCameraClass *klass)
             "Balance White Auto mode",
             "White balance mode  (0: Off, 1: Once, 2: Continuous)",
             UCA_TYPE_CAMERA_BALANCE_WHITE_AUTO, UCA_CAMERA_BALANCE_WHITE_OFF,
+            G_PARAM_READWRITE);
+    pylon_properties[PROP_EXPOSURE_AUTO] =
+        g_param_spec_enum("exposure-auto",
+            "Exposure Auto mode",
+            "Exposure auto mode  (0: Off, 1: Once, 2: Continuous)",
+            UCA_TYPE_CAMERA_EXPOSURE_AUTO, UCA_CAMERA_EXPOSURE_AUTO_OFF,
             G_PARAM_READWRITE);
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)

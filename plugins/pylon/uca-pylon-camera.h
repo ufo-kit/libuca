@@ -43,6 +43,12 @@ typedef enum {
     UCA_CAMERA_BALANCE_WHITE_CONTINUOUSLY
 } UcaCameraBalanceWhiteAuto;
 
+typedef enum {
+    UCA_CAMERA_EXPOSURE_AUTO_OFF,
+    UCA_CAMERA_EXPOSURE_AUTO_ONCE,
+    UCA_CAMERA_EXPOSURE_AUTO_CONTINUOUSLY
+} UcaCameraExposureAuto;
+
 typedef struct _UcaPylonCamera           UcaPylonCamera;
 typedef struct _UcaPylonCameraClass      UcaPylonCameraClass;
 typedef struct _UcaPylonCameraPrivate    UcaPylonCameraPrivate;
