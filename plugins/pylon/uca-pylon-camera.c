@@ -55,6 +55,7 @@ enum {
     PROP_ROI_HEIGHT_DEFAULT,
     PROP_GAIN,
     PROP_BALANCE_WHITE_AUTO,
+    PROP_EXPOSURE_AUTO,
     N_PROPERTIES
 };
 
@@ -149,6 +150,11 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
         pylon_camera_set_int_attribute("BalanceWhiteAuto", g_value_get_enum(value), &error);
         break;
     }
+    case PROP_EXPOSURE_AUTO:
+    {
+        pylon_camera_set_int_attribute("ExposureAuto", g_value_get_enum(value), &error);
+        break;
+    }
     case PROP_ROI_X:
     {
         priv->roi_x = g_value_get_uint(value);
@@ -208,6 +214,14 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             gint enum_value = UCA_CAMERA_BALANCE_WHITE_OFF;
             pylon_camera_get_int_attribute("BalanceWhiteAuto", &enum_value, &error);
             UcaCameraBalanceWhiteAuto mode = enum_value;
+            g_value_set_enum(value, mode);
+            break;
+          }
+        case PROP_EXPOSURE_AUTO:
+          {
+            gint enum_value = UCA_CAMERA_EXPOSURE_AUTO_OFF;
+            pylon_camera_get_int_attribute("ExposureAuto", &enum_value, &error);
+            UcaCameraExposureAuto mode = enum_value;
             g_value_set_enum(value, mode);
             break;
           }
