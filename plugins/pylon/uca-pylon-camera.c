@@ -443,6 +443,12 @@ static void uca_pylon_camera_class_init(UcaPylonCameraClass *klass)
             "White balance mode  (0: Off, 1: Once, 2: Continuous)",
             UCA_TYPE_CAMERA_BALANCE_WHITE_AUTO, UCA_CAMERA_BALANCE_WHITE_OFF,
             G_PARAM_READWRITE);
+    pylon_properties[PROP_EXPOSURE_AUTO] =
+        g_param_spec_enum("exposure-auto",
+            "Exposure Auto mode",
+            "Exposure auto mode  (0: Off, 1: Once, 2: Continuous)",
+            UCA_TYPE_CAMERA_EXPOSURE_AUTO, UCA_CAMERA_EXPOSURE_AUTO_OFF,
+            G_PARAM_READWRITE);
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, pylon_properties[id]);
