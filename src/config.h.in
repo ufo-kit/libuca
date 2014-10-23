@@ -1,3 +1,4 @@
+#cmakedefine WITH_PYTHON_MULTITHREADING     1
 #cmakedefine HAVE_PCO_CL
 #cmakedefine HAVE_PHOTON_FOCUS
 #cmakedefine HAVE_PHOTRON_FASTCAM

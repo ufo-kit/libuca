@@ -47,6 +47,20 @@ set_target_properties(uca PROPERTIES
 
 target_link_libraries(uca ${UCA_DEPS})
 #}}}
+#{{{ Python
+
+pkg_check_modules(PYTHON python)
+
+if (PYTHON_FOUND)
+    option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
+
+    if (WITH_PYTHON_MULTITHREADING)
+        include_directories(${PYTHON_INCLUDE_DIRS})
+        target_link_libraries(uca ${PYTHON_LIBRARIES})
+    endif ()
+endif ()
+
+#}}}
 #{{{ GObject introspection
 if (INTROSPECTION_SCANNER AND INTROSPECTION_COMPILER)
     option(WITH_GIR "Build introspection files" ON)
