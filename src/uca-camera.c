@@ -23,9 +23,14 @@
  * UcaCamera is the base camera from which a real hardware camera derives from.
  */
 
+#include "config.h"
+
+#ifdef WITH_PYTHON_MULTITHREADING
+#include <Python.h>
+#endif
+
 #include <glib.h>
 #include <string.h>
-#include "config.h"
 #include "compat.h"
 #include "uca-camera.h"
 #include "uca-ring-buffer.h"
@@ -579,6 +584,12 @@ uca_camera_init (UcaCamera *camera)
     uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH_MULTIPLIER], UCA_UNIT_COUNT);
     uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT_MULTIPLIER], UCA_UNIT_COUNT);
     uca_camera_set_property_unit (camera_properties[PROP_RECORDED_FRAMES], UCA_UNIT_COUNT);
+
+#ifdef WITH_PYTHON_MULTITHREADING
+    if (!PyEval_ThreadsInitialized ()) {
+        PyEval_InitThreads ();
+    }
+#endif
 }
 
 static gpointer
@@ -937,7 +948,21 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
         }
         else {
             g_static_mutex_lock (&access_lock);
+
+#ifdef WITH_PYTHON_MULTITHREADING
+            if (Py_IsInitialized ()) {
+                PyGILState_STATE state = PyGILState_Ensure ();
+                Py_BEGIN_ALLOW_THREADS
+
+                result = (*klass->grab) (camera, data, error);
+
+                Py_END_ALLOW_THREADS
+                PyGILState_Release (state);
+            }
+#else
             result = (*klass->grab) (camera, data, error);
+#endif
+
             g_static_mutex_unlock (&access_lock);
         }
 
