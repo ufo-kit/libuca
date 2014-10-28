@@ -33,11 +33,7 @@ G_DEFINE_TYPE_WITH_CODE (UcaAndorCamera, uca_andor_camera, UCA_TYPE_CAMERA,
                          G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, uca_andor_initable_iface_init))
 
 #define TIMEBASE_INVALID 0xDEAD
-
 #define NUM_BUFFERS             10
-#define ANDOR_READ              0
-#define ANDOR_WRITE             1
-#define PROPERTY_INDEPENDENT    -10
 
 struct _UcaAndorCameraPrivate {
     guint camera_number;
