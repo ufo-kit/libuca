@@ -1,6 +1,19 @@
 Changelog
 =========
 
+Changes in libuca 1.6.1
+-----------------------
+
+Released on October 29th 2014
+
+This is a bugfix release smoothing out daily operation. In particular, we
+
+- release the Python GIL to avoid blocking on grabs
+- added missing property specification for exposure-auto in the pylon plugin
+- improved robustness of ROI setting in the pylon plugin
+- added global shutter support for pco.edge cameras
+
+
 Changes in libuca 1.6
 ---------------------
 
@@ -184,7 +197,7 @@ properties and better signal and closure handling.
 Most of the ideas and approaches of libuca 0.5 have been transfered. However,
 instead of trying to initialize each camera first and having the user decide
 what to use, the user must now determine the used camera at compile time or use
-the factory pattern to delegate this to run-time. 
+the factory pattern to delegate this to run-time.
 
 ### Tango Wrapper
 
