@@ -129,6 +129,7 @@ static GParamSpec *camera_properties[N_BASE_PROPERTIES] = { NULL, };
 static GStaticMutex access_lock = G_STATIC_MUTEX_INIT;
 
 struct _UcaCameraPrivate {
+    gboolean cancelling_recording;
     gboolean is_recording;
     gboolean is_readout;
     gboolean transfer_async;
@@ -553,6 +554,7 @@ uca_camera_init (UcaCamera *camera)
     camera->grab_func = NULL;
 
     camera->priv = UCA_CAMERA_GET_PRIVATE(camera);
+    camera->priv->cancelling_recording = FALSE;
     camera->priv->is_recording = FALSE;
     camera->priv->is_readout = FALSE;
     camera->priv->transfer_async = FALSE;
@@ -600,7 +602,7 @@ buffer_thread (UcaCamera *camera)
 
     klass = UCA_CAMERA_GET_CLASS (camera);
 
-    while (camera->priv->is_recording) {
+    while (!camera->priv->cancelling_recording) {
         gpointer buffer;
 
         buffer = uca_ring_buffer_get_write_pointer (camera->priv->ring_buffer);
@@ -661,6 +663,8 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
     if (tmp_error == NULL) {
         priv->is_readout = FALSE;
         priv->is_recording = TRUE;
+        priv->cancelling_recording = FALSE;
+
         /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
         g_object_notify (G_OBJECT (camera), "is-recording");
     }
@@ -721,7 +725,7 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
         goto error_stop_recording;
     }
 
-    priv->is_recording = FALSE;
+    priv->cancelling_recording = TRUE;
 
     if (priv->buffered) {
         g_thread_join (priv->read_thread);
@@ -729,10 +733,14 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
     }
 
     g_static_mutex_lock (&access_lock);
+
     (*klass->stop_recording)(camera, &tmp_error);
+    priv->cancelling_recording = FALSE;
+
     g_static_mutex_unlock (&access_lock);
 
     if (tmp_error == NULL) {
+        priv->is_recording = FALSE;
         priv->is_readout = FALSE;
         /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
         g_object_notify (G_OBJECT (camera), "is-recording");
