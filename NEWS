@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Changes in libuca 1.6.2
+-----------------------
+
+Released on November 14th 2014
+
+This bugfix release solves a regression introduced with libuca 1.6.0 and
+documented at https://github.com/ufo-kit/libuca/issues/61.
+
+
 Changes in libuca 1.6.1
 -----------------------
 
