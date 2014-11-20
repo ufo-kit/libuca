@@ -8,9 +8,10 @@ add_subdirectory(pylon)
 add_subdirectory(ufo)
 add_subdirectory(dexela)
 add_subdirectory(xkit)
+add_subdirectory(andor)
 
 message("-- Building the following plugins:")
-set(_plugins "mock;file;pf;pco;pylon;ufo;dexela;xkit")
+set(_plugins "mock;file;pf;pco;pylon;ufo;dexela;xkit;andor")
 
 foreach(_target ${_plugins})
     if (TARGET "uca${_target}")
