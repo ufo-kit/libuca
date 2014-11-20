@@ -679,15 +679,14 @@ uca_andor_camera_init (UcaAndorCamera *self)
     strcpy (priv->model, modelchar);
 
     priv->is_sim_cam = strcmp (modelchar, "SIMCAM CMOS") == 0;
-    priv->name = g_malloc0 (1023*sizeof (gchar));
 
     if (priv->is_sim_cam == FALSE) {
         AT_WC* name = g_malloc0 (1023*sizeof (AT_WC));
         error_number = AT_GetString (handle, L"CameraName", name, 1023);
-        priv->name = priv->model;
+        priv->name = g_strdup (priv->model);
     }
     else {
-        priv->name = "SIMCAM CMOS (model)";
+        priv->name = g_strdup ("SIMCAM CMOS (model)");
     }
 
     error_number = AT_GetFloat (handle, L"ExposureTime", &priv->exp_time);
