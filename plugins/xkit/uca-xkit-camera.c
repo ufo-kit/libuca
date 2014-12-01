@@ -320,11 +320,8 @@ uca_xkit_camera_grab (UcaCamera *camera,
 {
     g_return_val_if_fail (UCA_IS_XKIT_CAMERA (camera), FALSE);
     UcaXkitCameraPrivate *priv;
-    GTimer *timer;
-
 
     priv = UCA_XKIT_CAMERA_GET_PRIVATE (camera);
-    timer = g_timer_new ();
 
     #pragma omp parallel for num_threads(NUM_CHIPS)
     for (guint i = 0; i < NUM_CHIPS; i++) {
@@ -342,7 +339,6 @@ uca_xkit_camera_grab (UcaCamera *camera,
     }
 
     compose_image ((guint16 *) data, priv->buffers, priv->flip, priv->n_chips);
-    g_timer_destroy (timer);
 
     return TRUE;
 }
