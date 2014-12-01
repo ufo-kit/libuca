@@ -36,7 +36,7 @@
 #define CHIPS_PER_ROW           3
 #define CHIPS_PER_COLUMN        1
 #define NUM_CHIPS               CHIPS_PER_ROW * CHIPS_PER_COLUMN
-#define NUM_FSRS                256
+#define NUM_FSRS                32
 
 static void uca_xkit_camera_initable_iface_init (GInitableIface *iface);
 
@@ -64,6 +64,7 @@ enum {
     PROP_READOUT_BIG_ENDIAN,
     PROP_READOUT_MIRRORED,
     PROP_READOUT_INCREMENTAL_GREYSCALE,
+    PROP_FAST_SHIFT_REGISTER,
     N_PROPERTIES
 };
 
@@ -109,6 +110,8 @@ struct _UcaXkitCameraPrivate {
     guint ports[NUM_CHIPS];
     GSocket* sockets[NUM_CHIPS];
 
+    guint8 fsr[NUM_FSRS];
+
     guint8 readout_mode;
     guint8 acquisition_mode;
 
@@ -147,6 +150,21 @@ xkit_reset (GSocket *socket, GError **error)
 {
     gchar buffer = 0x32;
     return xkit_send_recv_ackd (socket, &buffer, 1, error);
+}
+
+static gboolean
+xkit_set_fast_shift_register (GSocket *socket, guint8 *fsr, GError **error)
+{
+    struct {
+        guint8 msg;
+        guint8 fsr[NUM_FSRS];
+    } __attribute__((packed))
+    buffer = {
+        .msg = 0x36,
+    };
+
+    memcpy (&buffer.fsr[0], fsr, NUM_FSRS);
+    return xkit_send_recv_ackd (socket, (gchar *) &buffer, sizeof (buffer), error);
 }
 
 static gboolean
@@ -289,6 +307,9 @@ uca_xkit_camera_start_recording (UcaCamera *camera,
     if (!xkit_set_exposure_time (priv->sockets[0], 0x1000, error))
         return;
 
+    if (!xkit_set_fast_shift_register (priv->sockets[0], &priv->fsr[0], error))
+        return;
+
     xkit_start_acquisition (priv->sockets[0], priv->acquisition_mode, error);
 }
 
@@ -394,6 +415,24 @@ uca_xkit_camera_set_property (GObject *object,
                 priv->readout_mode &= ~X_KIT_READOUT_INCREMENTAL_GREYSCALE;
             break;
 
+        case PROP_FAST_SHIFT_REGISTER:
+            {
+                GValueArray *array;
+
+                array = g_value_get_boxed (value);
+
+                if (array != NULL) {
+                    if (array->n_values < NUM_FSRS)
+                        g_warning ("Number of elements is less than %i", array->n_values);
+                    else if (array->n_values > NUM_FSRS)
+                        g_warning ("Number of elements is more than %i", array->n_values);
+
+                    for (guint i = 0; i < MIN(NUM_FSRS, array->n_values); i++)
+                        priv->fsr[i] = g_value_get_uchar (&array->values[i]);
+                }
+            }
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
@@ -474,6 +513,24 @@ uca_xkit_camera_get_property (GObject *object,
             break;
         case PROP_READOUT_INCREMENTAL_GREYSCALE:
             g_value_set_boolean (value, priv->readout_mode & X_KIT_READOUT_INCREMENTAL_GREYSCALE);
+            break;
+        case PROP_FAST_SHIFT_REGISTER:
+            {
+                GValueArray *array;
+
+                array = g_value_array_new (NUM_FSRS);
+
+                for (guint i = 0; i < NUM_FSRS; i++) {
+                    GValue value = G_VALUE_INIT;
+
+                    g_value_init (&value, G_TYPE_UCHAR);
+                    g_value_set_uchar (&value, priv->fsr[i]);
+                    g_value_array_append (array, &value);
+                }
+
+                g_value_set_boxed (value, array);
+                g_value_array_free (array);
+            }
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -606,6 +663,16 @@ uca_xkit_camera_class_init (UcaXkitCameraClass *klass)
             FALSE,
             (GParamFlags) G_PARAM_READWRITE);
 
+    xkit_properties[PROP_FAST_SHIFT_REGISTER] =
+        g_param_spec_value_array ("fsr",
+            "Fast shift register",
+            "Fast shift register array",
+            g_param_spec_uchar ("dac",
+                                "DAC value",
+                                "DAC value",
+                                0, 255, 0, G_PARAM_READABLE),
+            G_PARAM_READWRITE);
+
     for (guint i = 0; i < NUM_CHIPS; i++) {
         gchar *prop_name;
 
@@ -644,6 +711,10 @@ uca_xkit_camera_init (UcaXkitCamera *self)
         priv->sockets[i] = NULL;
         priv->flip[i] = FALSE;
         priv->ports[i] = XKIT_DEFAULT_PORT + i;
+    }
+
+    for (guint i = 0; i < NUM_FSRS; i++) {
+        priv->fsr[i] = 0;
     }
 
     if (!setup_xkit (priv))
