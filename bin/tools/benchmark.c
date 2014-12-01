@@ -254,17 +254,14 @@ main (int argc, char *argv[])
     camera = uca_plugin_manager_get_camera (manager, argv[1], &error, NULL);
 
     if (camera == NULL) {
-        g_error ("Initialization: %s", error->message);
-        goto cleanup_camera;
+        g_print ("Initialization: %s\n", error->message);
+        goto cleanup_manager;
     }
 
     benchmark (camera, n_runs, n_frames);
 
     g_io_channel_shutdown (log_channel, TRUE, &error);
     g_assert_no_error (error);
-
-cleanup_camera:
-    g_object_unref (camera);
 
 cleanup_manager:
     g_object_unref (manager);
