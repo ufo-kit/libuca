@@ -967,6 +967,9 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
                 Py_END_ALLOW_THREADS
                 PyGILState_Release (state);
             }
+            else {
+                result = (*klass->grab) (camera, data, error);
+            }
 #else
             result = (*klass->grab) (camera, data, error);
 #endif
