@@ -92,6 +92,7 @@ grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames)
     uca_camera_stop_recording (camera, &error);
 }
 
+#if 0
 static void
 grab_callback (gpointer data, gpointer user_data)
 {
@@ -121,6 +122,7 @@ grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames)
 
     uca_camera_stop_recording (camera, &error);
 }
+#endif
 
 static void
 benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, guint n_runs, guint n_frames, guint n_bytes)
@@ -131,7 +133,7 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, guint 
     gdouble total_time = 0.0;
     GError *error = NULL;
 
-    g_print ("%-10i%-10i", n_frames, n_runs);
+    g_print ("n_frames=%i n_runs=%i", n_frames, n_runs);
     timer = g_timer_new ();
     g_assert_no_error (error);
 
@@ -149,7 +151,7 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, guint 
 
     fps = n_runs * n_frames / total_time;
     bandwidth = n_bytes * fps / 1024 / 1024;
-    g_print ("%-16.2f%-16.2f\n", fps, bandwidth);
+    g_print (" freq=%.2f io=%.2f\n", fps, bandwidth);
 
     g_timer_destroy (timer);
 }
@@ -180,17 +182,12 @@ benchmark (UcaCamera *camera, gint n_runs, gint n_frames)
                   "exposure-time", &exposure,
                   NULL);
 
-    g_print ("# --- General information ---\n");
-    g_print ("# Sensor size: %ix%i\n", sensor_width, sensor_height);
-    g_print ("# ROI size: %ix%i\n", roi_width, roi_height);
-    g_print ("# Exposure time: %fs\n", exposure);
-    g_print ("# Bits: %i\n", bits);
+    g_debug ("Sensor width=%i height=%i", sensor_width, sensor_height);
+    g_debug ("ROI width=%i height=%i", roi_width, roi_height);
+    g_debug ("Exposure time=%fs", exposure);
 
     /* Synchronous frame acquisition */
-    g_print ("# %-10s%-10s%-10s%-16s%-16s\n", "type", "n_frames", "n_runs", "frames/s", "MiB/s");
-    g_print ("  %-10s", "sync");
-
-    g_message ("Start synchronous benchmark");
+    g_print ("sync ");
 
     n_bytes_per_pixel = bits > 8 ? 2 : 1;
     n_bytes = roi_width * roi_height * n_bytes_per_pixel;
@@ -198,15 +195,17 @@ benchmark (UcaCamera *camera, gint n_runs, gint n_frames)
 
     benchmark_method (camera, buffer, grab_frames_sync, n_runs, n_frames, n_bytes);
 
+#if 0
+
     /* Asynchronous frame acquisition */
     g_object_set (G_OBJECT(camera),
                  "transfer-asynchronously", TRUE,
                  NULL);
 
-    g_message ("Start asynchronous benchmark");
-    g_print ("  %-10s", "async");
+    g_print ("async ");
 
     benchmark_method (camera, buffer, grab_frames_async, n_runs, n_frames, n_bytes);
+#endif
 
     g_free (buffer);
 }
