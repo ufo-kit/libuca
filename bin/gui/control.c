@@ -1366,11 +1366,11 @@ main (int argc, char *argv[])
         g_warning ("Cannot load UI: `%s'. Trying in current working directory.", error->message);
         g_error_free (error);
         error = NULL;
-    }
 
-    if (!gtk_builder_add_from_file (builder, "control.glade", &error)) {
-        g_warning ("Cannot load UI: `%s'.", error->message);
-        return 1;
+        if (!gtk_builder_add_from_file (builder, "control.glade", &error)) {
+            g_warning ("Cannot load UI: `%s'.", error->message);
+            return 1;
+        }
     }
 
     plugin_manager = uca_plugin_manager_new ();
