@@ -1365,6 +1365,7 @@ main (int argc, char *argv[])
     if (!gtk_builder_add_from_file (builder, CONTROL_GLADE_PATH, &error)) {
         g_warning ("Cannot load UI: `%s'. Trying in current working directory.", error->message);
         g_error_free (error);
+        error = NULL;
     }
 
     if (!gtk_builder_add_from_file (builder, "control.glade", &error)) {
