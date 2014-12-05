@@ -4,6 +4,7 @@ libdir=@UCA_LIBDIR@
 includedir=@UCA_INCLUDEDIR@
 girdir=@UCA_GIRDIR@
 typelibdir=@UCA_TYPELIBDIR@
+plugindir=@UCA_PLUGINDIR@
 
 Name: libuca
 Description: @UCA_DESCRIPTION@
