@@ -254,6 +254,83 @@ get_camera_type (UcaPluginManagerPrivate *priv,
 }
 
 /**
+ * transform_hash_entry_to_gparameter: (skip)
+ * @key: #gpointer to the key value of the hash entry
+ * @value: #gpointer to the value of the hash entry
+ * @parameter: (out caller-allocates): Pointer to the #GParameter where key and value
+ * should be filled into
+ *
+ * Takes a Key/Value pair from a #GHashTable and puts its values into the given
+ * #GParameter.
+ * Note that this function uses g_strdup() to set the #GParameters name value. This
+ * needs to be cleaned up by the caller using g_free()
+ *
+ * Since: 1.7
+ */
+typedef struct
+{
+    GParameter  *p;
+    guint       idx;
+} ParamArray;
+
+
+static void
+transform_hash_entry_to_gparameter (gpointer key,
+                                    gpointer value,
+                                    ParamArray *params)
+{
+    GParameter *parameter = &(params->p[params->idx]);
+
+    parameter->value = *((GValue*)value);
+    parameter->name = g_strdup ((const gchar*)key);
+    params->idx++;
+}
+
+/**
+ * uca_plugin_manager_get_camerah:
+ * @manager: A #UcaPluginManager
+ * @name: Name of the camera module, that maps to libuca<name>.so
+ * @parameters: (element-type utf8 GValue) (transfer none) (allow-none): a pointer to a #GHashTable containing parameters or %NULL
+ * @error: (allow-none): Location for a #GError or %NULL
+ *
+ * Create a new camera instance with camera @name.
+ *
+ * Returns: (transfer full): A new #UcaCamera object.
+ * Since: 1.7
+ */
+UcaCamera *
+uca_plugin_manager_get_camerah (UcaPluginManager *manager,
+                                const gchar *name,
+                                GHashTable *parameters,
+                                GError **error)
+{
+    //No parameters. Just create the camera
+    if (!parameters)
+        return uca_plugin_manager_get_camera (manager, name, error, NULL);
+
+    //If we reach this point, we have parameters. Construct GParameters for them and
+    //use uca_plugin_manager_get_camerav to create the camera
+    guint n_parameters = g_hash_table_size (parameters);
+    ParamArray params;
+    params.p = g_malloc0 (sizeof(GParameter) * n_parameters);
+    params.idx = 0;
+
+    g_hash_table_foreach (parameters, (GHFunc) transform_hash_entry_to_gparameter, &params);
+
+    UcaCamera *camera = uca_plugin_manager_get_camerav(manager, name, n_parameters, params.p, error);
+
+    //Free the g_strcpy-ed names
+    for (guint i = 0; i < params.idx; i++)
+    {
+        GParameter *parameter = &(params.p[i]);
+        g_free ((gpointer)(parameter->name));
+    }
+    g_free (params.p);
+
+    return camera;
+}
+
+/**
  * uca_plugin_manager_get_camerav:
  * @manager: A #UcaPluginManager
  * @name: Name of the camera module, that maps to libuca<name>.so
