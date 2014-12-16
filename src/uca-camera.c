@@ -342,6 +342,7 @@ uca_camera_class_init (UcaCameraClass *klass)
     klass->start_recording = NULL;
     klass->stop_recording = NULL;
     klass->grab = NULL;
+    klass->write = NULL;
 
     camera_properties[PROP_NAME] =
         g_param_spec_string("name",
@@ -916,6 +917,38 @@ uca_camera_trigger (UcaCamera *camera, GError **error)
     }
 
     g_static_mutex_unlock (&mutex);
+}
+
+/**
+ * uca_camera_write:
+ * @camera: A #UcaCamera object
+ * @name: String that identifies the written data.
+ * @data: (type gulong): Pointer to suitably sized data buffer. Must not be
+ *  %NULL.
+ * @size: Size of the data buffer in bytes.
+ * @error: Location to store a #UcaCameraError or %NULL.
+ *
+ * Writes camera-specific @data containing @size bytes and identified by @name.
+ */
+void
+uca_camera_write (UcaCamera *camera, const gchar *name, gpointer data, gsize size, GError **error)
+{
+    UcaCameraClass *klass;
+
+    g_return_if_fail (UCA_IS_CAMERA (camera));
+
+    klass = UCA_CAMERA_GET_CLASS (camera);
+
+    g_return_if_fail (klass != NULL);
+
+    if (klass->write == NULL) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_IMPLEMENTED,
+                     "`%s' does not provide a `write' method",
+                     G_OBJECT_TYPE_NAME (G_OBJECT (camera)));
+    }
+    else {
+        (*klass->write) (camera, name, data, size, error);
+    }
 }
 
 /**
