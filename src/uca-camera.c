@@ -55,6 +55,8 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  * @UCA_CAMERA_ERROR_NOT_RECORDING: Camera is not recording
  * @UCA_CAMERA_ERROR_NO_GRAB_FUNC: No grab callback was set
  * @UCA_CAMERA_ERROR_NOT_IMPLEMENTED: Virtual function is not implemented
+ * @UCA_CAMERA_ERROR_WRONG_WRITE_METADATA: Meta data specified in the name
+ *  argument of the write method is not correct.
  * @UCA_CAMERA_ERROR_END_OF_STREAM: Data stream has ended.
  */
 GQuark uca_camera_error_quark()
