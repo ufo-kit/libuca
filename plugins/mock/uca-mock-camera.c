@@ -273,12 +273,18 @@ uca_mock_camera_trigger (UcaCamera *camera, GError **error)
 static gboolean
 uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 {
+    gdouble exposure_time;
+
     g_return_val_if_fail (UCA_IS_MOCK_CAMERA(camera), FALSE);
 
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
 
+    g_object_get (G_OBJECT (camera), "exposure-time", &exposure_time, NULL);
+    g_usleep (G_USEC_PER_SEC * exposure_time);
+
     print_current_frame (priv, priv->dummy_data);
     priv->current_frame++;
+
     g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height);
 
     return TRUE;
