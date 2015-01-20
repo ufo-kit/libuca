@@ -118,10 +118,10 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
     g_return_if_fail(UCA_IS_KIRO_CAMERA (camera));
 
     priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
-    
+
     kiro_client_sync (priv->kiro_receiver);
     kiro_trb_adopt (priv->receive_buffer, kiro_client_get_memory (priv->kiro_receiver));
-        
+
     g_object_get (G_OBJECT(camera),
             "transfer-asynchronously", &transfer_async,
             NULL);
@@ -826,12 +826,12 @@ uca_kiro_camera_clone_interface(const gchar* address, UcaKiroCamera *kiro_camera
             for (guint idx = 0; idx < non_base_attributes_count; idx++) {
                 const gchar *attr_name = (const gchar*)g_list_nth_data (non_base_attributes, idx);
                 Tango::AttributeInfoEx attrInfo = priv->tango_device->attribute_query (string(attr_name));
-                
+
                 if (Tango::AttrDataFormat::IMAGE == attrInfo.data_format || Tango::AttrDataFormat::FMT_UNKNOWN == attrInfo.data_format) {
                     g_print ("Attribute '%s' has unknown DataFormat. Skipping.\n", attr_name);
                     continue;
                 }
-                
+
                 build_param_spec (&(priv->kiro_dynamic_attributes[N_PROPERTIES + idx]), &attrInfo);
                 g_object_class_install_property (gobject_class, N_PROPERTIES + idx, priv->kiro_dynamic_attributes[N_PROPERTIES + idx]);
 
@@ -903,15 +903,11 @@ uca_kiro_camera_get_property(GObject *object, guint property_id, GValue *value, 
     }
 }
 
+
 static void
-uca_kiro_camera_finalize(GObject *object)
+uca_kiro_camera_dispose (GObject *object)
 {
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE(object);
-
-    if (priv->thread_running) {
-        priv->thread_running = FALSE;
-        g_thread_join (priv->grab_thread);
-    }
 
     if (priv->kiro_receiver) {
         g_object_unref (priv->kiro_receiver);
@@ -922,6 +918,20 @@ uca_kiro_camera_finalize(GObject *object)
     if (priv->receive_buffer) {
         g_object_unref (priv->receive_buffer);
         priv->receive_buffer = NULL;
+    }
+
+    G_OBJECT_CLASS (uca_kiro_camera_parent_class)->dispose(object);
+}
+
+
+static void
+uca_kiro_camera_finalize(GObject *object)
+{
+    UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE(object);
+
+    if (priv->thread_running) {
+        priv->thread_running = FALSE;
+        g_thread_join (priv->grab_thread);
     }
 
     if (priv->dummy_data) {
@@ -947,13 +957,14 @@ ufo_kiro_camera_initable_init (GInitable *initable,
                                GError **error)
 {
     g_return_val_if_fail (UCA_IS_KIRO_CAMERA (initable), FALSE);
-    
+
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (UCA_KIRO_CAMERA (initable));
     if(priv->construction_error) {
         g_propagate_error (error, initable_iface_error);
+        initable_iface_error = NULL;
         return FALSE;
     }
-    
+
     return TRUE;
 }
 
@@ -971,10 +982,10 @@ uca_kiro_camera_constructed (GObject *object)
     //We want to add dynamic properties and it is too late to do so in the
     //real initable part. Therefore, we do it here and 'remember' any errors
     //that occur and check them later in the initable part.
-    
+
     UcaKiroCamera *self = UCA_KIRO_CAMERA (object);
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (self);
-    
+
     GValue address = G_VALUE_INIT;
     g_value_init(&address, G_TYPE_STRING);
     uca_kiro_camera_get_property (object, PROP_KIRO_TANGO_ADDRESS, &address, NULL);
@@ -989,8 +1000,8 @@ uca_kiro_camera_constructed (GObject *object)
         try {
             priv->tango_device = new Tango::DeviceProxy(g_value_get_string (&address));
             Tango::DbData kiro_credentials;
-            kiro_credentials.push_back (Tango::DbDatum("LocalAddress"));
-            kiro_credentials.push_back (Tango::DbDatum("LocalPort"));
+            kiro_credentials.push_back (Tango::DbDatum("KiroAddress"));
+            kiro_credentials.push_back (Tango::DbDatum("KiroPort"));
             priv->tango_device->get_property(kiro_credentials);
             string kiro_address, kiro_port;
             kiro_credentials[0] >> kiro_address;
@@ -1028,6 +1039,7 @@ uca_kiro_camera_class_init(UcaKiroCameraClass *klass)
     gobject_class->get_property = uca_kiro_camera_get_property;
     gobject_class->finalize = uca_kiro_camera_finalize;
     gobject_class->constructed = uca_kiro_camera_constructed;
+    gobject_class->dispose = uca_kiro_camera_dispose;
 
     UcaCameraClass *camera_class = UCA_CAMERA_CLASS (klass);
     camera_class->start_recording = uca_kiro_camera_start_recording;
@@ -1037,21 +1049,21 @@ uca_kiro_camera_class_init(UcaKiroCameraClass *klass)
 
     for (guint i = 0; kiro_overrideables[i] != 0; i++)
         g_object_class_override_property (gobject_class, kiro_overrideables[i], uca_camera_props[kiro_overrideables[i]]);
-                
+
     kiro_properties[PROP_KIRO_ADDRESS] =
         g_param_spec_string("kiro-address",
                 "KIRO Server Address",
                 "Address of the KIRO Server to grab images from",
                 "NONE",
                 G_PARAM_READABLE);
-                
+
     kiro_properties[PROP_KIRO_PORT] =
         g_param_spec_uint("kiro-port",
                 "KIRO Server Port",
                 "Port of the KIRO Server to grab images from",
                 1, 65535, 60010,
                 G_PARAM_READABLE);
-                
+
     kiro_properties[PROP_KIRO_TANGO_ADDRESS] =
         g_param_spec_string("kiro-tango-address",
                 "KIRO TANGO address",
