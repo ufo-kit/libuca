@@ -281,7 +281,10 @@ transform_hash_entry_to_gparameter (gpointer key,
 {
     GParameter *parameter = &(params->p[params->idx]);
 
-    parameter->value = *((GValue*)value);
+    if (value)
+        parameter->value = *((GValue*)value);
+    else
+        g_value_set_gtype (&(parameter->value), G_TYPE_NONE);
     parameter->name = g_strdup ((const gchar*)key);
     params->idx++;
 }
