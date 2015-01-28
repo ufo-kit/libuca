@@ -104,7 +104,7 @@ kiro_grab_func(gpointer data)
     const gulong sleep_time = (gulong) G_USEC_PER_SEC / fps;
 
     while (priv->thread_running) {
-        camera->grab_func (priv->dummy_data, camera->user_data);
+        camera->grab_func (NULL, camera->user_data);
         g_usleep (sleep_time);
     }
 
@@ -238,7 +238,8 @@ uca_kiro_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     //Element 0 is always about to be written, Element -1 is currently being written
     //Therefore, we take Element -2, to be sure this one is finished
     size_t index = kiro_trb_get_max_elements (priv->receive_buffer) - 2;
-    g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height * priv->bytes_per_pixel);
+    if (data)
+        g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height * priv->bytes_per_pixel);
 
     return TRUE;
 }
