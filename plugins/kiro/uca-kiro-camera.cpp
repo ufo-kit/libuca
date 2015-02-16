@@ -23,8 +23,7 @@ extern "C" {
 #include <gio/gio.h>
 #include <string.h>
 #include <math.h>
-#include <kiro/kiro-trb.h>
-#include <kiro/kiro-client.h>
+#include <kiro/kiro-sb.h>
 #include "uca-kiro-camera.h"
 } // EXTERN  C
 
@@ -83,8 +82,7 @@ struct _UcaKiroCameraPrivate {
     gboolean construction_error;
 
     GThread *grab_thread;
-    KiroTrb *receive_buffer;
-    KiroClient *kiro_receiver;
+    KiroSb *receive_buffer;
 
     guint roi_height;
     guint roi_width;
@@ -119,10 +117,6 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
     g_return_if_fail(UCA_IS_KIRO_CAMERA (camera));
 
     priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
-    
-    kiro_client_sync (priv->kiro_receiver);
-    kiro_trb_adopt (priv->receive_buffer, kiro_client_get_memory (priv->kiro_receiver));
-        
     g_object_get (G_OBJECT(camera),
             "transfer-asynchronously", &transfer_async,
             NULL);
@@ -181,6 +175,8 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
             }
         }
     }
+
+    kiro_sb_thaw (priv->receive_buffer);
 }
 
 static void
@@ -215,8 +211,8 @@ uca_kiro_camera_stop_recording(UcaCamera *camera, GError **error)
         g_thread_join (priv->grab_thread);
     }
 
+    kiro_sb_freeze (priv->receive_buffer);
     g_free (priv->dummy_data);
-    kiro_trb_purge(priv->receive_buffer, FALSE);
 }
 
 static void
@@ -231,15 +227,12 @@ uca_kiro_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
 
-    kiro_client_sync (priv->kiro_receiver);
-    kiro_trb_refresh (priv->receive_buffer);
-    priv->current_frame++;
-
-    //Element 0 is always about to be written, Element -1 is currently being written
-    //Therefore, we take Element -2, to be sure this one is finished
-    size_t index = kiro_trb_get_max_elements (priv->receive_buffer) - 2;
+    kiro_sb_freeze (priv->receive_buffer);
+    //Element 0 might still be in the process of being written. 
+    //Therefore, we take Element 1, to be sure this one is finished.
     if (data)
-        g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height * priv->bytes_per_pixel);
+        g_memmove (data, kiro_sb_get_data (priv->receive_buffer), priv->roi_width * priv->roi_height * priv->bytes_per_pixel);
+    kiro_sb_thaw (priv->receive_buffer);
 
     return TRUE;
 }
@@ -925,16 +918,11 @@ uca_kiro_camera_finalize(GObject *object)
         g_thread_join (priv->grab_thread);
     }
 
-    if (priv->kiro_receiver) {
-        g_object_unref (priv->kiro_receiver);
-        priv->kiro_receiver = NULL;
-    }
-    priv->kiro_connected = FALSE;
-
     if (priv->receive_buffer) {
-        g_object_unref (priv->receive_buffer);
+        kiro_sb_free (priv->receive_buffer);
         priv->receive_buffer = NULL;
     }
+    priv->kiro_connected = FALSE;
 
     if (priv->dummy_data) {
         g_free (priv->dummy_data);
@@ -1008,7 +996,7 @@ uca_kiro_camera_constructed (GObject *object)
             kiro_credentials[0] >> kiro_address;
             kiro_credentials[1] >> kiro_port;
 
-            if (0 > kiro_client_connect(priv->kiro_receiver, kiro_address.c_str (), kiro_port.c_str ())) {
+            if (0 > kiro_sb_clone (priv->receive_buffer, kiro_address.c_str (), kiro_port.c_str ())) {
                 g_warning ("Unable to connect to server at address: %s, port: %s\n", kiro_address.c_str (), kiro_port.c_str ());
                 priv->construction_error = TRUE;
                 g_set_error (&initable_iface_error, UCA_KIRO_CAMERA_ERROR, UCA_KIRO_CAMERA_ERROR_KIRO_CONNECTION_FAILED,
@@ -1098,8 +1086,8 @@ uca_kiro_camera_init(UcaKiroCamera *self)
     self->priv->construction_error = FALSE;
     self->priv->kiro_dynamic_attributes = NULL;
 
-    self->priv->receive_buffer = KIRO_TRB (g_object_new (KIRO_TYPE_TRB, NULL));
-    self->priv->kiro_receiver = KIRO_CLIENT (g_object_new (KIRO_TYPE_CLIENT, NULL));
+    self->priv->receive_buffer = kiro_sb_new ();
+    kiro_sb_freeze (self->priv->receive_buffer);
 }
 
 

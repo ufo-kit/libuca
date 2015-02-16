@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 project(ucakiro)
 
 find_package(PkgConfig)
-pkg_check_modules(KIRO kiro>=0.1)
+pkg_check_modules(KIRO kiro>=1.0)
 pkg_check_modules(TANGO tango>=8)
 
 if(KIRO_FOUND AND TANGO_FOUND)
