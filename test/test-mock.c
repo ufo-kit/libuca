@@ -285,8 +285,12 @@ test_can_be_written (Fixture *fixture, gconstpointer data)
     uca_camera_set_writable (fixture->camera, "roi-height", TRUE);
     uca_camera_start_recording (fixture->camera, &error);
     g_assert_no_error (error);
-
     g_object_set (fixture->camera, "roi-height", 128, NULL);
+#if (GLIB_CHECK_VERSION (2, 34, 0))
+    g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Property 'exposure-time' cant be changed during acquisition");
+    g_object_set (fixture->camera, "exposure-time", 1.0, NULL);
+    g_test_assert_expected_messages ();
+#endif
     uca_camera_stop_recording (fixture->camera, &error);
     g_assert_no_error (error);
 }
