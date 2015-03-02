@@ -293,27 +293,32 @@ uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 static void
 uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-    g_return_if_fail(UCA_IS_MOCK_CAMERA(object));
-    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE(object);
+    g_return_if_fail (UCA_IS_MOCK_CAMERA (object));
+    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (object);
+
+    if (uca_camera_is_recording (UCA_CAMERA (object)) && !uca_camera_is_writable_during_acquisition (UCA_CAMERA (object), pspec->name)) {
+        g_warning ("Property '%s' cant be changed during acquisition", pspec->name);
+        return;
+    }
 
     switch (property_id) {
         case PROP_EXPOSURE_TIME:
             priv->exposure_time = g_value_get_double (value);
             break;
         case PROP_ROI_X:
-            priv->roi_x = g_value_get_uint(value);
+            priv->roi_x = g_value_get_uint (value);
             break;
         case PROP_ROI_Y:
-            priv->roi_y = g_value_get_uint(value);
+            priv->roi_y = g_value_get_uint (value);
             break;
         case PROP_ROI_WIDTH:
-            priv->roi_width = g_value_get_uint(value);
+            priv->roi_width = g_value_get_uint (value);
             break;
         case PROP_ROI_HEIGHT:
-            priv->roi_height = g_value_get_uint(value);
+            priv->roi_height = g_value_get_uint (value);
             break;
         default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
     }
 }

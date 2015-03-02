@@ -687,8 +687,14 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 static void
 uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE(object);
+    g_return_if_fail (UCA_IS_PCO_CAMERA (object));
+    UcaPcoCameraPrivate *priv = UCA_PCO_CAMERA_GET_PRIVATE (object);
     guint err = PCO_NOERROR;
+
+    if (uca_camera_is_recording (UCA_CAMERA (object)) && !uca_camera_is_writable_during_acquisition (UCA_CAMERA (object), pspec->name)) {
+        g_warning ("Property '%s' cant be changed during acquisition", pspec->name);
+        return;
+    }
 
     switch (property_id) {
         case PROP_SENSOR_EXTENDED:
@@ -1781,6 +1787,9 @@ uca_pco_camera_init (UcaPcoCamera *self)
     uca_camera_register_unit (camera, "cooling-point-default", UCA_UNIT_DEGREE_CELSIUS);
     uca_camera_register_unit (camera, "sensor-adcs", UCA_UNIT_COUNT);
     uca_camera_register_unit (camera, "sensor-max-adcs", UCA_UNIT_COUNT);
+
+    uca_camera_set_writable (camera, "exposure-time");
+    uca_camera_set_writable (camera, "frames-per-second");
 }
 
 G_MODULE_EXPORT GType
