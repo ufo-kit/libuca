@@ -227,6 +227,9 @@ uca_kiro_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 
     UcaKiroCameraPrivate *priv = UCA_KIRO_CAMERA_GET_PRIVATE (camera);
 
+    //This is a hack to make sure we actually wait for a new frame;
+    kiro_sb_get_data (priv->receive_buffer);
+
     kiro_sb_freeze (priv->receive_buffer);
     //Element 0 might still be in the process of being written. 
     //Therefore, we take Element 1, to be sure this one is finished.
