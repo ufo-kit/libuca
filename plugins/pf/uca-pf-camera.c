@@ -208,9 +208,16 @@ uca_pf_camera_trigger(UcaCamera *camera, GError **error)
 static void
 uca_pf_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
+    g_return_if_fail (UCA_IS_PF_CAMERA (object));
+
+    if (uca_camera_is_recording (UCA_CAMERA (object)) && !uca_camera_is_writable_during_acquisition (UCA_CAMERA (object), pspec->name)) {
+        g_warning ("Property '%s' cant be changed during acquisition", pspec->name);
+        return;
+    }
+
     switch (property_id) {
         default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
     }
 }

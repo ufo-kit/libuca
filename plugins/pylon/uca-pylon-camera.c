@@ -135,8 +135,14 @@ static gboolean uca_pylon_camera_grab(UcaCamera *camera, gpointer data, GError *
 
 static void uca_pylon_camera_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
-    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE(object);
+    g_return_if_fail (UCA_IS_PYLON_CAMERA (object));
+    UcaPylonCameraPrivate *priv = UCA_PYLON_CAMERA_GET_PRIVATE (object);
     GError* error = NULL;
+
+    if (uca_camera_is_recording (UCA_CAMERA (object)) && !uca_camera_is_writable_during_acquisition (UCA_CAMERA (object), pspec->name)) {
+        g_warning ("Property '%s' cant be changed during acquisition", pspec->name);
+        return;
+    }
 
     switch (property_id) {
     case PROP_SENSOR_HORIZONTAL_BINNING:
