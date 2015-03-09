@@ -88,6 +88,7 @@ struct _UcaKiroCameraPrivate {
 
     guint roi_height;
     guint roi_width;
+    guint bytes_per_pixel;
 };
 
 static gpointer
@@ -133,6 +134,16 @@ uca_kiro_camera_start_recording(UcaCamera *camera, GError **error)
     g_object_get (G_OBJECT(camera),
             "roi-height", &priv->roi_height,
             NULL);
+
+    size_t bits = 0;
+    g_object_get (G_OBJECT(camera),
+            "sensor-bitdepth", &bits,
+            NULL);
+
+    priv->bytes_per_pixel = 1;
+    if (bits > 8) priv->bytes_per_pixel++;
+    if (bits > 16) priv->bytes_per_pixel++;
+    if (bits > 24) priv->bytes_per_pixel++;
 
     Tango::DevState state;
     g_object_get (G_OBJECT(camera),
@@ -227,7 +238,7 @@ uca_kiro_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     //Element 0 is always about to be written, Element -1 is currently being written
     //Therefore, we take Element -2, to be sure this one is finished
     size_t index = kiro_trb_get_max_elements (priv->receive_buffer) - 2;
-    g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height);
+    g_memmove (data, kiro_trb_get_element(priv->receive_buffer, index), priv->roi_width * priv->roi_height * priv->bytes_per_pixel);
 
     return TRUE;
 }
