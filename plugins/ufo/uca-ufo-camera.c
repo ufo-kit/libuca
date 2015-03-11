@@ -44,6 +44,12 @@
         return FALSE;                                   \
     }
 
+#define PCILIB_WARN_ON_ERROR(err)                       \
+    if (err != 0) {                                     \
+       g_warning ("%s:%i pcilib: %s (errcode = %d)",    \
+                  __FILE__, __LINE__, strerror(err), err); \
+    }
+
 #define UCA_UFO_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_UFO_CAMERA, UcaUfoCameraPrivate))
 
 static void uca_ufo_camera_initable_iface_init (GInitableIface *iface);
@@ -132,8 +138,10 @@ static guint
 read_register_value (pcilib_t *handle, const gchar *name)
 {
     pcilib_register_value_t reg_value;
+    int err;
 
-    pcilib_read_register(handle, NULL, name, &reg_value);
+    err = pcilib_read_register(handle, NULL, name, &reg_value);
+    PCILIB_WARN_ON_ERROR (err);
     return (guint) reg_value;
 }
 
@@ -170,6 +178,7 @@ update_properties (UcaUfoCameraPrivate *priv)
         gchar *prop_name;
         pcilib_register_description_t *reg;
         pcilib_register_value_t value;
+        gint err;
 
         reg = &description->registers[i];
 
@@ -187,7 +196,9 @@ update_properties (UcaUfoCameraPrivate *priv)
                 break;
         }
 
-        pcilib_read_register (priv->handle, NULL, reg->name, &value);
+        err = pcilib_read_register (priv->handle, NULL, reg->name, &value);
+        PCILIB_WARN_ON_ERROR (err);
+
         reg_info = g_new0 (RegisterInfo, 1);
         reg_info->name = g_strdup (reg->name);
         reg_info->cached_value = (guint32) value;
@@ -251,8 +262,11 @@ set_control_bit (UcaUfoCameraPrivate *priv, guint bit, gboolean set)
     static const gchar *name = "control";
     pcilib_register_value_t flags;
     pcilib_register_value_t mask;
+    gint err;
 
-    pcilib_read_register (priv->handle, NULL, name, &flags);
+    err = pcilib_read_register (priv->handle, NULL, name, &flags);
+    PCILIB_WARN_ON_ERROR (err);
+
     mask = 1 << bit;
 
     if (set)
@@ -260,13 +274,14 @@ set_control_bit (UcaUfoCameraPrivate *priv, guint bit, gboolean set)
     else
         flags = flags & ~mask;
 
-    pcilib_write_register(priv->handle, NULL, name, flags);
+    err = pcilib_write_register(priv->handle, NULL, name, flags);
+    PCILIB_WARN_ON_ERROR (err);
 }
 
 static void
 set_streaming (UcaUfoCameraPrivate *priv, gboolean enable)
 {
-    set_control_bit (priv, 11, enable); 
+    set_control_bit (priv, 11, enable);
 }
 
 static gpointer
@@ -437,8 +452,11 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
             {
                 const guint frequency = priv->frequency == FPGA_40MHZ ? 40 : 48;
                 const gdouble user_exposure_time = g_value_get_double(value);
+                gint err;
+
                 pcilib_register_value_t reg_value = (pcilib_register_value_t) (1e6 * user_exposure_time * frequency / 129.0 - 0.43 * 10);
-                pcilib_write_register(priv->handle, NULL, "cmosis_exp_time", reg_value);
+                err = pcilib_write_register(priv->handle, NULL, "cmosis_exp_time", reg_value);
+                PCILIB_WARN_ON_ERROR (err);
             }
             break;
         case PROP_FRAMES_PER_SECOND:
@@ -475,10 +493,16 @@ uca_ufo_camera_set_property(GObject *object, guint property_id, const GValue *va
 
                 if (reg_info != NULL) {
                     pcilib_register_value_t reg_value = 0;
+                    gint err;
 
                     reg_value = g_value_get_uint (value);
-                    pcilib_write_register (priv->handle, NULL, reg_info->name, reg_value);
-                    pcilib_read_register (priv->handle, NULL, reg_info->name, &reg_value);
+
+                    err = pcilib_write_register (priv->handle, NULL, reg_info->name, reg_value);
+                    PCILIB_WARN_ON_ERROR (err);
+
+                    err = pcilib_read_register (priv->handle, NULL, reg_info->name, &reg_value);
+                    PCILIB_WARN_ON_ERROR (err);
+
                     reg_info->cached_value = (guint) reg_value;
                 }
                 else
