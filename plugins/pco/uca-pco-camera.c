@@ -1788,8 +1788,8 @@ uca_pco_camera_init (UcaPcoCamera *self)
     uca_camera_register_unit (camera, "sensor-adcs", UCA_UNIT_COUNT);
     uca_camera_register_unit (camera, "sensor-max-adcs", UCA_UNIT_COUNT);
 
-    uca_camera_set_writable (camera, "exposure-time");
-    uca_camera_set_writable (camera, "frames-per-second");
+    uca_camera_set_writable (camera, "exposure-time", TRUE);
+    uca_camera_set_writable (camera, "frames-per-second", TRUE);
 }
 
 G_MODULE_EXPORT GType
