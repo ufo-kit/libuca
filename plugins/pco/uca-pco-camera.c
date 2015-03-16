@@ -563,7 +563,7 @@ uca_pco_camera_stop_recording (UcaCamera *camera, GError **error)
     err = pco_stop_recording (priv->pco);
     CHECK_AND_RETURN_ON_PCO_ERROR (err);
 
-    err = Fg_stopAcquireEx(priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
+    err = Fg_stopAcquire(priv->fg, priv->fg_port);
     FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_ACQUISITION);
 
     err = Fg_setStatusEx(priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
