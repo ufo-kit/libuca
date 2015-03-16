@@ -330,7 +330,7 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 g_warning("Tried to set illegal horizontal binning: %d", horizontalBinning);
                 return;
             }
-            dexela_set_binning_mode(horizontalBinning, dexela_get_binning_mode_vertical());
+            dexela_set_binning_mode(horizontalBinning, horizontalBinning);
             break;
         }
         case PROP_SENSOR_VERTICAL_BINNING:
@@ -340,7 +340,7 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 g_warning("Tried to set illegal vertical binning: %d", verticalBinning);
                 return;
             }
-            dexela_set_binning_mode(dexela_get_binning_mode_horizontal(), verticalBinning);
+            dexela_set_binning_mode(verticalBinning, verticalBinning);
             break;
         }
         case PROP_GAIN_MODE:
