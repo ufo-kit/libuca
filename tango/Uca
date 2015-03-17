@@ -6,7 +6,7 @@ import numpy as np
 import PyTango
 from gi.repository import Uca, GObject
 from PyTango import Attr, AttrWriteType, DevState
-from PyTango.server import Device, DeviceMeta, device_property, command, server_run
+from PyTango.server import Device, DeviceMeta, attribute, device_property, command, server_run
 
 try:
     import tifffile
@@ -65,6 +65,9 @@ class Camera(Device):
 
     camera = device_property(dtype=str, default_value='mock')
 
+    image = attribute(label="Image", dtype=[[np.uint16]],
+                      max_dim_x=4096, max_dim_y=4096)
+
     def init_device(self):
         Device.init_device(self)
         self.set_state(DevState.ON)
@@ -122,6 +125,9 @@ class Camera(Device):
             tifffile.imsave(path, frame)
         else:
             np.savez(open(path, 'wb'), frame)
+
+    def read_image(self):
+        return self.grab()
 
 
 if __name__ == '__main__':
