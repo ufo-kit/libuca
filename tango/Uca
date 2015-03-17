@@ -16,7 +16,7 @@ except ImportError:
     HAVE_TIFFFILE = False
 
 
-def get_tango_type(prop):
+def get_tango_type(obj_type):
     mapping = {
         GObject.TYPE_BOOLEAN: PyTango.CmdArgType.DevBoolean,
         GObject.TYPE_CHAR: PyTango.CmdArgType.DevUChar,
@@ -27,9 +27,16 @@ def get_tango_type(prop):
         GObject.TYPE_LONG: PyTango.CmdArgType.DevLong,
         GObject.TYPE_DOUBLE: PyTango.CmdArgType.DevDouble,
         GObject.TYPE_STRING: PyTango.CmdArgType.DevString,
+        GObject.TYPE_ENUM: PyTango.CmdArgType.DevShort,
     }
 
-    return mapping.get(prop, None)
+    tango_type = mapping.get(obj_type, None)
+
+    if tango_type is not None:
+        return tango_type
+
+    if obj_type.is_a(GObject.TYPE_ENUM):
+        return PyTango.CmdArgType.DevUShort
 
 
 def get_tango_write_type(prop):
