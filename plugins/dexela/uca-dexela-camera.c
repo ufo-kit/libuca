@@ -166,6 +166,28 @@ static gboolean is_binning_allowed(UcaDexelaCameraPrivate *priv, guint binning)
     return FALSE;
 }
 
+static guint real_width(UcaDexelaCameraPrivate *priv)
+{
+    return priv->width / dexela_get_binning_mode_horizontal();
+}
+
+static guint real_height(UcaDexelaCameraPrivate *priv)
+{
+    return priv->height / dexela_get_binning_mode_vertical();
+}
+
+static void adjust_roi_width(UcaDexelaCameraPrivate *priv, guint requested_width)
+{
+    guint maxRoiWidth = real_width(priv) - priv->roi_x;
+    priv->roi_width = min(maxRoiWidth, requested_width);
+}
+
+static void adjust_roi_height(UcaDexelaCameraPrivate *priv, guint requested_height)
+{
+    guint maxRoiHeight = real_height(priv) - priv->roi_y;
+    priv->roi_height = min(maxRoiHeight, requested_height);
+}
+
 static void uca_dexela_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(object);
@@ -305,22 +327,28 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
         }
         case PROP_ROI_X:
         {
-            priv->roi_x = g_value_get_uint(value);
+            guint maxRoiX = real_width(priv) - 1;
+            guint requestedRoiX = g_value_get_uint(value);
+            priv->roi_x = min(maxRoiX, requestedRoiX);
+            adjust_roi_width(priv, priv->roi_width);
             break;
         }
         case PROP_ROI_Y:
         {
-            priv->roi_y = g_value_get_uint(value);
+            guint maxRoiY = real_height(priv) -1;
+            guint requestedRoiY = g_value_get_uint(value);
+            priv->roi_y = min(maxRoiY, requestedRoiY);
+            adjust_roi_height(priv, priv->roi_height);
             break;
         }
         case PROP_ROI_WIDTH:
         {
-            priv->roi_width = g_value_get_uint(value);
+            adjust_roi_width(priv, g_value_get_uint(value));
             break;
         }
         case PROP_ROI_HEIGHT:
         {
-            priv->roi_height = g_value_get_uint(value);
+            adjust_roi_height(priv, g_value_get_uint(value));
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -331,6 +359,7 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 return;
             }
             dexela_set_binning_mode(horizontalBinning, horizontalBinning);
+            adjust_roi_width(priv, priv->roi_width);
             break;
         }
         case PROP_SENSOR_VERTICAL_BINNING:
@@ -341,6 +370,7 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 return;
             }
             dexela_set_binning_mode(verticalBinning, verticalBinning);
+            adjust_roi_height(priv, priv->roi_height);
             break;
         }
         case PROP_GAIN_MODE:
@@ -404,7 +434,7 @@ static gboolean uca_dexela_camera_grab(UcaCamera *camera, gpointer data, GError 
         // TODO: wait for a signal from uca_camera_trigger()
     }
     guchar* fullFrame = dexela_grab();
-    apply_software_roi(fullFrame, priv->width, priv->num_bytes, data, priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height);
+    apply_software_roi(fullFrame, real_width(priv), priv->num_bytes, data, priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height);
     return TRUE;
 }
 
@@ -484,8 +514,8 @@ static gboolean setup_dexela(UcaDexelaCameraPrivate *priv)
     priv->height = dexela_get_height();
     priv->roi_x = 0;
     priv->roi_y = 0;
-    priv->roi_width = priv->width;
-    priv->roi_height = priv->height;
+    priv->roi_width = real_width(priv);
+    priv->roi_height = real_height(priv);
     priv->num_bytes = 2;
     return TRUE;
 }
