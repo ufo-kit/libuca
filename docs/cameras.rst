@@ -15,7 +15,9 @@ The following cameras are supported:
 Property documentation
 ----------------------
 
--  `mock <mock.html>`__
--  `pco <pco.html>`__
--  `PhotonFocus <pf.html>`__
--  `Ufo Camera <ufo.html>`__
+
+.. toctree::
+
+    mock
+    pco
+    file
