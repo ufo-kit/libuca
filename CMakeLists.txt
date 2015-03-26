@@ -67,6 +67,7 @@ endmacro()
 #}}}
 #{{{ Configure
 include(ConfigurePaths)
+include(PkgConfigVars)
 configure_paths(UCA)
 
 set(UCA_PLUGINDIR "${UCA_LIBDIR}/uca")
