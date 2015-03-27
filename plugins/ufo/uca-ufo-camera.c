@@ -163,6 +163,33 @@ event_callback(pcilib_event_id_t event_id, pcilib_event_info_t *info, void *user
     return PCILIB_STREAMING_CONTINUE;
 }
 
+static gdouble
+total_readout_time (UcaUfoCamera *camera)
+{
+    gdouble clock_period_ns;
+    gdouble exposure_time;
+    gdouble readout_time;
+    gdouble overhead_time;
+    guint output_mode;
+    guint roi_height;
+    guint num_outputs;
+
+    g_object_get (G_OBJECT (camera),
+                  "exposure-time", &exposure_time,
+                  "ufo-cmosis-output-mode", &output_mode,
+                  "roi-height", &roi_height,
+                  NULL);
+
+    num_outputs = camera->priv->n_bits == 10 ? 16 : 4;  /* what about 11? */
+    clock_period_ns = camera->priv->frequency == FPGA_40MHZ ? 1 / 40.0 * 1000 : 1 / 48.0 * 1000;
+    exposure_time *= 1000 * 1000;    /* convert to nanoseconds */
+
+    readout_time = (129 * clock_period_ns * 16 / num_outputs) * roi_height;
+    overhead_time = (7 /* reg73 */ + 2 * (16 / num_outputs)) * 129 * clock_period_ns;
+
+    return exposure_time + (overhead_time + readout_time) / 1000 / 1000;
+}
+
 static guint
 update_properties (UcaUfoCameraPrivate *priv)
 {
@@ -319,7 +346,7 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
     if (trigger == UCA_CAMERA_TRIGGER_AUTO)
         set_streaming (priv, TRUE);
 
-    priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
+    priv->timeout = (pcilib_timeout_t) (total_readout_time (UCA_UFO_CAMERA (camera)) * 1000 * 1000);
 
     if (transfer_async)
         priv->async_thread = g_thread_create ((GThreadFunc) stream_async, camera, TRUE, error);
@@ -412,28 +439,6 @@ uca_ufo_camera_trigger (UcaCamera *camera, GError **error)
 
     /* XXX: What is PCILIB_EVENT0? */
     pcilib_trigger (priv->handle, PCILIB_EVENT0, 0, NULL);
-}
-
-static gdouble
-total_readout_time (UcaUfoCamera *camera)
-{
-    gdouble clock_period, foo;
-    gdouble exposure_time, image_readout_time, overhead_time;
-    guint output_mode;
-    guint roi_height;
-
-    g_object_get (G_OBJECT (camera),
-                  "exposure-time", &exposure_time,
-                  "ufo-cmosis-output-mode", &output_mode,
-                  "roi-height", &roi_height,
-                  NULL);
-
-    clock_period = camera->priv->frequency == FPGA_40MHZ ? 1 / 40.0 : 1 / 48.0;
-    foo = pow (2, output_mode);
-    image_readout_time = (129 * clock_period * foo) * roi_height;
-    overhead_time = (10 /* reg73 */ + 2 * foo) * 129 * clock_period;
-
-    return exposure_time + (overhead_time + image_readout_time) / 1000 / 1000;
 }
 
 static void
