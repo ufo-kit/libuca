@@ -429,12 +429,14 @@ static void
 uca_ufo_camera_trigger (UcaCamera *camera, GError **error)
 {
     UcaUfoCameraPrivate *priv;
+    int err;
     g_return_if_fail (UCA_IS_UFO_CAMERA(camera));
 
     priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
 
     /* XXX: What is PCILIB_EVENT0? */
-    pcilib_trigger (priv->handle, PCILIB_EVENT0, 0, NULL);
+    err = pcilib_trigger (priv->handle, PCILIB_EVENT0, 0, NULL);
+    PCILIB_SET_ERROR (err, UCA_UFO_CAMERA_ERROR_TRIGGER);
 }
 
 static void
