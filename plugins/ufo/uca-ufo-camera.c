@@ -342,9 +342,7 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 
     err = pcilib_start(priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_START_RECORDING);
-
-    if (trigger == UCA_CAMERA_TRIGGER_AUTO)
-        set_streaming (priv, TRUE);
+    set_streaming (priv, trigger == UCA_CAMERA_TRIGGER_AUTO);
 
     priv->timeout = (pcilib_timeout_t) (total_readout_time (UCA_UFO_CAMERA (camera)) * 1000 * 1000);
 
@@ -372,9 +370,7 @@ uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
 
     int err = pcilib_stop (priv->handle, PCILIB_EVENT_FLAGS_DEFAULT);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_STOP_RECORDING);
-
-    if (trigger == UCA_CAMERA_TRIGGER_AUTO)
-        set_streaming (priv, FALSE);
+    set_streaming (priv, trigger != UCA_CAMERA_TRIGGER_AUTO);
 }
 
 static void
