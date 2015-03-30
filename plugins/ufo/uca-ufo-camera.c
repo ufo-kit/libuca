@@ -248,6 +248,7 @@ setup_pcilib (UcaUfoCameraPrivate *priv)
 {
     pcilib_model_t model;
     guint adc_resolution;
+    int err;
 
     model = PCILIB_MODEL_DETECT;
     priv->handle = pcilib_open("/dev/fpga0", model);
@@ -278,6 +279,15 @@ setup_pcilib (UcaUfoCameraPrivate *priv)
         case 2:
             priv->n_bits = 12;
             break;
+    }
+
+    err = pcilib_start(priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
+
+    if (err != 0) {
+        g_set_error (&priv->construct_error,
+                     UCA_UFO_CAMERA_ERROR, UCA_UFO_CAMERA_ERROR_INIT,
+                     "pcilib start failed: %s", strerror (err));
+        return FALSE;
     }
 
     return TRUE;
@@ -340,8 +350,6 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
                   "trigger-mode", &trigger,
                   NULL);
 
-    err = pcilib_start(priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
-    PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_START_RECORDING);
     set_streaming (priv, trigger == UCA_CAMERA_TRIGGER_AUTO);
 
     priv->timeout = (pcilib_timeout_t) (total_readout_time (UCA_UFO_CAMERA (camera)) * 1000 * 1000);
@@ -368,8 +376,6 @@ uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
         priv->async_thread = NULL;
     }
 
-    int err = pcilib_stop (priv->handle, PCILIB_EVENT_FLAGS_DEFAULT);
-    PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_STOP_RECORDING);
     set_streaming (priv, trigger != UCA_CAMERA_TRIGGER_AUTO);
 }
 
@@ -609,6 +615,9 @@ uca_ufo_camera_finalize(GObject *object)
     UcaUfoCameraPrivate *priv;
 
     priv = UCA_UFO_CAMERA_GET_PRIVATE (object);
+
+    int err = pcilib_stop (priv->handle, PCILIB_EVENT_FLAGS_DEFAULT);
+    PCILIB_WARN_ON_ERROR (err);
 
     pcilib_close (priv->handle);
     g_clear_error (&priv->construct_error);
