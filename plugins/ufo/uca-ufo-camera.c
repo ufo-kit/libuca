@@ -311,7 +311,6 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
     UcaCameraTrigger trigger;
     gdouble exposure_time;
     gboolean transfer_async;
-    int err;
 
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 
@@ -324,7 +323,6 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
                   NULL);
 
     set_streaming (priv, trigger == UCA_CAMERA_TRIGGER_AUTO);
-
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
 
     if (transfer_async)
