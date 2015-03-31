@@ -154,7 +154,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_EXPOSURE_TIME,
     PROP_FRAMES_PER_SECOND,
-    PROP_TRIGGER_MODE,
+    PROP_TRIGGER_SOURCE,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -913,18 +913,18 @@ uca_pco_camera_set_property(GObject *object, guint property_id, const GValue *va
             }
             break;
 
-        case PROP_TRIGGER_MODE:
+        case PROP_TRIGGER_SOURCE:
             {
-                UcaCameraTrigger trigger_mode = (UcaCameraTrigger) g_value_get_enum(value);
+                UcaCameraTriggerSource trigger_source = g_value_get_enum (value);
 
-                switch (trigger_mode) {
-                    case UCA_CAMERA_TRIGGER_AUTO:
+                switch (trigger_source) {
+                    case UCA_CAMERA_TRIGGER_SOURCE_AUTO:
                         err = pco_set_trigger_mode(priv->pco, TRIGGER_MODE_AUTOTRIGGER);
                         break;
-                    case UCA_CAMERA_TRIGGER_SOFTWARE:
+                    case UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE:
                         err = pco_set_trigger_mode(priv->pco, TRIGGER_MODE_SOFTWARETRIGGER);
                         break;
-                    case UCA_CAMERA_TRIGGER_EXTERNAL:
+                    case UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL:
                         err = pco_set_trigger_mode(priv->pco, TRIGGER_MODE_EXTERNALTRIGGER);
                         break;
                 }
@@ -1240,20 +1240,20 @@ uca_pco_camera_get_property (GObject *object, guint property_id, GValue *value, 
             }
             break;
 
-        case PROP_TRIGGER_MODE:
+        case PROP_TRIGGER_SOURCE:
             {
                 guint16 mode;
                 err = pco_get_trigger_mode(priv->pco, &mode);
 
                 switch (mode) {
                     case TRIGGER_MODE_AUTOTRIGGER:
-                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
+                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
                         break;
                     case TRIGGER_MODE_SOFTWARETRIGGER:
-                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_SOFTWARE);
+                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
                         break;
                     case TRIGGER_MODE_EXTERNALTRIGGER:
-                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_EXTERNAL);
+                        g_value_set_enum(value, UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
                         break;
                     default:
                         g_warning("pco trigger mode not handled");

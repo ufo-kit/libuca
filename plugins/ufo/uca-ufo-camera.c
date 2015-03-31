@@ -284,7 +284,7 @@ set_control_bit (UcaUfoCameraPrivate *priv, guint bit, gboolean set)
     else
         flags = flags & ~mask;
 
-    err = pcilib_write_register(priv->handle, NULL, name, flags);
+    err = pcilib_write_register (priv->handle, NULL, name, flags);
     PCILIB_WARN_ON_ERROR (err);
 }
 
@@ -314,7 +314,7 @@ static void
 uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 {
     UcaUfoCameraPrivate *priv;
-    UcaCameraTrigger trigger;
+    UcaCameraTriggerSource trigger_source;
     gdouble exposure_time;
     gboolean transfer_async;
 
@@ -325,11 +325,11 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
     g_object_get (G_OBJECT(camera),
                   "transfer-asynchronously", &transfer_async,
                   "exposure-time", &exposure_time,
-                  "trigger-mode", &trigger,
+                  "trigger-source", &trigger_source,
                   NULL);
 
-    set_external_trigger_bit (priv, trigger == UCA_CAMERA_TRIGGER_EXTERNAL);
-    set_streaming_bit (priv, trigger == UCA_CAMERA_TRIGGER_AUTO);
+    set_external_trigger_bit (priv, trigger == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
+    set_streaming_bit (priv, trigger_mode == UCA_CAMERA_TRIGGER_SOURCE_AUTO);
 
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
 
@@ -341,13 +341,13 @@ static void
 uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
 {
     UcaUfoCameraPrivate *priv;
-    UcaCameraTrigger trigger;
+    UcaCameraTriggerSource trigger_source;
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 
     priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
 
     set_external_trigger_bit (priv, FALSE);
-    g_object_get (G_OBJECT (camera), "trigger-mode", &trigger, NULL);
+    g_object_get (G_OBJECT (camera), "trigger-source", &trigger_source, NULL);
 
     if (priv->async_thread) {
         int err = pcilib_stop(priv->handle, PCILIB_EVENT_FLAG_STOP_ONLY);
@@ -356,7 +356,7 @@ uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
         priv->async_thread = NULL;
     }
 
-    set_streaming_bit (priv, trigger != UCA_CAMERA_TRIGGER_AUTO);
+    set_streaming_bit (priv, trigger_mode != UCA_CAMERA_TRIGGER_SOURCE_AUTO);
 }
 
 static void

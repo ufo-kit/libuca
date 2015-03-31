@@ -58,21 +58,21 @@ automatically.
 Triggering
 ----------
 
-``libuca`` supports three trigger modes through the "trigger-mode"
+``libuca`` supports three trigger sources through the "trigger-source"
 property:
 
-1. ``UCA_CAMERA_TRIGGER_AUTO``: Exposure is triggered by the camera
+1. ``UCA_CAMERA_TRIGGER_SOURCE_AUTO``: Exposure is triggered by the camera
    itself.
-2. ``UCA_CAMERA_TRIGGER_SOFTWARE``: Exposure is triggered via software.
-3. ``UCA_CAMERA_TRIGGER_EXTERNAL``: Exposure is triggered by an external
+2. ``UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE``: Exposure is triggered via software.
+3. ``UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL``: Exposure is triggered by an external
    hardware mechanism.
 
-With ``UCA_CAMERA_TRIGGER_SOFTWARE`` you have to trigger with
+With ``UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE`` you have to trigger with
 ``uca_camera_trigger``::
 
         /* thread A */
         g_object_set (G_OBJECT (camera),
-                      "trigger-mode", UCA_CAMERA_TRIGGER_SOFTWARE,
+                      "trigger-source", UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE,
                       NULL);
 
         uca_camera_start_recording (camera, NULL);
@@ -81,6 +81,9 @@ With ``UCA_CAMERA_TRIGGER_SOFTWARE`` you have to trigger with
 
         /* thread B */
         uca_camera_trigger (camera, NULL);
+
+Moreover, the "trigger-type" property specifies if the exposure should be
+triggered at the rising edge or during the level signal.
 
 
 Grabbing frames asynchronously

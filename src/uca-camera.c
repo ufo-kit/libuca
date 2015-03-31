@@ -41,11 +41,17 @@
 G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
 
 /**
- * UcaCameraTrigger:
- * @UCA_CAMERA_TRIGGER_AUTO: Trigger automatically
- * @UCA_CAMERA_TRIGGER_EXTERNAL: Trigger from an external source
- * @UCA_CAMERA_TRIGGER_SOFTWARE: Trigger from software using
+ * UcaCameraTriggerSource:
+ * @UCA_CAMERA_TRIGGER_SOURCE_AUTO: Trigger automatically
+ * @UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL: Trigger from an external source
+ * @UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE: Trigger from software using
  *      #uca_camera_trigger
+ */
+
+/**
+ * UcaCameraTriggerType:
+ * @UCA_CAMERA_TRIGGER_TYPE_EDGE: Trigger on rising edge
+ * @UCA_CAMERA_TRIGGER_TYPE_LEVEL: Trigger during level signal
  */
 
 /**
@@ -108,6 +114,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "sensor-horizontal-binnings",
     "sensor-vertical-binning",
     "sensor-vertical-binnings",
+    "trigger",
     "trigger-mode",
     "exposure-time",
     "frames-per-second",
@@ -139,7 +146,8 @@ struct _UcaCameraPrivate {
     guint num_buffers;
     GThread *read_thread;
     UcaRingBuffer *ring_buffer;
-    UcaCameraTrigger trigger;
+    UcaCameraTriggerSource trigger_source;
+    UcaCameraTriggerType trigger_type;
     GValueArray *h_binnings;
     GValueArray *v_binnings;
 };
@@ -180,8 +188,12 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
             }
             break;
 
-        case PROP_TRIGGER_MODE:
-            priv->trigger = g_value_get_enum (value);
+        case PROP_TRIGGER_SOURCE:
+            priv->trigger_source = g_value_get_enum (value);
+            break;
+
+        case PROP_TRIGGER_TYPE:
+            priv->trigger_type = g_value_get_enum (value);
             break;
 
         case PROP_BUFFERED:
@@ -215,8 +227,12 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             g_value_set_boolean (value, priv->transfer_async);
             break;
 
-        case PROP_TRIGGER_MODE:
-            g_value_set_enum (value, priv->trigger);
+        case PROP_TRIGGER_SOURCE:
+            g_value_set_enum (value, priv->trigger_source);
+            break;
+
+        case PROP_TRIGGER_TYPE:
+            g_value_set_enum (value, priv->trigger_type);
             break;
 
         case PROP_FRAMES_PER_SECOND:
@@ -423,11 +439,18 @@ uca_camera_class_init (UcaCameraClass *klass)
                 1, G_MAXUINT, 1,
                 G_PARAM_READABLE), G_PARAM_READABLE);
 
-    camera_properties[PROP_TRIGGER_MODE] =
-        g_param_spec_enum("trigger-mode",
-            "Trigger mode",
-            "Trigger mode",
-            UCA_TYPE_CAMERA_TRIGGER, UCA_CAMERA_TRIGGER_AUTO,
+    camera_properties[PROP_TRIGGER_SOURCE] =
+        g_param_spec_enum("trigger-source",
+            "Trigger source",
+            "Trigger source",
+            UCA_TYPE_CAMERA_TRIGGER_SOURCE, UCA_CAMERA_TRIGGER_SOURCE_AUTO,
+            G_PARAM_READWRITE);
+
+    camera_properties[PROP_TRIGGER_TYPE] =
+        g_param_spec_enum("trigger-type",
+            "Trigger type",
+            "Trigger type",
+            UCA_TYPE_CAMERA_TRIGGER_TYPE, UCA_CAMERA_TRIGGER_TYPE_EDGE,
             G_PARAM_READWRITE);
 
     camera_properties[PROP_ROI_X] =
@@ -561,7 +584,8 @@ uca_camera_init (UcaCamera *camera)
     camera->priv->is_recording = FALSE;
     camera->priv->is_readout = FALSE;
     camera->priv->transfer_async = FALSE;
-    camera->priv->trigger = UCA_CAMERA_TRIGGER_AUTO;
+    camera->priv->trigger_source = UCA_CAMERA_TRIGGER_SOURCE_AUTO;
+    camera->priv->trigger_type = UCA_CAMERA_TRIGGER_TYPE_EDGE;
     camera->priv->h_binnings = g_value_array_new (1);
     camera->priv->v_binnings = g_value_array_new (1);
     camera->priv->buffered = FALSE;
