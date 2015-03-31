@@ -289,9 +289,15 @@ set_control_bit (UcaUfoCameraPrivate *priv, guint bit, gboolean set)
 }
 
 static void
-set_streaming (UcaUfoCameraPrivate *priv, gboolean enable)
+set_streaming_bit (UcaUfoCameraPrivate *priv, gboolean enable)
 {
     set_control_bit (priv, 11, enable);
+}
+
+static void
+set_external_trigger_bit (UcaUfoCameraPrivate *priv, gboolean enable)
+{
+    set_control_bit (priv, 14, enable);
 }
 
 static gpointer
@@ -322,7 +328,9 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
                   "trigger-mode", &trigger,
                   NULL);
 
-    set_streaming (priv, trigger == UCA_CAMERA_TRIGGER_AUTO);
+    set_external_trigger_bit (priv, trigger == UCA_CAMERA_TRIGGER_EXTERNAL);
+    set_streaming_bit (priv, trigger == UCA_CAMERA_TRIGGER_AUTO);
+
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
 
     if (transfer_async)
@@ -338,6 +346,7 @@ uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
 
     priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
 
+    set_external_trigger_bit (priv, FALSE);
     g_object_get (G_OBJECT (camera), "trigger-mode", &trigger, NULL);
 
     if (priv->async_thread) {
@@ -347,7 +356,7 @@ uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
         priv->async_thread = NULL;
     }
 
-    set_streaming (priv, trigger != UCA_CAMERA_TRIGGER_AUTO);
+    set_streaming_bit (priv, trigger != UCA_CAMERA_TRIGGER_AUTO);
 }
 
 static void
