@@ -1,1 +1,0 @@
-LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:/opt/pylon/lib64:/opt/pylon/genicam/bin/Linux64_x64 CC=gcc CFLAGS="${GTK_DOC_CFLAGS}" LDFLAGS="${GTK_DOC_LDFLAGS} -L${CMAKE_CURRENT_BINARY_DIR} -luca `pkg-config --libs gtk+-2.0`" gtkdoc-scangobj --module=uca
