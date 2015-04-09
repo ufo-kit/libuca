@@ -318,11 +318,11 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
                   "trigger-type", &trigger_type,
                   NULL);
 
-    set_control_bit (priv, 14, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
     set_control_bit (priv, 15, trigger_type == UCA_CAMERA_TRIGGER_TYPE_EDGE);
     set_control_bit (priv, 11, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO);
+    set_control_bit (priv, 14, TRUE);
 
-    priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 50.0) * 1000);
+    priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 100.0) * 1000);
 
     if (transfer_async)
         priv->async_thread = g_thread_create ((GThreadFunc) stream_async, camera, TRUE, error);
