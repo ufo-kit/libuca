@@ -318,7 +318,8 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
                   "trigger-type", &trigger_type,
                   NULL);
 
-    set_control_bit (priv, 15, trigger_type == UCA_CAMERA_TRIGGER_TYPE_EDGE);
+    set_control_bit (priv, 15, trigger_type == UCA_CAMERA_TRIGGER_TYPE_EDGE &&
+                               trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
     set_control_bit (priv, 11, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO);
     set_control_bit (priv, 14, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO ||
                                trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
