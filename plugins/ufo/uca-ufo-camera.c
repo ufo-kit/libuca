@@ -320,7 +320,8 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 
     set_control_bit (priv, 15, trigger_type == UCA_CAMERA_TRIGGER_TYPE_EDGE);
     set_control_bit (priv, 11, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO);
-    set_control_bit (priv, 14, TRUE);
+    set_control_bit (priv, 14, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO ||
+                               trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
 
     priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 100.0) * 1000);
 
