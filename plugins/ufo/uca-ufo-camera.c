@@ -331,10 +331,13 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 }
 
 static void
-uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
+uca_ufo_camera_stop_recording (UcaCamera *camera, GError **error)
 {
     UcaUfoCameraPrivate *priv;
     UcaCameraTriggerSource trigger_source;
+    pcilib_event_id_t event_id;
+    pcilib_event_info_t event_info;
+
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 
     priv = UCA_UFO_CAMERA_GET_PRIVATE(camera);
@@ -350,6 +353,10 @@ uca_ufo_camera_stop_recording(UcaCamera *camera, GError **error)
         g_thread_join(priv->async_thread);
         priv->async_thread = NULL;
     }
+
+    /* read stale frames ... */
+    while (!pcilib_get_next_event (priv->handle, priv->timeout, &event_id, sizeof (pcilib_event_info_t), &event_info))
+        ;
 }
 
 static void
