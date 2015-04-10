@@ -113,7 +113,6 @@ struct _UcaUfoCameraPrivate {
     GHashTable         *property_table; /* maps from prop_id to RegisterInfo* */
     GThread            *async_thread;
     pcilib_t           *handle;
-    pcilib_timeout_t    timeout;
     guint               n_bits;
     guint               height;
     enum {
@@ -315,8 +314,6 @@ uca_ufo_camera_start_recording (UcaCamera *camera, GError **error)
     set_control_bit (priv, 14, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO ||
                                trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
 
-    priv->timeout = ((pcilib_timeout_t) (exposure_time * 1000 + 100.0) * 1000);
-
     if (transfer_async)
         priv->async_thread = g_thread_create ((GThreadFunc) stream_async, camera, TRUE, error);
 
@@ -355,7 +352,7 @@ uca_ufo_camera_stop_recording (UcaCamera *camera, GError **error)
     }
 
     /* read stale frames ... */
-    while (!pcilib_get_next_event (priv->handle, priv->timeout, &event_id, sizeof (pcilib_event_info_t), &event_info))
+    while (!pcilib_get_next_event (priv->handle, 0, &event_id, sizeof (pcilib_event_info_t), &event_info))
         ;
 
     err = pcilib_stop (priv->handle, PCILIB_EVENT_FLAGS_DEFAULT);
@@ -385,7 +382,7 @@ uca_ufo_camera_grab(UcaCamera *camera, gpointer data, GError **error)
 
     const gsize size = SENSOR_WIDTH * priv->height * sizeof(guint16);
 
-    err = pcilib_get_next_event (priv->handle, priv->timeout, &event_id, sizeof(pcilib_event_info_t), &event_info);
+    err = pcilib_get_next_event (priv->handle, PCILIB_TIMEOUT_INFINITE, &event_id, sizeof(pcilib_event_info_t), &event_info);
     PCILIB_SET_ERROR_RETURN_FALSE (err, UCA_UFO_CAMERA_ERROR_NEXT_EVENT);
 
     gpointer src = pcilib_get_data (priv->handle, event_id, PCILIB_EVENT_DATA, (size_t *) &err);
