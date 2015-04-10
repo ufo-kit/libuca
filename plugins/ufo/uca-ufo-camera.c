@@ -358,7 +358,7 @@ uca_ufo_camera_stop_recording (UcaCamera *camera, GError **error)
     while (!pcilib_get_next_event (priv->handle, priv->timeout, &event_id, sizeof (pcilib_event_info_t), &event_info))
         ;
 
-    err = pcilib_stop(priv->handle, PCILIB_EVENT_FLAG_STOP_ONLY);
+    err = pcilib_stop (priv->handle, PCILIB_EVENT_FLAGS_DEFAULT);
     PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_STOP_RECORDING);
 }
 
