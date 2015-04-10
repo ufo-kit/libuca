@@ -221,7 +221,6 @@ setup_pcilib (UcaUfoCameraPrivate *priv)
 {
     pcilib_model_t model;
     guint adc_resolution;
-    int err;
 
     model = PCILIB_MODEL_DETECT;
     priv->handle = pcilib_open("/dev/fpga0", model);
@@ -252,15 +251,6 @@ setup_pcilib (UcaUfoCameraPrivate *priv)
         case 2:
             priv->n_bits = 12;
             break;
-    }
-
-    err = pcilib_start(priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
-
-    if (err != 0) {
-        g_set_error (&priv->construct_error,
-                     UCA_UFO_CAMERA_ERROR, UCA_UFO_CAMERA_ERROR_INIT,
-                     "pcilib start failed: %s", strerror (err));
-        return FALSE;
     }
 
     return TRUE;
@@ -299,13 +289,14 @@ stream_async (UcaCamera *camera)
 }
 
 static void
-uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
+uca_ufo_camera_start_recording (UcaCamera *camera, GError **error)
 {
     UcaUfoCameraPrivate *priv;
     UcaCameraTriggerSource trigger_source;
     UcaCameraTriggerType trigger_type;
     gdouble exposure_time;
     gboolean transfer_async;
+    int err;
 
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 
@@ -328,6 +319,14 @@ uca_ufo_camera_start_recording(UcaCamera *camera, GError **error)
 
     if (transfer_async)
         priv->async_thread = g_thread_create ((GThreadFunc) stream_async, camera, TRUE, error);
+
+    err = pcilib_start (priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
+
+    if (err != 0) {
+        g_set_error (&priv->construct_error,
+                     UCA_UFO_CAMERA_ERROR, UCA_UFO_CAMERA_ERROR_INIT,
+                     "pcilib start failed: %s", strerror (err));
+    }
 }
 
 static void
@@ -337,6 +336,7 @@ uca_ufo_camera_stop_recording (UcaCamera *camera, GError **error)
     UcaCameraTriggerSource trigger_source;
     pcilib_event_id_t event_id;
     pcilib_event_info_t event_info;
+    int err;
 
     g_return_if_fail(UCA_IS_UFO_CAMERA(camera));
 
@@ -348,7 +348,7 @@ uca_ufo_camera_stop_recording (UcaCamera *camera, GError **error)
     g_object_get (G_OBJECT (camera), "trigger-source", &trigger_source, NULL);
 
     if (priv->async_thread) {
-        int err = pcilib_stop(priv->handle, PCILIB_EVENT_FLAG_STOP_ONLY);
+        err = pcilib_stop(priv->handle, PCILIB_EVENT_FLAG_STOP_ONLY);
         PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_STOP_RECORDING);
         g_thread_join(priv->async_thread);
         priv->async_thread = NULL;
@@ -357,6 +357,9 @@ uca_ufo_camera_stop_recording (UcaCamera *camera, GError **error)
     /* read stale frames ... */
     while (!pcilib_get_next_event (priv->handle, priv->timeout, &event_id, sizeof (pcilib_event_info_t), &event_info))
         ;
+
+    err = pcilib_stop(priv->handle, PCILIB_EVENT_FLAG_STOP_ONLY);
+    PCILIB_SET_ERROR(err, UCA_UFO_CAMERA_ERROR_STOP_RECORDING);
 }
 
 static void
