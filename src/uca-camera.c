@@ -522,7 +522,7 @@ uca_camera_class_init (UcaCameraClass *klass)
             FALSE, G_PARAM_READABLE);
 
     /**
-     * UcaCamera:recorded-frames
+     * UcaCamera:recorded-frames:
      *
      * Number of frames that are recorded into internal camera memory.
      *
