@@ -90,6 +90,7 @@ typedef struct {
     State        state;
     guint        n_recorded;
     gboolean     data_in_camram;
+    gboolean     advance_buffers;
 
     gint         timestamp;
     gint         width, height;
@@ -669,23 +670,60 @@ set_tool_button_state (ThreadData *data)
 }
 
 static gpointer
-preview_frames (void *args)
+grab_async (void *args)
 {
     ThreadData *data = (ThreadData *) args;
-    gint counter = 0;
     GError *error = NULL;
 
     while (data->state == RUNNING) {
-        gpointer *buffer;
+        if (data->advance_buffers) {
+            uca_ring_buffer_write_advance (data->buffer);
+            data->advance_buffers = FALSE;
+        }
 
-        buffer = uca_ring_buffer_peek_pointer (data->buffer);
+        gpointer *buffer = uca_ring_buffer_peek_pointer (data->buffer);
         uca_camera_grab (data->camera, buffer, &error);
 
         if (error != NULL) {
             print_and_free_error (&error);
-            continue;
         }
+    }
+    return NULL;
 
+}
+
+static gpointer
+preview_frames (void *args)
+{
+    ThreadData *data = (ThreadData *) args;
+    gint counter = 0;
+    data->n_recorded = 0;
+    uca_ring_buffer_reset (data->buffer);
+    GError *error = NULL;
+
+
+    /* manually grab first frame*/
+    gpointer *buffer = uca_ring_buffer_peek_pointer (data->buffer);
+    uca_camera_grab (data->camera, buffer, &error);
+    data->advance_buffers = TRUE;
+
+    if (!g_thread_create (grab_async, data, FALSE, &error)) {
+        g_printerr ("Failed to create thread: %s\n", error->message);
+        data->state = IDLE;
+        set_tool_button_state (data);
+        return NULL;
+    }
+
+    while (data->state == RUNNING) {
+        /* wait for the grab thread to finish moving to the next buffer */
+        if (data->advance_buffers)
+            continue;
+
+        /* buffer-pointer was already set either manually (before the while-loop
+         * started) or ar the end of the while loop to make sure we get the
+         * 'last' buffer which was used before the ring buffer was advanced to
+         * the next block
+         */
         up_and_down_scale (data, buffer);
 
         gdk_threads_enter ();
@@ -724,6 +762,10 @@ preview_frames (void *args)
         gdk_threads_leave ();
 
         counter++;
+
+        /*prefetch pointer to current buffer location before advancing */
+        buffer = uca_ring_buffer_get_read_pointer (data->buffer);
+        data->advance_buffers = TRUE;
     }
     return NULL;
 }
@@ -803,11 +845,17 @@ update_current_frame (ThreadData *data)
     index = (guint) gtk_adjustment_get_value (data->frame_slider);
     n_max = uca_ring_buffer_get_num_blocks (data->buffer);
 
-    /* Shift index so that we always show the oldest frames first */
-    if (n_max > 0)
+    if (n_max > 0 && data->n_recorded > 0) {
+        /* Shift index so that we always show the oldest frames first */
         index = (index + data->n_recorded - n_max) % n_max;
+        buffer = uca_ring_buffer_get_pointer (data->buffer, index);
+    }
+    else {
+        /* we were in preview mode. Grab the 'next' frame in the buffer */
+        uca_ring_buffer_write_advance (data->buffer);
+        buffer = uca_ring_buffer_get_read_pointer (data->buffer);
+    }
 
-    buffer = uca_ring_buffer_get_pointer (data->buffer, index);
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), buffer);
     up_and_down_scale (data, buffer);
     update_pixbuf (data);
