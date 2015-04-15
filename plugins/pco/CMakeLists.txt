@@ -3,9 +3,9 @@ project(ucapco C)
 
 find_package(PCO)
 find_package(FgLib5)
-find_package(ClSerMe4)
+find_package(ClSerSis)
 
-if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
+if (PCO_FOUND)
     set(UCA_CAMERA_NAME "pco")
     set(PLUGIN_VERSION "1.2.0")
     set(PLUGIN_REVISION "1")
@@ -16,8 +16,8 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
                    ${CMAKE_CURRENT_BINARY_DIR}/../../package-plugin-${UCA_CAMERA_NAME}.sh)
 
     include_directories(${PCO_INCLUDE_DIRS}
-                        ${CLSERME4_INCLUDE_DIR}
-                        ${FGLIB5_INCLUDE_DIR}
+                        ${clsersis_INCLUDE_DIR}
+                        ${FgLib5_INCLUDE_DIR}
                         ${CMAKE_CURRENT_SOURCE_DIR}
                         ${CMAKE_CURRENT_BINARY_DIR}
                         ${UCA_CONFIGDIR})
@@ -33,8 +33,8 @@ if (PCO_FOUND AND CLSERME4_FOUND AND FGLIB5_FOUND)
     target_link_libraries(ucapco
                           ${UCA_DEPS}
                           ${PCO_LIBRARIES}
-                          ${CLSERME4_LIBRARY}
-                          ${FGLIB5_LIBRARY})
+                          ${clsersis_LIBRARY}
+                          ${FgLib5_LIBRARY})
 
     install(TARGETS ucapco
             LIBRARY DESTINATION ${UCA_PLUGINDIR}
