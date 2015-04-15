@@ -59,10 +59,15 @@ None **sensor-vertical-binnings**
 
     | *Default:* None
 
-None **trigger-mode**
-    Trigger mode
+None **trigger-source**
+    Trigger source
 
-    | *Default:* <enum UCA_CAMERA_TRIGGER_AUTO of type UcaCameraTrigger>
+    | *Default:* <enum UCA_CAMERA_TRIGGER_SOURCE_AUTO of type UcaCameraTriggerSource>
+
+None **trigger-type**
+    Trigger type
+
+    | *Default:* <enum UCA_CAMERA_TRIGGER_TYPE_EDGE of type UcaCameraTriggerType>
 
 double **exposure-time**
     Exposure time in seconds
