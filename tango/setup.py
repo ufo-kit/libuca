@@ -10,5 +10,5 @@ setup(
     description='TANGO server for libuca',
     long_description='TANGO server for libuca',
     scripts=['Uca'],
-    install_requires=['PyTango']
+    install_requires=['PyTango', 'tifffile']
 )
