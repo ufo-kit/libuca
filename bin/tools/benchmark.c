@@ -207,6 +207,8 @@ benchmark (UcaCamera *camera, Options *options)
     options->n_bytes = roi_width * roi_height * n_bytes_per_pixel;
     buffer = g_malloc0 (options->n_bytes);
 
+    g_object_set (G_OBJECT(camera), "transfer-asynchronously", FALSE, NULL);
+
     g_print ("[  sync ] [     auto ]");
     benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
 
