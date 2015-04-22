@@ -24,7 +24,19 @@
 #include "common.h"
 
 
-typedef void (*GrabFrameFunc) (UcaCamera *camera, gpointer buffer, guint n_frames);
+typedef struct {
+    gint n_frames;
+    gint n_runs;
+    gdouble exposure_time;
+    gboolean test_async;
+    gboolean test_software;
+    gboolean test_external;
+
+    gsize n_bytes;
+} Options;
+
+
+typedef void (*GrabFrameFunc) (UcaCamera *, gpointer, guint, UcaCameraTriggerSource);
 
 static UcaCamera *camera = NULL;
 
@@ -72,13 +84,17 @@ log_handler (const gchar *log_domain, GLogLevelFlags log_level, const gchar *mes
 }
 
 static void
-grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames)
+grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source)
 {
     GError *error = NULL;
 
+    g_object_set (camera, "trigger-source", trigger_source, NULL);
     uca_camera_start_recording (camera, &error);
 
     for (guint i = 0; i < n_frames; i++) {
+        if (trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE)
+            uca_camera_trigger (camera, &error);
+
         if (!uca_camera_grab (camera, buffer, &error))
             g_warning ("Data stream ended");
 
@@ -92,7 +108,6 @@ grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames)
     uca_camera_stop_recording (camera, &error);
 }
 
-#if 0
 static void
 grab_callback (gpointer data, gpointer user_data)
 {
@@ -105,11 +120,12 @@ grab_callback (gpointer data, gpointer user_data)
 }
 
 static void
-grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames)
+grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source)
 {
     GError *error = NULL;
     guint n_acquired_frames = 0;
 
+    g_object_set (camera, "trigger-source", trigger_source, NULL);
     uca_camera_set_grab_func (camera, grab_callback, &n_acquired_frames);
     uca_camera_start_recording (camera, &error);
 
@@ -122,10 +138,9 @@ grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames)
 
     uca_camera_stop_recording (camera, &error);
 }
-#endif
 
 static void
-benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, guint n_runs, guint n_frames, guint n_bytes)
+benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Options *options, UcaCameraTriggerSource trigger_source)
 {
     GTimer *timer;
     gdouble fps;
@@ -133,15 +148,14 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, guint 
     gdouble total_time = 0.0;
     GError *error = NULL;
 
-    g_print ("n_frames=%i n_runs=%i", n_frames, n_runs);
     timer = g_timer_new ();
     g_assert_no_error (error);
 
-    for (guint run = 0; run < n_runs; run++) {
-        g_message ("Start run %i of %i", run, n_runs);
+    for (guint run = 0; run < options->n_runs; run++) {
+        g_message ("Start run %i of %i", run + 1, options->n_runs);
         g_timer_start (timer);
 
-        func (camera, buffer, n_frames);
+        func (camera, buffer, options->n_frames, trigger_source);
 
         g_timer_stop (timer);
         total_time += g_timer_elapsed (timer, NULL);
@@ -149,63 +163,80 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, guint 
 
     g_assert_no_error (error);
 
-    fps = n_runs * n_frames / total_time;
-    bandwidth = n_bytes * fps / 1024 / 1024;
-    g_print (" freq=%.2f io=%.2f\n", fps, bandwidth);
+    fps = options->n_runs * options->n_frames / total_time;
+    bandwidth = options->n_bytes * fps / 1024 / 1024;
+    g_print (" %8.2f Hz  %8.2f MB/s\n", fps, bandwidth);
 
     g_timer_destroy (timer);
 }
 
 static void
-benchmark (UcaCamera *camera, gint n_runs, gint n_frames)
+benchmark (UcaCamera *camera, Options *options)
 {
+    gchar *name;
     guint sensor_width;
     guint sensor_height;
     guint roi_width;
     guint roi_height;
     guint bits;
-    guint n_bytes_per_pixel;
-    guint n_bytes;
-    gdouble exposure = 0.00001;
+    gsize n_bytes_per_pixel;
+    gdouble exposure_time;
     gpointer buffer;
 
     g_object_set (G_OBJECT (camera),
-                  "exposure-time", exposure,
+                  "exposure-time", options->exposure_time,
                   NULL);
 
     g_object_get (G_OBJECT (camera),
+                  "name", &name,
                   "sensor-width", &sensor_width,
                   "sensor-height", &sensor_height,
                   "sensor-bitdepth", &bits,
                   "roi-width", &roi_width,
                   "roi-height", &roi_height,
-                  "exposure-time", &exposure,
+                  "exposure-time", &exposure_time,
                   NULL);
 
-    g_debug ("Sensor width=%i height=%i", sensor_width, sensor_height);
-    g_debug ("ROI width=%i height=%i", roi_width, roi_height);
-    g_debug ("Exposure time=%fs", exposure);
+    g_debug ("Benchmarking %s [width=%i height=%i roiwidth=%i roiheight=%i exposure_time=%fs]",
+             name, sensor_width, sensor_height, roi_width, roi_height, exposure_time);
+
+    g_free (name);
 
     /* Synchronous frame acquisition */
-    g_print ("sync ");
-
     n_bytes_per_pixel = bits > 8 ? 2 : 1;
-    n_bytes = roi_width * roi_height * n_bytes_per_pixel;
-    buffer = g_malloc0(n_bytes);
+    options->n_bytes = roi_width * roi_height * n_bytes_per_pixel;
+    buffer = g_malloc0 (options->n_bytes);
 
-    benchmark_method (camera, buffer, grab_frames_sync, n_runs, n_frames, n_bytes);
+    g_print ("[  sync ] [     auto ]");
+    benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
 
-#if 0
+    if (options->test_software) {
+        g_print ("[  sync ] [ software ]");
+        benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
+    }
+
+    if (options->test_external) {
+        g_print ("[  sync ] [ external ]");
+        benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
+    }
 
     /* Asynchronous frame acquisition */
-    g_object_set (G_OBJECT(camera),
-                 "transfer-asynchronously", TRUE,
-                 NULL);
+    if (options->test_async) {
+        g_object_set (G_OBJECT(camera), "transfer-asynchronously", TRUE, NULL);
 
-    g_print ("async ");
+        g_print ("[ async ] [     auto ]");
+        benchmark_method (camera, buffer, grab_frames_async, options, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
 
-    benchmark_method (camera, buffer, grab_frames_async, n_runs, n_frames, n_bytes);
-#endif
+        if (options->test_software) {
+            g_print ("[ async ] [ software ]");
+            benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
+        }
+
+        if (options->test_external) {
+            g_print ("[ async ] [ external ]");
+            benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
+        }
+    }
 
     g_free (buffer);
 }
@@ -217,12 +248,23 @@ main (int argc, char *argv[])
     UcaPluginManager *manager;
     GIOChannel *log_channel;
     GError *error = NULL;
-    static gint n_frames = 100;
-    static gint n_runs = 3;
+
+    static Options options = {
+        .n_frames = 1000,
+        .n_runs = 3,
+        .exposure_time = 0.001,
+        .test_async = FALSE,
+        .test_software = FALSE,
+        .test_external = FALSE,
+    };
 
     static GOptionEntry entries[] = {
-        { "num-frames", 'n', 0, G_OPTION_ARG_INT, &n_frames, "Number of frames per run", "N" },
-        { "num-runs", 'r', 0, G_OPTION_ARG_INT, &n_runs, "Number of runs", "N" },
+        { "num-frames", 'n', 0, G_OPTION_ARG_INT, &options.n_frames, "Number of frames per run", "N" },
+        { "num-runs", 'r', 0, G_OPTION_ARG_INT, &options.n_runs, "Number of runs", "N" },
+        { "exposure-time", 'e', 0, G_OPTION_ARG_DOUBLE, &options.exposure_time, "Exposure time in seconds", NULL },
+        { "test-async", 'a', 0, G_OPTION_ARG_NONE, &options.test_async, "Test asynchronous mode", NULL },
+        { "test-software", 's', 0, G_OPTION_ARG_NONE, &options.test_software, "Test software trigger mode", NULL },
+        { "test-external", 'e', 0, G_OPTION_ARG_NONE, &options.test_external, "Test external trigger mode", NULL },
         { NULL }
     };
 
@@ -246,7 +288,7 @@ main (int argc, char *argv[])
         goto cleanup_manager;
     }
 
-    log_channel = g_io_channel_new_file ("error.log", "a+", &error);
+    log_channel = g_io_channel_new_file ("benchmark.log", "a+", &error);
     g_assert_no_error (error);
     g_log_set_handler (NULL, G_LOG_LEVEL_MASK, log_handler, log_channel);
 
@@ -257,7 +299,7 @@ main (int argc, char *argv[])
         goto cleanup_manager;
     }
 
-    benchmark (camera, n_runs, n_frames);
+    benchmark (camera, &options);
 
     g_io_channel_shutdown (log_channel, TRUE, &error);
     g_assert_no_error (error);
