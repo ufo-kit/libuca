@@ -231,12 +231,12 @@ benchmark (UcaCamera *camera, Options *options)
 
         if (options->test_software) {
             g_print ("[ async ] [ software ]");
-            benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
+            benchmark_method (camera, buffer, grab_frames_async, options, UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
         }
 
         if (options->test_external) {
             g_print ("[ async ] [ external ]");
-            benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
+            benchmark_method (camera, buffer, grab_frames_async, options, UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
         }
     }
 
