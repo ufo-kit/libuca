@@ -1,6 +1,25 @@
 Changelog
 =========
 
+Changes in libuca 2.0.0
+-----------------------
+
+Released on April 24th 2015
+
+This release changes the trigger properties from a single "trigger-type"
+property to separate "trigger-source" and "trigger-type" properties. Apart from
+that numerous bug fixes and the following updates have been done since 1.6.2:
+
+- uca-benchmark measures more mode combinations.
+- A basic Python-based TANGO server has been added.
+- pco: Check for SiliconSoftware run-time version 5.2.2.
+- Add uca_camera_write to "write" arbitrary data to the camera. The semantics
+  are camera-specific.
+- Added uca_plugin_manager_get_camerah to pass property values via a GHashTable.
+- The plugin directory can be queried via pkg-config.
+- The Python GIL is released on potentially long-running code paths.
+
+
 Changes in libuca 1.6.2
 -----------------------
 
