@@ -314,10 +314,10 @@ uca_ufo_camera_start_recording (UcaCamera *camera, GError **error)
     set_control_bit (priv, 14, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO ||
                                trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
 
+    err = pcilib_start (priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
+
     if (transfer_async)
         priv->async_thread = g_thread_create ((GThreadFunc) stream_async, camera, TRUE, error);
-
-    err = pcilib_start (priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
 
     if (err != 0) {
         g_set_error (&priv->construct_error,
