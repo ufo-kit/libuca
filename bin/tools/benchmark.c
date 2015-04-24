@@ -123,7 +123,7 @@ static void
 grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source)
 {
     GError *error = NULL;
-    guint n_acquired_frames = 0;
+    volatile guint n_acquired_frames = 0;
 
     g_object_set (camera, "trigger-source", trigger_source, NULL);
     uca_camera_set_grab_func (camera, grab_callback, &n_acquired_frames);
