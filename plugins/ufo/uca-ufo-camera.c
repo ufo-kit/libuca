@@ -308,10 +308,10 @@ uca_ufo_camera_start_recording (UcaCamera *camera, GError **error)
                   "trigger-type", &trigger_type,
                   NULL);
 
-    set_control_bit (priv, 15, trigger_type == UCA_CAMERA_TRIGGER_TYPE_EDGE &&
-                               trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
+    set_control_bit (priv, 3, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
     set_control_bit (priv, 11, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO);
-    set_control_bit (priv, 14, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_AUTO ||
+    set_control_bit (priv, 14, trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
+    set_control_bit (priv, 15, trigger_type == UCA_CAMERA_TRIGGER_TYPE_EDGE &&
                                trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
 
     err = pcilib_start (priv->handle, PCILIB_EVENT_DATA, PCILIB_EVENT_FLAGS_DEFAULT);
