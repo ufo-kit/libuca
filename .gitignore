@@ -1,5 +1,4 @@
 *~
-*.cmake
 *.orig
 *.rpm
 _CPack_Packages

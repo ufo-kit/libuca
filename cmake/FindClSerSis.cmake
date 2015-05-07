@@ -1,0 +1,44 @@
+IF (NOT clsersis_FOUND)
+	FILE(TO_CMAKE_PATH "$ENV{SISODIR5}" SISODIR5)
+
+	IF (clsersis_INCLUDE_DIR AND clsersis_LIBRARY)
+		SET(CLSERSIS_FIND_QUIETLY TRUE)
+	ENDIF (clsersis_INCLUDE_DIR AND clsersis_LIBRARY)
+
+	FIND_PATH(clsersis_INCLUDE_DIR clser.h
+		PATHS
+		$ENV{CLSERSIS}/include
+		${CMAKE_INSTALL_PREFIX}/include
+		${SISODIR5}/include
+		"[HKEY_LOCAL_MACHINE\\SOFTWARE\\Silicon Software GmbH\\Runtime5;Info]/include"
+	)
+MESSAGE(STATUS "clsersis_INCLUDE_DIR ${clsersis_INCLUDE_DIR}")
+
+	INCLUDE(SisoLibDir)
+	SISO_LIB_DIR("${SISODIR5}/lib" LIB_DIRS COMPILER_LIB_DIR)
+
+	IF (UNIX)
+		SET(CLSERSIS_NAME clsersis.a clsersis)
+	ELSE (UNIX)
+		SET(CLSERSIS_NAME clsersis)
+	ENDIF (UNIX)
+
+	FIND_LIBRARY(clsersis_LIBRARY NAMES ${CLSERSIS_NAME}
+		PATHS
+		$ENV{CLSERSIS}/lib/${COMPILER_LIB_DIR}
+		$ENV{CLSERSIS}/lib
+		${CMAKE_INSTALL_PREFIX}/lib/${COMPILER_LIB_DIR}
+		${CMAKE_INSTALL_PREFIX}/lib
+		${LIB_DIRS}
+		"[HKEY_LOCAL_MACHINE\\SOFTWARE\\Silicon Software GmbH\\Runtime5;Info]/lib/${COMPILER_LIB_DIR}"
+		"[HKEY_LOCAL_MACHINE\\SOFTWARE\\Silicon Software GmbH\\Runtime5;Info]/lib"
+	)
+
+	INCLUDE(FindPackageHandleStandardArgs)
+	FIND_PACKAGE_HANDLE_STANDARD_ARGS(CLSERSIS DEFAULT_MSG clsersis_LIBRARY clsersis_INCLUDE_DIR)
+	SET(clsersis_LIBRARIES ${clsersis_LIBRARY})
+ENDIF (NOT clsersis_FOUND)
+
+IF (clsersis_FOUND)
+	SET(clsersis_LIBRARIES ${clsersis_LIBRARY})
+ENDIF (clsersis_FOUND)
