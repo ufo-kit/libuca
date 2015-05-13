@@ -124,6 +124,8 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
     priv = EGG_PROPERTY_CELL_RENDERER_GET_PRIVATE (renderer);
     pspec = get_pspec_from_object (priv->object, prop_name);
 
+    gboolean writable = (pspec->flags & G_PARAM_WRITABLE) && !(pspec->flags & G_PARAM_CONSTRUCT_ONLY);
+
     /*
      * Set this renderers mode, so that any actions can be forwarded to our
      * child renderers.
@@ -181,7 +183,7 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
                 g_object_get (priv->object, prop_name, &val, NULL);
                 g_object_set (priv->renderer,
                         "active", val,
-                        "activatable", pspec->flags & G_PARAM_WRITABLE ? TRUE : FALSE,
+                        "activatable", writable, 
                         NULL);
                 break;
             }
@@ -251,7 +253,8 @@ egg_property_cell_renderer_set_renderer (EggPropertyCellRenderer    *renderer,
             break;
     }
 
-    if (pspec->flags & G_PARAM_WRITABLE) {
+
+    if (writable) {
         if (GTK_IS_CELL_RENDERER_TOGGLE (priv->renderer))
             g_object_set (priv->renderer, "mode", GTK_CELL_RENDERER_MODE_ACTIVATABLE, NULL);
         else
