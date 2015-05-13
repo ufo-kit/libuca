@@ -205,6 +205,12 @@ uca_file_camera_set_property (GObject *object, guint property_id, const GValue *
     g_return_if_fail(UCA_IS_FILE_CAMERA(object));
     UcaFileCameraPrivate *priv = UCA_FILE_CAMERA_GET_PRIVATE(object);
 
+    if (uca_camera_is_recording (UCA_CAMERA(object)) &&
+        !uca_camera_is_writable_during_acquisition (UCA_CAMERA (object), pspec->name)) {
+        g_warning ("Property '%s' cant be changed during acquisition", pspec->name);
+        return;
+    }
+
     switch (property_id) {
         case PROP_PATH:
             g_free (priv->path);
@@ -226,11 +232,6 @@ uca_file_camera_get_property(GObject *object, guint property_id, GValue *value, 
 {
     g_return_if_fail (UCA_IS_FILE_CAMERA (object));
     UcaFileCameraPrivate *priv = UCA_FILE_CAMERA_GET_PRIVATE (object);
-
-    if (uca_camera_is_recording(UCA_CAMERA(object)) && !uca_camera_is_writable_during_acquisition(UCA_CAMERA(object), pspec->name)) {
-        g_warning ("Property '%s' cant be changed during acquisition", pspec->name);
-        return;
-    }
 
     switch (property_id) {
         case PROP_NAME:
