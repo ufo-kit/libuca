@@ -210,6 +210,10 @@ uca_file_camera_set_property (GObject *object, guint property_id, const GValue *
             g_free (priv->path);
             priv->path = g_strdup (g_value_get_string (value));
             update_fnames (priv, NULL);
+
+            g_object_notify (object, "roi-width");
+            g_object_notify (object, "roi-height");
+            g_object_notify (object, "sensor-bitdepth");
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
