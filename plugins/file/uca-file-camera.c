@@ -74,7 +74,6 @@ read_tiff_meta_data (UcaFileCameraPrivate *priv, const gchar *fname)
     TIFFClose (file);
 }
 
-
 static gboolean
 read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
 {
@@ -137,7 +136,7 @@ update_fnames (UcaFileCameraPrivate *priv, GError **error)
             break;
 
         if (g_str_has_suffix (fname, ".tiff") || g_str_has_suffix (fname, ".tif"))
-            priv->fnames = g_list_append (priv->fnames, g_strdup (fname));
+            priv->fnames = g_list_append (priv->fnames, g_build_filename (priv->path, fname, NULL));
     }
 
     priv->fnames = g_list_sort (priv->fnames, (GCompareFunc) g_strcmp0);
