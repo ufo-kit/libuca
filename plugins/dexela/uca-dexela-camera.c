@@ -76,6 +76,8 @@ static const gdouble MINIMUM_EXPOSURE_TIME_IN_SECONDS = 0.017d; // 17ms as per d
 static const gdouble PIXEL_SIZE = 74.8e-6; // 74.8µm as per data sheet
 
 struct _UcaDexelaCameraPrivate {
+    GError* init_error;
+
     GValueArray *binnings;
     guint width;
     guint height;
@@ -417,10 +419,17 @@ static void uca_dexela_camera_finalize(GObject *object)
 static gboolean uca_dexela_camera_initable_init(GInitable *initable, GCancellable *cancellable, GError **error)
 {
     g_return_val_if_fail (UCA_IS_DEXELA_CAMERA (initable), FALSE);
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(initable);
 
     if (cancellable != NULL) {
         g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
                              "Cancellable initialization not supported");
+        return FALSE;
+    }
+    if (priv->init_error != NULL) {
+        if (error) {
+            *error = g_error_copy (priv->init_error);
+        }
         return FALSE;
     }
     return TRUE;
@@ -462,13 +471,13 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaDexelaCameraPrivate));
 }
 
-static void uca_dexela_camera_init(UcaDexelaCamera *self)
+static gboolean setup_dexela(UcaDexelaCameraPrivate *priv)
 {
-    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
-    self->priv = priv;
-    fill_binnings(priv);
-    // TODO implement error checking
-    dexela_open_detector(DEFAULT_FMT_FILE_PATH);
+    if (!dexela_open_detector(DEFAULT_FMT_FILE_PATH)) {
+        g_set_error_literal(&priv->init_error, G_IO_ERROR, G_IO_ERROR_FAILED, "Failed to open dexela detector. Check cable, driver and permissions.");
+        return FALSE;
+    }
+    // TODO implement more error checking
     dexela_init_serial_connection();
     priv->bits = dexela_get_bit_depth();
     priv->width = dexela_get_width();
@@ -478,8 +487,17 @@ static void uca_dexela_camera_init(UcaDexelaCamera *self)
     priv->roi_width = priv->width;
     priv->roi_height = priv->height;
     priv->num_bytes = 2;
+    return TRUE;
+}
+
+static void uca_dexela_camera_init(UcaDexelaCamera *self)
+{
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
+    self->priv = priv;
+    fill_binnings(priv);
     priv->uca_trigger_source = UCA_CAMERA_TRIGGER_SOURCE_AUTO;
     priv->uca_trigger_type = UCA_CAMERA_TRIGGER_TYPE_EDGE;
+    setup_dexela(priv);
 }
 
 G_MODULE_EXPORT GType
