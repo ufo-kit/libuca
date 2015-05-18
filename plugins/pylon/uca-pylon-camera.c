@@ -68,7 +68,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_HORIZONTAL_BINNINGS,
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
-    PROP_TRIGGER_MODE,
+    PROP_TRIGGER_SOURCE,
     PROP_EXPOSURE_TIME,
     PROP_ROI_X,
     PROP_ROI_Y,
@@ -149,7 +149,8 @@ static void uca_pylon_camera_set_property(GObject *object, guint property_id, co
       /* intentional fall-through*/
     case PROP_SENSOR_VERTICAL_BINNING:
       /* intentional fall-through*/
-    case PROP_TRIGGER_MODE:
+    case PROP_TRIGGER_SOURCE:
+        /* this plugin supports AUTO triggering only ATM */
         break;
     case PROP_BALANCE_WHITE_AUTO:
     {
@@ -262,8 +263,8 @@ static void uca_pylon_camera_get_property(GObject *object, guint property_id, GV
             g_value_set_boxed(value, priv->binnings);
             break;
 
-        case PROP_TRIGGER_MODE:
-            g_value_set_enum(value, UCA_CAMERA_TRIGGER_AUTO);
+        case PROP_TRIGGER_SOURCE:
+            g_value_set_enum(value, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
             break;
 
         case PROP_HAS_STREAMING:

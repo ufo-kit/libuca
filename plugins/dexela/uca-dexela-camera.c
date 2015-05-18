@@ -57,7 +57,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_EXPOSURE_TIME,
-    PROP_TRIGGER_MODE,
+    PROP_TRIGGER_SOURCE,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -85,7 +85,8 @@ struct _UcaDexelaCameraPrivate {
     guint roi_height;
     guint bits;
     gsize num_bytes;
-    UcaCameraTrigger uca_trigger_mode;
+    UcaCameraTriggerSource uca_trigger_source;
+    UcaCameraTriggerType uca_trigger_type;
 };
 
 /**
@@ -105,35 +106,51 @@ static void fill_binnings(UcaDexelaCameraPrivate *priv)
     g_value_array_append(priv->binnings, &val);
 }
 
-static void map_dexela_trigger_mode_to_uca(UcaDexelaCameraPrivate *priv, GValue* value, TriggerMode mode)
+static void map_dexela_trigger_mode_to_uca_source(UcaDexelaCameraPrivate *priv, GValue* value, TriggerMode mode)
 {
     if (mode == SOFTWARE) {
-        g_value_set_enum(value, priv->uca_trigger_mode);
-        return;
+        priv->uca_trigger_source = UCA_CAMERA_TRIGGER_SOURCE_AUTO;
     }
-    if (mode == EDGE) {
-        g_value_set_enum(value, UCA_CAMERA_TRIGGER_EXTERNAL);
-        return;
+    if (mode == EDGE || mode == DURATION) {
+        priv->uca_trigger_source = UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL;
     }
-    g_warning("Unsupported dexela trigger mode: %d", mode);
+    g_value_set_enum(value, priv->uca_trigger_source);
 }
 
-static void set_trigger_mode(UcaDexelaCameraPrivate *priv, UcaCameraTrigger mode)
+static void map_dexela_trigger_mode_to_uca_type(UcaDexelaCameraPrivate *priv, GValue* value, TriggerMode mode)
 {
-    priv->uca_trigger_mode = mode;
-    if (mode == UCA_CAMERA_TRIGGER_AUTO) {
+    if (mode == EDGE) {
+        priv->uca_trigger_type = UCA_CAMERA_TRIGGER_TYPE_EDGE;
+    }
+    if (mode == DURATION) {
+        priv->uca_trigger_type = UCA_CAMERA_TRIGGER_TYPE_LEVEL;
+    }
+    g_value_set_enum(value, priv->uca_trigger_type);
+}
+
+static void set_triggering(UcaDexelaCameraPrivate *priv, UcaCameraTriggerSource source, UcaCameraTriggerType type)
+{
+    priv->uca_trigger_source = source;
+    priv->uca_trigger_type = type;
+    if (source == UCA_CAMERA_TRIGGER_SOURCE_AUTO) {
         dexela_set_trigger_mode(SOFTWARE);
         return;
     }
-    if (mode == UCA_CAMERA_TRIGGER_SOFTWARE) {
+    if (source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE) {
         dexela_set_trigger_mode(SOFTWARE);
         return;
     }
-    if (mode == UCA_CAMERA_TRIGGER_EXTERNAL) {
-        dexela_set_trigger_mode(EDGE);
-        return;
+    if (source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL) {
+        if (type == UCA_CAMERA_TRIGGER_TYPE_EDGE) {
+            dexela_set_trigger_mode(EDGE);
+            return;
+        }
+        if (type == UCA_CAMERA_TRIGGER_TYPE_LEVEL) {
+            dexela_set_trigger_mode(DURATION);
+            return;
+        }
     }
-    g_warning("Unsupported uca trigger mode: %d", mode);
+    g_warning("Unsupported uca trigger source and type: %d/%d", source, type);
 }
 
 static gboolean is_binning_allowed(UcaDexelaCameraPrivate *priv, guint binning)
@@ -249,9 +266,14 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
             g_value_set_boolean(value, dexela_get_control_register() & 1);
             break;
         }
-        case PROP_TRIGGER_MODE:
+        case PROP_TRIGGER_SOURCE:
         {
-            map_dexela_trigger_mode_to_uca(priv, value, dexela_get_trigger_mode());
+            map_dexela_trigger_mode_to_uca_source(priv, value, dexela_get_trigger_mode());
+            break;
+        }
+        case PROP_TRIGGER_TYPE:
+        {
+            map_dexela_trigger_mode_to_uca_type(priv, value, dexela_get_trigger_mode());
             break;
         }
         default:
@@ -342,9 +364,14 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
             dexela_set_control_register(dexela_get_control_register() & 0xFFFE);
             break;
         }
-        case PROP_TRIGGER_MODE:
+        case PROP_TRIGGER_SOURCE:
         {
-            set_trigger_mode(priv, g_value_get_enum(value));
+            set_triggering(priv, g_value_get_enum(value), priv->uca_trigger_type);
+            break;
+        }
+        case PROP_TRIGGER_TYPE:
+        {
+            set_triggering(priv, priv->uca_trigger_source, g_value_get_enum(value));
             break;
         }
         default:
@@ -371,7 +398,7 @@ static gboolean uca_dexela_camera_grab(UcaCamera *camera, gpointer data, GError 
     g_return_val_if_fail(UCA_IS_DEXELA_CAMERA(camera), FALSE);
     UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
 
-    if (priv->uca_trigger_mode == UCA_CAMERA_TRIGGER_SOFTWARE) {
+    if (priv->uca_trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE) {
         // TODO: wait for a signal from uca_camera_trigger()
     }
     guchar* fullFrame = dexela_grab();
@@ -451,7 +478,8 @@ static void uca_dexela_camera_init(UcaDexelaCamera *self)
     priv->roi_width = priv->width;
     priv->roi_height = priv->height;
     priv->num_bytes = 2;
-    priv->uca_trigger_mode = UCA_CAMERA_TRIGGER_AUTO;
+    priv->uca_trigger_source = UCA_CAMERA_TRIGGER_SOURCE_AUTO;
+    priv->uca_trigger_type = UCA_CAMERA_TRIGGER_TYPE_EDGE;
 }
 
 G_MODULE_EXPORT GType
