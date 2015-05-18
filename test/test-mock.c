@@ -287,8 +287,9 @@ test_can_be_written (Fixture *fixture, gconstpointer data)
     g_assert_no_error (error);
     g_object_set (fixture->camera, "roi-height", 128, NULL);
 #if (GLIB_CHECK_VERSION (2, 34, 0))
-    g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Property 'exposure-time' cant be changed during acquisition");
-    g_object_set (fixture->camera, "exposure-time", 1.0, NULL);
+    uca_camera_set_writable (fixture->camera, "roi-x0", FALSE);
+    g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Property 'roi-x0' cant be changed during acquisition");
+    g_object_set (fixture->camera, "roi-x0", 64, NULL);
     g_test_assert_expected_messages ();
 #endif
     uca_camera_stop_recording (fixture->camera, &error);
@@ -302,8 +303,8 @@ test_factory_hashtable (Fixture *fixture, gconstpointer data)
 
     guint checkvalue = 42;
 
-    gchar *foo = "roi-width";
-    gchar *bar = "roi-height";
+    gchar *foo = "roi-x0";
+    gchar *bar = "roi-y0";
     GValue baz = G_VALUE_INIT;
     g_value_init(&baz, G_TYPE_UINT);
     g_value_set_uint(&baz, checkvalue);
@@ -319,13 +320,13 @@ test_factory_hashtable (Fixture *fixture, gconstpointer data)
     g_assert (error == NULL);
     g_assert (camera);
 
-    guint roi_width = 0;
-    g_object_get (G_OBJECT (camera), "roi-width", &roi_width, NULL);
-    g_assert (roi_width == checkvalue);
+    guint roi_x0 = 0;
+    g_object_get (G_OBJECT (camera), "roi-x0", &roi_x0, NULL);
+    g_assert (roi_x0 == checkvalue);
 
-    guint roi_height = 0;
-    g_object_get (G_OBJECT (camera), "roi-height", &roi_height, NULL);
-    g_assert (roi_height == checkvalue);
+    guint roi_y0 = 0;
+    g_object_get (G_OBJECT (camera), "roi-y0", &roi_y0, NULL);
+    g_assert (roi_y0 == checkvalue);
 
     g_object_unref(camera);
 }
