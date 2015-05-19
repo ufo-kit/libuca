@@ -57,7 +57,7 @@ static gint base_overrideables[] = {
     PROP_SENSOR_VERTICAL_BINNING,
     PROP_SENSOR_VERTICAL_BINNINGS,
     PROP_EXPOSURE_TIME,
-    PROP_TRIGGER_MODE,
+    PROP_TRIGGER_SOURCE,
     PROP_ROI_X,
     PROP_ROI_Y,
     PROP_ROI_WIDTH,
@@ -76,6 +76,8 @@ static const gdouble MINIMUM_EXPOSURE_TIME_IN_SECONDS = 0.017d; // 17ms as per d
 static const gdouble PIXEL_SIZE = 74.8e-6; // 74.8µm as per data sheet
 
 struct _UcaDexelaCameraPrivate {
+    GError* init_error;
+
     GValueArray *binnings;
     guint width;
     guint height;
@@ -85,7 +87,8 @@ struct _UcaDexelaCameraPrivate {
     guint roi_height;
     guint bits;
     gsize num_bytes;
-    UcaCameraTrigger uca_trigger_mode;
+    UcaCameraTriggerSource uca_trigger_source;
+    UcaCameraTriggerType uca_trigger_type;
 };
 
 /**
@@ -105,35 +108,51 @@ static void fill_binnings(UcaDexelaCameraPrivate *priv)
     g_value_array_append(priv->binnings, &val);
 }
 
-static void map_dexela_trigger_mode_to_uca(UcaDexelaCameraPrivate *priv, GValue* value, TriggerMode mode)
+static void map_dexela_trigger_mode_to_uca_source(UcaDexelaCameraPrivate *priv, GValue* value, TriggerMode mode)
 {
     if (mode == SOFTWARE) {
-        g_value_set_enum(value, priv->uca_trigger_mode);
-        return;
+        priv->uca_trigger_source = UCA_CAMERA_TRIGGER_SOURCE_AUTO;
     }
-    if (mode == EDGE) {
-        g_value_set_enum(value, UCA_CAMERA_TRIGGER_EXTERNAL);
-        return;
+    if (mode == EDGE || mode == DURATION) {
+        priv->uca_trigger_source = UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL;
     }
-    g_warning("Unsupported dexela trigger mode: %d", mode);
+    g_value_set_enum(value, priv->uca_trigger_source);
 }
 
-static void set_trigger_mode(UcaDexelaCameraPrivate *priv, UcaCameraTrigger mode)
+static void map_dexela_trigger_mode_to_uca_type(UcaDexelaCameraPrivate *priv, GValue* value, TriggerMode mode)
 {
-    priv->uca_trigger_mode = mode;
-    if (mode == UCA_CAMERA_TRIGGER_AUTO) {
+    if (mode == EDGE) {
+        priv->uca_trigger_type = UCA_CAMERA_TRIGGER_TYPE_EDGE;
+    }
+    if (mode == DURATION) {
+        priv->uca_trigger_type = UCA_CAMERA_TRIGGER_TYPE_LEVEL;
+    }
+    g_value_set_enum(value, priv->uca_trigger_type);
+}
+
+static void set_triggering(UcaDexelaCameraPrivate *priv, UcaCameraTriggerSource source, UcaCameraTriggerType type)
+{
+    priv->uca_trigger_source = source;
+    priv->uca_trigger_type = type;
+    if (source == UCA_CAMERA_TRIGGER_SOURCE_AUTO) {
         dexela_set_trigger_mode(SOFTWARE);
         return;
     }
-    if (mode == UCA_CAMERA_TRIGGER_SOFTWARE) {
+    if (source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE) {
         dexela_set_trigger_mode(SOFTWARE);
         return;
     }
-    if (mode == UCA_CAMERA_TRIGGER_EXTERNAL) {
-        dexela_set_trigger_mode(EDGE);
-        return;
+    if (source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL) {
+        if (type == UCA_CAMERA_TRIGGER_TYPE_EDGE) {
+            dexela_set_trigger_mode(EDGE);
+            return;
+        }
+        if (type == UCA_CAMERA_TRIGGER_TYPE_LEVEL) {
+            dexela_set_trigger_mode(DURATION);
+            return;
+        }
     }
-    g_warning("Unsupported uca trigger mode: %d", mode);
+    g_warning("Unsupported uca trigger source and type: %d/%d", source, type);
 }
 
 static gboolean is_binning_allowed(UcaDexelaCameraPrivate *priv, guint binning)
@@ -145,6 +164,28 @@ static gboolean is_binning_allowed(UcaDexelaCameraPrivate *priv, guint binning)
         }
     }
     return FALSE;
+}
+
+static guint real_width(UcaDexelaCameraPrivate *priv)
+{
+    return priv->width / dexela_get_binning_mode_horizontal();
+}
+
+static guint real_height(UcaDexelaCameraPrivate *priv)
+{
+    return priv->height / dexela_get_binning_mode_vertical();
+}
+
+static void adjust_roi_width(UcaDexelaCameraPrivate *priv, guint requested_width)
+{
+    guint maxRoiWidth = real_width(priv) - priv->roi_x;
+    priv->roi_width = min(maxRoiWidth, requested_width);
+}
+
+static void adjust_roi_height(UcaDexelaCameraPrivate *priv, guint requested_height)
+{
+    guint maxRoiHeight = real_height(priv) - priv->roi_y;
+    priv->roi_height = min(maxRoiHeight, requested_height);
 }
 
 static void uca_dexela_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
@@ -249,9 +290,14 @@ static void uca_dexela_camera_get_property(GObject *object, guint property_id, G
             g_value_set_boolean(value, dexela_get_control_register() & 1);
             break;
         }
-        case PROP_TRIGGER_MODE:
+        case PROP_TRIGGER_SOURCE:
         {
-            map_dexela_trigger_mode_to_uca(priv, value, dexela_get_trigger_mode());
+            map_dexela_trigger_mode_to_uca_source(priv, value, dexela_get_trigger_mode());
+            break;
+        }
+        case PROP_TRIGGER_TYPE:
+        {
+            map_dexela_trigger_mode_to_uca_type(priv, value, dexela_get_trigger_mode());
             break;
         }
         default:
@@ -281,22 +327,28 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
         }
         case PROP_ROI_X:
         {
-            priv->roi_x = g_value_get_uint(value);
+            guint maxRoiX = real_width(priv) - 1;
+            guint requestedRoiX = g_value_get_uint(value);
+            priv->roi_x = min(maxRoiX, requestedRoiX);
+            adjust_roi_width(priv, priv->roi_width);
             break;
         }
         case PROP_ROI_Y:
         {
-            priv->roi_y = g_value_get_uint(value);
+            guint maxRoiY = real_height(priv) -1;
+            guint requestedRoiY = g_value_get_uint(value);
+            priv->roi_y = min(maxRoiY, requestedRoiY);
+            adjust_roi_height(priv, priv->roi_height);
             break;
         }
         case PROP_ROI_WIDTH:
         {
-            priv->roi_width = g_value_get_uint(value);
+            adjust_roi_width(priv, g_value_get_uint(value));
             break;
         }
         case PROP_ROI_HEIGHT:
         {
-            priv->roi_height = g_value_get_uint(value);
+            adjust_roi_height(priv, g_value_get_uint(value));
             break;
         }
         case PROP_SENSOR_HORIZONTAL_BINNING:
@@ -306,7 +358,8 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 g_warning("Tried to set illegal horizontal binning: %d", horizontalBinning);
                 return;
             }
-            dexela_set_binning_mode(horizontalBinning, dexela_get_binning_mode_vertical());
+            dexela_set_binning_mode(horizontalBinning, horizontalBinning);
+            adjust_roi_width(priv, priv->roi_width);
             break;
         }
         case PROP_SENSOR_VERTICAL_BINNING:
@@ -316,7 +369,8 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
                 g_warning("Tried to set illegal vertical binning: %d", verticalBinning);
                 return;
             }
-            dexela_set_binning_mode(dexela_get_binning_mode_horizontal(), verticalBinning);
+            dexela_set_binning_mode(verticalBinning, verticalBinning);
+            adjust_roi_height(priv, priv->roi_height);
             break;
         }
         case PROP_GAIN_MODE:
@@ -342,9 +396,14 @@ static void uca_dexela_camera_set_property(GObject *object, guint property_id, c
             dexela_set_control_register(dexela_get_control_register() & 0xFFFE);
             break;
         }
-        case PROP_TRIGGER_MODE:
+        case PROP_TRIGGER_SOURCE:
         {
-            set_trigger_mode(priv, g_value_get_enum(value));
+            set_triggering(priv, g_value_get_enum(value), priv->uca_trigger_type);
+            break;
+        }
+        case PROP_TRIGGER_TYPE:
+        {
+            set_triggering(priv, priv->uca_trigger_source, g_value_get_enum(value));
             break;
         }
         default:
@@ -371,11 +430,11 @@ static gboolean uca_dexela_camera_grab(UcaCamera *camera, gpointer data, GError 
     g_return_val_if_fail(UCA_IS_DEXELA_CAMERA(camera), FALSE);
     UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(camera);
 
-    if (priv->uca_trigger_mode == UCA_CAMERA_TRIGGER_SOFTWARE) {
+    if (priv->uca_trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE) {
         // TODO: wait for a signal from uca_camera_trigger()
     }
     guchar* fullFrame = dexela_grab();
-    apply_software_roi(fullFrame, priv->width, priv->num_bytes, data, priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height);
+    apply_software_roi(fullFrame, real_width(priv), priv->num_bytes, data, priv->roi_x, priv->roi_y, priv->roi_width, priv->roi_height);
     return TRUE;
 }
 
@@ -390,10 +449,17 @@ static void uca_dexela_camera_finalize(GObject *object)
 static gboolean uca_dexela_camera_initable_init(GInitable *initable, GCancellable *cancellable, GError **error)
 {
     g_return_val_if_fail (UCA_IS_DEXELA_CAMERA (initable), FALSE);
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(initable);
 
     if (cancellable != NULL) {
         g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
                              "Cancellable initialization not supported");
+        return FALSE;
+    }
+    if (priv->init_error != NULL) {
+        if (error) {
+            *error = g_error_copy (priv->init_error);
+        }
         return FALSE;
     }
     return TRUE;
@@ -435,23 +501,33 @@ static void uca_dexela_camera_class_init(UcaDexelaCameraClass *klass)
     g_type_class_add_private(klass, sizeof(UcaDexelaCameraPrivate));
 }
 
-static void uca_dexela_camera_init(UcaDexelaCamera *self)
+static gboolean setup_dexela(UcaDexelaCameraPrivate *priv)
 {
-    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
-    self->priv = priv;
-    fill_binnings(priv);
-    // TODO implement error checking
-    dexela_open_detector(DEFAULT_FMT_FILE_PATH);
+    if (!dexela_open_detector(DEFAULT_FMT_FILE_PATH)) {
+        g_set_error_literal(&priv->init_error, G_IO_ERROR, G_IO_ERROR_FAILED, "Failed to open dexela detector. Check cable, driver and permissions.");
+        return FALSE;
+    }
+    // TODO implement more error checking
     dexela_init_serial_connection();
     priv->bits = dexela_get_bit_depth();
     priv->width = dexela_get_width();
     priv->height = dexela_get_height();
     priv->roi_x = 0;
     priv->roi_y = 0;
-    priv->roi_width = priv->width;
-    priv->roi_height = priv->height;
+    priv->roi_width = real_width(priv);
+    priv->roi_height = real_height(priv);
     priv->num_bytes = 2;
-    priv->uca_trigger_mode = UCA_CAMERA_TRIGGER_AUTO;
+    return TRUE;
+}
+
+static void uca_dexela_camera_init(UcaDexelaCamera *self)
+{
+    UcaDexelaCameraPrivate *priv = UCA_DEXELA_CAMERA_GET_PRIVATE(self);
+    self->priv = priv;
+    fill_binnings(priv);
+    priv->uca_trigger_source = UCA_CAMERA_TRIGGER_SOURCE_AUTO;
+    priv->uca_trigger_type = UCA_CAMERA_TRIGGER_TYPE_EDGE;
+    setup_dexela(priv);
 }
 
 G_MODULE_EXPORT GType

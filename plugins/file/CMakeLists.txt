@@ -5,9 +5,9 @@ find_package(TIFF)
 
 if (TIFF_FOUND)
     set(UCA_CAMERA_NAME "file")
-    set(PLUGIN_VERSION "0.0.1")
-    set(PLUGIN_REVISION "0")
-    set(PLUGIN_REQUIRES "libuca >= 1.2.0")
+    set(PLUGIN_VERSION "0.0.2")
+    set(PLUGIN_REVISION "1")
+    set(PLUGIN_REQUIRES "libuca >= 2.0.0")
     set(PLUGIN_SUMMARY "File plugin for libuca")
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
