@@ -22,7 +22,6 @@
 #include "uca-mock-camera.h"
 
 #define UCA_MOCK_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_MOCK_CAMERA, UcaMockCameraPrivate))
-#define __CREATE_RANDOM_IMAGE_DATA__
 
 static void uca_mock_initable_iface_init (GInitableIface *iface);
 
@@ -31,7 +30,8 @@ G_DEFINE_TYPE_WITH_CODE (UcaMockCamera, uca_mock_camera, UCA_TYPE_CAMERA,
                                                 uca_mock_initable_iface_init))
 
 enum {
-    N_PROPERTIES = N_BASE_PROPERTIES,
+    PROP_CREATE_RANDOM = N_BASE_PROPERTIES,
+    N_PROPERTIES
 };
 
 static const gint mock_overrideables[] = {
@@ -54,12 +54,18 @@ static GParamSpec *mock_properties[N_PROPERTIES] = { NULL, };
 struct _UcaMockCameraPrivate {
     guint width;
     guint height;
+    guint bits;
+    guint bytes;
+    guint max_val;
     guint roi_x, roi_y, roi_width, roi_height;
     gfloat max_frame_rate;
     gdouble exposure_time;
     guint8 *dummy_data;
     guint current_frame;
+    gboolean create_random;
     GRand *rand;
+
+    guint8 *default_line;
 
     gboolean thread_running;
 
@@ -133,17 +139,27 @@ static const char g_digits[10][20] = {
 static const guint DIGIT_WIDTH = 4;
 static const guint DIGIT_HEIGHT = 5;
 
+
+static inline void
+set_pixel (guint8 *buffer, guint x, guint y, guint value, guint n_bytes, guint mask, guint width)
+{
+    gulong offset = ((y * width) + x) * n_bytes;
+    guint val = (value & mask);
+
+    for (guint i = 0; i < n_bytes; i++) {
+        buffer[offset + i] = (val >> (i * 8)) & 0xFF;
+    }
+}
+
 static void
-print_number (guint8 *buffer, guint number, guint x, guint y, guint width)
+print_number (guint8 *buffer, guint number, guint x, guint y, guint n_bytes, guint mask, guint width)
 {
     for (int i = 0; i < DIGIT_WIDTH; i++) {
         for (int j = 0; j < DIGIT_HEIGHT; j++) {
-            char val = (char) g_digits[number][j*DIGIT_WIDTH+i];
-            if(val != 0x00) {
-                //This should make the frame counter appear in a bright yellow
-                val = 0xBE;
-            }
-            buffer[(y+j)*width + (x+i)] = (guint8) val;
+            guint val = g_digits[number][j*DIGIT_WIDTH+i];
+            if (val > 0)
+                val = mask;
+            set_pixel (buffer, x+i, y+j, val, n_bytes, mask, width);
         }
     }
 }
@@ -152,45 +168,38 @@ static void
 print_current_frame (UcaMockCameraPrivate *priv, guint8 *buffer)
 {
     guint number = priv->current_frame;
-    char default_line[priv->width];
     guint divisor = 10000000;
     int x = 1;
 
-    memset(buffer, 0, 15 * priv->roi_width);
+    memset(buffer, 0, 15 * priv->roi_width * priv->bytes);
     while (divisor > 0) {
-        print_number(buffer, number / divisor, x, 1, priv->roi_width);
+        /* max_val doubles as a bit mask */
+        print_number(buffer, number / divisor, x, 1, priv->bytes, priv->max_val, priv->roi_width);
         number = number % divisor;
         divisor = divisor / 10;
         x += DIGIT_WIDTH + 1;
     }
 
-    for (int p = 0; p < priv->roi_width; p++) {
-        default_line[p] = (char) ((p*256) / (priv->roi_width));
-    }
-
     for (guint y = 16; y < priv->roi_height; y++) {
-        guint index = y * priv->roi_width;
-        memcpy (&buffer[index], &default_line[0], priv->roi_width);
+        guint index = y * priv->roi_width * priv->bytes;
+        memcpy (&buffer[index], priv->default_line + (priv->roi_x * priv->width), priv->roi_width * priv->bytes);
     }
 
-#ifdef __CREATE_RANDOM_IMAGE_DATA__
-    //This block will fill a square at the center of the image with noraml
-    //distributed random data
-    const double mean = 128.0;
-    const double std = 32.0;
+    if (priv->create_random) {
+        //This block will fill a square at the center of the ROI with noraml
+        //distributed random data
+        const double mean = (double) ceil (priv->max_val / 2.);
+        const double std = (double) ceil (priv->max_val / 8.);
 
-    for (guint y = (priv->roi_height / 3); y < ((priv->roi_height * 2) / 3); y++) {
-        guint row_start = y * priv->roi_width;
-
-        for (guint i = (priv->roi_width / 3); i < ((priv->roi_width * 2) / 3); i++) {
-            int index = row_start + i;
-            double u1 = g_rand_double (priv->rand);
-            double u2 = g_rand_double (priv->rand);
-            double r = sqrt (-2 * log(u1)) * cos(2 * G_PI * u2);
-            buffer[index] = (guint8) (r * std + mean);
+        for (guint y = (priv->roi_height / 3); y < ((priv->roi_height * 2) / 3); y++) {
+            for (guint x = (priv->roi_width / 3); x < ((priv->roi_width * 2) / 3); x++) {
+                double u1 = g_rand_double (priv->rand);
+                double u2 = g_rand_double (priv->rand);
+                double r = sqrt (-2 * log(u1)) * cos(2 * G_PI * u2);
+                set_pixel (buffer, x, y, round (r * std + mean), priv->bytes, priv->max_val, priv->roi_width);
+            }
         }
     }
-#endif
 }
 
 static gpointer
@@ -222,7 +231,7 @@ uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
 
     priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
     /* TODO: check that roi_x + roi_width < priv->width */
-    priv->dummy_data = (guint8 *) g_malloc0(priv->roi_width * priv->roi_height);
+    priv->dummy_data = (guint8 *) g_malloc0(priv->roi_width * priv->roi_height * priv->bytes);
 
     g_object_get(G_OBJECT(camera),
             "transfer-asynchronously", &transfer_async,
@@ -285,7 +294,7 @@ uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     print_current_frame (priv, priv->dummy_data);
     priv->current_frame++;
 
-    g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height);
+    g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height * priv->bytes);
 
     return TRUE;
 }
@@ -302,6 +311,15 @@ uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *
     }
 
     switch (property_id) {
+        case PROP_SENSOR_WIDTH:
+            priv->width = g_value_get_uint (value);
+            break;
+        case PROP_SENSOR_HEIGHT:
+            priv->height = g_value_get_uint (value);
+            break;
+        case PROP_SENSOR_BITDEPTH:
+            priv->bits = g_value_get_uint (value);
+            break;
         case PROP_EXPOSURE_TIME:
             priv->exposure_time = g_value_get_double (value);
             break;
@@ -316,6 +334,9 @@ uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *
             break;
         case PROP_ROI_HEIGHT:
             priv->roi_height = g_value_get_uint (value);
+            break;
+        case PROP_CREATE_RANDOM:
+            priv->create_random = g_value_get_boolean (value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -339,7 +360,7 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
             g_value_set_uint(value, priv->height);
             break;
         case PROP_SENSOR_BITDEPTH:
-            g_value_set_uint(value, 8);
+            g_value_set_uint(value, priv->bits);
             break;
         case PROP_EXPOSURE_TIME:
             g_value_set_double(value, priv->exposure_time);
@@ -362,6 +383,9 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
         case PROP_HAS_CAMRAM_RECORDING:
             g_value_set_boolean(value, FALSE);
             break;
+        case PROP_CREATE_RANDOM:
+            g_value_set_boolean(value, priv->create_random);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
             break;
@@ -377,13 +401,15 @@ uca_mock_camera_finalize(GObject *object)
 
     if (priv->thread_running) {
         priv->thread_running = FALSE;
-        g_thread_join(priv->grab_thread);
+        g_thread_join (priv->grab_thread);
     }
 
-    g_free(priv->dummy_data);
-    g_value_array_free(priv->binnings);
+    g_free (priv->dummy_data);
+    g_value_array_free (priv->binnings);
 
-    G_OBJECT_CLASS(uca_mock_camera_parent_class)->finalize(object);
+    g_free (priv->default_line);
+
+    G_OBJECT_CLASS (uca_mock_camera_parent_class)->finalize(object);
 }
 
 static gboolean
@@ -392,6 +418,30 @@ ufo_mock_camera_initable_init (GInitable *initable,
                                GError **error)
 {
     g_return_val_if_fail (UCA_IS_MOCK_CAMERA (initable), FALSE);
+    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (UCA_MOCK_CAMERA (initable));
+
+    g_object_get (G_OBJECT (initable),
+                "sensor-width", &priv->width,
+                "sensor-height", &priv->height,
+                "sensor-bitdepth", &priv->bits,
+                NULL);
+
+    priv->roi_width = priv->width;
+    priv->roi_height = priv->height;
+    priv->bytes = ceil (priv->bits / 8.);
+
+    priv->max_val = 0;
+    for (guint i = 0; i < priv->bits; i++) {
+        priv->max_val |= 1 << i;
+    }
+
+    priv->default_line = g_malloc0 (priv->width * priv->bytes);
+    gdouble step_size = ((gdouble) priv->max_val) / priv->width;
+    for (guint p = 0; p < priv->roi_width; p++) {
+        guint val = round (p * step_size);
+        set_pixel (priv->default_line, p, 0, val, priv->bytes, priv->max_val, priv->width);
+    }
+
     return TRUE;
 }
 
@@ -418,8 +468,18 @@ uca_mock_camera_class_init(UcaMockCameraClass *klass)
     for (guint i = 0; mock_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, mock_overrideables[i], uca_camera_props[mock_overrideables[i]]);
 
+    mock_properties[PROP_CREATE_RANDOM] =
+        g_param_spec_boolean("create-random",
+            "Add random data to picture",
+            "If TRUE, fills a rectangle in the center of the picture with random data",
+            TRUE,
+            G_PARAM_READWRITE);
+
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, mock_properties[id]);
+
+    uca_camera_pspec_set_writable (g_object_class_find_property (gobject_class, uca_camera_props[PROP_EXPOSURE_TIME]), TRUE);
+    uca_camera_pspec_set_writable (mock_properties[PROP_CREATE_RANDOM], TRUE);
 
     g_type_class_add_private(klass, sizeof(UcaMockCameraPrivate));
 }
@@ -430,13 +490,12 @@ uca_mock_camera_init(UcaMockCamera *self)
     self->priv = UCA_MOCK_CAMERA_GET_PRIVATE(self);
     self->priv->roi_x = 0;
     self->priv->roi_y = 0;
-    self->priv->width = self->priv->roi_width = 512;
-    self->priv->height = self->priv->roi_height = 512;
     self->priv->max_frame_rate = 100000.0f;
     self->priv->grab_thread = NULL;
     self->priv->current_frame = 0;
     self->priv->exposure_time = 0.05;
-    
+    self->priv->create_random = TRUE;
+
     self->priv->binnings = g_value_array_new(1);
     self->priv->rand = g_rand_new ();
 
@@ -444,6 +503,15 @@ uca_mock_camera_init(UcaMockCamera *self)
     g_value_init(&val, G_TYPE_UINT);
     g_value_set_uint(&val, 1);
     g_value_array_append(self->priv->binnings, &val);
+
+
+    /* will be set in initable_init */
+    self->priv->width = self->priv->roi_width = 0;
+    self->priv->height = self->priv->roi_height = 0;
+    self->priv->bits = 0;
+    self->priv->bytes = 0;
+    self->priv->max_val = 0;
+    self->priv->default_line = NULL;
 }
 
 G_MODULE_EXPORT GType

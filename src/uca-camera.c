@@ -372,15 +372,15 @@ uca_camera_class_init (UcaCameraClass *klass)
         g_param_spec_uint(uca_camera_props[PROP_SENSOR_WIDTH],
             "Width of sensor",
             "Width of the sensor in pixels",
-            1, G_MAXUINT, 1,
-            G_PARAM_READABLE);
+            1, G_MAXUINT, 512,
+            G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 
     camera_properties[PROP_SENSOR_HEIGHT] =
         g_param_spec_uint(uca_camera_props[PROP_SENSOR_HEIGHT],
             "Height of sensor",
             "Height of the sensor in pixels",
-            1, G_MAXUINT, 1,
-            G_PARAM_READABLE);
+            1, G_MAXUINT, 512,
+            G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 
     camera_properties[PROP_SENSOR_PIXEL_WIDTH] =
         g_param_spec_double (uca_camera_props[PROP_SENSOR_PIXEL_WIDTH],
@@ -400,8 +400,8 @@ uca_camera_class_init (UcaCameraClass *klass)
         g_param_spec_uint(uca_camera_props[PROP_SENSOR_BITDEPTH],
             "Number of bits per pixel",
             "Number of bits per pixel",
-            1, 32, 1,
-            G_PARAM_READABLE);
+            1, 32, 8,
+            G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
 
     camera_properties[PROP_SENSOR_HORIZONTAL_BINNING] =
         g_param_spec_uint(uca_camera_props[PROP_SENSOR_HORIZONTAL_BINNING],
@@ -1154,7 +1154,24 @@ uca_camera_set_writable (UcaCamera *camera,
     GParamSpec *pspec;
 
     pspec = get_param_spec_by_name (camera, prop_name);
+    uca_camera_pspec_set_writable (pspec, writable);
+}
 
+/**
+ * uca_camera_pspec_set_writable: (skip)
+ * @pspec: A #GParamSpec
+ * @writable: %TRUE if property can be written during acquisition
+ *
+ * Sets a flag that defines if the property defined by @pspec can be written
+ * during an acquisition. This can be used during UcaCamera class
+ * initialization.
+ *
+ * Since: 2.1
+ */
+void
+uca_camera_pspec_set_writable (GParamSpec *pspec,
+                               gboolean writable)
+{
     if (pspec != NULL) {
         if (g_param_spec_get_qdata (pspec, UCA_WRITABLE_QUARK) != NULL)
             g_warning ("::%s is already fixed", pspec->name);

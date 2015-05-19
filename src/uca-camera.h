@@ -179,6 +179,9 @@ UcaUnit     uca_camera_get_unit         (UcaCamera          *camera,
 void        uca_camera_set_writable     (UcaCamera          *camera,
                                          const gchar        *prop_name,
                                          gboolean            writable);
+void        uca_camera_pspec_set_writable
+                                        (GParamSpec         *pspec,
+                                         gboolean            writable);
 gboolean    uca_camera_is_writable_during_acquisition
                                         (UcaCamera          *camera,
                                          const gchar        *prop_name);
