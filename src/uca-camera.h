@@ -144,6 +144,7 @@ struct _UcaCameraClass {
     void (*trigger)         (UcaCamera *camera, GError **error);
     void (*write)           (UcaCamera *camera, const gchar *name, gpointer data, gsize size, GError **error);
     gboolean (*grab)        (UcaCamera *camera, gpointer data, GError **error);
+    gboolean (*readout)     (UcaCamera *camera, gpointer data, guint index, GError **error);
 };
 
 UcaCamera * uca_camera_new              (const gchar        *type,
@@ -166,6 +167,11 @@ void        uca_camera_write            (UcaCamera          *camera,
                                          GError            **error);
 gboolean    uca_camera_grab             (UcaCamera          *camera,
                                          gpointer            data,
+                                         GError            **error)
+                                        __attribute__((nonnull (2)));
+gboolean    uca_camera_readout          (UcaCamera          *camera,
+                                         gpointer            data,
+                                         guint               index,
                                          GError            **error)
                                         __attribute__((nonnull (2)));
 void        uca_camera_set_grab_func    (UcaCamera          *camera,

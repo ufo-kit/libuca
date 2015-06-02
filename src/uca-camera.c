@@ -360,6 +360,7 @@ uca_camera_class_init (UcaCameraClass *klass)
     klass->start_recording = NULL;
     klass->stop_recording = NULL;
     klass->grab = NULL;
+    klass->readout = NULL;
     klass->write = NULL;
 
     camera_properties[PROP_NAME] =
@@ -1063,6 +1064,78 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
             result = TRUE;
         }
     }
+    return result;
+}
+
+/**
+ * uca_camera_readout:
+ * @camera: A #UcaCamera object
+ * @data: (type gulong): Pointer to suitably sized data buffer. Must not be
+ *  %NULL.
+ * @index: Index of in-camera frame to be grabbed
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Grab a frame a single frame and store the result in @data.
+ *
+ * You must have called uca_camera_start_recording() before, otherwise you will
+ * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
+ *
+ * Since: 2.1
+ */
+gboolean
+uca_camera_readout (UcaCamera *camera, gpointer data, guint index, GError **error)
+{
+    UcaCameraClass *klass;
+    gboolean result = FALSE;
+
+    /* FIXME: this prevents accessing two independent cameras simultanously. */
+    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+
+    g_return_val_if_fail (UCA_IS_CAMERA(camera), FALSE);
+
+    klass = UCA_CAMERA_GET_CLASS (camera);
+
+    g_return_val_if_fail (klass != NULL, FALSE);
+    g_return_val_if_fail (klass->readout != NULL, FALSE);
+    g_return_val_if_fail (data != NULL, FALSE);
+
+    if (camera->priv->buffered) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                     "Cannot grab specific frame in buffered mode");
+        return FALSE;
+    }
+
+    g_static_mutex_lock (&mutex);
+
+    if (!camera->priv->is_recording && !camera->priv->is_readout) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
+                     "Camera is not in readout or record mode");
+    }
+    else {
+        g_static_mutex_lock (&access_lock);
+
+#ifdef WITH_PYTHON_MULTITHREADING
+        if (Py_IsInitialized ()) {
+            PyGILState_STATE state = PyGILState_Ensure ();
+            Py_BEGIN_ALLOW_THREADS
+
+            result = (*klass->readout) (camera, data, index, error);
+
+            Py_END_ALLOW_THREADS
+            PyGILState_Release (state);
+        }
+        else {
+            result = (*klass->readout) (camera, data, index, error);
+        }
+#else
+        result = (*klass->readout) (camera, data, index, error);
+#endif
+
+        g_static_mutex_unlock (&access_lock);
+    }
+
+    g_static_mutex_unlock (&mutex);
+
     return result;
 }
 
