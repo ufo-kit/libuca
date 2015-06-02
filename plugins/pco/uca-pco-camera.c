@@ -605,8 +605,10 @@ uca_pco_camera_stop_readout(UcaCamera *camera, GError **error)
 
     priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
+#if 0
     err = Fg_stopAcquireEx (priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
     FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
+#endif
 
     err = Fg_setStatusEx (priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
     FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
@@ -680,6 +682,51 @@ uca_pco_camera_grab(UcaCamera *camera, gpointer data, GError **error)
         pco_get_reorder_func(priv->pco)((guint16 *) data, frame, priv->frame_width, priv->frame_height);
     else
         memcpy((gchar *) data, (gchar *) frame, priv->buffer_size);
+
+    return TRUE;
+}
+
+static gboolean
+uca_pco_camera_readout (UcaCamera *camera, gpointer data, guint index, GError **error)
+{
+    static const gint MAX_TIMEOUT = 5;
+    UcaPcoCameraPrivate *priv;
+    guint16 *frame;
+
+    g_return_val_if_fail (UCA_IS_PCO_CAMERA(camera), FALSE);
+
+    priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
+
+#if 0
+    /* XXX: the number of recorded images is not reported reliably by libpco,
+     * hence we ignore the check here */
+    if (index >= priv->num_recorded_images) {
+        g_set_error (error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_GENERAL,
+                     "Cannot readout frame %i out of %i frames in total",
+                     index, priv->num_recorded_images);
+        return FALSE;
+    }
+#endif
+
+    if (is_edge (priv)) {
+        g_set_error (error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_LIBPCO_GENERAL,
+                     "pco.edge does not have a a readout mode");
+        return FALSE;
+    }
+
+    pco_read_images(priv->pco, priv->active_segment, index, index);
+
+    priv->last_frame = Fg_getLastPicNumberBlockingEx(priv->fg, priv->last_frame + 1,
+                                                     priv->fg_port, MAX_TIMEOUT, priv->fg_mem);
+
+    if (priv->last_frame <= 0) {
+        g_set_error (error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_GENERAL,
+                     "%s", Fg_getLastErrorDescription (priv->fg));
+        return FALSE;
+    }
+
+    frame = Fg_getImagePtrEx (priv->fg, priv->last_frame, priv->fg_port, priv->fg_mem);
+    memcpy((gchar *) data, (gchar *) frame, priv->buffer_size);
 
     return TRUE;
 }
@@ -1455,6 +1502,7 @@ uca_pco_camera_class_init(UcaPcoCameraClass *klass)
     camera_class->stop_readout = uca_pco_camera_stop_readout;
     camera_class->trigger = uca_pco_camera_trigger;
     camera_class->grab = uca_pco_camera_grab;
+    camera_class->readout = uca_pco_camera_readout;
 
     for (guint i = 0; base_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, base_overrideables[i], uca_camera_props[base_overrideables[i]]);
