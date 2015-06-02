@@ -868,7 +868,7 @@ uca_camera_stop_readout (UcaCamera *camera, GError **error)
     klass = UCA_CAMERA_GET_CLASS(camera);
 
     g_return_if_fail (klass != NULL);
-    g_return_if_fail (klass->start_readout != NULL);
+    g_return_if_fail (klass->stop_readout != NULL);
 
     g_static_mutex_lock (&mutex);
 
