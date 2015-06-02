@@ -124,7 +124,7 @@ camera that is supported by
 camera we have to create a plugin manager first::
 
         manager = uca_plugin_manager_new ();
-        camera = uca_plugin_manager_get_camera (manager, "pco", &error);
+        camera = uca_plugin_manager_get_camera (manager, "pco", &error, NULL);
 
 Errors are indicated with a returned value ``NULL`` and ``error`` set to
 a value other than ``NULL``::
