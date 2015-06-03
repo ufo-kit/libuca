@@ -441,6 +441,36 @@ is_type (UcaPcoCameraPrivate *priv, int type)
     return priv->description->type == type;
 }
 
+static gboolean
+check_and_resize_memory (UcaPcoCameraPrivate *priv, GError **error)
+{
+    const guint num_buffers = 2;
+
+    if (priv->frame_width != priv->roi_width || priv->frame_height != priv->roi_height || priv->fg_mem == NULL) {
+        guint fg_width = is_edge (priv) ? 2 * priv->roi_width : priv->roi_width;
+
+        priv->frame_width = priv->roi_width;
+        priv->frame_height = priv->roi_height;
+        priv->buffer_size = 2 * priv->frame_width * priv->frame_height;
+
+        Fg_setParameter (priv->fg, FG_WIDTH, &fg_width, priv->fg_port);
+        Fg_setParameter (priv->fg, FG_HEIGHT, &priv->frame_height, priv->fg_port);
+
+        if (priv->fg_mem)
+            Fg_FreeMemEx (priv->fg, priv->fg_mem);
+
+        priv->fg_mem = Fg_AllocMemEx (priv->fg, num_buffers * priv->buffer_size, num_buffers);
+
+        if (priv->fg_mem == NULL) {
+            g_set_error (error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
+                         "%s", Fg_getLastErrorDescription(priv->fg));
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
 static void
 uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
 {
@@ -497,29 +527,8 @@ uca_pco_camera_start_recording (UcaCamera *camera, GError **error)
     /* if (pco_set_binning(priv->pco, priv->binning_h, priv->binning_v) != PCO_NOERROR) */
     /*     g_warning("Cannot set binning\n"); */
 
-    if (priv->frame_width != priv->roi_width || priv->frame_height != priv->roi_height || priv->fg_mem == NULL) {
-        guint fg_width = is_edge (priv) ? 2 * priv->roi_width : priv->roi_width;
-
-        priv->frame_width = priv->roi_width;
-        priv->frame_height = priv->roi_height;
-        priv->buffer_size = 2 * priv->frame_width * priv->frame_height;
-
-        Fg_setParameter(priv->fg, FG_WIDTH, &fg_width, priv->fg_port);
-        Fg_setParameter(priv->fg, FG_HEIGHT, &priv->frame_height, priv->fg_port);
-
-        if (priv->fg_mem)
-            Fg_FreeMemEx(priv->fg, priv->fg_mem);
-
-        const guint num_buffers = 2;
-        priv->fg_mem = Fg_AllocMemEx(priv->fg, num_buffers * priv->buffer_size, num_buffers);
-
-        if (priv->fg_mem == NULL) {
-            g_set_error(error, UCA_PCO_CAMERA_ERROR, UCA_PCO_CAMERA_ERROR_FG_INIT,
-                    "%s", Fg_getLastErrorDescription(priv->fg));
-            g_object_unref(camera);
-            return;
-        }
-    }
+    if (!check_and_resize_memory (priv, error))
+        return;
 
     if (transfer_async)
         setup_fg_callback (camera);
@@ -584,6 +593,9 @@ uca_pco_camera_start_readout(UcaCamera *camera, GError **error)
      * TODO: Check if readout mode is possible. This is not the case for the
      * edge.
      */
+
+    if (!check_and_resize_memory (priv, error))
+        return;
 
     err = pco_get_num_images (priv->pco, priv->active_segment, &priv->num_recorded_images);
     CHECK_AND_RETURN_ON_PCO_ERROR (err);
