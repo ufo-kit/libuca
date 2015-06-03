@@ -1726,7 +1726,6 @@ setup_pco_camera (UcaPcoCameraPrivate *priv)
     pco_get_active_segment (priv->pco, &priv->active_segment);
     pco_get_resolution (priv->pco, &priv->width, &priv->height, &priv->width_ex, &priv->height_ex);
     pco_get_binning (priv->pco, &priv->binning_h, &priv->binning_v);
-    pco_set_storage_mode (priv->pco, STORAGE_MODE_FIFO_BUFFER);
     pco_set_auto_transfer (priv->pco, 1);
 
     pco_get_roi (priv->pco, roi);
