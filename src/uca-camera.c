@@ -1015,26 +1015,28 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
                          "Camera is neither recording nor in readout mode");
         }
         else {
-            g_static_mutex_lock (&access_lock);
-
 #ifdef WITH_PYTHON_MULTITHREADING
             if (Py_IsInitialized ()) {
                 PyGILState_STATE state = PyGILState_Ensure ();
                 Py_BEGIN_ALLOW_THREADS
 
+                g_static_mutex_lock (&access_lock);
                 result = (*klass->grab) (camera, data, error);
+                g_static_mutex_unlock (&access_lock);
 
                 Py_END_ALLOW_THREADS
                 PyGILState_Release (state);
             }
             else {
+                g_static_mutex_lock (&access_lock);
                 result = (*klass->grab) (camera, data, error);
+                g_static_mutex_unlock (&access_lock);
             }
 #else
+            g_static_mutex_lock (&access_lock);
             result = (*klass->grab) (camera, data, error);
-#endif
-
             g_static_mutex_unlock (&access_lock);
+#endif
         }
 
         g_static_mutex_unlock (&mutex);
