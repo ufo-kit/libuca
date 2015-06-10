@@ -617,10 +617,8 @@ uca_pco_camera_stop_readout(UcaCamera *camera, GError **error)
 
     priv = UCA_PCO_CAMERA_GET_PRIVATE(camera);
 
-#if 0
-    err = Fg_stopAcquireEx (priv->fg, priv->fg_port, priv->fg_mem, STOP_SYNC);
+    err = Fg_stopAcquire (priv->fg, priv->fg_port);
     FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
-#endif
 
     err = Fg_setStatusEx (priv->fg, FG_UNBLOCK_ALL, 0, priv->fg_port, priv->fg_mem);
     FG_SET_ERROR (err, priv->fg, UCA_PCO_CAMERA_ERROR_FG_GENERAL);
