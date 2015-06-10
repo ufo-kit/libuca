@@ -1,6 +1,27 @@
 Changelog
 =========
 
+Changes in libuca 2.1.0
+-----------------------
+
+Released on June 10th 2015
+
+This is a combined bug fix and feature release. Most notably there is a new
+uca_camera_readout() API to grab arbitrary frames from cameras with in-camera
+memory, e.g. the pco.dimax.
+
+- pco: fix deadlock with streamed acquisition
+- pco: allocate memory also when just reading out
+- pco: do not reset storage mode
+- file: signal change of ROI and bitdepth and read complete filename path
+- ufo: update trigger policy
+- dexela: Correct the ROI dimensions respecting the binning mode
+- dexela: only allow symmetricall binnings
+- pylon and dexela: update to the new trigger API
+- Add FindClserSis to find the frame grabber SDK
+- sensor-width, sensor-height and sensor-bitdepth are not construct-only anymore
+
+
 Changes in libuca 2.0.0
 -----------------------
 
