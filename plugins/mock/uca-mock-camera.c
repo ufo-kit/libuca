@@ -62,6 +62,7 @@ struct _UcaMockCameraPrivate {
     gdouble exposure_time;
     guint8 *dummy_data;
     guint current_frame;
+    guint readout_index;
     gboolean create_random;
     GRand *rand;
 
@@ -73,7 +74,7 @@ struct _UcaMockCameraPrivate {
     GValueArray *binnings;
 };
 
-static const char g_digits[10][20] = {
+static const char g_digits[16][20] = {
     /* 0 */
     { 0x00, 0xff, 0xff, 0x00,
       0xff, 0x00, 0x00, 0xff,
@@ -133,7 +134,43 @@ static const char g_digits[10][20] = {
       0xff, 0x00, 0x00, 0xff,
       0x00, 0xff, 0xff, 0xff,
       0x00, 0x00, 0x00, 0xff,
-      0xff, 0xff, 0xff, 0x00 }
+      0xff, 0xff, 0xff, 0x00 },
+    /* A */
+    { 0x00, 0xff, 0xff, 0x00,
+      0xff, 0x00, 0x00, 0xff,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0x00, 0x00, 0xff,
+      0xff, 0x00, 0x00, 0xff },
+    /* B */
+    { 0xff, 0xff, 0xff, 0x00,
+      0xff, 0x00, 0x00, 0xff,
+      0xff, 0xff, 0xff, 0x00,
+      0xff, 0x00, 0x00, 0xff,
+      0xff, 0xff, 0xff, 0x00 },
+    /* C */
+    { 0x00, 0xff, 0xff, 0xff,
+      0xff, 0x00, 0x00, 0x00,
+      0xff, 0x00, 0x00, 0x00,
+      0xff, 0x00, 0x00, 0x00,
+      0x00, 0xff, 0xff, 0xff },
+    /* D */
+    { 0xff, 0xff, 0xff, 0x00,
+      0xff, 0x00, 0x00, 0xff,
+      0xff, 0x00, 0x00, 0xff,
+      0xff, 0x00, 0x00, 0xff,
+      0xff, 0xff, 0xff, 0x00 },
+    /* E */
+    { 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff,
+      0xff, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0xff },
+    /* F */
+    { 0xff, 0xff, 0xff, 0xff,
+      0xff, 0x00, 0x00, 0x00,
+      0xff, 0xff, 0xff, 0x00,
+      0xff, 0x00, 0x00, 0x00,
+      0xff, 0x00, 0x00, 0x00 }
 };
 
 static const guint DIGIT_WIDTH = 4;
@@ -165,13 +202,21 @@ print_number (guint8 *buffer, guint number, guint x, guint y, guint n_bytes, gui
 }
 
 static void
-print_current_frame (UcaMockCameraPrivate *priv, guint8 *buffer)
+print_current_frame (UcaMockCameraPrivate *priv, guint8 *buffer, gboolean prefix)
 {
-    guint number = priv->current_frame;
     guint divisor = 10000000;
-    int x = 1;
+    int x = 2;
+    guint number = priv->current_frame;
 
     memset(buffer, 0, 15 * priv->roi_width * priv->bytes);
+
+    if (prefix) {
+        number = priv->readout_index;
+        print_number(buffer, 11, x, 1, priv->bytes, priv->max_val, priv->roi_width);
+        divisor = divisor / 10;
+        x += DIGIT_WIDTH + 1;
+    }
+
     while (divisor > 0) {
         /* max_val doubles as a bit mask */
         print_number(buffer, number / divisor, x, 1, priv->bytes, priv->max_val, priv->roi_width);
@@ -291,8 +336,23 @@ uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     g_object_get (G_OBJECT (camera), "exposure-time", &exposure_time, NULL);
     g_usleep (G_USEC_PER_SEC * exposure_time);
 
-    print_current_frame (priv, priv->dummy_data);
+    print_current_frame (priv, priv->dummy_data, FALSE);
     priv->current_frame++;
+
+    g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height * priv->bytes);
+
+    return TRUE;
+}
+
+static gboolean
+uca_mock_camera_readout (UcaCamera *camera, gpointer data, guint index, GError **error)
+{
+    g_return_val_if_fail (UCA_IS_MOCK_CAMERA(camera), FALSE);
+
+    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
+
+    priv->readout_index = index;
+    print_current_frame (priv, priv->dummy_data, TRUE);
 
     g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height * priv->bytes);
 
@@ -463,6 +523,7 @@ uca_mock_camera_class_init(UcaMockCameraClass *klass)
     camera_class->start_recording = uca_mock_camera_start_recording;
     camera_class->stop_recording = uca_mock_camera_stop_recording;
     camera_class->grab = uca_mock_camera_grab;
+    camera_class->readout = uca_mock_camera_readout;
     camera_class->trigger = uca_mock_camera_trigger;
 
     for (guint i = 0; mock_overrideables[i] != 0; i++)
