@@ -611,8 +611,8 @@ uca_camera_init (UcaCamera *camera)
     uca_camera_set_property_unit (camera_properties[PROP_ROI_Y], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT], UCA_UNIT_PIXEL);
-    uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH_MULTIPLIER], UCA_UNIT_COUNT);
-    uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT_MULTIPLIER], UCA_UNIT_COUNT);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_WIDTH_MULTIPLIER], UCA_UNIT_PIXEL);
+    uca_camera_set_property_unit (camera_properties[PROP_ROI_HEIGHT_MULTIPLIER], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_RECORDED_FRAMES], UCA_UNIT_COUNT);
 
 #ifdef WITH_PYTHON_MULTITHREADING
