@@ -356,6 +356,33 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
 }
 
 static void
+update_sidebar (ThreadData *data, gpointer buffer)
+{
+    gchar string[32];
+
+    gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
+
+    if (data->pixel_size == 1) {
+        guint8 *input = (guint8 *) buffer;
+        guint8 val = input[i];
+        g_snprintf (string, 32, "val = %i", val);
+        gtk_label_set_text (data->val_label, string);
+    }
+    else if (data->pixel_size == 2) {
+        guint16 *input = (guint16 *) buffer;
+        guint16 val = input[i];
+        g_snprintf (string, 32, "val = %i", val);
+        gtk_label_set_text (data->val_label, string);
+    }
+
+    g_snprintf (string, 32, "x = %i", data->display_x);
+    gtk_label_set_text (data->x_label, string);
+
+    g_snprintf (string, 32, "y = %i", data->display_y);
+    gtk_label_set_text (data->y_label, string);
+}
+
+static void
 on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 {
     gint page_width = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(data->hadjustment));
@@ -405,34 +432,9 @@ on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
     }
 
     if ((data->state != RUNNING) || ((data->ev_x >= 0 && data->ev_y >= 0) && (data->ev_y <= data->display_height && data->ev_x <= data->display_width))) {
-        gpointer *buffer;
-        GString *string;
-
-        buffer = uca_ring_buffer_peek_pointer (data->buffer);
-        string = g_string_new_len (NULL, 32);
-        gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
-
-        if (data->pixel_size == 1) {
-            guint8 *input = (guint8 *) buffer;
-            guint8 val = input[i];
-            g_string_printf (string, "val = %i", val);
-            gtk_label_set_text (data->val_label, string->str);
-        }
-        else if (data->pixel_size == 2) {
-            guint16 *input = (guint16 *) buffer;
-            guint16 val = input[i];
-            g_string_printf (string, "val = %i", val);
-            gtk_label_set_text (data->val_label, string->str);
-        }
-
-        g_string_printf (string, "x = %i", data->display_x);
-        gtk_label_set_text (data->x_label, string->str);
-
-        g_string_printf (string, "y = %i", data->display_y);
-        gtk_label_set_text (data->y_label, string->str);
-
-        g_string_free (string, TRUE);
+        update_sidebar (data, uca_ring_buffer_peek_pointer (data->buffer));
     }
+
     if (data->cr != NULL) {
         gdouble dash = 5.0;
         cairo_set_source_rgb (data->cr, data->red, data->green, data->blue);
@@ -539,7 +541,7 @@ on_expose (GtkWidget *event_box, GdkEventExpose *event, ThreadData *data)
 static void
 update_pixbuf (ThreadData *data)
 {
-    GString *string;
+    gchar string[32];
     gdouble mean;
     gdouble sigma;
     guint min;
@@ -573,33 +575,30 @@ update_pixbuf (ThreadData *data)
     }
 
     get_statistics (data, &mean, &sigma, &max, &min);
-    string = g_string_new_len (NULL, 32);
 
-    g_string_printf (string, "\u03bc = %3.2f", mean);
-    gtk_label_set_text (data->mean_label, string->str);
+    g_snprintf (string, 32, "\u03bc = %3.2f", mean);
+    gtk_label_set_text (data->mean_label, string);
 
-    g_string_printf (string, "\u03c3 = %3.2f", sigma);
-    gtk_label_set_text (data->sigma_label, string->str);
+    g_snprintf (string, 32, "\u03c3 = %3.2f", sigma);
+    gtk_label_set_text (data->sigma_label, string);
 
-    g_string_printf (string, "min = %i", min);
-    gtk_label_set_text (data->min_label, string->str);
+    g_snprintf (string, 32, "min = %i", min);
+    gtk_label_set_text (data->min_label, string);
 
-    g_string_printf (string, "max = %i", max);
-    gtk_label_set_text (data->max_label, string->str);
+    g_snprintf (string, 32, "max = %i", max);
+    gtk_label_set_text (data->max_label, string);
 
-    g_string_printf (string, "x = %i", x);
-    gtk_label_set_text (data->roix_label, string->str);
+    g_snprintf (string, 32, "x = %i", x);
+    gtk_label_set_text (data->roix_label, string);
 
-    g_string_printf (string, "y = %i", y);
-    gtk_label_set_text (data->roiy_label, string->str);
+    g_snprintf (string, 32, "y = %i", y);
+    gtk_label_set_text (data->roiy_label, string);
 
-    g_string_printf (string, "width = %i", width);
-    gtk_label_set_text (data->roiw_label, string->str);
+    g_snprintf (string, 32, "width = %i", width);
+    gtk_label_set_text (data->roiw_label, string);
 
-    g_string_printf (string, "height = %i", height);
-    gtk_label_set_text (data->roih_label, string->str);
-
-    g_string_free (string, TRUE);
+    g_snprintf (string, 32, "height = %i", height);
+    gtk_label_set_text (data->roih_label, string);
 
     if (gtk_toggle_button_get_active (data->histogram_button))
         gtk_widget_queue_draw (data->histogram_view);
@@ -712,36 +711,11 @@ preview_frames (void *args)
         update_pixbuf (data);
         egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), data->shadow);
 
-        if ((data->ev_x >= 0) && (data->ev_y >= 0) &&
-            (data->ev_y <= data->display_height) && (data->ev_x <= data->display_width)) {
-            GString *string;
-            string = g_string_new_len (NULL, 32);
-            gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
-
-            if (data->pixel_size == 1) {
-                guint8 *input = (guint8 *) data->shadow;
-                guint8 val = input[i];
-                g_string_printf (string, "val = %i", val);
-                gtk_label_set_text (data->val_label, string->str);
-            }
-            else if (data->pixel_size == 2) {
-                guint16 *input = (guint16 *) data->shadow;
-                guint16 val = input[i];
-                g_string_printf (string, "val = %i", val);
-                gtk_label_set_text (data->val_label, string->str);
-            }
-
-            g_string_printf (string, "x = %i", data->display_x);
-            gtk_label_set_text (data->x_label, string->str);
-
-            g_string_printf (string, "y = %i", data->display_y);
-            gtk_label_set_text (data->y_label, string->str);
-
-            g_string_free (string, TRUE);
+        if ((data->ev_x >= 0) && (data->ev_y >= 0) && (data->ev_y <= data->display_height) && (data->ev_x <= data->display_width)) {
+            update_sidebar (data, data->shadow);
         }
 
         gdk_threads_leave ();
-
         counter++;
     }
 
