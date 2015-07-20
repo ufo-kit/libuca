@@ -82,6 +82,7 @@ typedef struct {
     GtkAdjustment   *frame_slider;
 
     UcaRingBuffer  *buffer;
+    guchar      *shadow;
     guchar      *pixels;
     gint         display_width, display_height;
     gint         colormap;
@@ -90,7 +91,6 @@ typedef struct {
     State        state;
     guint        n_recorded;
     gboolean     data_in_camram;
-    gboolean     advance_buffers;
 
     gint         timestamp;
     gint         width, height;
@@ -676,20 +676,13 @@ grab_async (void *args)
     GError *error = NULL;
 
     while (data->state == RUNNING) {
-        if (data->advance_buffers) {
-            uca_ring_buffer_write_advance (data->buffer);
-            data->advance_buffers = FALSE;
-        }
+        uca_camera_grab (data->camera, data->shadow, &error);
 
-        gpointer *buffer = uca_ring_buffer_peek_pointer (data->buffer);
-        uca_camera_grab (data->camera, buffer, &error);
-
-        if (error != NULL) {
+        if (error != NULL)
             print_and_free_error (&error);
-        }
     }
-    return NULL;
 
+    return NULL;
 }
 
 static gpointer
@@ -697,15 +690,12 @@ preview_frames (void *args)
 {
     ThreadData *data = (ThreadData *) args;
     gint counter = 0;
-    data->n_recorded = 0;
-    uca_ring_buffer_reset (data->buffer);
     GError *error = NULL;
 
+    data->n_recorded = 0;
+    data->shadow = g_malloc (uca_ring_buffer_get_block_size (data->buffer));
 
-    /* manually grab first frame*/
-    gpointer *buffer = uca_ring_buffer_peek_pointer (data->buffer);
-    uca_camera_grab (data->camera, buffer, &error);
-    data->advance_buffers = TRUE;
+    uca_camera_grab (data->camera, data->shadow, &error);
 
     if (!g_thread_create (grab_async, data, FALSE, &error)) {
         g_printerr ("Failed to create thread: %s\n", error->message);
@@ -715,21 +705,12 @@ preview_frames (void *args)
     }
 
     while (data->state == RUNNING) {
-        /* wait for the grab thread to finish moving to the next buffer */
-        if (data->advance_buffers)
-            continue;
-
-        /* buffer-pointer was already set either manually (before the while-loop
-         * started) or ar the end of the while loop to make sure we get the
-         * 'last' buffer which was used before the ring buffer was advanced to
-         * the next block
-         */
-        up_and_down_scale (data, buffer);
+        up_and_down_scale (data, data->shadow);
 
         gdk_threads_enter ();
 
         update_pixbuf (data);
-        egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), buffer);
+        egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), data->shadow);
 
         if ((data->ev_x >= 0) && (data->ev_y >= 0) &&
             (data->ev_y <= data->display_height) && (data->ev_x <= data->display_width)) {
@@ -738,13 +719,13 @@ preview_frames (void *args)
             gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
 
             if (data->pixel_size == 1) {
-                guint8 *input = (guint8 *) buffer;
+                guint8 *input = (guint8 *) data->shadow;
                 guint8 val = input[i];
                 g_string_printf (string, "val = %i", val);
                 gtk_label_set_text (data->val_label, string->str);
             }
             else if (data->pixel_size == 2) {
-                guint16 *input = (guint16 *) buffer;
+                guint16 *input = (guint16 *) data->shadow;
                 guint16 val = input[i];
                 g_string_printf (string, "val = %i", val);
                 gtk_label_set_text (data->val_label, string->str);
@@ -762,11 +743,14 @@ preview_frames (void *args)
         gdk_threads_leave ();
 
         counter++;
-
-        /*prefetch pointer to current buffer location before advancing */
-        buffer = uca_ring_buffer_get_read_pointer (data->buffer);
-        data->advance_buffers = TRUE;
     }
+
+    up_and_down_scale (data, data->shadow);
+    gdk_threads_enter ();
+    update_pixbuf (data);
+    gdk_threads_leave ();
+
+    g_free (data->shadow);
     return NULL;
 }
 
