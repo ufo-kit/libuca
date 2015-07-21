@@ -1,6 +1,19 @@
 Changelog
 =========
 
+
+Changes in libuca 2.1.1
+-----------------------
+
+Released on July 21st 2015
+
+This is bugfix release:
+
+- pco: use Fg_stopAcquire in stop_readout
+- Fix #72: avoid race condition in GUI
+- Fix ufo-kit/concert#373: use same unit for ROI and ROI multiplier
+
+
 Changes in libuca 2.1.0
 -----------------------
 
