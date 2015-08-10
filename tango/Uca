@@ -66,7 +66,7 @@ class Camera(Device):
     camera = device_property(dtype=str, default_value='mock')
 
     image = attribute(label="Image", dtype=[[np.uint16]],
-                      max_dim_x=4096, max_dim_y=4096)
+                      max_dim_x=8192, max_dim_y=8192)
 
     def init_device(self):
         Device.init_device(self)
