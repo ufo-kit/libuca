@@ -46,7 +46,7 @@ struct _UcaPluginManagerPrivate {
     GList *funcs;
 };
 
-static const gchar *MODULE_PATTERN = "libuca([A-Za-z]+)";
+static const gchar *MODULE_PATTERN = "libuca([A-Za-z0-9]+)";
 
 typedef GType (*GetTypeFunc) (void);
 
@@ -193,15 +193,17 @@ static gchar *
 find_camera_module_path (GList *search_paths, const gchar *name)
 {
     gchar *result = NULL;
+    gchar *modname;
     GList *paths;
 
+    modname = g_strdup_printf ("libuca%s.so", name);
     paths = scan_search_paths (search_paths);
 
     for (GList *it = g_list_first (paths); it != NULL; it = g_list_next (it)) {
         gchar *path = (gchar *) it->data;
         gchar *basename = g_path_get_basename ((gchar *) path);
 
-        if (g_strrstr (basename, name)) {
+        if (g_strrstr (basename, modname)) {
             result = g_strdup (path);
             g_free (basename);
             break;
@@ -210,6 +212,7 @@ find_camera_module_path (GList *search_paths, const gchar *name)
         g_free (basename);
     }
 
+    g_free (modname);
     g_list_free_full (paths, g_free);
     return result;
 }
