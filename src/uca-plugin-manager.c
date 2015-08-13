@@ -50,6 +50,12 @@ static const gchar *MODULE_PATTERN = "libuca([A-Za-z]+)";
 
 typedef GType (*GetTypeFunc) (void);
 
+typedef struct {
+    GParameter  *p;
+    guint       idx;
+} ParamArray;
+
+
 /**
  * UcaPluginManagerError:
  * @UCA_PLUGIN_MANAGER_ERROR_MODULE_NOT_FOUND: The module could not be found
@@ -267,13 +273,6 @@ get_camera_type (UcaPluginManagerPrivate *priv,
  *
  * Since: 1.7
  */
-typedef struct
-{
-    GParameter  *p;
-    guint       idx;
-} ParamArray;
-
-
 static void
 transform_hash_entry_to_gparameter (gpointer key,
                                     gpointer value,
@@ -307,12 +306,12 @@ uca_plugin_manager_get_camerah (UcaPluginManager *manager,
                                 GHashTable *parameters,
                                 GError **error)
 {
-    //No parameters. Just create the camera
+    /* No parameters. Just create the camera */
     if (!parameters)
         return uca_plugin_manager_get_camera (manager, name, error, NULL);
 
-    //If we reach this point, we have parameters. Construct GParameters for them and
-    //use uca_plugin_manager_get_camerav to create the camera
+    /* If we reach this point, we have parameters. Construct GParameters for
+     * them and use uca_plugin_manager_get_camerav to create the camera. */
     guint n_parameters = g_hash_table_size (parameters);
     ParamArray params;
     params.p = g_malloc0 (sizeof(GParameter) * n_parameters);
@@ -320,17 +319,7 @@ uca_plugin_manager_get_camerah (UcaPluginManager *manager,
 
     g_hash_table_foreach (parameters, (GHFunc) transform_hash_entry_to_gparameter, &params);
 
-    UcaCamera *camera = uca_plugin_manager_get_camerav(manager, name, n_parameters, params.p, error);
-
-    //Free the g_strcpy-ed names
-    for (guint i = 0; i < params.idx; i++)
-    {
-        GParameter *parameter = &(params.p[i]);
-        g_free ((gpointer)(parameter->name));
-    }
-    g_free (params.p);
-
-    return camera;
+    return uca_plugin_manager_get_camerav (manager, name, n_parameters, params.p, error);
 }
 
 /**
