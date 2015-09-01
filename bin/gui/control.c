@@ -21,6 +21,7 @@
 #include <gdk/gdkkeysyms.h>
 #include <math.h>
 #include <cairo.h>
+#include <string.h>
 
 #include "config.h"
 #include "uca-camera.h"
@@ -110,7 +111,7 @@ typedef struct {
 static UcaPluginManager *plugin_manager;
 static gsize mem_size = 2048;
 
-static void update_pixbuf (ThreadData *data);
+static void update_pixbuf (ThreadData *data, gpointer buffer);
 
 static void
 up_and_down_scale (ThreadData *data, gpointer buffer)
@@ -301,7 +302,7 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
 }
 
 static void
-get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, guint *_min)
+get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, guint *_min, gpointer buffer)
 {
     gdouble sum = 0.0;
     gdouble squared_sum = 0.0;
@@ -310,7 +311,7 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
     guint n = data->width * data->height;
 
     if (data->pixel_size == 1) {
-        guint8 *input = (guint8 *) uca_ring_buffer_peek_pointer (data->buffer);
+        guint8 *input = (guint8 *) buffer;
 
         for (gint i = 0; i < n; i++) {
             guint8 val = input[i];
@@ -326,7 +327,7 @@ get_statistics (ThreadData *data, gdouble *mean, gdouble *sigma, guint *_max, gu
         }
     }
     else {
-        guint16 *input = (guint16 *) uca_ring_buffer_peek_pointer (data->buffer);
+        guint16 *input = (guint16 *) buffer;
 
         for (gint i = 0; i < n; i++) {
             guint16 val = input[i];
@@ -519,7 +520,7 @@ on_button_release (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data
     data->adj_width = data->to_x - data->from_x;
     data->adj_height = data->to_y - data->from_y;
 
-    update_pixbuf (data);
+    update_pixbuf (data, uca_ring_buffer_peek_pointer (data->buffer));
 }
 
 static gboolean
@@ -539,7 +540,7 @@ on_expose (GtkWidget *event_box, GdkEventExpose *event, ThreadData *data)
 }
 
 static void
-update_pixbuf (ThreadData *data)
+update_pixbuf (ThreadData *data, gpointer buffer)
 {
     gchar string[32];
     gdouble mean;
@@ -574,7 +575,7 @@ update_pixbuf (ThreadData *data)
         height = data->display_height;
     }
 
-    get_statistics (data, &mean, &sigma, &max, &min);
+    get_statistics (data, &mean, &sigma, &max, &min, buffer);
 
     g_snprintf (string, 32, "\u03bc = %3.2f", mean);
     gtk_label_set_text (data->mean_label, string);
@@ -708,7 +709,7 @@ preview_frames (void *args)
 
         gdk_threads_enter ();
 
-        update_pixbuf (data);
+        update_pixbuf (data, data->shadow);
         egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), data->shadow);
 
         if ((data->ev_x >= 0) && (data->ev_y >= 0) && (data->ev_y <= data->display_height) && (data->ev_x <= data->display_width)) {
@@ -721,10 +722,13 @@ preview_frames (void *args)
 
     up_and_down_scale (data, data->shadow);
     gdk_threads_enter ();
-    update_pixbuf (data);
+    update_pixbuf (data, data->shadow);
     gdk_threads_leave ();
 
+    gpointer buffer = uca_ring_buffer_get_write_pointer (data->buffer);
+    memcpy (buffer, data->shadow, uca_ring_buffer_get_block_size (data->buffer));
     g_free (data->shadow);
+
     return NULL;
 }
 
@@ -816,7 +820,7 @@ update_current_frame (ThreadData *data)
 
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), buffer);
     up_and_down_scale (data, buffer);
-    update_pixbuf (data);
+    update_pixbuf (data, buffer);
 }
 
 static void
@@ -1010,13 +1014,13 @@ update_zoomed_pixbuf (ThreadData *data)
 {
     if (data->state == RUNNING) {
         up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
-        update_pixbuf (data);
+        update_pixbuf (data, uca_ring_buffer_peek_pointer (data->buffer));
         update_pixbuf_dimensions (data);
     }
     else {
         update_pixbuf_dimensions (data);
         up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
-        update_pixbuf (data);
+        update_pixbuf (data, uca_ring_buffer_peek_pointer (data->buffer));
     }
 }
 
@@ -1083,7 +1087,7 @@ on_colormap_changed (GtkComboBox *widget, ThreadData *data)
     update_pixbuf_dimensions (data);
 
     up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
-    update_pixbuf (data);
+    update_pixbuf (data, uca_ring_buffer_peek_pointer (data->buffer));
 }
 
 static void
