@@ -4,6 +4,7 @@ import sys
 import time
 import numpy as np
 import PyTango
+import threading
 from gi.repository import Uca, GObject
 from PyTango import Attr, AttrWriteType, DevState
 from PyTango.server import Device, DeviceMeta, attribute, device_property, command, server_run
@@ -119,12 +120,15 @@ class Camera(Device):
 
     @command(dtype_in=str, doc_in="Path and filename to store frame")
     def Store(self, path):
-        frame = self.grab()
+        def grab_and_write():
+            frame = self.grab()
 
-        if HAVE_TIFFFILE:
-            tifffile.imsave(path, frame)
-        else:
-            np.savez(open(path, 'wb'), frame)
+            if HAVE_TIFFFILE:
+                tifffile.imsave(path, frame)
+            else:
+                np.savez(open(path, 'wb'), frame)
+
+        threading.Thread(target=grab_and_write).start()
 
     @command
     def Trigger(self):
