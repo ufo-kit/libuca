@@ -36,7 +36,7 @@ typedef struct {
 } Options;
 
 
-typedef void (*GrabFrameFunc) (UcaCamera *, gpointer, guint, UcaCameraTriggerSource);
+typedef guint (*GrabFrameFunc) (UcaCamera *, gpointer, guint, UcaCameraTriggerSource);
 
 static UcaCamera *camera = NULL;
 
@@ -83,13 +83,15 @@ log_handler (const gchar *log_domain, GLogLevelFlags log_level, const gchar *mes
     g_assert_no_error (error);
 }
 
-static void
+static guint
 grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source)
 {
     GError *error = NULL;
+    guint total;
 
     g_object_set (camera, "trigger-source", trigger_source, NULL);
     uca_camera_start_recording (camera, &error);
+    total = 0;
 
     for (guint i = 0; i < n_frames; i++) {
         if (trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE)
@@ -103,9 +105,13 @@ grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraT
             g_error_free (error);
             error = NULL;
         }
+        else {
+            total++;
+        }
     }
 
     uca_camera_stop_recording (camera, &error);
+    return total;
 }
 
 static void
@@ -119,7 +125,7 @@ grab_callback (gpointer data, gpointer user_data)
     g_static_mutex_unlock (&mutex);
 }
 
-static void
+static guint
 grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source)
 {
     GError *error = NULL;
@@ -137,6 +143,7 @@ grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCamera
         ;
 
     uca_camera_stop_recording (camera, &error);
+    return n_frames;
 }
 
 static void
@@ -146,6 +153,8 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Option
     gdouble fps;
     gdouble bandwidth;
     gdouble total_time = 0.0;
+    guint num_frames_total;
+    guint num_frames_acquired = 0;
     GError *error = NULL;
 
     timer = g_timer_new ();
@@ -155,7 +164,7 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Option
         g_message ("Start run %i of %i", run + 1, options->n_runs);
         g_timer_start (timer);
 
-        func (camera, buffer, options->n_frames, trigger_source);
+        num_frames_acquired += func (camera, buffer, options->n_frames, trigger_source);
 
         g_timer_stop (timer);
         total_time += g_timer_elapsed (timer, NULL);
@@ -165,7 +174,10 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Option
 
     fps = options->n_runs * options->n_frames / total_time;
     bandwidth = options->n_bytes * fps / 1024 / 1024;
-    g_print (" %8.2f Hz  %8.2f MB/s\n", fps, bandwidth);
+    num_frames_total = options->n_runs * options->n_frames;
+    g_print (" %8.2f Hz  %8.2f MB/s  %d/%d acquired (%3.2f%% dropped)\n",
+             fps, bandwidth, num_frames_acquired, num_frames_total,
+             100 * (num_frames_total - num_frames_acquired) / ((gdouble) num_frames_total));
 
     g_timer_destroy (timer);
 }
