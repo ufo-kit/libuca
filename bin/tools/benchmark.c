@@ -65,8 +65,7 @@ log_handler (const gchar *log_domain, GLogLevelFlags log_level, const gchar *mes
     tz = g_time_zone_new_local ();
     date_time = g_date_time_new_now (tz);
 
-    new_message = g_strdup_printf ("[%s] %s\n",
-                                   g_date_time_format (date_time, "%FT%H:%M:%S%z"), message);
+    new_message = g_strdup_printf ("[%s] %s\n", g_date_time_format (date_time, "%FT%H:%M:%S%z"), message);
 
     g_time_zone_unref (tz);
     g_date_time_unref (date_time);
@@ -160,7 +159,25 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Option
     timer = g_timer_new ();
     g_assert_no_error (error);
 
+    if (func == grab_frames_sync)
+        g_print ("sync   ");
+    else
+        g_print ("async  ");
+
+    switch (trigger_source) {
+        case UCA_CAMERA_TRIGGER_SOURCE_AUTO:
+            g_print ("auto  ");
+            break;
+        case UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE:
+            g_print ("soft  ");
+            break;
+        case UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL:
+            g_print ("ext   ");
+            break;
+    }
+
     for (guint run = 0; run < options->n_runs; run++) {
+        g_print ("%i/%i", run + 1, options->n_runs);
         g_message ("Start run %i of %i", run + 1, options->n_runs);
         g_timer_start (timer);
 
@@ -168,6 +185,7 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Option
 
         g_timer_stop (timer);
         total_time += g_timer_elapsed (timer, NULL);
+        g_print ("\b\b\b");
     }
 
     g_assert_no_error (error);
@@ -221,35 +239,25 @@ benchmark (UcaCamera *camera, Options *options)
 
     g_object_set (G_OBJECT(camera), "transfer-asynchronously", FALSE, NULL);
 
-    g_print ("[  sync ] [     auto ]");
     benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
 
-    if (options->test_software) {
-        g_print ("[  sync ] [ software ]");
+    if (options->test_software)
         benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
-    }
 
-    if (options->test_external) {
-        g_print ("[  sync ] [ external ]");
+    if (options->test_external)
         benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
-    }
 
     /* Asynchronous frame acquisition */
     if (options->test_async) {
         g_object_set (G_OBJECT(camera), "transfer-asynchronously", TRUE, NULL);
 
-        g_print ("[ async ] [     auto ]");
         benchmark_method (camera, buffer, grab_frames_async, options, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
 
-        if (options->test_software) {
-            g_print ("[ async ] [ software ]");
+        if (options->test_software)
             benchmark_method (camera, buffer, grab_frames_async, options, UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
-        }
 
-        if (options->test_external) {
-            g_print ("[ async ] [ external ]");
+        if (options->test_external)
             benchmark_method (camera, buffer, grab_frames_async, options, UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL);
-        }
     }
 
     g_free (buffer);
@@ -276,9 +284,9 @@ main (int argc, char *argv[])
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &options.n_frames, "Number of frames per run", "N" },
         { "num-runs", 'r', 0, G_OPTION_ARG_INT, &options.n_runs, "Number of runs", "N" },
         { "exposure-time", 'e', 0, G_OPTION_ARG_DOUBLE, &options.exposure_time, "Exposure time in seconds", NULL },
-        { "test-async", 'a', 0, G_OPTION_ARG_NONE, &options.test_async, "Test asynchronous mode", NULL },
-        { "test-software", 's', 0, G_OPTION_ARG_NONE, &options.test_software, "Test software trigger mode", NULL },
-        { "test-external", 'e', 0, G_OPTION_ARG_NONE, &options.test_external, "Test external trigger mode", NULL },
+        { "async", 0, 0, G_OPTION_ARG_NONE, &options.test_async, "Test asynchronous mode", NULL },
+        { "software", 0, 0, G_OPTION_ARG_NONE, &options.test_software, "Test software trigger mode", NULL },
+        { "external", 0, 0, G_OPTION_ARG_NONE, &options.test_external, "Test external trigger mode", NULL },
         { NULL }
     };
 
