@@ -33,7 +33,6 @@
 typedef struct {
     gint n_frames;
     gdouble duration;
-    gdouble exposure_time;
     gchar *filename;
 #ifdef HAVE_LIBTIFF
     gboolean write_tiff;
@@ -220,7 +219,6 @@ main (int argc, char *argv[])
     static Options opts = {
         .n_frames = -1,
         .duration = -1.0,
-        .exposure_time = 0.001,
         .filename = NULL,
 #ifdef HAVE_LIBTIFF
         .write_tiff = FALSE,
@@ -230,7 +228,6 @@ main (int argc, char *argv[])
     static GOptionEntry entries[] = {
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &opts.n_frames, "Number of frames to acquire", "N" },
         { "duration", 'd', 0, G_OPTION_ARG_DOUBLE, &opts.duration, "Duration in seconds", NULL },
-        { "exposure-time", 'e', 0, G_OPTION_ARG_DOUBLE, &opts.exposure_time, "Exposure time in seconds", NULL },
         { "output", 'o', 0, G_OPTION_ARG_STRING, &opts.filename, "Output file name", "FILE" },
 #ifdef HAVE_LIBTIFF
         { "write-tiff", 't', 0, G_OPTION_ARG_NONE, &opts.write_tiff, "Write as TIFF", NULL },
@@ -261,14 +258,18 @@ main (int argc, char *argv[])
         goto cleanup_manager;
     }
 
-    camera = uca_plugin_manager_get_camera (manager, argv[1], &error, NULL);
+    camera = uca_plugin_manager_get_camera (manager, argv[argc - 1], &error, NULL);
 
     if (camera == NULL) {
         g_print ("Error during initialization: %s\n", error->message);
         goto cleanup_camera;
     }
 
-    g_object_set (camera, "exposure-time", opts.exposure_time, NULL);
+    if (!uca_camera_parse_arg_props (camera, argv, argc - 1, &error)) {
+        g_print ("Error setting properties: %s\n", error->message);
+        goto cleanup_manager;
+    }
+
     error = record_frames (camera, &opts);
 
     if (error != NULL)

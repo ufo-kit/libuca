@@ -27,7 +27,6 @@
 typedef struct {
     gint n_frames;
     gint n_runs;
-    gdouble exposure_time;
     gboolean test_async;
     gboolean test_software;
     gboolean test_external;
@@ -35,11 +34,9 @@ typedef struct {
     gsize n_bytes;
 } Options;
 
-
 typedef guint (*GrabFrameFunc) (UcaCamera *, gpointer, guint, UcaCameraTriggerSource);
 
 static UcaCamera *camera = NULL;
-
 
 static void
 sigint_handler(int signal)
@@ -213,10 +210,6 @@ benchmark (UcaCamera *camera, Options *options)
     gdouble exposure_time;
     gpointer buffer;
 
-    g_object_set (G_OBJECT (camera),
-                  "exposure-time", options->exposure_time,
-                  NULL);
-
     g_object_get (G_OBJECT (camera),
                   "name", &name,
                   "sensor-width", &sensor_width,
@@ -274,7 +267,6 @@ main (int argc, char *argv[])
     static Options options = {
         .n_frames = 1000,
         .n_runs = 3,
-        .exposure_time = 0.001,
         .test_async = FALSE,
         .test_software = FALSE,
         .test_external = FALSE,
@@ -283,7 +275,6 @@ main (int argc, char *argv[])
     static GOptionEntry entries[] = {
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &options.n_frames, "Number of frames per run", "N" },
         { "num-runs", 'r', 0, G_OPTION_ARG_INT, &options.n_runs, "Number of runs", "N" },
-        { "exposure-time", 'e', 0, G_OPTION_ARG_DOUBLE, &options.exposure_time, "Exposure time in seconds", NULL },
         { "async", 0, 0, G_OPTION_ARG_NONE, &options.test_async, "Test asynchronous mode", NULL },
         { "software", 0, 0, G_OPTION_ARG_NONE, &options.test_software, "Test software trigger mode", NULL },
         { "external", 0, 0, G_OPTION_ARG_NONE, &options.test_external, "Test external trigger mode", NULL },
@@ -314,10 +305,15 @@ main (int argc, char *argv[])
     g_assert_no_error (error);
     g_log_set_handler (NULL, G_LOG_LEVEL_MASK, log_handler, log_channel);
 
-    camera = uca_plugin_manager_get_camera (manager, argv[1], &error, NULL);
+    camera = uca_plugin_manager_get_camera (manager, argv[argc - 1], &error, NULL);
 
     if (camera == NULL) {
         g_print ("Initialization: %s\n", error->message);
+        goto cleanup_manager;
+    }
+
+    if (!uca_camera_parse_arg_props (camera, argv, argc - 1, &error)) {
+        g_print ("Error setting properties: %s\n", error->message);
         goto cleanup_manager;
     }
 
