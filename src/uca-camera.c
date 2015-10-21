@@ -136,6 +136,27 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
 
 static GParamSpec *camera_properties[N_BASE_PROPERTIES] = { NULL, };
 static GStaticMutex access_lock = G_STATIC_MUTEX_INIT;
+static gboolean str_to_boolean (const gchar *s);
+
+#define DEFINE_CAST(suffix, trans_func)                 \
+static void                                             \
+value_transform_##suffix (const GValue *src_value,      \
+                         GValue       *dest_value)      \
+{                                                       \
+  const gchar* src = g_value_get_string (src_value);    \
+  g_value_set_##suffix (dest_value, trans_func (src));  \
+}
+
+DEFINE_CAST (uchar,     atoi)
+DEFINE_CAST (int,       atoi)
+DEFINE_CAST (long,      atol)
+DEFINE_CAST (uint,      atoi)
+DEFINE_CAST (uint64,    atoi)
+DEFINE_CAST (ulong,     atol)
+DEFINE_CAST (float,     atof)
+DEFINE_CAST (double,    atof)
+DEFINE_CAST (boolean,   str_to_boolean)
+
 
 struct _UcaCameraPrivate {
     gboolean cancelling_recording;
@@ -151,6 +172,12 @@ struct _UcaCameraPrivate {
     GValueArray *h_binnings;
     GValueArray *v_binnings;
 };
+
+static gboolean
+str_to_boolean (const gchar *s)
+{
+    return g_ascii_strncasecmp (s, "true", 4) == 0;
+}
 
 static void
 uca_camera_set_property_unit (GParamSpec *pspec, UcaUnit unit)
@@ -642,6 +669,82 @@ buffer_thread (UcaCamera *camera)
     }
 
     return error;
+}
+
+/**
+ * uca_camera_parse_arg_props:
+ * @camera: A #UcaCamera object
+ * @argv: Array of property assignment strings in the form of `prop=value`
+ * @argc: Length of @argv
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Parses the assignment array @argv and sets the property to the given value.
+ * If an error occures, @error is set and %FALSE is returned.
+ *
+ * Returns: %TRUE on success.
+ */
+gboolean
+uca_camera_parse_arg_props (UcaCamera *camera, gchar **argv, guint argc, GError **error)
+{
+    GRegex *assignment;
+
+    assignment = g_regex_new ("\\s*([A-Za-z0-9-]*)=(.*)\\s*", 0, 0, error);
+
+    if (*error)
+        return FALSE;
+
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_UCHAR,   value_transform_uchar);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_INT,     value_transform_int);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_UINT,    value_transform_uint);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_UINT64,  value_transform_uint64);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_LONG,    value_transform_long);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_ULONG,   value_transform_ulong);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_FLOAT,   value_transform_float);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_DOUBLE,  value_transform_double);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_BOOLEAN, value_transform_boolean);
+
+    for (guint i = 0; i < argc; i++) {
+        GMatchInfo *match;
+        gboolean success = TRUE;
+
+        g_regex_match (assignment, argv[i], 0, &match);
+
+        if (g_match_info_matches (match)) {
+            GParamSpec *pspec;
+            GValue value = {0};
+
+            gchar *prop = g_match_info_fetch (match, 1);
+            gchar *string_value = g_match_info_fetch (match, 2);
+
+            g_value_init (&value, G_TYPE_STRING);
+            g_value_set_string (&value, string_value);
+
+            pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (camera), prop);
+
+            if (pspec != NULL) {
+                GValue target_value = {0};
+
+                g_value_init (&target_value, pspec->value_type);
+                g_value_transform (&value, &target_value);
+                g_object_set_property (G_OBJECT (camera), prop, &target_value);
+            }
+            else {
+                g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_IMPLEMENTED,
+                             "No property `%s' found", prop);
+                success = FALSE;
+            }
+
+            g_match_info_free (match);
+            g_free (prop);
+            g_free (string_value);
+
+            if (!success)
+                return FALSE;
+        }
+    }
+
+    g_regex_unref (assignment);
+    return TRUE;
 }
 
 /**

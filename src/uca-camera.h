@@ -149,6 +149,10 @@ struct _UcaCameraClass {
 
 UcaCamera * uca_camera_new              (const gchar        *type,
                                          GError            **error);
+gboolean    uca_camera_parse_arg_props  (UcaCamera          *camera,
+                                         gchar             **argv,
+                                         guint               argc,
+                                         GError            **error);
 void        uca_camera_start_recording  (UcaCamera          *camera,
                                          GError            **error);
 void        uca_camera_stop_recording   (UcaCamera          *camera,
