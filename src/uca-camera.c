@@ -31,6 +31,7 @@
 
 #include <glib.h>
 #include <string.h>
+#include <stdlib.h>
 #include "compat.h"
 #include "uca-camera.h"
 #include "uca-ring-buffer.h"
