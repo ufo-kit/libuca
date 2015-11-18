@@ -402,14 +402,14 @@ uca_camera_class_init (UcaCameraClass *klass)
             "Width of sensor",
             "Width of the sensor in pixels",
             1, G_MAXUINT, 512,
-            G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
+            G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_HEIGHT] =
         g_param_spec_uint(uca_camera_props[PROP_SENSOR_HEIGHT],
             "Height of sensor",
             "Height of the sensor in pixels",
             1, G_MAXUINT, 512,
-            G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
+            G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_PIXEL_WIDTH] =
         g_param_spec_double (uca_camera_props[PROP_SENSOR_PIXEL_WIDTH],
@@ -430,7 +430,7 @@ uca_camera_class_init (UcaCameraClass *klass)
             "Number of bits per pixel",
             "Number of bits per pixel",
             1, 32, 8,
-            G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
+            G_PARAM_READABLE);
 
     camera_properties[PROP_SENSOR_HORIZONTAL_BINNING] =
         g_param_spec_uint(uca_camera_props[PROP_SENSOR_HORIZONTAL_BINNING],

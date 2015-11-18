@@ -371,15 +371,6 @@ uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *
     }
 
     switch (property_id) {
-        case PROP_SENSOR_WIDTH:
-            priv->width = g_value_get_uint (value);
-            break;
-        case PROP_SENSOR_HEIGHT:
-            priv->height = g_value_get_uint (value);
-            break;
-        case PROP_SENSOR_BITDEPTH:
-            priv->bits = g_value_get_uint (value);
-            break;
         case PROP_EXPOSURE_TIME:
             priv->exposure_time = g_value_get_double (value);
             break;
@@ -477,26 +468,22 @@ ufo_mock_camera_initable_init (GInitable *initable,
                                GCancellable *cancellable,
                                GError **error)
 {
+    UcaMockCameraPrivate *priv;
+    gdouble step_size;
+
     g_return_val_if_fail (UCA_IS_MOCK_CAMERA (initable), FALSE);
-    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (UCA_MOCK_CAMERA (initable));
+    priv = UCA_MOCK_CAMERA_GET_PRIVATE (UCA_MOCK_CAMERA (initable));
 
-    g_object_get (G_OBJECT (initable),
-                "sensor-width", &priv->width,
-                "sensor-height", &priv->height,
-                "sensor-bitdepth", &priv->bits,
-                NULL);
-
-    priv->roi_width = priv->width;
-    priv->roi_height = priv->height;
     priv->bytes = ceil (priv->bits / 8.);
-
     priv->max_val = 0;
+
     for (guint i = 0; i < priv->bits; i++) {
         priv->max_val |= 1 << i;
     }
 
     priv->default_line = g_malloc0 (priv->width * priv->bytes);
-    gdouble step_size = ((gdouble) priv->max_val) / priv->width;
+    step_size = ((gdouble) priv->max_val) / priv->width;
+
     for (guint p = 0; p < priv->roi_width; p++) {
         guint val = round (p * step_size);
         set_pixel (priv->default_line, p, 0, val, priv->bytes, priv->max_val, priv->width);
@@ -567,9 +554,9 @@ uca_mock_camera_init(UcaMockCamera *self)
 
 
     /* will be set in initable_init */
-    self->priv->width = self->priv->roi_width = 0;
-    self->priv->height = self->priv->roi_height = 0;
-    self->priv->bits = 0;
+    self->priv->width = self->priv->roi_width = 512;
+    self->priv->height = self->priv->roi_height = 512;
+    self->priv->bits = 8;
     self->priv->bytes = 0;
     self->priv->max_val = 0;
     self->priv->default_line = NULL;
