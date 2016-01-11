@@ -40,7 +40,6 @@ typedef struct {
     UcaCamera   *camera;
     GtkWidget   *main_window;
     GdkPixbuf   *pixbuf;
-    GdkPixbuf   *subpixbuf;
     GtkWidget   *image;
     GtkWidget   *start_button;
     GtkWidget   *stop_button;
@@ -52,6 +51,7 @@ typedef struct {
     GtkWidget   *rect_color_button;
     GtkWidget   *acquisition_expander;
     GtkWidget   *properties_expander;
+    GtkWidget   *histogram_view;
     GtkWidget   *colormap_box;
     GtkWidget   *event_box;
     GtkLabel    *mean_label;
@@ -66,8 +66,6 @@ typedef struct {
     GtkLabel    *roiw_label;
     GtkLabel    *roih_label;
 
-    GtkDialog       *download_dialog;
-    GtkProgressBar  *download_progressbar;
     GtkAdjustment   *download_adjustment;
     GtkAdjustment   *count;
     GtkAdjustment   *hadjustment;
@@ -76,42 +74,51 @@ typedef struct {
     GtkAdjustment   *y_adjustment;
     GtkAdjustment   *width_adjustment;
     GtkAdjustment   *height_adjustment;
-
-    GtkWidget       *histogram_view;
-    GtkToggleButton *histogram_button;
-    GtkToggleButton *log_button;
     GtkAdjustment   *frame_slider;
 
-    UcaRingBuffer  *buffer;
-    guchar      *shadow;
-    guchar      *pixels;
-    gint         display_width, display_height;
-    gint         colormap;
-    gdouble      zoom_factor;
-    gdouble      zoom_before;
-    State        state;
-    guint        n_recorded;
-    gboolean     data_in_camram;
+    GtkDialog       *download_dialog;
+    GtkProgressBar  *download_progressbar;
+    GtkToggleButton *histogram_button;
+    GtkToggleButton *log_button;
+    UcaRingBuffer   *buffer;
+    guchar          *shadow;
+    guchar          *pixels;
+    cairo_t         *cr;
+    State           state;
+    guint           n_recorded;
+    gboolean        data_in_camram;
+    gboolean        stopped;
 
-    gint         timestamp;
+    gint         display_width, display_height;
+    gint         pixbuf_width, pixbuf_height;
+    gint         page_width, page_height;
+    gint         adj_width, adj_height;
     gint         width, height;
-    gint         pixel_size;
-    gint         ev_x, ev_y;
     gint         display_x, display_y;
     gint         tmp_fromx, tmp_fromy;
+    gint         rect_evx, rect_evy;
+    gint         side_x, side_y;
+    gint         rect_x, rect_y;
     gint         from_x, from_y;
     gint         to_x, to_y;
-    gint         adj_width, adj_height;
-    gint         rect_x, rect_y;
-    gint         rect_evx, rect_evy;
-    cairo_t      *cr;
+    gint         ev_x, ev_y;
+    gint         colormap;
+    gint         timestamp;
+    gint         pixel_size;
+    gint         resize_counter;
+    gint         mm_width, mm_height;
+
+    gdouble      zoom_factor;
+    gdouble      zoom_before;
     gdouble      red, green, blue;
+    gdouble      percent_width, percent_height;
 } ThreadData;
 
 static UcaPluginManager *plugin_manager;
 static gsize mem_size = 2048;
 
 static void update_pixbuf (ThreadData *data, gpointer buffer);
+static void update_pixbuf_dimensions (ThreadData *data);
 
 static void
 up_and_down_scale (ThreadData *data, gpointer buffer)
@@ -126,62 +133,122 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
     gint zoom;
     gint stride;
     gint offset = 0;
-    gint start_wval;
-    gint start_hval;
+    gint min_x;
+    gint min_y;
+    gint max_x;
+    gint max_y;
+    gint current_width;
+    gint current_height;
+
+    current_width = gtk_adjustment_get_page_size (data->hadjustment);
+    current_height = gtk_adjustment_get_page_size (data->vadjustment);
+    if (((current_width > data->page_width || current_height > data->page_height)
+     && ((current_width - data->page_width) >= 15 || (current_height - data->page_height) >= 15))
+     || ((current_width < data->page_width || current_height < data->page_height)
+     && ((data->page_width - current_width) >= 15 || (data->page_height - current_height) >= 15))) {
+        data->resize_counter += 1;
+        if (data->resize_counter > 30) {
+            update_pixbuf_dimensions (data);
+        }
+    }
 
     egg_histogram_get_range (EGG_HISTOGRAM_VIEW (data->histogram_view), &min, &max);
     factor = 255.0 / (max - min);
     output = data->pixels;
     zoom = (gint) data->zoom_factor;
     stride = (gint) 1 / data->zoom_factor;
-    gint page_width = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->hadjustment));
-    gint page_height = gtk_adjustment_get_page_size (GTK_ADJUSTMENT (data->vadjustment));
     do_log = gtk_toggle_button_get_active (data->log_button);
+    min_x = gtk_adjustment_get_value (data->hadjustment);
+    min_y = gtk_adjustment_get_value (data->vadjustment);
 
-    if (data->state == RUNNING) {
-        if ((data->adj_width > 0) && (data->adj_height > 0)) {
-            start_wval = data->from_x;
-            start_hval = data->from_y;
-            page_width = data->to_x;
-            page_height = data->to_y;
-        }
-        else {
-            start_wval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->hadjustment));
-            start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
-            page_width += start_wval;
-            page_height += start_hval;
-        }
+    if (data->adj_width > 0 && data->adj_height > 0) {
+        min_x = data->from_x;
+        min_y = data->from_y;
+        max_x = data->pixbuf_width + min_x;
+        max_y = data->pixbuf_height + min_y;
+    }
+    else if (data->stopped == FALSE) {
+        if (data->display_width <= data->page_width || data->pixbuf_width == data->display_width)
+            max_x = data->display_width;
+        else
+            max_x = data->pixbuf_width + min_x;
+
+        if (data->display_height <= data->page_height || data->pixbuf_height == data->display_height)
+            max_y = data->display_height;
+        else
+            max_y = data->pixbuf_height + min_y;
     }
     else {
-        start_wval = 0;
-        start_hval = 0;
-        page_width = data->display_width;
-        page_height = data->display_height;
+        min_x = 0;
+        min_y = 0;
+        max_x = data->display_width;
+        max_y = data->display_height;
     }
+
+    if (max_x > data->display_width) {
+        gint diff_x = max_x - data->display_width;
+        if ((min_x - diff_x) >= 0) {
+            min_x -= diff_x;
+            max_x -= diff_x;
+        }
+        else {
+            min_x = 0;
+            max_x = data->pixbuf_width;
+        }
+    }
+
+    if (max_y > data->display_height) {
+        gint diff_y = max_y - data->display_height;
+        if ((min_y - diff_y) >= 0) {
+            min_y -= diff_y;
+            max_y -= diff_y;
+        }
+        else {
+            min_y = 0;
+            max_y = data->pixbuf_height;
+        }
+    }
+
+    if ((data->display_width <= data->page_width) || (data->page_width == 1) ||
+        (data->adj_width > 0 && data->adj_height > 0 && data->adj_width <= data->page_width))
+        data->percent_width = 0.5;
+    else if ((min_x == 0 && data->display_width >= data->page_width) ||
+        (data->adj_width > 0 && data->adj_height > 0 && data->adj_width > data->page_width))
+        data->percent_width = 0.0;
+    else
+        data->percent_width = min_x / (gdouble) (data->display_width - data->page_width);
+
+    if ((data->display_height<= data->page_height) || (data->page_height == 1) ||
+        (data->adj_width > 0 && data->adj_height > 0 && data->adj_height <= data->page_height))
+        data->percent_height = 0.5;
+    else if ((min_y == 0 && data->display_height >= data->page_height) ||
+        (data->adj_width > 0 && data->adj_height > 0 && data->adj_height > data->page_height))
+        data->percent_height = 0.0;
+    else
+        data->percent_height = min_y / (gdouble) (data->display_height - data->page_height);
+
+    gtk_misc_set_alignment (GTK_MISC(data->image), data->percent_width, data->percent_height);
 
     if (data->pixel_size == 1) {
         guint8 *input = (guint8 *) buffer;
-
-        for (gint y = 0; y < data->display_height; y++) {
-            if (zoom <= 1) {
+        for (gint y = min_y; y < max_y; y++) {
+            if (zoom <= 1 && min_x == 0) {
                 offset = y * stride * data->width;
             }
 
-            for (gint x = 0; x < data->display_width; x++) {
-                if (zoom <= 1)
+            for (gint x = min_x; x < max_x; x++) {
+                if (zoom <= 1 && min_x == 0)
                     offset += stride;
+                else if (zoom <= 1)
+                    offset = (y * stride * data->width) + (x * stride);
                 else
                     offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
 
-                if (y >= start_hval && y < page_height) {
-                    if (x >= start_wval && x < page_width) {
+                if (do_log)
+                    dval = log ((input[offset] - min) * factor);
+                else
+                    dval = (input[offset] - min) * factor;
 
-                        if (do_log)
-                            dval = log ((input[offset] - min) * factor);
-                        else
-                            dval = (input[offset] - min) * factor;
-                    }
-                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 if (data->colormap == 1) {
@@ -221,7 +288,6 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
                     else {
                         red = 255 + 4 * (223.125 - val);
                     }
-
                     output[i++] = (guchar) red;
                     output[i++] = (guchar) green;
                     output[i++] = (guchar) blue;
@@ -232,26 +298,24 @@ up_and_down_scale (ThreadData *data, gpointer buffer)
     else if (data->pixel_size == 2) {
         guint16 *input = (guint16 *) buffer;
 
-        for (gint y = 0; y < data->display_height; y++) {
-            if (zoom <= 1) {
+        for (gint y = min_y; y < max_y; y++) {
+            if (zoom <= 1 && min_x == 0) {
                 offset = y * stride * data->width;
             }
 
-            for (gint x = 0; x < data->display_width; x++) {
-                if (zoom <= 1)
+            for (gint x = min_x; x < max_x; x++) {
+                if (zoom <= 1 && min_x == 0)
                     offset += stride;
+                else if (zoom <= 1)
+                    offset = (y * stride * data->width) + (x * stride);
                 else
                     offset = ((gint) (y / zoom) * data->width) + ((gint) (x / zoom));
 
-                if (y >= start_hval && y < page_height)  {
-                    if (x >= start_wval && x < page_width) {
+                if (do_log)
+                    dval = log ((input[offset] - min) * factor);
+                else
+                    dval = (input[offset] - min) * factor;
 
-                        if (do_log)
-                            dval = log ((input[offset] - min) * factor);
-                        else
-                            dval = (input[offset] - min) * factor;
-                    }
-                }
                 guchar val = (guchar) CLAMP(dval, 0.0, 255.0);
 
                 if (data->colormap == 1) {
@@ -361,7 +425,21 @@ update_sidebar (ThreadData *data, gpointer buffer)
 {
     gchar string[32];
 
-    gint i = (data->display_y / data->zoom_factor) * data->width + data->display_x / data->zoom_factor;
+    if (data->display_x < 0)
+        data->side_x = 0;
+    else if (data->display_x > data->display_width)
+        data->side_x = data->display_width;
+    else
+        data->side_x = data->display_x;
+
+    if (data->display_y < 0)
+        data->side_y = 0;
+    else if (data->display_y > data->display_height)
+        data->side_y = data->display_height;
+    else
+        data->side_y = data->display_y;
+
+    gint i = (data->side_y / data->zoom_factor) * data->width + (data->side_x / data->zoom_factor);
 
     if (data->pixel_size == 1) {
         guint8 *input = (guint8 *) buffer;
@@ -376,20 +454,21 @@ update_sidebar (ThreadData *data, gpointer buffer)
         gtk_label_set_text (data->val_label, string);
     }
 
-    g_snprintf (string, 32, "x = %i", data->display_x);
+    g_snprintf (string, 32, "x = %i", data->side_x);
     gtk_label_set_text (data->x_label, string);
 
-    g_snprintf (string, 32, "y = %i", data->display_y);
+    g_snprintf (string, 32, "y = %i", data->side_y);
     gtk_label_set_text (data->y_label, string);
 }
 
 static void
 on_motion_notify (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 {
-    gint page_width = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(data->hadjustment));
-    gint page_height = gtk_adjustment_get_page_size(GTK_ADJUSTMENT(data->vadjustment));
-    gint start_wval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->hadjustment));
-    gint start_hval = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->vadjustment));
+    gint page_width = gtk_adjustment_get_page_size (data->hadjustment);
+    gint page_height = gtk_adjustment_get_page_size (data->vadjustment);
+    gint start_wval = gtk_adjustment_get_value (data->hadjustment);
+    gint start_hval = gtk_adjustment_get_value (data->vadjustment);
+
     page_width += start_wval;
     page_height += start_hval;
     data->rect_evx = event->x;
@@ -473,10 +552,16 @@ on_button_press (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data)
 
     normalize_event_coords (data);
 
-    gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->x_adjustment), data->display_width);
-    gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->y_adjustment), data->display_height);
-    gtk_adjustment_set_value (GTK_ADJUSTMENT (data->x_adjustment), data->ev_x);
-    gtk_adjustment_set_value (GTK_ADJUSTMENT (data->y_adjustment), data->ev_y);
+    gtk_adjustment_set_upper (data->x_adjustment, data->display_width);
+    gtk_adjustment_set_upper (data->y_adjustment, data->display_height);
+    if (data->adj_width > 0 && data->adj_height > 0) {
+        gtk_adjustment_set_value (data->x_adjustment, data->side_x);
+        gtk_adjustment_set_value (data->y_adjustment, data->side_y);
+    }
+    else {
+        gtk_adjustment_set_value (data->x_adjustment, data->ev_x);
+        gtk_adjustment_set_value (data->y_adjustment, data->ev_y);
+    }
 
     data->tmp_fromx = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->x_adjustment));
     data->tmp_fromy = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->y_adjustment));
@@ -492,13 +577,19 @@ on_button_release (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data
 
     normalize_event_coords (data);
 
-    gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->width_adjustment), data->display_width);
-    gtk_adjustment_set_upper (GTK_ADJUSTMENT (data->height_adjustment), data->display_height);
-    gtk_adjustment_set_value (GTK_ADJUSTMENT (data->width_adjustment), data->ev_x);
-    gtk_adjustment_set_value (GTK_ADJUSTMENT (data->height_adjustment), data->ev_y);
+    gtk_adjustment_set_upper (data->width_adjustment, data->display_width);
+    gtk_adjustment_set_upper (data->height_adjustment, data->display_height);
+    if (data->adj_width > 0 && data->adj_height > 0) {
+        gtk_adjustment_set_value (data->width_adjustment, data->side_x);
+        gtk_adjustment_set_value (data->height_adjustment, data->side_y);
+    }
+    else {
+        gtk_adjustment_set_value (data->width_adjustment, data->ev_x);
+        gtk_adjustment_set_value (data->height_adjustment, data->ev_y);
+    }
 
-    gint tmp_tox = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->width_adjustment));
-    gint tmp_toy = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->height_adjustment));
+    gint tmp_tox = gtk_adjustment_get_value (data->width_adjustment);
+    gint tmp_toy = gtk_adjustment_get_value (data->height_adjustment);
 
     if (data->tmp_fromx > tmp_tox) {
         data->from_x = tmp_tox;
@@ -520,8 +611,16 @@ on_button_release (GtkWidget *event_box, GdkEventMotion *event, ThreadData *data
     data->adj_width = data->to_x - data->from_x;
     data->adj_height = data->to_y - data->from_y;
 
+    if (data->adj_width < 40 && data->adj_height < 40) {
+        data->adj_width = 0;
+        data->adj_height = 0;
+    }
+
+    update_pixbuf_dimensions (data);
+    up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
     update_pixbuf (data, uca_ring_buffer_peek_pointer (data->buffer));
 }
+
 
 static gboolean
 on_expose (GtkWidget *event_box, GdkEventExpose *event, ThreadData *data)
@@ -554,21 +653,14 @@ update_pixbuf (ThreadData *data, gpointer buffer)
 
     gdk_flush ();
 
+    gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
+    gtk_widget_queue_draw (data->image);
+
     if (data->adj_width > 0 && data->adj_height > 0) {
-        data->subpixbuf = gdk_pixbuf_new_subpixbuf (data->pixbuf, data->from_x, data->from_y, data->adj_width, data->adj_height);
-        gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->subpixbuf);
-    }
-    else {
-        gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
-    }
-
-    gtk_widget_queue_draw_area (data->image, 0, 0, data->display_width, data->display_height);
-
-    if ((data->adj_width > 0) && (data->adj_height > 0)) {
         x = data->from_x;
         y = data->from_y;
-        width = data->adj_width;
-        height = data->adj_height;
+        width = data->pixbuf_width;
+        height = data->pixbuf_height;
     }
     else {
         width = data->display_width;
@@ -611,13 +703,28 @@ update_pixbuf_dimensions (ThreadData *data)
     if (data->pixbuf != NULL)
         g_object_unref (data->pixbuf);
 
+    gint filling_up;
+    gint width_remainder;
+    gint height_remainder;
+    gint event_width;
+    gint event_height;
+
+    data->display_width = (gint) data->width * data->zoom_factor;
+    data->display_height = (gint) data->height * data->zoom_factor;
+    filling_up = data->pixel_size * 4;
+    data->resize_counter = 0;
+
+    if ((gint) data->zoom_factor == 32)
+        gtk_widget_set_sensitive (data->zoom_in_button, FALSE);
+    else
+        gtk_widget_set_sensitive (data->zoom_in_button, TRUE);
+
     if (data->adj_width > 0 && data->adj_height > 0) {
         gdouble zoom = data->zoom_factor / data->zoom_before;
-
-        data->from_x = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->x_adjustment)) * zoom;
-        data->from_y = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->y_adjustment)) * zoom;
-        data->to_x = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->width_adjustment)) * zoom;
-        data->to_y = gtk_adjustment_get_value (GTK_ADJUSTMENT (data->height_adjustment)) * zoom;
+        data->from_x = gtk_adjustment_get_value (data->x_adjustment) * zoom;
+        data->from_y = gtk_adjustment_get_value (data->y_adjustment) * zoom;
+        data->to_x = gtk_adjustment_get_value (data->width_adjustment) * zoom;
+        data->to_y = gtk_adjustment_get_value (data->height_adjustment) * zoom;
 
         gint adj_x = data->from_x;
         gint adj_y = data->from_y;
@@ -632,12 +739,42 @@ update_pixbuf_dimensions (ThreadData *data)
         }
         data->adj_width = data->to_x - data->from_x;
         data->adj_height = data->to_y - data->from_y;
+
+        data->pixbuf_width = data->adj_width;
+        data->pixbuf_height = data->adj_height;
+    }
+    else {
+        data->page_width = gtk_adjustment_get_page_size (data->hadjustment);
+        data->page_height = gtk_adjustment_get_page_size (data->vadjustment);
+
+        if (data->display_width <= data->page_width || data->stopped == TRUE || data->page_width == 1)
+            data->pixbuf_width = data->display_width;
+        else
+            data->pixbuf_width = data->page_width;
+
+        if (data->display_height <= data->page_height || data->stopped == TRUE || data->page_height == 1)
+            data->pixbuf_height = data->display_height;
+        else
+            data->pixbuf_height = data->page_height;
     }
 
-    data->display_width = (gint) data->width * data->zoom_factor;
-    data->display_height = (gint) data->height * data->zoom_factor;
+    width_remainder = data->pixbuf_width % filling_up;
+    height_remainder = data->pixbuf_height % filling_up;
+    if (width_remainder != 0)
+        data->pixbuf_width += (filling_up - width_remainder);
+    if (height_remainder != 0)
+        data->pixbuf_height += (filling_up - height_remainder);
 
-    data->pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, data->display_width, data->display_height);
+    event_width = data->pixbuf_width;
+    event_height = data->pixbuf_height;
+    if ((data->display_width > event_width) && (data->adj_width <= 0 || data->adj_height <= 0))
+        event_width = data->display_width;
+
+    if ((data->display_height > event_height) && (data->adj_width <= 0 || data->adj_height <=0))
+        event_height = data->display_height;
+
+    gtk_widget_set_size_request (data->event_box, event_width, event_height);
+    data->pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, FALSE, 8, data->pixbuf_width, data->pixbuf_height);
     data->pixels = gdk_pixbuf_get_pixels (data->pixbuf);
     gtk_image_set_from_pixbuf (GTK_IMAGE (data->image), data->pixbuf);
 }
@@ -878,6 +1015,8 @@ static void
 on_start_button_clicked (GtkWidget *widget, ThreadData *data)
 {
     GError *error = NULL;
+    data->stopped = FALSE;
+    update_pixbuf_dimensions (data);
 
     uca_camera_start_recording (data->camera, &error);
 
@@ -905,6 +1044,8 @@ on_stop_button_clicked (GtkWidget *widget, ThreadData *data, GtkAdjustment *adju
     data->state = IDLE;
     set_tool_button_state (data);
     uca_camera_stop_recording (data->camera, &error);
+    data->stopped = TRUE;
+    update_pixbuf_dimensions (data);
 
     on_frame_slider_changed (adjustment, data);
 
@@ -1021,6 +1162,25 @@ update_zoomed_pixbuf (ThreadData *data)
         update_pixbuf_dimensions (data);
         up_and_down_scale (data, uca_ring_buffer_peek_pointer (data->buffer));
         update_pixbuf (data, uca_ring_buffer_peek_pointer (data->buffer));
+    }
+
+    gint min_x;
+    gint min_y;
+    gint zoomed_min_x;
+    gint zoomed_min_y;
+
+    min_x = gtk_adjustment_get_value(data->hadjustment);
+    min_y = gtk_adjustment_get_value(data->vadjustment);
+
+    if ((data->percent_width != 0.0) || (data->percent_height != 0.0)) {
+        if (min_x != 0) {
+            zoomed_min_x = data->percent_width * (data->width * data->zoom_factor - data->page_width);
+            gtk_adjustment_set_value (data->hadjustment, zoomed_min_x);
+        }
+        if (min_y != 0) {
+            zoomed_min_y = data->percent_height * (data->height * data->zoom_factor - data->page_height);
+            gtk_adjustment_set_value (data->vadjustment, zoomed_min_y);
+        }
     }
 }
 
@@ -1225,6 +1385,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.colormap = 1;
     td.histogram_view = histogram_view;
     td.data_in_camram = FALSE;
+    td.stopped = TRUE;
     td.main_window = window;
 
     update_pixbuf_dimensions (&td);
