@@ -116,18 +116,21 @@ read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
 }
 
 static gboolean
-update_fnames (UcaFileCameraPrivate *priv, GError **error)
+update_fnames (UcaFileCameraPrivate *priv)
 {
     GDir *dir;
     const gchar *fname;
+    GError *error = NULL;
 
     g_list_free_full (priv->fnames, g_free);
     priv->fnames = NULL;
 
-    dir = g_dir_open (priv->path, 0, error);
+    dir = g_dir_open (priv->path, 0, &error);
 
-    if (dir == NULL)
+    if (dir == NULL) {
+        g_warning ("%s", error->message);
         return FALSE;
+    }
 
     while (1) {
         fname = g_dir_read_name (dir);
@@ -215,7 +218,8 @@ uca_file_camera_set_property (GObject *object, guint property_id, const GValue *
         case PROP_PATH:
             g_free (priv->path);
             priv->path = g_strdup (g_value_get_string (value));
-            update_fnames (priv, NULL);
+            priv->path = g_strstrip (priv->path);
+            update_fnames (priv);
 
             g_object_notify (object, "roi-width");
             g_object_notify (object, "roi-height");
@@ -346,7 +350,7 @@ uca_file_camera_init(UcaFileCamera *self)
     priv->bitdepth = 8;
 
     priv->fnames = NULL;
-    update_fnames (priv, NULL);
+    update_fnames (priv);
 }
 
 G_MODULE_EXPORT GType
