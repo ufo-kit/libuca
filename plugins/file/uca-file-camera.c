@@ -78,7 +78,7 @@ static gboolean
 read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
 {
     TIFF *file;
-    guint bitdepth;
+    guint16 bitdepth;
     guint width;
     guint height;
     tsize_t result;
