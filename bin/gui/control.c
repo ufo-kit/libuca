@@ -1251,9 +1251,26 @@ on_colormap_changed (GtkComboBox *widget, ThreadData *data)
 }
 
 static void
+update_ring_buffer_dimensions (ThreadData *data)
+{
+    gsize image_size;
+    guint num_frames;
+
+    image_size = data->pixel_size * data->width * data->height;
+    num_frames = mem_size  * 1024 * 1024 / image_size;
+
+    if (data->buffer != NULL)
+        g_object_unref (data->buffer);
+
+    data->buffer = uca_ring_buffer_new (image_size, num_frames);
+    g_message ("Allocated memory for %d frames", num_frames);
+}
+
+static void
 on_roi_width_changed (GObject *object, GParamSpec *pspec, ThreadData *data)
 {
     g_object_get (object, "roi-width", &data->width, NULL);
+    update_ring_buffer_dimensions (data);
     update_pixbuf_dimensions (data);
 }
 
@@ -1261,7 +1278,20 @@ static void
 on_roi_height_changed (GObject *object, GParamSpec *pspec, ThreadData *data)
 {
     g_object_get (object, "roi-height", &data->height, NULL);
+    update_ring_buffer_dimensions (data);
     update_pixbuf_dimensions (data);
+}
+
+static void
+on_sensor_bitdepth_changed (GObject *object, GParamSpec *pspec, ThreadData *data)
+{
+    guint bitdepth;
+    gdouble max_value;
+    g_object_get (object, "sensor-bitdepth", &bitdepth, NULL);
+    data->pixel_size = bitdepth > 8 ? 2 : 1;
+    max_value = pow (2, bitdepth);
+    egg_histogram_view_set_max (EGG_HISTOGRAM_VIEW (data->histogram_view), max_value);
+    update_ring_buffer_dimensions (data);
 }
 
 static void
@@ -1276,11 +1306,7 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     GdkPixbuf *pixbuf;
     GtkBox    *histogram_box;
     GtkAdjustment   *max_bin_adjustment;
-    UcaRingBuffer   *ring_buffer;
-    gsize image_size;
-    guint n_frames;
     guint bits_per_sample;
-    guint pixel_size;
     guint width, height;
     GError  *error = NULL;
 
@@ -1302,8 +1328,11 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
                   "sensor-bitdepth", &bits_per_sample,
                   NULL);
 
+    memset (&td, 0, sizeof (td));
+
     g_signal_connect (camera, "notify::roi-width", (GCallback) on_roi_width_changed, &td);
     g_signal_connect (camera, "notify::roi-height", (GCallback) on_roi_height_changed, &td);
+    g_signal_connect (camera, "notify::sensor-bitdepth", (GCallback) on_sensor_bitdepth_changed, &td);
 
     histogram_view      = egg_histogram_view_new (width * height, bits_per_sample, 256);
     property_tree_view  = egg_property_tree_view_new (G_OBJECT (camera));
@@ -1355,32 +1384,23 @@ create_main_window (GtkBuilder *builder, const gchar* camera_name)
     td.download_adjustment = GTK_ADJUSTMENT (gtk_builder_get_object (builder, "download-adjustment"));
 
     /* Set initial data */
-    pixel_size  = bits_per_sample > 8 ? 2 : 1;
-    image_size  = pixel_size * width * height;
-    n_frames    = mem_size * 1024 * 1024 / image_size;
-    ring_buffer = uca_ring_buffer_new (image_size, n_frames);
+    td.pixel_size = bits_per_sample > 8 ? 2 : 1;
+    td.width  = td.display_width = width;
+    td.height = td.display_height = height;
+    update_ring_buffer_dimensions (&td);
 
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (histogram_view),
-                               uca_ring_buffer_peek_pointer (ring_buffer));
+                               uca_ring_buffer_peek_pointer (td.buffer));
 
     pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB, TRUE, 8, width, height);
     gtk_image_set_from_pixbuf (GTK_IMAGE (image), pixbuf);
 
     gtk_adjustment_set_value (max_bin_adjustment, pow (2, bits_per_sample) - 1);
-
     gtk_adjustment_set_upper (td.count, (gdouble) G_MAXULONG);
 
-    g_message ("Allocated memory for %d frames", n_frames);
-
-    td.pixel_size = pixel_size;
     td.image  = image;
-    td.pixbuf = NULL;
-    td.pixels = NULL;
-    td.buffer = ring_buffer;
     td.state  = IDLE;
     td.camera = camera;
-    td.width  = td.display_width = width;
-    td.height = td.display_height = height;
     td.zoom_factor = 1.0;
     td.colormap = 1;
     td.histogram_view = histogram_view;
