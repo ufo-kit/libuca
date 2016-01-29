@@ -138,6 +138,14 @@ egg_histogram_get_range (EggHistogramView *view,
     *max = priv->max_value;
 }
 
+void
+egg_histogram_view_set_max (EggHistogramView *view,
+                            guint max)
+{
+    g_return_if_fail (EGG_IS_HISTOGRAM_VIEW (view));
+    view->priv->max = max;
+}
+
 static void
 set_cursor_type (EggHistogramView *view, GdkCursorType cursor_type)
 {

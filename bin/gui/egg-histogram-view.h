@@ -58,6 +58,8 @@ void          egg_histogram_view_update   (EggHistogramView *view,
 void          egg_histogram_get_range     (EggHistogramView *view,
                                            gdouble          *min,
                                            gdouble          *max);
+void          egg_histogram_view_set_max  (EggHistogramView *view,
+                                           guint             max);
 
 G_END_DECLS
 
