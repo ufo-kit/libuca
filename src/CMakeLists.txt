@@ -114,6 +114,7 @@ endif()
 #{{{ Installation
 install(TARGETS uca
         LIBRARY DESTINATION ${UCA_LIBDIR}
+		RUNTIME DESTINATION ${UCA_BINDIR}
         COMPONENT libraries)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libuca.pc
