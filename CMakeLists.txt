@@ -82,6 +82,8 @@ pkg_check_modules(GLIB2 glib-2.0>=2.28 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.28 REQUIRED)
 pkg_check_modules(GMODULE2 gmodule-2.0>=2.28 REQUIRED)
 pkg_check_modules(GIO2 gio-2.0>=2.28 REQUIRED)
+
+link_directories(${GLIB2_LIBRARY_DIRS})
 #}}}
 #{{{ Common includes
 include_directories(
