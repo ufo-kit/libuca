@@ -305,7 +305,7 @@ test_factory_hashtable (Fixture *fixture, gconstpointer data)
 
     gchar *foo = "roi-x0";
     gchar *bar = "roi-y0";
-    GValue baz = G_VALUE_INIT;
+    GValue baz = { 0 };
     g_value_init(&baz, G_TYPE_UINT);
     g_value_set_uint(&baz, checkvalue);
 
