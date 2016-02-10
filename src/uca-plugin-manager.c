@@ -196,7 +196,11 @@ find_camera_module_path (GList *search_paths, const gchar *name)
     gchar *modname;
     GList *paths;
 
+#ifdef _WIN32
+    modname = g_strdup_printf ("libuca%s.dll", name);
+#else
     modname = g_strdup_printf ("libuca%s.so", name);
+#endif
     paths = scan_search_paths (search_paths);
 
     for (GList *it = g_list_first (paths); it != NULL; it = g_list_next (it)) {
