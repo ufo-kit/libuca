@@ -262,12 +262,12 @@ main (int argc, char *argv[])
 
     if (camera == NULL) {
         g_print ("Error during initialization: %s\n", error->message);
-        goto cleanup_camera;
+        goto cleanup_manager;
     }
 
     if (!uca_camera_parse_arg_props (camera, argv, argc - 1, &error)) {
         g_print ("Error setting properties: %s\n", error->message);
-        goto cleanup_manager;
+        goto cleanup_camera;
     }
 
     error = record_frames (camera, &opts);
