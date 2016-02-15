@@ -22,5 +22,6 @@ if (TIFF_FOUND)
 
     install(TARGETS ucafile
             LIBRARY DESTINATION ${UCA_PLUGINDIR}
+			RUNTIME DESTINATION ${UCA_BINDIR}
             COMPONENT ${UCA_CAMERA_NAME})
 endif ()
