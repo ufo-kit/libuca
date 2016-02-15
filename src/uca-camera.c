@@ -334,17 +334,6 @@ uca_camera_dispose (GObject *object)
 
     priv = UCA_CAMERA_GET_PRIVATE (object);
 
-    if (priv->is_recording) {
-        GError *error = NULL;
-
-        uca_camera_stop_recording (UCA_CAMERA (object), &error);
-
-        if (error != NULL) {
-            g_warning ("Could not stop recording: %p", error->message);
-            g_error_free (error);
-        }
-    }
-
     if (priv->ring_buffer != NULL) {
         g_object_unref (priv->ring_buffer);
         priv->ring_buffer = NULL;
