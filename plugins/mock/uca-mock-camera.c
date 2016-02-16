@@ -71,7 +71,6 @@ struct _UcaMockCameraPrivate {
     gboolean thread_running;
 
     GThread *grab_thread;
-    GValueArray *binnings;
 };
 
 static const char g_digits[16][20] = {
@@ -456,8 +455,6 @@ uca_mock_camera_finalize(GObject *object)
     }
 
     g_free (priv->dummy_data);
-    g_value_array_free (priv->binnings);
-
     g_free (priv->default_line);
 
     G_OBJECT_CLASS (uca_mock_camera_parent_class)->finalize(object);
@@ -544,14 +541,11 @@ uca_mock_camera_init(UcaMockCamera *self)
     self->priv->exposure_time = 0.05;
     self->priv->create_random = TRUE;
 
-    self->priv->binnings = g_value_array_new(1);
     self->priv->rand = g_rand_new ();
 
     GValue val = {0};
     g_value_init(&val, G_TYPE_UINT);
     g_value_set_uint(&val, 1);
-    g_value_array_append(self->priv->binnings, &val);
-
 
     /* will be set in initable_init */
     self->priv->width = self->priv->roi_width = 512;
