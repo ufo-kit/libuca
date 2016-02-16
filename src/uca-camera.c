@@ -112,9 +112,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "sensor-pixel-height",
     "sensor-bitdepth",
     "sensor-horizontal-binning",
-    "sensor-horizontal-binnings",
     "sensor-vertical-binning",
-    "sensor-vertical-binnings",
     "trigger-source",
     "trigger-type",
     "exposure-time",
@@ -170,8 +168,6 @@ struct _UcaCameraPrivate {
     UcaRingBuffer *ring_buffer;
     UcaCameraTriggerSource trigger_source;
     UcaCameraTriggerType trigger_type;
-    GValueArray *h_binnings;
-    GValueArray *v_binnings;
 };
 
 static gboolean
@@ -298,14 +294,6 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             g_value_set_uint (value, 1);
             break;
 
-        case PROP_SENSOR_HORIZONTAL_BINNINGS:
-            g_value_set_boxed (value, priv->h_binnings);
-            break;
-
-        case PROP_SENSOR_VERTICAL_BINNINGS:
-            g_value_set_boxed (value, priv->v_binnings);
-            break;
-
         case PROP_ROI_WIDTH_MULTIPLIER:
             g_value_set_uint (value, 1);
             break;
@@ -350,8 +338,6 @@ uca_camera_finalize (GObject *object)
     guint n_props;
 
     priv = UCA_CAMERA_GET_PRIVATE (object);
-    g_value_array_free (priv->h_binnings);
-    g_value_array_free (priv->v_binnings);
 
     /* We will reset property units of all subclassed objects  */
     props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object), &n_props);
@@ -428,34 +414,12 @@ uca_camera_class_init (UcaCameraClass *klass)
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
 
-    camera_properties[PROP_SENSOR_HORIZONTAL_BINNINGS] =
-        g_param_spec_value_array(uca_camera_props[PROP_SENSOR_HORIZONTAL_BINNINGS],
-            "Array of possible binnings",
-            "Array of possible binnings in horizontal direction",
-            g_param_spec_uint(
-                uca_camera_props[PROP_SENSOR_HORIZONTAL_BINNING],
-                "Number of ADCs",
-                "Number of ADCs that make up one pixel",
-                1, G_MAXUINT, 1,
-                G_PARAM_READABLE), G_PARAM_READABLE);
-
     camera_properties[PROP_SENSOR_VERTICAL_BINNING] =
         g_param_spec_uint(uca_camera_props[PROP_SENSOR_VERTICAL_BINNING],
             "Vertical binning",
             "Number of sensor ADCs that are combined to one pixel in vertical direction",
             1, G_MAXUINT, 1,
             G_PARAM_READWRITE);
-
-    camera_properties[PROP_SENSOR_VERTICAL_BINNINGS] =
-        g_param_spec_value_array(uca_camera_props[PROP_SENSOR_VERTICAL_BINNINGS],
-            "Array of possible binnings",
-            "Array of possible binnings in vertical direction",
-            g_param_spec_uint(
-                uca_camera_props[PROP_SENSOR_VERTICAL_BINNING],
-                "Number of ADCs",
-                "Number of ADCs that make up one pixel",
-                1, G_MAXUINT, 1,
-                G_PARAM_READABLE), G_PARAM_READABLE);
 
     camera_properties[PROP_TRIGGER_SOURCE] =
         g_param_spec_enum("trigger-source",
@@ -604,16 +568,12 @@ uca_camera_init (UcaCamera *camera)
     camera->priv->transfer_async = FALSE;
     camera->priv->trigger_source = UCA_CAMERA_TRIGGER_SOURCE_AUTO;
     camera->priv->trigger_type = UCA_CAMERA_TRIGGER_TYPE_EDGE;
-    camera->priv->h_binnings = g_value_array_new (1);
-    camera->priv->v_binnings = g_value_array_new (1);
     camera->priv->buffered = FALSE;
     camera->priv->num_buffers = 4;
     camera->priv->ring_buffer = NULL;
 
     g_value_init (&val, G_TYPE_UINT);
     g_value_set_uint (&val, 1);
-    g_value_array_append (camera->priv->h_binnings, &val);
-    g_value_array_append (camera->priv->v_binnings, &val);
 
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_WIDTH], UCA_UNIT_PIXEL);
     uca_camera_set_property_unit (camera_properties[PROP_SENSOR_HEIGHT], UCA_UNIT_PIXEL);
