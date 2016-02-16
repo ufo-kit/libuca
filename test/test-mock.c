@@ -233,21 +233,6 @@ test_property_units (Fixture *fixture, gconstpointer data)
 }
 
 static void
-test_binnings_properties (Fixture *fixture, gconstpointer data)
-{
-    UcaCamera *camera = UCA_CAMERA (fixture->camera);
-
-    GValueArray *array = NULL;
-    g_object_get (G_OBJECT (camera),
-            "sensor-horizontal-binnings", &array,
-            NULL);
-
-    GValue *value = g_value_array_get_nth (array, 0);
-    g_assert (value != NULL);
-    g_assert (g_value_get_uint (value) == 1);
-}
-
-static void
 test_signal (Fixture *fixture, gconstpointer data)
 {
     UcaCamera *camera = UCA_CAMERA (fixture->camera);
@@ -356,7 +341,6 @@ int main (int argc, char *argv[])
         {"/recording/buffered", test_recording_buffered},
         {"/properties/base", test_base_properties},
         {"/properties/recording", test_recording_property},
-        {"/properties/binnings", test_binnings_properties},
         {"/properties/frames-per-second", test_fps_property},
         {"/properties/units", test_property_units},
         {"/properties/units/overwrite", test_overwriting_units},
