@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "uca-camera.h"
 #include "uca-plugin-manager.h"
 #include "common.h"
@@ -30,11 +31,12 @@ typedef struct {
     gboolean test_async;
     gboolean test_software;
     gboolean test_external;
+    gboolean test_readout;
 
     gsize n_bytes;
 } Options;
 
-typedef guint (*GrabFrameFunc) (UcaCamera *, gpointer, guint, UcaCameraTriggerSource);
+typedef guint (*GrabFrameFunc) (UcaCamera *, gpointer, guint, UcaCameraTriggerSource, GTimer *);
 
 static UcaCamera *camera = NULL;
 
@@ -80,7 +82,7 @@ log_handler (const gchar *log_domain, GLogLevelFlags log_level, const gchar *mes
 }
 
 static guint
-grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source)
+grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source, GTimer *timer)
 {
     GError *error = NULL;
     guint total;
@@ -89,6 +91,7 @@ grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraT
     uca_camera_start_recording (camera, &error);
     total = 0;
 
+    g_timer_start (timer);
     for (guint i = 0; i < n_frames; i++) {
         if (trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE)
             uca_camera_trigger (camera, &error);
@@ -105,9 +108,46 @@ grab_frames_sync (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraT
             total++;
         }
     }
+    g_timer_stop (timer);
 
     uca_camera_stop_recording (camera, &error);
     return total;
+}
+
+static guint
+grab_frames_readout (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source, GTimer *timer)
+{
+    GError *error = NULL;
+    guint recorded_frames = 0;
+
+    g_object_set(camera, "trigger-source", trigger_source, NULL);
+    uca_camera_start_recording(camera, &error);
+
+    do {
+        g_object_get (camera, "recorded-frames", &recorded_frames, NULL);
+    }while(recorded_frames < n_frames);
+
+    uca_camera_stop_recording(camera, &error);
+
+    // This sets is-readout in camera object. So the grab is sequential from image 1
+    uca_camera_start_readout(camera, &error);
+
+    g_timer_start (timer);
+    
+    /*This is required because its possible that the camera has recorded frames more
+    than what is required. Index starts at 1 for consistency (camRAM index start from 1)*/
+    for(int i = 1; i <= n_frames; i++) {
+        uca_camera_grab (camera, buffer, &error);
+        if(error != NULL){
+            g_warning("There was an error grabbing frame %d during readout from camRAM",i+1);
+            error = NULL;
+        }
+    }
+
+    g_timer_stop (timer);
+    uca_camera_stop_readout(camera, &error);
+
+    return n_frames;
 }
 
 static void
@@ -122,13 +162,14 @@ grab_callback (gpointer data, gpointer user_data)
 }
 
 static guint
-grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source)
+grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source, GTimer *timer)
 {
     GError *error = NULL;
     volatile guint n_acquired_frames = 0;
 
     g_object_set (camera, "trigger-source", trigger_source, NULL);
     uca_camera_set_grab_func (camera, grab_callback, &n_acquired_frames);
+    g_timer_start (timer);
     uca_camera_start_recording (camera, &error);
 
     /*
@@ -139,6 +180,7 @@ grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCamera
         ;
 
     uca_camera_stop_recording (camera, &error);
+    g_timer_stop (timer);
     return n_frames;
 }
 
@@ -158,6 +200,8 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Option
 
     if (func == grab_frames_sync)
         g_print ("sync   ");
+    else if (func == grab_frames_readout)
+        g_printf("rout   ");
     else
         g_print ("async  ");
 
@@ -176,11 +220,9 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Option
     for (guint run = 0; run < options->n_runs; run++) {
         g_print ("%i/%i", run + 1, options->n_runs);
         g_message ("Start run %i of %i", run + 1, options->n_runs);
-        g_timer_start (timer);
 
-        num_frames_acquired += func (camera, buffer, options->n_frames, trigger_source);
+        num_frames_acquired += func (camera, buffer, options->n_frames, trigger_source, timer);
 
-        g_timer_stop (timer);
         total_time += g_timer_elapsed (timer, NULL);
         g_print ("\b\b\b");
     }
@@ -232,7 +274,10 @@ benchmark (UcaCamera *camera, Options *options)
 
     g_object_set (G_OBJECT(camera), "transfer-asynchronously", FALSE, NULL);
 
-    benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
+    if(options->test_readout)
+        benchmark_method (camera, buffer, grab_frames_readout, options, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
+    else
+        benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_AUTO);
 
     if (options->test_software)
         benchmark_method (camera, buffer, grab_frames_sync, options, UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE);
@@ -270,6 +315,7 @@ main (int argc, char *argv[])
         .test_async = FALSE,
         .test_software = FALSE,
         .test_external = FALSE,
+        .test_readout = FALSE,
     };
 
     static GOptionEntry entries[] = {
@@ -278,6 +324,7 @@ main (int argc, char *argv[])
         { "async", 0, 0, G_OPTION_ARG_NONE, &options.test_async, "Test asynchronous mode", NULL },
         { "software", 0, 0, G_OPTION_ARG_NONE, &options.test_software, "Test software trigger mode", NULL },
         { "external", 0, 0, G_OPTION_ARG_NONE, &options.test_external, "Test external trigger mode", NULL },
+        { "readout", 0, 0, G_OPTION_ARG_NONE, &options.test_readout, "Test readout from camRAM instead of sync acquisition", NULL},
         { NULL }
     };
 
@@ -325,5 +372,6 @@ main (int argc, char *argv[])
 cleanup_manager:
     g_object_unref (manager);
 
+    g_object_unref (camera);
     return 0;
 }
