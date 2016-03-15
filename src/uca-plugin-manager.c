@@ -229,7 +229,7 @@ get_camera_type (UcaPluginManagerPrivate *priv,
     GModule *module;
     gchar *module_path;
     GetTypeFunc *func;
-    const gchar *symbol_name = "uca_camera_get_type";
+    const gchar *symbol_name = "camera_plugin_get_type";
 
     module_path = find_camera_module_path (priv->search_paths, name);
 
