@@ -22,7 +22,7 @@
 #include "uca-plugin-manager.h"
 
 
-GOptionContext  *uca_option_context_new (UcaPluginManager *manager);
-
+GOptionContext  *uca_common_context_new (UcaPluginManager *manager);
+UcaCamera       *uca_common_get_camera (UcaPluginManager *manager, const gchar *name, GError **error);
 
 #endif

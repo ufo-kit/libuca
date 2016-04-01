@@ -335,7 +335,7 @@ main (int argc, char *argv[])
 #endif
 
     manager = uca_plugin_manager_new ();
-    context = uca_option_context_new (manager);
+    context = uca_common_context_new (manager);
     g_option_context_add_main_entries (context, entries, NULL);
 
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
@@ -352,7 +352,7 @@ main (int argc, char *argv[])
     g_assert_no_error (error);
     g_log_set_handler (NULL, G_LOG_LEVEL_MASK, log_handler, log_channel);
 
-    camera = uca_plugin_manager_get_camera (manager, argv[argc - 1], &error, NULL);
+    camera = uca_common_get_camera (manager, argv[argc - 1], &error);
 
     if (camera == NULL) {
         g_print ("Initialization: %s\n", error->message);

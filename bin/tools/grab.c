@@ -240,7 +240,7 @@ main (int argc, char *argv[])
 #endif
 
     manager = uca_plugin_manager_new ();
-    context = uca_option_context_new (manager);
+    context = uca_common_context_new (manager);
     g_option_context_add_main_entries (context, entries, NULL);
 
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
@@ -258,7 +258,7 @@ main (int argc, char *argv[])
         goto cleanup_manager;
     }
 
-    camera = uca_plugin_manager_get_camera (manager, argv[argc - 1], &error, NULL);
+    camera = uca_common_get_camera (manager, argv[argc - 1], &error);
 
     if (camera == NULL) {
         g_print ("Error during initialization: %s\n", error->message);
