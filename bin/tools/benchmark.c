@@ -201,7 +201,7 @@ benchmark_method (UcaCamera *camera, gpointer buffer, GrabFrameFunc func, Option
     if (func == grab_frames_sync)
         g_print ("sync   ");
     else if (func == grab_frames_readout)
-        g_printf("rout   ");
+        g_print ("rout   ");
     else
         g_print ("async  ");
 
