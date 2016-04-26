@@ -78,7 +78,7 @@ uca_common_get_camera (UcaPluginManager *manager, const gchar *name, GError **er
     GParameter *params;
     guint n_props;
 
-    n_props = g_strv_length (uca_prop_assignment_array);
+    n_props = uca_prop_assignment_array != NULL ? g_strv_length (uca_prop_assignment_array) : 0;
     params = g_new0 (GParameter, n_props);
 
     for (guint i = 0; i < n_props; i++) {
