@@ -232,6 +232,7 @@ get_camera_type (UcaPluginManagerPrivate *priv,
     const gchar *symbol_name = "camera_plugin_get_type";
 
     module_path = find_camera_module_path (priv->search_paths, name);
+    g_debug ("Trying to load `%s' from %s.", name, module_path);
 
     if (module_path == NULL) {
         g_set_error (error, UCA_PLUGIN_MANAGER_ERROR, UCA_PLUGIN_MANAGER_ERROR_MODULE_NOT_FOUND,
