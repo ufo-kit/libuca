@@ -100,8 +100,8 @@ Building on Windows
 Using MSYS2, the build procedure is similar to Linux but differs in some points.
 To build libuca and the plugins:
 
-Get msys2 from `msys2.github.io <https://msys2.github.io/`__ (preferably the x86_64
-variant) and install it to ``C:\msys64`` or any other location.
+Get msys2 from `msys2.github.io <https://msys2.github.io/>`_ (preferably the
+x86_64 variant) and install it to ``C:\msys64`` or any other location.
 
 Run ``mingw64_shell.bat`` from the ``C:\msys64`` folder` to open up a msys2 shell
 and use the pre-installed ``pacman`` package manager to install required packages.
@@ -135,13 +135,15 @@ to create and install all binaries and libraries in ``C:\uca``.
 Building plugins
 ^^^^^^^^^^^^^^^^
 
-Note: A package config file (libuca.pc) is generated when libuca is built and is
-stored in folder pkgconfig in ``C:\uca\bin``. This file is used while building
-uca plugins to locate shared libraries of libuca. To help find them add the
-location to the package config search path using the environment variable
-``PKG_CONFIG_PATH``, i.e. run::
+.. note::
 
-    PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/c/uca/bin/pkgconfig/
+    A package config file (libuca.pc) is generated when libuca is built
+    and is stored in folder pkgconfig in ``C:\uca\bin``. This file is used while
+    building uca plugins to locate shared libraries of libuca. To help find them add
+    the location to the package config search path using the environment variable
+    ``PKG_CONFIG_PATH``, i.e. run::
+
+        PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/c/uca/bin/pkgconfig/
 
 Now, create an empty ``build`` directory in the plugin root folder, change
 directory to that folder and configure the plugin using::
