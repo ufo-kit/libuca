@@ -98,9 +98,7 @@ read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
         return FALSE;
     }
 
-    if (priv->bitdepth > 8) {
-        step *= priv->bitdepth <= 16 ? 2 : 4;
-    }
+    step *= priv->bitdepth / 8;
 
     for (guint32 i = 0; i < priv->height; i++) {
         result = TIFFReadScanline (file, ((gchar *) buffer) + offset, i, 0);
