@@ -100,8 +100,8 @@ int main(int argc, char *argv[])
     manager = uca_plugin_manager_new ();
 
     if (argc < 2) {
-        name = g_strdup ("Basic camera");
-        camera = g_object_new (UCA_TYPE_CAMERA, NULL);
+        print_usage();
+        return 0;
     }
     else {
         name = argv[1];
