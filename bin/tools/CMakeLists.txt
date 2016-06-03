@@ -19,14 +19,14 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
 include_directories(${CMAKE_CURRENT_BINARY_DIR}
                     ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(BINARIES "benchmark" "gen-doc" "grab")
+set(BINARIES "benchmark" "gen-doc" "grab" "info")
 
 foreach (BINARY ${BINARIES})
     add_executable(uca-${BINARY} ${BINARY}.c common.c)
     target_link_libraries(uca-${BINARY} ${libs})
 endforeach ()
 
-install(TARGETS uca-benchmark uca-grab uca-gen-doc
+install(TARGETS uca-benchmark uca-grab uca-gen-doc uca-info
         RUNTIME DESTINATION ${UCA_BINDIR}
         COMPONENT executables)
 #}}}
