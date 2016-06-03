@@ -16,6 +16,7 @@
    Franklin St, Fifth Floor, Boston, MA 02110, USA */
 
 #include <glib-object.h>
+#include <string.h>
 #include "uca-plugin-manager.h"
 #include "uca-camera.h"
 
@@ -60,10 +61,17 @@ print_properties (UcaCamera *camera)
 {
     GObjectClass *oclass;
     GParamSpec **pspecs;
+    gchar *fmt_string;
     guint n_props;
+    guint max_length = 0;
 
     oclass = G_OBJECT_GET_CLASS (camera);
     pspecs = g_object_class_list_properties (oclass, &n_props);
+
+    for (guint i = 0; i < n_props; i++)
+        max_length = MAX (max_length, strlen (g_param_spec_get_name (pspecs[i])));
+
+    fmt_string = g_strdup_printf (" %%s | %%-%us | %%s\n", max_length);
 
     for (guint i = 0; i < n_props; i++) {
         GParamSpec *pspec;
@@ -78,12 +86,13 @@ print_properties (UcaCamera *camera)
         g_object_get_property (G_OBJECT (camera), name, &value);
         value_string = g_strdup_value_contents (&value);
 
-        g_print (" %s | %-26s | %s\n", get_flags_description (pspec), name, value_string);
+        g_print (fmt_string, get_flags_description (pspec), name, value_string);
 
         g_free (value_string);
         g_value_unset (&value);
     }
 
+    g_free (fmt_string);
     g_free (pspecs);
 }
 
