@@ -19,20 +19,12 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
 include_directories(${CMAKE_CURRENT_BINARY_DIR}
                     ${CMAKE_CURRENT_SOURCE_DIR})
 
-#{{{ gen-doc
-add_executable(uca-gen-doc gen-doc.c)
-target_link_libraries(uca-gen-doc ${libs})
-#}}}
-#{{{ uca-grab
-add_executable(uca-grab
-               grab.c common.c)
-target_link_libraries(uca-grab ${libs})
-#}}}
-#{{{ uca-benchmark
-add_executable(uca-benchmark
-               benchmark.c common.c)
-target_link_libraries(uca-benchmark ${libs})
-#}}}
+set(BINARIES "benchmark" "gen-doc" "grab")
+
+foreach (BINARY ${BINARIES})
+    add_executable(uca-${BINARY} ${BINARY}.c common.c)
+    target_link_libraries(uca-${BINARY} ${libs})
+endforeach ()
 
 install(TARGETS uca-benchmark uca-grab uca-gen-doc
         RUNTIME DESTINATION ${UCA_BINDIR}
