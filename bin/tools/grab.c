@@ -148,14 +148,15 @@ record_frames (UcaCamera *camera, Options *opts)
                   "sensor-bitdepth", &bits,
                   NULL);
 
+    g_object_set (G_OBJECT (camera), "trigger-source", UCA_CAMERA_TRIGGER_SOURCE_AUTO, NULL);
+
     pixel_size = get_bytes_per_pixel (bits);
     size = roi_width * roi_height * pixel_size;
     n_allocated = opts->n_frames > 0 ? opts->n_frames : 256;
     buffer = uca_ring_buffer_new (size, n_allocated);
     timer = g_timer_new();
 
-    g_print("Start recording: %ix%i at %i bits/pixel\n",
-            roi_width, roi_height, bits);
+    g_print("Start recording: %ix%i at %i bits/pixel\n", roi_width, roi_height, bits);
 
     uca_camera_start_recording(camera, &error);
 
