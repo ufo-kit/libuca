@@ -17,11 +17,15 @@ if __name__ == '__main__':
                         help='TANGO device address')
     parser.add_argument('-n', '--number', type=int, default=1000,
                         help='Number of frames to acquire')
+    parser.add_argument('-s', '--software-trigger', action='store_true',
+                        default=False,
+                        help='Use software trigger instead of auto')
 
     args = parser.parse_args()
 
     camera = PyTango.DeviceProxy(args.device)
     camera.exposure_time = 0.0001
+    camera.trigger_source = 1 if args.software_trigger else 0
     camera.Start()
 
     start = time.time()
@@ -35,6 +39,9 @@ if __name__ == '__main__':
 
     for i in progress(range(args.number)):
         try:
+            if args.software_trigger:
+                camera.Trigger()
+
             frame = camera.image
         except:
             camera.Stop()
