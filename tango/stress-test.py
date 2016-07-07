@@ -30,6 +30,7 @@ if __name__ == '__main__':
 
     start = time.time()
     size = 0
+    acquired = 0
 
     if HAVE_PROGRESSBAR:
         progress = progressbar.ProgressBar(max_value=args.number, redirect_stdout=True)
@@ -43,12 +44,11 @@ if __name__ == '__main__':
                 camera.Trigger()
 
             frame = camera.image
+            size += frame.nbytes
+            acquired += 1
         except:
-            camera.Stop()
-            print("Failure after {} frames".format(i))
-            sys.exit(0)
+            pass
 
-        size += frame.nbytes
 
         if HAVE_PROGRESSBAR:
             progress.update(i)
@@ -56,4 +56,5 @@ if __name__ == '__main__':
     end = time.time()
     camera.Stop()
 
+    print("Frames acquired: {}/{} ({:3.2f} %)".format(acquired, args.number, float(acquired) / args.number * 100))
     print("Bandwidth: {:.3f} MB/s".format(size / (end - start) / 1024. / 1024.))
