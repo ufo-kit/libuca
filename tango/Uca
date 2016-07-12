@@ -25,6 +25,7 @@ def get_tango_type(obj_type):
         GObject.TYPE_FLOAT: PyTango.CmdArgType.DevFloat,
         GObject.TYPE_INT: PyTango.CmdArgType.DevShort,      # DevInt is invalid?
         GObject.TYPE_UINT: PyTango.CmdArgType.DevUShort,    # check
+        GObject.TYPE_UINT64: PyTango.CmdArgType.DevULong,
         GObject.TYPE_LONG: PyTango.CmdArgType.DevLong,
         GObject.TYPE_DOUBLE: PyTango.CmdArgType.DevDouble,
         GObject.TYPE_STRING: PyTango.CmdArgType.DevString,
