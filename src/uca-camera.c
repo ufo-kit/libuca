@@ -334,11 +334,8 @@ uca_camera_dispose (GObject *object)
 static void
 uca_camera_finalize (GObject *object)
 {
-    UcaCameraPrivate *priv;
     GParamSpec **props;
     guint n_props;
-
-    priv = UCA_CAMERA_GET_PRIVATE (object);
 
     /* We will reset property units of all subclassed objects  */
     props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object), &n_props);

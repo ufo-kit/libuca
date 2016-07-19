@@ -457,7 +457,6 @@ ufo_mock_camera_initable_init (GInitable *initable,
                                GError **error)
 {
     UcaMockCameraPrivate *priv;
-    gdouble step_size;
 
     g_return_val_if_fail (UCA_IS_MOCK_CAMERA (initable), FALSE);
     priv = UCA_MOCK_CAMERA_GET_PRIVATE (UCA_MOCK_CAMERA (initable));
