@@ -1,8 +1,12 @@
-The GObject Tango device
-========================
+GObject Tango device
+====================
 
 UcaDevice is a generic Tango Device that wraps ``libuca`` in order to
 make libuca controlled cameras available as Tango devices.
+
+.. note::
+
+    The documentation of UcaDevice can be outdated.
 
 
 Architecture
@@ -135,8 +139,8 @@ Tango-Event-System here!
 Open Questions, Missing Features etc.
 -------------------------------------
 
-* *Why do we need to specify ``Storage`` for UcaDevice and ``GrabbingDevice``
-  for ImageDevice?*
+* *Why do we need to specify* ``Storage`` *for UcaDevice and* ``GrabbingDevice``
+  *for ImageDevice?*
 
   ImageDevice needs the Tango-Address of UcaDevice to mirror all Attributes and
   Commands and to forward them to it. UcaDevice needs the Tango-Address of

@@ -47,13 +47,18 @@ To generate bindings for third-party languages, you have to install ::
 Fetching the sources
 ^^^^^^^^^^^^^^^^^^^^
 
-Untar the distribution ::
-
-    untar xfz libuca-x.y.z.tar.gz
-
-or clone the repository ::
+Clone the repository ::
 
     git clone https://github.com/ufo-kit/libuca
+
+or download the latest release at https://github.com/ufo-kit/libuca/releases and 
+unzip the ``.zip`` file::
+
+    unzip libuca-x.y.z.zip
+
+or untar the ``.tar.gz`` file::
+
+    tar -zxvf libuca-x.y.z.tar.gz
 
 and create a new, empty build directory inside::
 
@@ -176,12 +181,14 @@ Then you need to setup the type system::
         UcaCamera *camera;
         GError *error = NULL; /* this _must_ be set to NULL */
 
-        g_type_init ();
+    #if !(GLIB_CHECK_VERSION (2, 36, 0))
+        g_type_init();
+    #endif
 
 Now you can instantiate new camera *objects*. Each camera is identified
 by a human-readable string, in this case we want to access any pco
 camera that is supported by
-`libpco <http://ufo.kit.edu/repos/libpco.git/>`__. To instantiate a
+`libpco <http://ufo.kit.edu/extra/libpco/html/>`__. To instantiate a
 camera we have to create a plugin manager first::
 
         manager = uca_plugin_manager_new ();
@@ -251,7 +258,7 @@ where the result is stored::
                       );
 
         g_print ("Width of the region of interest: %d\n", roi_width);
-        g_print ("Exposure time: %3.5s\n", exposure_time);
+        g_print ("Exposure time: %3.5fs\n", exposure_time);
 
 In a similar way, properties are set with ``g_object_set``::
 

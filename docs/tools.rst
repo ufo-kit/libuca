@@ -2,8 +2,7 @@ Tools
 =====
 
 Several tools are available to ensure ``libuca`` works as expected. All
-of them are located in ``build/test/`` and some of them are installed
-with ``make installed``.
+of them are installed with ``make install``.
 
 
 uca-camera-control -- simple graphical user interface
@@ -14,11 +13,15 @@ side pane:
 
 .. image:: uca-gui.png
 
+You can see all available options of ``uca-camera-control`` with::
+
+    $ uca-camera-control --help-all
+
 
 uca-grab -- grabbing frames
 ---------------------------
 
-Grab with frames with ::
+Grab frames with ::
 
     $ uca-grab --num-frames=10 camera-model
 
@@ -36,6 +39,10 @@ in fractions of seconds::
 
     $ uca-grab --duration=0.25 camera-model
 
+You can see all available options of ``uca-grab`` with::
+
+    $ uca-grab --help-all
+
 
 uca-benchmark -- check bandwidth
 --------------------------------
@@ -43,11 +50,49 @@ uca-benchmark -- check bandwidth
 Measure the memory bandwidth by taking subsequent frames and averaging
 the grabbing time::
 
-    $ ./benchmark mock
+    $ uca-benchmark option camera-model
+
+You can specify the number of frames per run with the ``-n/--num-frames`` option, the number of runs with the ``-r/--num-runs`` option and test asynchronous mode with the ``async`` option::
+
+    $ uca-benchmark -n 100 -r 3 --async mock
+
+    # Type    Trigger Source   FPS        Bandwidth   Frames acquired/total
+      sync    auto             17.57 Hz   4.39 MB/s   300/300 acquired (0.00% dropped)
+      async   auto             19.98 Hz   4.99 MB/s   300/300 acquired (0.00% dropped)
+
     # --- General information ---
-    # Sensor size: 640x480
-    # ROI size: 640x480
-    # Exposure time: 0.000010s
-    # type      n_frames  n_runs    frames/s        MiB/s
-      sync      100       3         29848.98        8744.82
-      async     100       3         15739.43        4611.16
+    # Camera: mock
+    # Sensor size: 4096x4096
+    # ROI size: 512x512
+    # Exposure time: 0.050000s
+
+You can see all available options of ``uca-benchmark`` with::
+
+    $ uca-benchmark --help-all
+
+
+uca-info -- get properties information
+--------------------------------------
+
+Get information about camera properties with::
+
+    $ uca-info camera-model
+
+For example::
+
+    $ uca-info mock
+    # RO | name                      | "mock camera"
+    # RO | sensor-width              | 4096
+    # RO | sensor-height             | 4096
+    # RO | sensor-pixel-width        | 0.000010
+    # RO | sensor-pixel-height       | 0.000010
+    # RO | sensor-bitdepth           | 8
+    ...
+
+
+uca-gen-doc -- generate properties documentation
+------------------------------------------------
+
+Generate HTML source code of property documentation of a camera with::
+
+    $ uca-gen-doc camera-model

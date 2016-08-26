@@ -23,8 +23,6 @@ def get_version():
 
     return '.'.join(version)
 
-extensions = []
-templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 
@@ -39,7 +37,6 @@ pygments_style = 'sphinx'
 
 html_theme = 'default'
 
-html_static_path = ['_static']
 htmlhelp_basename = 'libucadoc'
 
 latex_documents = [

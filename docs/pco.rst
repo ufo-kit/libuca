@@ -275,7 +275,7 @@ None **timestamp-mode**
     | *Default:* <enum UCA_PCO_CAMERA_TIMESTAMP_NONE of type UcaPcoCameraTimestamp>
 
 string **version**
-    Camera version given as `serial number, hardware major.minor, firmware major.minor'
+    Camera version given as 'serial number, hardware major.minor, firmware major.minor'
 
     | *Default:* 0, 0.0, 0.0
 

@@ -18,9 +18,9 @@ all camera strings with ``uca_plugin_manager_get_available_cameras``::
 
         GList *types;
 
-        types = uca_camera_get_available_cameras (manager);
+        types = uca_plugin_manager_get_available_cameras (manager);
 
-        for (GList *it = g_list_first; it != NULL; it = g_list_next (it))
+        for (GList *it = g_list_first (types); it != NULL; it = g_list_next (it))
             g_print ("%s\n", (gchar *) it->data);
 
         /* free the strings and the list */
@@ -76,7 +76,7 @@ With ``UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE`` you have to trigger with
                       NULL);
 
         uca_camera_start_recording (camera, NULL);
-        uca_camera_grab (camera, &buffer, NULL);
+        uca_camera_grab (camera, buffer, NULL);
         uca_camera_stop_recording (camera, NULL);
 
         /* thread B */
