@@ -16,4 +16,5 @@ Contents
     cameras
     api
     tools
-    tango
+    concert
+    remote

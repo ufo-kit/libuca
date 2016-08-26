@@ -10,13 +10,13 @@ string **name**
 unsigned int **sensor-width**
     Width of the sensor in pixels
 
-    | *Default:* 1
+    | *Default:* 512
     | *Range:* [1, 4294967295]
 
 unsigned int **sensor-height**
     Height of the sensor in pixels
 
-    | *Default:* 1
+    | *Default:* 512
     | *Range:* [1, 4294967295]
 
 double **sensor-pixel-width**
@@ -34,7 +34,7 @@ double **sensor-pixel-height**
 unsigned int **sensor-bitdepth**
     Number of bits per pixel
 
-    | *Default:* 1
+    | *Default:* 8
     | *Range:* [1, 32]
 
 unsigned int **sensor-horizontal-binning**
@@ -43,21 +43,11 @@ unsigned int **sensor-horizontal-binning**
     | *Default:* 1
     | *Range:* [1, 4294967295]
 
-None **sensor-horizontal-binnings**
-    Array of possible binnings in horizontal direction
-
-    | *Default:* None
-
 unsigned int **sensor-vertical-binning**
     Number of sensor ADCs that are combined to one pixel in vertical direction
 
     | *Default:* 1
     | *Range:* [1, 4294967295]
-
-None **sensor-vertical-binnings**
-    Array of possible binnings in vertical direction
-
-    | *Default:* None
 
 None **trigger-source**
     Trigger source
@@ -158,3 +148,8 @@ unsigned int **num-buffers**
 
     | *Default:* 4
     | *Range:* [0, 4294967295]
+
+bool **fill-data**
+    Fill data with gradient and random image
+
+    | *Default:* True
