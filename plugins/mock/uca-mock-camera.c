@@ -31,6 +31,7 @@ G_DEFINE_TYPE_WITH_CODE (UcaMockCamera, uca_mock_camera, UCA_TYPE_CAMERA,
 
 enum {
     PROP_FILL_DATA = N_BASE_PROPERTIES,
+    PROP_DEGREE_VALUE,
     N_PROPERTIES
 };
 
@@ -64,6 +65,7 @@ struct _UcaMockCameraPrivate {
     guint current_frame;
     guint readout_index;
     gboolean fill_data;
+    gdouble degree_value;
     GRand *rand;
 
     gboolean thread_running;
@@ -380,6 +382,9 @@ uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *
         case PROP_FILL_DATA:
             priv->fill_data = g_value_get_boolean (value);
             break;
+        case PROP_DEGREE_VALUE:
+            priv->degree_value = g_value_get_double (value);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
@@ -427,6 +432,9 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
             break;
         case PROP_FILL_DATA:
             g_value_set_boolean (value, priv->fill_data);
+            break;
+        case PROP_DEGREE_VALUE:
+            g_value_set_double (value, priv->degree_value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -502,11 +510,19 @@ uca_mock_camera_class_init(UcaMockCameraClass *klass)
             TRUE,
             G_PARAM_READWRITE);
 
+    mock_properties[PROP_DEGREE_VALUE] =
+        g_param_spec_double("degree-value",
+            "Temperature of the degree value",
+            "Temperature of the degree value in degree Celsius",
+            -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+            G_PARAM_READWRITE);
+
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, mock_properties[id]);
 
     uca_camera_pspec_set_writable (g_object_class_find_property (gobject_class, uca_camera_props[PROP_EXPOSURE_TIME]), TRUE);
     uca_camera_pspec_set_writable (mock_properties[PROP_FILL_DATA], TRUE);
+    uca_camera_pspec_set_writable (mock_properties[PROP_DEGREE_VALUE], TRUE);
 
     g_type_class_add_private(klass, sizeof(UcaMockCameraPrivate));
 }
@@ -522,6 +538,7 @@ uca_mock_camera_init(UcaMockCamera *self)
     self->priv->current_frame = 0;
     self->priv->exposure_time = 0.05;
     self->priv->fill_data = TRUE;
+    self->priv->degree_value = 1.0;
 
     self->priv->rand = g_rand_new ();
 
@@ -537,6 +554,8 @@ uca_mock_camera_init(UcaMockCamera *self)
     self->priv->bits = 8;
     self->priv->bytes = 0;
     self->priv->max_val = 0;
+
+    uca_camera_register_unit (UCA_CAMERA (self), "degree-value", UCA_UNIT_DEGREE_CELSIUS);
 }
 
 G_MODULE_EXPORT GType
