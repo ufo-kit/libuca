@@ -21,7 +21,8 @@ if (TIFF_FOUND)
     target_link_libraries(ucafile uca ${UCA_DEPS} ${TIFF_LIBRARIES})
 
     install(TARGETS ucafile
+            ARCHIVE DESTINATION ${UCA_LIBDIR}
             LIBRARY DESTINATION ${UCA_PLUGINDIR}
-			RUNTIME DESTINATION ${UCA_BINDIR}
+            RUNTIME DESTINATION ${UCA_PLUGINDIR}
             COMPONENT ${UCA_CAMERA_NAME})
 endif ()
