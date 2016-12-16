@@ -16,6 +16,7 @@ add_library(ucamock SHARED
 target_link_libraries(ucamock uca m ${UCA_DEPS})
 
 install(TARGETS ucamock
+        ARCHIVE DESTINATION ${UCA_LIBDIR}
         LIBRARY DESTINATION ${UCA_PLUGINDIR}
-		RUNTIME DESTINATION ${UCA_BINDIR}
+        RUNTIME DESTINATION ${UCA_PLUGINDIR}
         COMPONENT ${UCA_CAMERA_NAME})
