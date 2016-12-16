@@ -1,6 +1,36 @@
 Changelog
 =========
 
+Changes in libuca 2.2.0
+-----------------------
+
+Released on December 16th 2016.
+
+Enhancements:
+
+- Improve Windows support
+- Add uca-info tool to print current prop values
+- Add debug output of plugin module location
+- Add stress test script for TANGO
+- Increase maximum dimension of TANGO image attribute
+- cli: pass -p/--property assignment to constructor
+- Improve benchmark output and count the number of dropped frames
+
+Fixes:
+
+- Fix #69, #71, #72, #74
+- Fix segfaults with changing ROI or bitdepth
+- Fix zoom problems and statistics in the GUI
+- Fix reading of 32 bit TIFFs in file plugin
+- Allow setting max bin value of histogram
+
+Breaks and changes:
+
+- Raise GLib dependency to 2.28
+- Do not stop camera when closing the object
+- Move sensor binnings array out to plugin and remove it from mock
+- mock: replace create-random with fill-data policy
+
 
 Changes in libuca 2.1.1
 -----------------------
