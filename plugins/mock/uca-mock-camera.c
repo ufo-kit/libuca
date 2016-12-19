@@ -279,7 +279,11 @@ uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
     if (transfer_async) {
         GError *tmp_error = NULL;
         priv->thread_running = TRUE;
-        priv->grab_thread = g_thread_create(mock_grab_func, camera, TRUE, &tmp_error);
+#if GLIB_CHECK_VERSION (2, 32, 0)
+        priv->grab_thread = g_thread_new (NULL, mock_grab_func, camera);
+#else
+        priv->grab_thread = g_thread_create (mock_grab_func, camera, TRUE, &tmp_error);
+#endif
 
         if (tmp_error != NULL) {
             priv->thread_running = FALSE;
