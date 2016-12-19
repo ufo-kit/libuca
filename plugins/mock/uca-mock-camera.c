@@ -71,6 +71,7 @@ struct _UcaMockCameraPrivate {
     gboolean thread_running;
 
     GThread *grab_thread;
+    GAsyncQueue *trigger_queue;
 };
 
 static const char g_digits[16][20] = {
@@ -311,18 +312,33 @@ uca_mock_camera_stop_recording(UcaCamera *camera, GError **error)
 static void
 uca_mock_camera_trigger (UcaCamera *camera, GError **error)
 {
+    UcaMockCameraPrivate *priv;
+
+    g_return_if_fail(UCA_IS_MOCK_CAMERA (camera));
+    priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
+
+    g_async_queue_push (priv->trigger_queue, g_malloc0 (1));
 }
 
 static gboolean
 uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 {
+    UcaMockCameraPrivate *priv;
+    UcaCameraTriggerSource trigger_source;
     gdouble exposure_time;
 
     g_return_val_if_fail (UCA_IS_MOCK_CAMERA(camera), FALSE);
 
-    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
 
-    g_object_get (G_OBJECT (camera), "exposure-time", &exposure_time, NULL);
+    priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
+
+    g_object_get (G_OBJECT (camera),
+                  "exposure-time", &exposure_time,
+                  "trigger-source", &trigger_source, NULL);
+
+    if (trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE)
+        g_free (g_async_queue_pop (priv->trigger_queue));
+
     g_usleep (G_USEC_PER_SEC * exposure_time);
 
     if (priv->fill_data) {
@@ -455,6 +471,7 @@ uca_mock_camera_finalize(GObject *object)
     }
 
     g_free (priv->dummy_data);
+    g_async_queue_unref (priv->trigger_queue);
 
     G_OBJECT_CLASS (uca_mock_camera_parent_class)->finalize(object);
 }
@@ -554,6 +571,7 @@ uca_mock_camera_init(UcaMockCamera *self)
     self->priv->bits = 8;
     self->priv->bytes = 0;
     self->priv->max_val = 0;
+    self->priv->trigger_queue = g_async_queue_new ();
 
     uca_camera_register_unit (UCA_CAMERA (self), "degree-value", UCA_UNIT_DEGREE_CELSIUS);
 }
