@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 #{{{ Variables
-set(UCA_GLADEDIR    "${UCA_DATADIR}/libuca")
+set(CMAKE_INSTALL_GLADEDIR    "${CMAKE_INSTALL_DATADIR}/libuca")
 #}}}
 #{{{ Configure
 find_package(PkgConfig)
@@ -34,11 +34,11 @@ if (GTK2_FOUND)
         ${GTHREAD2_LIBRARIES})
 
     install(TARGETS ${BINARY}
-            RUNTIME DESTINATION ${UCA_BINDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             COMPONENT executables)
 
     install(FILES control.glade
-            DESTINATION ${UCA_GLADEDIR}
+            DESTINATION ${CMAKE_INSTALL_GLADEDIR}
             COMPONENT executables)
 endif()
 #}}}

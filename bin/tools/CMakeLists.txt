@@ -27,6 +27,6 @@ foreach (BINARY ${BINARIES})
 endforeach ()
 
 install(TARGETS uca-benchmark uca-grab uca-gen-doc uca-info
-        RUNTIME DESTINATION ${UCA_BINDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         COMPONENT executables)
 #}}}

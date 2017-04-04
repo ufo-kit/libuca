@@ -75,11 +75,13 @@ macro(create_enums prefix template_prefix header_list)
 endmacro()
 #}}}
 #{{{ Configure
-include(ConfigurePaths)
 include(PkgConfigVars)
-configure_paths(UCA)
+include(GNUInstallDirs)
 
-set(UCA_PLUGINDIR "${UCA_LIBDIR}/uca")
+set(CMAKE_INSTALL_GIRDIR        "${CMAKE_INSTALL_DATAROOTDIR}/gir-1.0")
+set(CMAKE_INSTALL_PLUGINDIR     "${CMAKE_INSTALL_LIBDIR}/ufo")
+set(CMAKE_INSTALL_TYPELIBDIR    "${CMAKE_INSTALL_LIBDIR}/girepository-1.0")
+set(CMAKE_INSTALL_PKGCONFIGDIR  "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
                ${CMAKE_CURRENT_BINARY_DIR}/package.sh)
