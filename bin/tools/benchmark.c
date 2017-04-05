@@ -359,11 +359,6 @@ main (int argc, char *argv[])
         goto cleanup_manager;
     }
 
-    if (!uca_camera_parse_arg_props (camera, argv, argc - 1, &error)) {
-        g_print ("Error setting properties: %s\n", error->message);
-        goto cleanup_camera;
-    }
-
     benchmark (camera, &options);
 
     g_io_channel_shutdown (log_channel, TRUE, &error);
