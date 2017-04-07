@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 #{{{ Variables
-set(CMAKE_INSTALL_GLADEDIR    "${CMAKE_INSTALL_DATADIR}/libuca")
+set(CMAKE_INSTALL_GLADEDIR    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/libuca")
 #}}}
 #{{{ Configure
 find_package(PkgConfig)

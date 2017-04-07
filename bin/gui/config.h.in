@@ -1,1 +1,1 @@
-#define CONTROL_GLADE_PATH "${UCA_GLADEDIR}/control.glade"
+#define CONTROL_GLADE_PATH "${CMAKE_INSTALL_GLADEDIR}/control.glade"
