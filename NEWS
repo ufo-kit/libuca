@@ -1,6 +1,23 @@
 Changelog
 =========
 
+Changes in libuca 2.2.1
+-----------------------
+
+Released on May 10th 2017.
+
+Enhancements:
+
+- Replace our homegrown install path system with CMake's GNUInstallDirs
+- Use better system to parse command line argument properties for the command
+  line tools.
+
+Fixes:
+
+- Fix #80: trigger must not block on the access_lock
+- Emulate correct software trigger behaviour for the mock camera.
+
+
 Changes in libuca 2.2.0
 -----------------------
 
