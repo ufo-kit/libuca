@@ -114,13 +114,8 @@ endif()
 #{{{ Installation
 install(TARGETS uca
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        COMPONENT libraries)
-
-if(WIN32)
-install(TARGETS uca
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         COMPONENT libraries)
-endif()
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libuca.pc
         DESTINATION ${CMAKE_INSTALL_PKGCONFIGDIR}
