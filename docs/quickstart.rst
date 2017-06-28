@@ -115,7 +115,7 @@ first time using::
 Close the terminal and open a new shell again. Install all required dependencies
 with::
 
-    pacman -S make cmake pkg-config git glib2-devel gettext-devel
+    pacman -S gcc make cmake pkg-config git glib2-devel gettext-devel
 
 Clone libuca and any plugins you want to use on Windows::
 
