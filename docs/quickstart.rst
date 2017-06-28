@@ -132,7 +132,7 @@ directory to that folder, configure libuca using CMake and build and install it:
 Before proceeding with the plugins you *must* soft link the library to fit the
 naming scheme::
 
-    ln -s /usr/lib/libuca.so /usr/lib/libuca.dll.a
+    ln -s /usr/bin/libuca.so /usr/lib/libuca.dll.a
 
 To build plugins nothing special is required. Clone the repository, create an
 empty build directory, configure and build::
