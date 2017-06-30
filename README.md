@@ -7,6 +7,8 @@ library to access two-dimensional pixel detectors. It gives the user a general
 interface to a variety of different cameras and camera types. You can read more
 about it in our [manual](http://libuca.readthedocs.io).
 
+![Architecture overview](http://libuca.readthedocs.io/en/latest/_images/architecture.png "Architecture overview")
+
 Details of the latest version can be found on the UFO [project
 page](http://ufo.kit.edu).
 
