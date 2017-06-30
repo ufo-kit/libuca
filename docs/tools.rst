@@ -11,7 +11,7 @@ uca-camera-control -- simple graphical user interface
 Records and shows frames. Moreover, you can change the camera properties in a
 side pane:
 
-.. image:: uca-gui.png
+.. image:: images/uca-gui.png
 
 You can see all available options of ``uca-camera-control`` with::
 

@@ -4,6 +4,8 @@ Welcome
 `libuca`_ is a light-weight camera abstraction library written in C and GObject,
 focused on scientific cameras used at the ANKA synchrotron.
 
+.. image:: images/architecture.png
+
 .. _libuca: https://github.com/ufo-kit/libuca
 
 Contents
