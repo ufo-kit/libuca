@@ -23,12 +23,12 @@
 #include <cairo.h>
 #include <string.h>
 
-#include "config.h"
 #include "uca-camera.h"
 #include "uca-plugin-manager.h"
 #include "uca-ring-buffer.h"
 #include "egg-property-tree-view.h"
 #include "egg-histogram-view.h"
+#include "resources.h"
 
 typedef enum {
     IDLE,
@@ -1548,6 +1548,29 @@ create_choice_window (GtkBuilder *builder)
     g_list_free (camera_types);
 }
 
+static gboolean
+builder_add_from_resource (GtkBuilder *builder, const gchar *resource_path, GError **error)
+{
+    GBytes *data;
+    const gchar *buffer;
+    gsize length;
+    gboolean ret;
+
+    g_assert (error && *error == NULL);
+    data = g_resources_lookup_data (resource_path, 0, error);
+
+    if (data == NULL)
+        return FALSE;
+
+    length = 0;
+    buffer = g_bytes_get_data (data, &length);
+    g_assert (buffer != NULL);
+
+    ret = gtk_builder_add_from_string (builder, buffer, length, error) > 0;
+    g_bytes_unref (data);
+    return ret;
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -1578,15 +1601,9 @@ main (int argc, char *argv[])
 
     builder = gtk_builder_new ();
 
-    if (!gtk_builder_add_from_file (builder, CONTROL_GLADE_PATH, &error)) {
-        g_warning ("Cannot load UI: `%s'. Trying in current working directory.", error->message);
-        g_error_free (error);
-        error = NULL;
-
-        if (!gtk_builder_add_from_file (builder, "control.glade", &error)) {
-            g_warning ("Cannot load UI: `%s'.", error->message);
-            return 1;
-        }
+    if (!builder_add_from_resource (builder, "/edu/kit/ipe/uca-camera-control/uca-camera-control.glade", &error)) {
+        g_warning ("Could not load UI: %s", error->message);
+        return 1;
     }
 
     plugin_manager = uca_plugin_manager_new ();

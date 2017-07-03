@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+    <gresource prefix="/edu/kit/ipe/uca-camera-control">
+        <file compressed="true">uca-camera-control.glade</file>
+    </gresource>
+</gresources>

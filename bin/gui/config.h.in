@@ -1,1 +1,0 @@
-#define CONTROL_GLADE_PATH "${CMAKE_INSTALL_GLADEDIR}/control.glade"
