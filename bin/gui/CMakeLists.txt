@@ -22,7 +22,7 @@ if (GTK2_FOUND)
     set(BINARY "uca-camera-control")
 
     add_executable(${BINARY}
-        control.c
+        uca-camera-control.c
         egg-property-cell-renderer.c
         egg-property-tree-view.c
         egg-histogram-view.c)
