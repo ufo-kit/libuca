@@ -36,6 +36,9 @@ sources += [enums_c, enums_h]
 lib = shared_library('uca',
     sources: sources,
     dependencies: [glib_dep, gobject_dep, gmodule_dep, gio_dep],
+    c_args: [
+        '-Wno-deprecated-declarations',
+    ],
     version: version,
     soversion: version_major
 )
