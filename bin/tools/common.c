@@ -102,6 +102,9 @@ cleanup:
 
     camera = uca_plugin_manager_get_camerav (manager, name, n_props, params, error);
 
+    if (camera == NULL)
+        goto get_camera_exit;
+
     uca_camera_parse_arg_props (camera, uca_prop_assignment_array, n_props, error);
 
     for (guint i = 0; i < n_props; i++) {
@@ -109,7 +112,7 @@ cleanup:
         g_free ((gchar *) params[i].name);
     }
 
+get_camera_exit:
     g_free (params);
-
     return camera;
 }
