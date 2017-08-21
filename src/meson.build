@@ -46,8 +46,13 @@ lib = shared_library('uca',
 gnome.generate_gir(lib,
     namespace: 'Uca',
     nsversion: '@0@.0'.format(version_major),
-    sources: sources,
+    sources: sources + headers,
     install: true,
+    includes: [
+      'GLib-2.0',
+      'GObject-2.0',
+      'GModule-2.0',
+    ],
 )
 
 pkg = import('pkgconfig')
