@@ -40,7 +40,8 @@ lib = shared_library('uca',
         '-Wno-deprecated-declarations',
     ],
     version: version,
-    soversion: version_major
+    soversion: version_major,
+    install: true,
 )
 
 gnome.generate_gir(lib,
