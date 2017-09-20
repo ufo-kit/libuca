@@ -33,7 +33,7 @@ enums_h = enums[1]
 
 sources += [enums_c, enums_h]
 
-lib = shared_library('uca',
+lib = library('uca',
     sources: sources,
     dependencies: [glib_dep, gobject_dep, gmodule_dep, gio_dep],
     c_args: [
