@@ -75,44 +75,14 @@ UcaCamera *
 uca_common_get_camera (UcaPluginManager *manager, const gchar *name, GError **error)
 {
     UcaCamera *camera;
-    GParameter *params;
     guint n_props;
 
     n_props = uca_prop_assignment_array != NULL ? g_strv_length (uca_prop_assignment_array) : 0;
-    params = g_new0 (GParameter, n_props);
 
-    for (guint i = 0; i < n_props; i++) {
-        gchar **split;
+    camera = uca_plugin_manager_get_camera (manager, name, error, NULL);
 
-        split = g_strsplit (uca_prop_assignment_array[i], "=", 2);
+    if (camera != NULL)
+        uca_camera_parse_arg_props (camera, uca_prop_assignment_array, n_props, error);
 
-        if (g_strv_length (split) < 2)
-            goto cleanup;
-
-        params[i].name = g_strdup (split[0]);
-
-        /* We cannot check the type before instantiation, classic chicken-egg
-         * situation ... so, let's try string. */
-        g_value_init (&params[i].value, G_TYPE_STRING);
-        g_value_set_string (&params[i].value, split[1]);
-
-cleanup:
-        g_strfreev (split);
-    }
-
-    camera = uca_plugin_manager_get_camerav (manager, name, n_props, params, error);
-
-    if (camera == NULL)
-        goto get_camera_exit;
-
-    uca_camera_parse_arg_props (camera, uca_prop_assignment_array, n_props, error);
-
-    for (guint i = 0; i < n_props; i++) {
-        /* cast is legit, because we created the string */
-        g_free ((gchar *) params[i].name);
-    }
-
-get_camera_exit:
-    g_free (params);
     return camera;
 }
