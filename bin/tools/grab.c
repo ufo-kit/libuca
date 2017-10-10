@@ -266,19 +266,12 @@ main (int argc, char *argv[])
         goto cleanup_manager;
     }
 
-    if (!uca_camera_parse_arg_props (camera, argv, argc - 1, &error)) {
-        g_print ("Error setting properties: %s\n", error->message);
-        goto cleanup_camera;
-    }
-
     error = record_frames (camera, &opts);
 
     if (error != NULL)
         g_print ("Error: %s\n", error->message);
 
     g_option_context_free (context);
-
-cleanup_camera:
     g_object_unref (camera);
 
 cleanup_manager:
