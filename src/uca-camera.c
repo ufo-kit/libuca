@@ -155,6 +155,7 @@ DEFINE_CAST (uint64,    atoi)
 DEFINE_CAST (ulong,     atol)
 DEFINE_CAST (float,     atof)
 DEFINE_CAST (double,    atof)
+DEFINE_CAST (enum,      atoi)
 DEFINE_CAST (boolean,   str_to_boolean)
 
 
@@ -650,6 +651,7 @@ uca_camera_parse_arg_props (UcaCamera *camera, gchar **argv, guint argc, GError 
     g_value_register_transform_func (G_TYPE_STRING, G_TYPE_FLOAT,   value_transform_float);
     g_value_register_transform_func (G_TYPE_STRING, G_TYPE_DOUBLE,  value_transform_double);
     g_value_register_transform_func (G_TYPE_STRING, G_TYPE_BOOLEAN, value_transform_boolean);
+    g_value_register_transform_func (G_TYPE_STRING, G_TYPE_ENUM,    value_transform_enum);
 
     for (guint i = 0; i < argc; i++) {
         GMatchInfo *match;
