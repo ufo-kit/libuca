@@ -23,3 +23,4 @@ include_dir = include_directories('src')
 
 subdir('bin')
 subdir('plugins')
+subdir('test')
