@@ -1,3 +1,6 @@
+cc = meson.get_compiler('c')
+libm = cc.find_library('m')
+
 executable('uca-info', 
     sources: ['info.c'],
     include_directories: include_dir,
@@ -9,7 +12,7 @@ executable('uca-info',
 executable('uca-grab', 
     sources: ['grab.c', 'common.c'],
     include_directories: include_dir,
-    dependencies: deps,
+    dependencies: deps + [libm],
     link_with: lib,
     install: true
 )

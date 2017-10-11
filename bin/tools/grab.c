@@ -20,6 +20,7 @@
 #include <glib-object.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "uca-plugin-manager.h"
 #include "uca-camera.h"
 #include "uca-ring-buffer.h"
@@ -136,10 +137,12 @@ record_frames (UcaCamera *camera, Options *opts)
     gsize size;
     gint n_frames;
     guint n_allocated;
+    guint n_digits;
+    gchar *fmt_string;
     GTimer *timer;
+    gdouble elapsed;
     UcaRingBuffer *buffer;
     GError *error = NULL;
-    gdouble last_printed;
 
     g_object_get (G_OBJECT (camera),
                   "roi-width", &roi_width,
@@ -153,7 +156,8 @@ record_frames (UcaCamera *camera, Options *opts)
     buffer = uca_ring_buffer_new (size, n_allocated);
     timer = g_timer_new();
 
-    g_print ("Start recording: %ix%i at %i bits/pixel\n", roi_width, roi_height, bits);
+    g_print ("Acquiring %i images at %ix%i with %i bits per pixel\n",
+             opts->n_frames, roi_width, roi_height, bits);
 
     uca_camera_start_recording(camera, &error);
 
@@ -161,33 +165,27 @@ record_frames (UcaCamera *camera, Options *opts)
         return error;
 
     n_frames = 0;
+    n_digits = floor (log10 (abs (opts->n_frames))) + 1;
+    fmt_string = g_strdup_printf ("\33[2K\r%%%ii/%%i images acquired ...", n_digits);
     g_timer_start(timer);
-    last_printed = 0.0;
 
     while (1) {
-        gdouble elapsed;
-
         uca_camera_grab (camera, uca_ring_buffer_get_write_pointer (buffer), &error);
         uca_ring_buffer_write_advance (buffer);
 
         if (error != NULL)
             return error;
 
-        n_frames++;
-        elapsed = g_timer_elapsed (timer, NULL);
+        g_print (fmt_string, ++n_frames, opts->n_frames);
 
         if (n_frames == opts->n_frames)
             break;
-
-        if (elapsed - last_printed >= 1.0) {
-            g_print ("Recorded %i frames at %.2f frames/s\n",
-                     n_frames, n_frames / elapsed);
-            last_printed = elapsed;
-        }
     }
 
-    g_print ("Stop recording: %3.2f frames/s\n",
-             n_frames / g_timer_elapsed (timer, NULL));
+    elapsed = g_timer_elapsed (timer, NULL);
+    g_print ("\nAcquired %3.2f images/s = %3.2f ms/image = %.4f MB/s\n",
+             n_frames / elapsed, elapsed / n_frames * 1000.,
+             n_frames * size / 1024. / 1024. / elapsed);
 
     uca_camera_stop_recording (camera, &error);
 
