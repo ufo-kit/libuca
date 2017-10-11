@@ -60,11 +60,7 @@ write_tiff (UcaRingBuffer *buffer,
     guint bits_per_sample;
     gsize bytes_per_pixel;
 
-    if (opts->filename)
-        tif = TIFFOpen (opts->filename, "w");
-    else
-        tif = TIFFOpen ("frames.tif", "w");
-
+    tif = TIFFOpen (opts->filename, "w");
     n_frames = uca_ring_buffer_get_num_blocks (buffer);
     rows_per_strip = TIFFDefaultStripSize (tif, (guint32) - 1);
     bytes_per_pixel = get_bytes_per_pixel (bits_per_pixel);
@@ -113,11 +109,7 @@ write_raw (UcaRingBuffer *buffer,
         gchar *filename;
         gpointer data;
 
-        if (opts->filename)
-            filename = g_strdup_printf ("%s-%08i.raw", opts->filename, i);
-        else
-            filename = g_strdup_printf ("frame-%08i.raw", i);
-
+        filename = g_strdup_printf ("%s-%08i.raw", opts->filename, i);
         fp = fopen(filename, "wb");
         data = uca_ring_buffer_get_read_pointer (buffer);
 
@@ -189,14 +181,18 @@ record_frames (UcaCamera *camera, Options *opts)
 
     uca_camera_stop_recording (camera, &error);
 
+    if (opts->filename == NULL)
+        g_print ("No filename given, not writing data.\n");
+    else {
 #ifdef HAVE_LIBTIFF
-    if (opts->write_tiff)
-        write_tiff (buffer, opts, roi_width, roi_height, bits);
-    else
-        write_raw (buffer, opts);
+        if (opts->write_tiff)
+            write_tiff (buffer, opts, roi_width, roi_height, bits);
+        else
+            write_raw (buffer, opts);
 #else
-    write_raw (buffer, opts);
+        write_raw (buffer, opts);
 #endif
+    }
 
     g_object_unref (buffer);
     g_timer_destroy (timer);
