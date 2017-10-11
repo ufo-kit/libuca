@@ -229,7 +229,7 @@ record_frames (UcaCamera *camera, Options *opts)
         g_print ("No filename given, not writing data.\n");
     else {
 #ifdef HAVE_LIBTIFF
-        if (opts->write_tiff)
+        if (g_str_has_suffix (opts->filename, ".tif") || g_str_has_suffix (opts->filename, ".tiff"))
             write_tiff (buffer, opts, roi_width, roi_height, bits);
         else
             write_raw (buffer, opts);
@@ -255,17 +255,11 @@ main (int argc, char *argv[])
     static Options opts = {
         .n_frames = -1,
         .filename = NULL,
-#ifdef HAVE_LIBTIFF
-        .write_tiff = FALSE,
-#endif
     };
 
     static GOptionEntry entries[] = {
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &opts.n_frames, "Number of frames to acquire", "N" },
         { "output", 'o', 0, G_OPTION_ARG_STRING, &opts.filename, "Output file name template", "FILE" },
-#ifdef HAVE_LIBTIFF
-        { "write-tiff", 't', 0, G_OPTION_ARG_NONE, &opts.write_tiff, "Write as TIFF", NULL },
-#endif
         { NULL }
     };
 
