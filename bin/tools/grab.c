@@ -46,6 +46,27 @@ get_bytes_per_pixel (guint bits_per_pixel)
     return bits_per_pixel > 8 ? 2 : 1;
 }
 
+static guint
+count_format_specifiers (const gchar *template)
+{
+    GRegex *regex;
+    GMatchInfo *info;
+    gint count = 0;
+
+    regex = g_regex_new ("%[0-9]+[ui]", 0, 0, NULL);
+    g_regex_match (regex, template, 0, &info);
+
+    while (g_match_info_matches (info)) {
+        count++;
+        g_match_info_next (info, NULL);
+    }
+
+    g_match_info_free (info);
+    g_regex_unref (regex);
+
+    return count > 0 ? (guint) count : 0;
+}
+
 #ifdef HAVE_LIBTIFF
 static void
 write_tiff (UcaRingBuffer *buffer,
@@ -59,6 +80,9 @@ write_tiff (UcaRingBuffer *buffer,
     guint n_frames;
     guint bits_per_sample;
     gsize bytes_per_pixel;
+
+    if (count_format_specifiers (opts->filename) > 0)
+        g_warning ("Can only write multi-page TIFF, format specifier is ignored.\n");
 
     tif = TIFFOpen (opts->filename, "w");
     n_frames = uca_ring_buffer_get_num_blocks (buffer);
@@ -100,23 +124,43 @@ write_raw (UcaRingBuffer *buffer,
 {
     guint n_frames;
     gsize size;
+    guint num_format_specifiers;
+    gboolean multiple_files;
+    FILE *fp;
 
     size = uca_ring_buffer_get_block_size (buffer);
     n_frames = uca_ring_buffer_get_num_blocks (buffer);
+    num_format_specifiers = count_format_specifiers (opts->filename);
+
+    if (num_format_specifiers > 1) {
+        g_printerr ("Can only use zero or one format specifiers. Aborting write.\n");
+        return;
+    }
+
+    multiple_files = num_format_specifiers == 1;
+
+    if (!multiple_files)
+        fp = fopen (opts->filename, "wb");
 
     for (gint i = 0; i < n_frames; i++) {
-        FILE *fp;
-        gchar *filename;
         gpointer data;
 
-        filename = g_strdup_printf ("%s-%08i.raw", opts->filename, i);
-        fp = fopen(filename, "wb");
-        data = uca_ring_buffer_get_read_pointer (buffer);
+        if (multiple_files) {
+            gchar *filename;
+            filename = g_strdup_printf (opts->filename, i);
+            fp = fopen (filename, "wb");
+            g_free (filename);
+        }
 
+        data = uca_ring_buffer_get_read_pointer (buffer);
         fwrite (data, size, 1, fp);
-        fclose (fp);
-        g_free (filename);
+
+        if (multiple_files)
+            fclose (fp);
     }
+
+    if (!multiple_files)
+        fclose (fp);
 }
 
 static GError *
@@ -218,7 +262,7 @@ main (int argc, char *argv[])
 
     static GOptionEntry entries[] = {
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &opts.n_frames, "Number of frames to acquire", "N" },
-        { "output", 'o', 0, G_OPTION_ARG_STRING, &opts.filename, "Output file name", "FILE" },
+        { "output", 'o', 0, G_OPTION_ARG_STRING, &opts.filename, "Output file name template", "FILE" },
 #ifdef HAVE_LIBTIFF
         { "write-tiff", 't', 0, G_OPTION_ARG_NONE, &opts.write_tiff, "Write as TIFF", NULL },
 #endif
