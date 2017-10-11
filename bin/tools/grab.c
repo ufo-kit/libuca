@@ -32,7 +32,6 @@
 
 typedef struct {
     gint n_frames;
-    gdouble duration;
     gchar *filename;
 #ifdef HAVE_LIBTIFF
     gboolean write_tiff;
@@ -154,7 +153,7 @@ record_frames (UcaCamera *camera, Options *opts)
     buffer = uca_ring_buffer_new (size, n_allocated);
     timer = g_timer_new();
 
-    g_print("Start recording: %ix%i at %i bits/pixel\n", roi_width, roi_height, bits);
+    g_print ("Start recording: %ix%i at %i bits/pixel\n", roi_width, roi_height, bits);
 
     uca_camera_start_recording(camera, &error);
 
@@ -177,7 +176,7 @@ record_frames (UcaCamera *camera, Options *opts)
         n_frames++;
         elapsed = g_timer_elapsed (timer, NULL);
 
-        if (n_frames == opts->n_frames || (opts->duration > 0.0 && elapsed >= opts->duration))
+        if (n_frames == opts->n_frames)
             break;
 
         if (elapsed - last_printed >= 1.0) {
@@ -217,7 +216,6 @@ main (int argc, char *argv[])
 
     static Options opts = {
         .n_frames = -1,
-        .duration = -1.0,
         .filename = NULL,
 #ifdef HAVE_LIBTIFF
         .write_tiff = FALSE,
@@ -226,7 +224,6 @@ main (int argc, char *argv[])
 
     static GOptionEntry entries[] = {
         { "num-frames", 'n', 0, G_OPTION_ARG_INT, &opts.n_frames, "Number of frames to acquire", "N" },
-        { "duration", 'd', 0, G_OPTION_ARG_DOUBLE, &opts.duration, "Duration in seconds", NULL },
         { "output", 'o', 0, G_OPTION_ARG_STRING, &opts.filename, "Output file name", "FILE" },
 #ifdef HAVE_LIBTIFF
         { "write-tiff", 't', 0, G_OPTION_ARG_NONE, &opts.write_tiff, "Write as TIFF", NULL },
@@ -252,8 +249,8 @@ main (int argc, char *argv[])
         goto cleanup_manager;
     }
 
-    if (opts.n_frames < 0 && opts.duration < 0.0) {
-        g_print ("You must specify at least one of --num-frames and --output.\n");
+    if (opts.n_frames < 0) {
+        g_print ("You must specify the number of acquired frames with -n/--num-frames.\n");
         goto cleanup_manager;
     }
 
