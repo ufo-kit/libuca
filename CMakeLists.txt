@@ -14,7 +14,6 @@ project(uca C)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 #}}}
 #{{{ Metadata
-set(TARNAME "libuca")
 set(UCA_DESCRIPTION "Unified Camera Access")
 
 # These are software release versions
@@ -27,25 +26,6 @@ set(UCA_VERSION_STRING "${UCA_VERSION_MAJOR}.${UCA_VERSION_MINOR}.${UCA_VERSION_
 # symbols have been removed, function signatures, structures, constants etc.
 # changed.
 set(UCA_ABI_VERSION "2")
-
-#{{{ CPack
-set(CPACK_PACKAGE_VERSION "${UCA_VERSION_STRING}")
-set(CPACK_PACKAGE_NAME "${TARNAME}")
-set(PACKAGE_TARNAME "${TARNAME}")
-set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-set(PACKAGE_BUGREPORT "http://ufo.kit.edu/ufo/newticket")
-
-set(CPACK_GENERATOR "DEB;RPM")
-set(CPACK_PACKAGE_RELEASE 2)
-set(CPACK_RPM_PACKAGE_RELEASE ${CPACK_PACKAGE_RELEASE})
-set(CPACK_DEBIAN_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Matthias Vogelgesang <matthias.vogelgesang@kit.edu>")
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${UCA_DESCRIPTION})
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION_SUMMARY ${UCA_DESCRIPTION})
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}")
-
-set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-#}}}
 #}}}
 #{{{ Macros
 # create_enums
@@ -124,5 +104,3 @@ add_subdirectory(plugins)
 add_subdirectory(test)
 add_subdirectory(bin)
 #}}}
-
-include(CPack)
