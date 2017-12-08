@@ -620,6 +620,35 @@ buffer_thread (UcaCamera *camera)
     return error;
 }
 
+static GEnumValue *
+find_enum_value (GParamSpecEnum *pspec, const gchar *name)
+{
+    GEnumValue *result;
+    GEnumClass *enum_class;
+
+    result = NULL;
+    enum_class = pspec->enum_class;
+
+    for (guint i = 0; i < enum_class->n_values; i++)
+        if (!g_strcmp0 (enum_class->values[i].value_name, name))
+            result = &enum_class->values[i];
+
+    return result;
+}
+
+static gboolean
+is_a_number (const gchar *s)
+{
+    g_return_val_if_fail (s != NULL, FALSE);
+
+    for (; *s != '\0'; s++) {
+        if (!g_ascii_isdigit (*s))
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
 /**
  * uca_camera_parse_arg_props:
  * @camera: A #UcaCamera object
@@ -666,17 +695,43 @@ uca_camera_parse_arg_props (UcaCamera *camera, gchar **argv, guint argc, GError 
             gchar *prop = g_match_info_fetch (match, 1);
             gchar *string_value = g_match_info_fetch (match, 2);
 
-            g_value_init (&value, G_TYPE_STRING);
-            g_value_set_string (&value, string_value);
-
             pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (camera), prop);
 
             if (pspec != NULL) {
                 GValue target_value = {0};
 
+                if (g_type_is_a (pspec->value_type, G_TYPE_ENUM)) {
+                    g_value_init (&value, G_TYPE_INT);
+
+                    if (!is_a_number (string_value)) {
+                        GEnumValue *enum_value;
+
+                        enum_value = find_enum_value ((GParamSpecEnum *) pspec, string_value);
+
+                        if (enum_value) {
+                            g_value_set_int (&value, enum_value->value);
+                        }
+                        else {
+                            g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_FOUND,
+                                         "Enum value `%s' does not exist for `%s'",
+                                         string_value, prop);
+                            success = FALSE;
+                        }
+                    }
+                    else {
+                        g_value_set_int (&value, atoi (string_value));
+                    }
+                }
+                else {
+                    g_value_init (&value, G_TYPE_STRING);
+                    g_value_set_string (&value, string_value);
+                }
+
                 g_value_init (&target_value, pspec->value_type);
                 g_value_transform (&value, &target_value);
                 g_object_set_property (G_OBJECT (camera), prop, &target_value);
+                g_value_unset (&value);
+                g_value_unset (&target_value);
             }
             else {
                 g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_IMPLEMENTED,
