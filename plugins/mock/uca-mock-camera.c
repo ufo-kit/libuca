@@ -425,6 +425,9 @@ uca_mock_camera_set_property (GObject *object, guint property_id, const GValue *
         case PROP_DEGREE_VALUE:
             priv->degree_value = g_value_get_double (value);
             break;
+        case PROP_TEST_ENUM:
+            g_debug ("Set test-enum to `%i'", g_value_get_enum (value));
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             return;
@@ -475,6 +478,9 @@ uca_mock_camera_get_property(GObject *object, guint property_id, GValue *value, 
             break;
         case PROP_DEGREE_VALUE:
             g_value_set_double (value, priv->degree_value);
+            break;
+        case PROP_TEST_ENUM:
+            g_value_set_enum (value, 0);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
