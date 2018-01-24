@@ -81,8 +81,12 @@ uca_common_get_camera (UcaPluginManager *manager, const gchar *name, GError **er
 
     camera = uca_plugin_manager_get_camera (manager, name, error, NULL);
 
-    if (camera != NULL)
-        uca_camera_parse_arg_props (camera, uca_prop_assignment_array, n_props, error);
+    if (camera != NULL) {
+        if (!uca_camera_parse_arg_props (camera, uca_prop_assignment_array, n_props, error)) {
+            g_object_unref (camera);
+            return NULL;
+        }
+    }
 
     return camera;
 }
