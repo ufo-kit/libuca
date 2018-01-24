@@ -86,7 +86,7 @@ if (GOBJECT_INTROSPECTION_FOUND)
         add_custom_command(OUTPUT ${GIR_XML}
             COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_SCANNER}
                     --namespace=Uca
-                    --nsversion=${UCA_ABI_VERSION}
+                    --nsversion=${UCA_ABI_VERSION}.0
                     --library=uca
                     --no-libtool
                     --include=GObject-2.0
