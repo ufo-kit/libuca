@@ -33,6 +33,7 @@ G_DEFINE_TYPE_WITH_CODE (UcaMockCamera, uca_mock_camera, UCA_TYPE_CAMERA,
 enum {
     PROP_FILL_DATA = N_BASE_PROPERTIES,
     PROP_DEGREE_VALUE,
+    PROP_TEST_ENUM,
     N_PROPERTIES
 };
 
@@ -528,12 +529,21 @@ uca_mock_initable_iface_init (GInitableIface *iface)
 static void
 uca_mock_camera_class_init(UcaMockCameraClass *klass)
 {
-    GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
+    GObjectClass *gobject_class;
+    UcaCameraClass *camera_class;
+
+    static GEnumValue enum_values[] = {
+        { 0, "UCA_MOCK_CAMERA_TEST_ENUM_FOO", "foo" },
+        { 1, "UCA_MOCK_CAMERA_TEST_ENUM_BAR", "bar" },
+        { 0, }
+    };
+
+    gobject_class = G_OBJECT_CLASS(klass);
     gobject_class->set_property = uca_mock_camera_set_property;
     gobject_class->get_property = uca_mock_camera_get_property;
     gobject_class->finalize = uca_mock_camera_finalize;
 
-    UcaCameraClass *camera_class = UCA_CAMERA_CLASS(klass);
+    camera_class = UCA_CAMERA_CLASS(klass);
     camera_class->start_recording = uca_mock_camera_start_recording;
     camera_class->stop_recording = uca_mock_camera_stop_recording;
     camera_class->grab = uca_mock_camera_grab;
@@ -555,6 +565,14 @@ uca_mock_camera_class_init(UcaMockCameraClass *klass)
             "Temperature of the degree value",
             "Temperature of the degree value in degree Celsius",
             -G_MAXDOUBLE, G_MAXDOUBLE, 0.0,
+            G_PARAM_READWRITE);
+
+    mock_properties[PROP_TEST_ENUM] =
+        g_param_spec_enum ("test-enum",
+            "Test enum",
+            "Test enum",
+            g_enum_register_static ("UcaMockCameraTestEnum", enum_values),
+            0,
             G_PARAM_READWRITE);
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
