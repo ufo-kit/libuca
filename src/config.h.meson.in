@@ -1,1 +1,3 @@
 #mesondefine UCA_PLUGINDIR
+#mesondefine GLIB_VERSION_MIN_REQUIRED
+#mesondefine GLIB_VERSION_MAX_ALLOWED

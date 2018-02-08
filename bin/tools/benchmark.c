@@ -153,19 +153,19 @@ grab_frames_readout (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCame
 static void
 grab_callback (gpointer data, gpointer user_data)
 {
-    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+    static GMutex mutex;
     guint *n_acquired_frames = user_data;
 
-    g_static_mutex_lock (&mutex);
+    g_mutex_lock (&mutex);
     *n_acquired_frames += 1;
-    g_static_mutex_unlock (&mutex);
+    g_mutex_unlock (&mutex);
 }
 
 static guint
 grab_frames_async (UcaCamera *camera, gpointer buffer, guint n_frames, UcaCameraTriggerSource trigger_source, GTimer *timer)
 {
     GError *error = NULL;
-    volatile guint n_acquired_frames = 0;
+    guint n_acquired_frames = 0;
 
     g_object_set (camera, "trigger-source", trigger_source, NULL);
     uca_camera_set_grab_func (camera, grab_callback, &n_acquired_frames);
@@ -363,8 +363,6 @@ main (int argc, char *argv[])
 
     g_io_channel_shutdown (log_channel, TRUE, &error);
     g_assert_no_error (error);
-
-cleanup_camera:
     g_object_unref (camera);
 
 cleanup_manager:

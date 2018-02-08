@@ -1053,11 +1053,8 @@ on_start_button_clicked (GtkWidget *widget, ThreadData *data)
     data->state = RUNNING;
     set_tool_button_state (data);
 
-    if (!g_thread_create (preview_frames, data, FALSE, &error)) {
-        g_printerr ("Failed to create thread: %s\n", error->message);
-        data->state = IDLE;
-        set_tool_button_state (data);
-    }
+    /* FIXME: clean up struct */
+    g_thread_new (NULL, preview_frames, data);
 }
 
 static void
@@ -1094,11 +1091,8 @@ on_record_button_clicked (GtkWidget *widget, ThreadData *data)
     data->state = RECORDING;
     set_tool_button_state (data);
 
-    if (!g_thread_create (record_frames, data, FALSE, &error)) {
-        g_printerr ("Failed to create thread: %s\n", error->message);
-        data->state = IDLE;
-        set_tool_button_state (data);
-    }
+    /* FIXME: clean up struct */
+    g_thread_new (NULL, record_frames, data);
 }
 
 static gpointer
@@ -1160,11 +1154,8 @@ download_frames (ThreadData *data)
 static void
 on_download_button_clicked (GtkWidget *widget, ThreadData *data)
 {
-    GError *error = NULL;
-
-    if (!g_thread_create ((GThreadFunc) download_frames, data, FALSE, &error)) {
-        g_printerr ("Failed to create thread: %s\n", error->message);
-    }
+    /* FIXME: clean up thread struct somewhere */
+    g_thread_new (NULL, (GThreadFunc) download_frames, data);
 
     gtk_widget_set_sensitive (data->main_window, FALSE);
     gtk_window_set_modal (GTK_WINDOW (data->download_dialog), TRUE);
@@ -1595,7 +1586,6 @@ main (int argc, char *argv[])
         return 1;
     }
 
-    g_thread_init (NULL);
     gdk_threads_init ();
     gtk_init (&argc, &argv);
 

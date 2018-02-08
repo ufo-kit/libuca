@@ -32,10 +32,12 @@
  *
  * Since: 1.1
  */
+
+#include "config.h"
+
 #include <gio/gio.h>
 #include <gmodule.h>
 #include "uca-plugin-manager.h"
-#include "config.h"
 
 G_DEFINE_TYPE (UcaPluginManager, uca_plugin_manager, G_TYPE_OBJECT)
 

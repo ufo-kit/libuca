@@ -13,6 +13,8 @@ plugindir = '@0@/@1@/uca'.format(get_option('prefix'), get_option('libdir'))
 
 conf = configuration_data()
 conf.set_quoted('UCA_PLUGINDIR', plugindir)
+conf.set('GLIB_VERSION_MIN_REQUIRED', 'GLIB_VERSION_2_38')
+conf.set('GLIB_VERSION_MAX_ALLOWED', 'GLIB_VERSION_2_38')
 
 configure_file(
     input: 'config.h.meson.in',
@@ -36,9 +38,6 @@ sources += [enums_c, enums_h]
 lib = library('uca',
     sources: sources,
     dependencies: [glib_dep, gobject_dep, gmodule_dep, gio_dep],
-    c_args: [
-        '-Wno-deprecated-declarations',
-    ],
     version: version,
     soversion: version_major,
     install: true,

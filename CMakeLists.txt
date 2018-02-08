@@ -69,10 +69,13 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
 #{{{ Common dependencies
 find_package(PkgConfig)
 find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
-pkg_check_modules(GLIB2 glib-2.0>=2.28 REQUIRED)
-pkg_check_modules(GOBJECT2 gobject-2.0>=2.28 REQUIRED)
-pkg_check_modules(GMODULE2 gmodule-2.0>=2.28 REQUIRED)
-pkg_check_modules(GIO2 gio-2.0>=2.28 REQUIRED)
+pkg_check_modules(GLIB2 glib-2.0>=2.38 REQUIRED)
+pkg_check_modules(GOBJECT2 gobject-2.0>=2.38 REQUIRED)
+pkg_check_modules(GMODULE2 gmodule-2.0>=2.38 REQUIRED)
+pkg_check_modules(GIO2 gio-2.0>=2.38 REQUIRED)
+
+set(GLIB_VERSION_MIN_REQUIRED "GLIB_VERSION_2_38")
+set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_38")
 
 link_directories(${GLIB2_LIBRARY_DIRS})
 #}}}

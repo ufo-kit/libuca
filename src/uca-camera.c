@@ -135,7 +135,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
 };
 
 static GParamSpec *camera_properties[N_BASE_PROPERTIES] = { NULL, };
-static GStaticMutex access_lock = G_STATIC_MUTEX_INIT;
+static GMutex access_lock;
 static gboolean str_to_boolean (const gchar *s);
 
 #define DEFINE_CAST(suffix, trans_func)                 \
@@ -766,8 +766,8 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
 {
     UcaCameraClass *klass;
     UcaCameraPrivate *priv;
+    static GMutex mutex;
     GError *tmp_error = NULL;
-    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
     g_return_if_fail (UCA_IS_CAMERA (camera));
 
@@ -778,7 +778,7 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
 
     priv = camera->priv;
 
-    g_static_mutex_lock (&mutex);
+    g_mutex_lock (&mutex);
 
     if (priv->is_recording) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
@@ -792,9 +792,9 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
         goto start_recording_unlock;
     }
 
-    g_static_mutex_lock (&access_lock);
+    g_mutex_lock (&access_lock);
     (*klass->start_recording)(camera, &tmp_error);
-    g_static_mutex_unlock (&access_lock);
+    g_mutex_unlock (&access_lock);
 
     if (tmp_error == NULL) {
         priv->is_readout = FALSE;
@@ -826,7 +826,7 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
     }
 
 start_recording_unlock:
-    g_static_mutex_unlock (&mutex);
+    g_mutex_unlock (&mutex);
 }
 
 /**
@@ -841,8 +841,8 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
 {
     UcaCameraClass *klass;
     UcaCameraPrivate *priv;
+    static GMutex mutex;
     GError *tmp_error = NULL;
-    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
     g_return_if_fail (UCA_IS_CAMERA (camera));
 
@@ -853,7 +853,7 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
 
     priv = camera->priv;
 
-    g_static_mutex_lock (&mutex);
+    g_mutex_lock (&mutex);
 
     if (!priv->is_recording) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
@@ -868,12 +868,12 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
         priv->read_thread = NULL;
     }
 
-    g_static_mutex_lock (&access_lock);
+    g_mutex_lock (&access_lock);
 
     (*klass->stop_recording)(camera, &tmp_error);
     priv->cancelling_recording = FALSE;
 
-    g_static_mutex_unlock (&access_lock);
+    g_mutex_unlock (&access_lock);
 
     if (tmp_error == NULL) {
         priv->is_recording = FALSE;
@@ -890,7 +890,7 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
     }
 
 error_stop_recording:
-    g_static_mutex_unlock (&mutex);
+    g_mutex_unlock (&mutex);
 }
 
 /**
@@ -923,7 +923,7 @@ void
 uca_camera_start_readout (UcaCamera *camera, GError **error)
 {
     UcaCameraClass *klass;
-    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+    static GMutex mutex;
 
     g_return_if_fail (UCA_IS_CAMERA(camera));
 
@@ -932,7 +932,7 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
     g_return_if_fail (klass != NULL);
     g_return_if_fail (klass->start_readout != NULL);
 
-    g_static_mutex_lock (&mutex);
+    g_mutex_lock (&mutex);
 
     if (camera->priv->is_recording) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
@@ -941,9 +941,9 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
     else {
         GError *tmp_error = NULL;
 
-        g_static_mutex_lock (&access_lock);
+        g_mutex_lock (&access_lock);
         (*klass->start_readout) (camera, &tmp_error);
-        g_static_mutex_unlock (&access_lock);
+        g_mutex_unlock (&access_lock);
 
         if (tmp_error == NULL) {
             camera->priv->is_readout = TRUE;
@@ -954,7 +954,7 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
             g_propagate_error (error, tmp_error);
     }
 
-    g_static_mutex_unlock (&mutex);
+    g_mutex_unlock (&mutex);
 }
 
 /**
@@ -970,7 +970,7 @@ void
 uca_camera_stop_readout (UcaCamera *camera, GError **error)
 {
     UcaCameraClass *klass;
-    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+    static GMutex mutex;
 
     g_return_if_fail (UCA_IS_CAMERA(camera));
 
@@ -979,7 +979,7 @@ uca_camera_stop_readout (UcaCamera *camera, GError **error)
     g_return_if_fail (klass != NULL);
     g_return_if_fail (klass->stop_readout != NULL);
 
-    g_static_mutex_lock (&mutex);
+    g_mutex_lock (&mutex);
 
     if (camera->priv->is_recording) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
@@ -988,9 +988,9 @@ uca_camera_stop_readout (UcaCamera *camera, GError **error)
     else {
         GError *tmp_error = NULL;
 
-        g_static_mutex_lock (&access_lock);
+        g_mutex_lock (&access_lock);
         (*klass->stop_readout) (camera, &tmp_error);
-        g_static_mutex_unlock (&access_lock);
+        g_mutex_unlock (&access_lock);
 
         if (tmp_error == NULL) {
             camera->priv->is_readout = FALSE;
@@ -1000,7 +1000,7 @@ uca_camera_stop_readout (UcaCamera *camera, GError **error)
             g_propagate_error (error, tmp_error);
     }
 
-    g_static_mutex_unlock (&mutex);
+    g_mutex_unlock (&mutex);
 }
 
 /**
@@ -1032,7 +1032,7 @@ void
 uca_camera_trigger (UcaCamera *camera, GError **error)
 {
     UcaCameraClass *klass;
-    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+    static GMutex mutex;
 
     g_return_if_fail (UCA_IS_CAMERA (camera));
 
@@ -1041,7 +1041,7 @@ uca_camera_trigger (UcaCamera *camera, GError **error)
     g_return_if_fail (klass != NULL);
     g_return_if_fail (klass->trigger != NULL);
 
-    g_static_mutex_lock (&mutex);
+    g_mutex_lock (&mutex);
 
     if (!camera->priv->is_recording)
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is not recording");
@@ -1049,7 +1049,7 @@ uca_camera_trigger (UcaCamera *camera, GError **error)
         (*klass->trigger) (camera, error);
     }
 
-    g_static_mutex_unlock (&mutex);
+    g_mutex_unlock (&mutex);
 }
 
 /**
@@ -1103,7 +1103,7 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     gboolean result = FALSE;
 
     /* FIXME: this prevents accessing two independent cameras simultanously. */
-    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+    static GMutex mutex;
 
     g_return_val_if_fail (UCA_IS_CAMERA(camera), FALSE);
 
@@ -1114,7 +1114,7 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     g_return_val_if_fail (data != NULL, FALSE);
 
     if (!camera->priv->buffered) {
-        g_static_mutex_lock (&mutex);
+        g_mutex_lock (&mutex);
 
         if (!camera->priv->is_recording && !camera->priv->is_readout) {
             g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
@@ -1126,26 +1126,26 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
                 PyGILState_STATE state = PyGILState_Ensure ();
                 Py_BEGIN_ALLOW_THREADS
 
-                g_static_mutex_lock (&access_lock);
+                g_mutex_lock (&access_lock);
                 result = (*klass->grab) (camera, data, error);
-                g_static_mutex_unlock (&access_lock);
+                g_mutex_unlock (&access_lock);
 
                 Py_END_ALLOW_THREADS
                 PyGILState_Release (state);
             }
             else {
-                g_static_mutex_lock (&access_lock);
+                g_mutex_lock (&access_lock);
                 result = (*klass->grab) (camera, data, error);
-                g_static_mutex_unlock (&access_lock);
+                g_mutex_unlock (&access_lock);
             }
 #else
-            g_static_mutex_lock (&access_lock);
+            g_mutex_lock (&access_lock);
             result = (*klass->grab) (camera, data, error);
-            g_static_mutex_unlock (&access_lock);
+            g_mutex_unlock (&access_lock);
 #endif
         }
 
-        g_static_mutex_unlock (&mutex);
+        g_mutex_unlock (&mutex);
     }
     else {
         gpointer buffer;
@@ -1197,7 +1197,7 @@ uca_camera_readout (UcaCamera *camera, gpointer data, guint index, GError **erro
     gboolean result = FALSE;
 
     /* FIXME: this prevents accessing two independent cameras simultanously. */
-    static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
+    static GMutex mutex;
 
     g_return_val_if_fail (UCA_IS_CAMERA(camera), FALSE);
 
@@ -1213,14 +1213,14 @@ uca_camera_readout (UcaCamera *camera, gpointer data, guint index, GError **erro
         return FALSE;
     }
 
-    g_static_mutex_lock (&mutex);
+    g_mutex_lock (&mutex);
 
     if (!camera->priv->is_recording && !camera->priv->is_readout) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
                      "Camera is not in readout or record mode");
     }
     else {
-        g_static_mutex_lock (&access_lock);
+        g_mutex_lock (&access_lock);
 
 #ifdef WITH_PYTHON_MULTITHREADING
         if (Py_IsInitialized ()) {
@@ -1239,10 +1239,10 @@ uca_camera_readout (UcaCamera *camera, gpointer data, guint index, GError **erro
         result = (*klass->readout) (camera, data, index, error);
 #endif
 
-        g_static_mutex_unlock (&access_lock);
+        g_mutex_unlock (&access_lock);
     }
 
-    g_static_mutex_unlock (&mutex);
+    g_mutex_unlock (&mutex);
 
     return result;
 }
