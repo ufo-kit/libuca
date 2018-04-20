@@ -1,5 +1,5 @@
 project('libuca', 'c',
-    version: '2.2.1'
+    version: '2.3.0'
 )
 
 version = meson.project_version()
