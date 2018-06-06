@@ -61,6 +61,8 @@ print_properties (UcaCamera *camera)
 {
     GObjectClass *oclass;
     GParamSpec **pspecs;
+    GHashTable *map;
+    GList *names;
     gchar *fmt_string;
     guint n_props;
     guint max_length = 0;
@@ -71,12 +73,11 @@ print_properties (UcaCamera *camera)
     for (guint i = 0; i < n_props; i++)
         max_length = MAX (max_length, strlen (g_param_spec_get_name (pspecs[i])));
 
-    fmt_string = g_strdup_printf (" %%s | %%-%us | %%s\n", max_length);
+    map = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, g_free);
 
     for (guint i = 0; i < n_props; i++) {
         GParamSpec *pspec;
         GValue value= { 0, { { 0 } } };
-        gchar *value_string;
         const gchar *name;
 
         pspec = pspecs[i];
@@ -84,14 +85,26 @@ print_properties (UcaCamera *camera)
         g_value_init (&value, pspec->value_type);
 
         g_object_get_property (G_OBJECT (camera), name, &value);
-        value_string = g_strdup_value_contents (&value);
-
-        g_print (fmt_string, get_flags_description (pspec), name, value_string);
-
-        g_free (value_string);
+        g_hash_table_insert (map, (gpointer) name, g_strdup_value_contents (&value));
         g_value_unset (&value);
     }
 
+    fmt_string = g_strdup_printf (" %%s | %%-%us | %%s\n", max_length);
+    names = g_list_sort (g_hash_table_get_keys (map), (GCompareFunc) g_strcmp0);
+
+    for (GList *it = g_list_first (names); it != NULL; it = g_list_next (it)) {
+        GParamSpec *pspec;
+        const gchar *name;
+        gchar* value;
+
+        name = (const gchar *) it->data;
+        pspec = g_object_class_find_property (oclass, name);
+        value = g_hash_table_lookup (map, name);
+        g_print (fmt_string, get_flags_description (pspec), name, value);
+    }
+
+    g_list_free (names);
+    g_hash_table_destroy (map);
     g_free (fmt_string);
     g_free (pspecs);
 }
