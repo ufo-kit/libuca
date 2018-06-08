@@ -66,6 +66,8 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  *  argument of the write method is not correct.
  * @UCA_CAMERA_ERROR_TIMEOUT: Generic timeout error
  * @UCA_CAMERA_ERROR_END_OF_STREAM: Data stream has ended.
+ * @UCA_CAMERA_ERROR_DEVICE: Device-specific error. This is used if the plugin
+ *  does not use its own error codes.
  */
 GQuark uca_camera_error_quark()
 {
