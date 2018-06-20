@@ -802,9 +802,7 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
         priv->is_readout = FALSE;
         priv->is_recording = TRUE;
         priv->cancelling_recording = FALSE;
-
-        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-        g_object_notify (G_OBJECT (camera), "is-recording");
+        g_object_notify_by_pspec (G_OBJECT (camera), camera_properties[PROP_IS_RECORDING]);
     }
     else
         g_propagate_error (error, tmp_error);
@@ -880,8 +878,7 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
     if (tmp_error == NULL) {
         priv->is_recording = FALSE;
         priv->is_readout = FALSE;
-        /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-        g_object_notify (G_OBJECT (camera), "is-recording");
+        g_object_notify_by_pspec (G_OBJECT (camera), camera_properties[PROP_IS_RECORDING]);
     }
     else
         g_propagate_error (error, tmp_error);
@@ -949,8 +946,7 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
 
         if (tmp_error == NULL) {
             camera->priv->is_readout = TRUE;
-            /* TODO: we should depend on GLib 2.26 and use g_object_notify_by_pspec */
-            g_object_notify (G_OBJECT (camera), "is-readout");
+            g_object_notify_by_pspec (G_OBJECT (camera), camera_properties[PROP_IS_READOUT]);
         }
         else
             g_propagate_error (error, tmp_error);
