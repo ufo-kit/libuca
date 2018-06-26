@@ -339,7 +339,7 @@ main (int argc, char *argv[])
     g_option_context_add_main_entries (context, entries, NULL);
 
     if (!g_option_context_parse (context, &argc, &argv, &error)) {
-        g_print ("Failed parsing arguments: %s\n", error->message);
+        g_printerr ("Failed parsing arguments: %s\n", error->message);
         goto cleanup_manager;
     }
 
@@ -359,7 +359,7 @@ main (int argc, char *argv[])
     camera = uca_common_get_camera (manager, argv[argc - 1], &error);
 
     if (camera == NULL) {
-        g_print ("Initialization: %s\n", error->message);
+        g_printerr ("Initialization: %s\n", error->message);
         goto cleanup_manager;
     }
 

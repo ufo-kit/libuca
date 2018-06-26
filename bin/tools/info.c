@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
     }
 
     if (camera == NULL) {
-        g_print("Error during initialization: %s\n", error->message);
+        g_printerr ("Error during initialization: %s\n", error->message);
         print_usage();
         return 1;
     }

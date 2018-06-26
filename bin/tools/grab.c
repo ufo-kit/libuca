@@ -293,21 +293,21 @@ main (int argc, char *argv[])
     }
 
     if (opts.n_frames < 0) {
-        g_print ("You must specify the number of acquired frames with -n/--num-frames.\n");
+        g_printerr ("You must specify the number of acquired frames with -n/--num-frames.\n");
         goto cleanup_manager;
     }
 
     camera = uca_common_get_camera (manager, argv[argc - 1], &error);
 
     if (camera == NULL) {
-        g_print ("Error during initialization: %s\n", error->message);
+        g_printerr ("Error during initialization: %s\n", error->message);
         goto cleanup_manager;
     }
 
     error = record_frames (camera, &opts);
 
     if (error != NULL)
-        g_print ("Error: %s\n", error->message);
+        g_printerr ("Error: %s\n", error->message);
 
     g_option_context_free (context);
     g_object_unref (camera);
