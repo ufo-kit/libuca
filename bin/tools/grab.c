@@ -223,6 +223,7 @@ record_frames (UcaCamera *camera, Options *opts)
             break;
     }
 
+    g_free (fmt_string);
     elapsed = g_timer_elapsed (total_timer, NULL);
 
     g_print ("\nTime total = %3.2f s => %3.2f f/s = %3.2f ms/f = %.4f MB/s\n",

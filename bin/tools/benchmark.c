@@ -344,7 +344,11 @@ main (int argc, char *argv[])
     }
 
     if (argc < 2) {
-        g_print ("%s\n", g_option_context_get_help (context, TRUE, NULL));
+        gchar *help;
+
+        help = g_option_context_get_help (context, TRUE, NULL);
+        g_print ("%s\n", help);
+        g_free (help);
         goto cleanup_manager;
     }
 
@@ -366,6 +370,7 @@ main (int argc, char *argv[])
     g_object_unref (camera);
 
 cleanup_manager:
+    g_option_context_free (context);
     g_object_unref (manager);
 
     return 0;
