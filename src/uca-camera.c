@@ -670,9 +670,6 @@ uca_camera_parse_arg_props (UcaCamera *camera, gchar **argv, guint argc, GError 
 
     assignment = g_regex_new ("\\s*([A-Za-z0-9-]*)=(.*)\\s*", 0, 0, error);
 
-    if (*error)
-        return FALSE;
-
     g_value_register_transform_func (G_TYPE_STRING, G_TYPE_UCHAR,   value_transform_uchar);
     g_value_register_transform_func (G_TYPE_STRING, G_TYPE_INT,     value_transform_int);
     g_value_register_transform_func (G_TYPE_STRING, G_TYPE_UINT,    value_transform_uint);
@@ -741,13 +738,17 @@ uca_camera_parse_arg_props (UcaCamera *camera, gchar **argv, guint argc, GError 
                 success = FALSE;
             }
 
-            g_match_info_free (match);
             g_free (prop);
             g_free (string_value);
 
-            if (!success)
+            if (!success) {
+                g_match_info_free (match);
+                g_regex_unref (assignment);
                 return FALSE;
+            }
         }
+
+        g_match_info_free (match);
     }
 
     g_regex_unref (assignment);
