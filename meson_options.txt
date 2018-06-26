@@ -1,0 +1,3 @@
+option('introspection',
+    type: 'boolean', value: true,
+    description: 'Build introspection data (requires gobject-introspection')

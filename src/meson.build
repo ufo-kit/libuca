@@ -43,17 +43,21 @@ lib = library('uca',
     install: true,
 )
 
-gnome.generate_gir(lib,
-    namespace: 'Uca',
-    nsversion: '@0@.0'.format(version_major),
-    sources: sources + headers,
-    install: true,
-    includes: [
-      'GLib-2.0',
-      'GObject-2.0',
-      'GModule-2.0',
-    ],
-)
+gir = find_program('g-ir-scanner', required: false)
+
+if gir.found() and get_option('introspection')
+    gnome.generate_gir(lib,
+        namespace: 'Uca',
+        nsversion: '@0@.0'.format(version_major),
+        sources: sources + headers,
+        install: true,
+        includes: [
+            'GLib-2.0',
+            'GObject-2.0',
+            'GModule-2.0',
+        ],
+    )
+endif
 
 pkg = import('pkgconfig')
 
