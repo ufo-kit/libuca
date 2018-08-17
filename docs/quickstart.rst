@@ -152,7 +152,6 @@ Usage
 The API for accessing cameras is straightforward. First you need to
 include the necessary header files::
 
-    #include <glib-object.h>
     #include <uca/uca-plugin-manager.h>
     #include <uca/uca-camera.h>
 
