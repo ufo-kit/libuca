@@ -28,7 +28,7 @@ class UcaConan(ConanFile):
         self._configured_cmake().install()
 
     def package_info(self):
-        self.cpp_info.libs = ["libuca"]
+        self.cpp_info.libs = ["uca"]
 
     def imports(self):
         self.copy("*.dll", "bin", "bin")
