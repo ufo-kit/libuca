@@ -4,7 +4,7 @@ from conans import ConanFile, CMake, tools
 class UcaConan(ConanFile):
     name = "libuca"
     version = "2.3.0"
-    license = "MIT"
+    license = "LGPL-2.1"
     author = "Marius Elvert marius.elvert@softwareschneiderei.de"
     url = "https://github.com/ufo-kit/libuca"
     description = "GLib-based C library for unified camera access ."
