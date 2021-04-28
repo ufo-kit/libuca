@@ -1,6 +1,3 @@
-cmake_minimum_required(VERSION 2.6)
-project(uca C)
-
 #{{{ Sources
 set(uca_SRCS
     uca-camera.c
@@ -24,26 +21,40 @@ if (CI_INSTALL_PREFIX)
 endif()
 #}}}
 #{{{ Target
-include_directories(${CMAKE_CURRENT_BINARY_DIR}
-                    ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_library(uca SHARED
-    ${uca_SRCS}
-    ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)
+add_library(uca STATIC
+  ${uca_SRCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)
 
 set_target_properties(uca PROPERTIES
-      VERSION ${UCA_VERSION_STRING}
-      SOVERSION ${UCA_ABI_VERSION})
+  VERSION ${UCA_VERSION_STRING}
+  SOVERSION ${UCA_ABI_VERSION})
 
-target_link_libraries(uca ${UCA_DEPS})
+target_include_directories(uca
+  PUBLIC .
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+target_link_libraries(uca
+  PUBLIC CONAN_PKG::glib)
+
 #}}}
 #{{{ Python
 
-pkg_check_modules(PYTHON python3-embed)
+#TODO: Reenable
+#option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
+#pkg_check_modules(PYTHON python)
+#
+#if (PYTHON_FOUND)
+#
+#    if (WITH_PYTHON_MULTITHREADING)
+#        include_directories(${PYTHON_INCLUDE_DIRS})
+#        target_link_libraries(uca ${PYTHON_LIBRARIES})
+#    endif ()
+#endif ()
+#pkg_check_modules(PYTHON python3-embed)
 
-if (NOT PYTHON_FOUND)
-    pkg_check_modules(PYTHON python3)
-endif ()
+#if (NOT PYTHON_FOUND)
+ #   pkg_check_modules(PYTHON python3)
+#endif ()
 
 if (PYTHON_FOUND)
     option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
@@ -56,54 +67,54 @@ endif ()
 
 #}}}
 #{{{ GObject introspection
-pkg_check_modules(GOBJECT_INTROSPECTION gobject-introspection-1.0)
-
-if (GOBJECT_INTROSPECTION_FOUND)
-    option(WITH_GIR "Build introspection files" ON)
-
-    if (WITH_GIR)
-        pkg_check_variable(gobject-introspection-1.0 g_ir_scanner)
-        pkg_check_variable(gobject-introspection-1.0 g_ir_compiler)
-
-        set(GIR_PREFIX "Uca-${UCA_ABI_VERSION}.0")
-        set(GIR_XML "${GIR_PREFIX}.gir")
-        set(GIR_TYPELIB "${GIR_PREFIX}.typelib")
-        set(_gir_input)
-
-        foreach(_src ${uca_SRCS} ${uca_HDRS})
-            list(APPEND _gir_input "${CMAKE_CURRENT_SOURCE_DIR}/${_src}")
-        endforeach()
-
-        list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h")
-        list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c")
-
-        add_custom_command(OUTPUT ${GIR_XML}
-            COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_SCANNER}
-                    --namespace=Uca
-                    --nsversion=${UCA_ABI_VERSION}.0
-                    --library=uca
-                    --no-libtool
-                    --include=GObject-2.0
-                    --include=GModule-2.0
-                    --output ${GIR_XML}
-                    --warn-all
-                    --quiet
-                    ${_gir_input}
-            DEPENDS ${uca_SRCS}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-        add_custom_command(OUTPUT ${GIR_TYPELIB}
-            COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_COMPILER}
-                    -o ${GIR_TYPELIB}
-                    ${GIR_XML}
-            DEPENDS ${GIR_XML}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-        add_custom_target(gir ALL DEPENDS ${GIR_XML} ${GIR_TYPELIB})
-        add_dependencies(gir uca)
-
-    endif()
-endif()
+#pkg_check_modules(GOBJECT_INTROSPECTION gobject-introspection-1.0)
+#
+#if (GOBJECT_INTROSPECTION_FOUND)
+#    option(WITH_GIR "Build introspection files" ON)
+#
+#    if (WITH_GIR)
+#        pkg_check_variable(gobject-introspection-1.0 g_ir_scanner)
+#        pkg_check_variable(gobject-introspection-1.0 g_ir_compiler)
+#
+#        set(GIR_PREFIX "Uca-${UCA_ABI_VERSION}.0")
+#        set(GIR_XML "${GIR_PREFIX}.gir")
+#        set(GIR_TYPELIB "${GIR_PREFIX}.typelib")
+#        set(_gir_input)
+#
+#        foreach(_src ${uca_SRCS} ${uca_HDRS})
+#            list(APPEND _gir_input "${CMAKE_CURRENT_SOURCE_DIR}/${_src}")
+#        endforeach()
+#
+#        list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h")
+#        list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c")
+#
+#        add_custom_command(OUTPUT ${GIR_XML}
+#            COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_SCANNER}
+#                    --namespace=Uca
+#                    --nsversion=${UCA_ABI_VERSION}.0
+#                    --library=uca
+#                    --no-libtool
+#                    --include=GObject-2.0
+#                    --include=GModule-2.0
+#                    --output ${GIR_XML}
+#                    --warn-all
+#                    --quiet
+#                    ${_gir_input}
+#            DEPENDS ${uca_SRCS}
+#            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+#
+#        add_custom_command(OUTPUT ${GIR_TYPELIB}
+#            COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_COMPILER}
+#                    -o ${GIR_TYPELIB}
+#                    ${GIR_XML}
+#            DEPENDS ${GIR_XML}
+#            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+#
+#        add_custom_target(gir ALL DEPENDS ${GIR_XML} ${GIR_TYPELIB})
+#        add_dependencies(gir uca)
+#
+#    endif()
+#endif()
 #}}}
 #{{{ Installation
 install(TARGETS uca
