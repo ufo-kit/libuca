@@ -2,6 +2,7 @@
 *.orig
 *.rpm
 _CPack_Packages
+.vscode/
 build*/
 CMakeFiles
 install_manifest.txt

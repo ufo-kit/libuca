@@ -910,6 +910,21 @@ uca_camera_is_recording (UcaCamera *camera)
 }
 
 /**
+ * uca_camera_stopped_recording:
+ * @camera: A #UcaCamera object
+ * 
+ * Convenience function for plugin's to check if uca_camera_stop_recording() has been called.
+ * 
+ * Return value: %True if state is standby or transitioning from recording to standby
+ */
+gboolean
+uca_camera_stopped_recording(UcaCamera *camera)
+{
+    g_return_val_if_fail (UCA_IS_CAMERA(camera), FALSE);
+    return !uca_camera_is_recording (camera) || camera->priv->cancelling_recording;
+}
+
+/**
  * uca_camera_start_readout:
  * @camera: A #UcaCamera object
  * @error: Location to store a #UcaCameraError error or %NULL
