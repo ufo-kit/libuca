@@ -163,6 +163,7 @@ DEFINE_CAST (boolean,   str_to_boolean)
 
 struct _UcaCameraPrivate {
     gboolean cancelling_recording;
+    gboolean cancelling_grab;
     gboolean is_recording;
     gboolean is_readout;
     gboolean transfer_async;
@@ -564,6 +565,7 @@ uca_camera_init (UcaCamera *camera)
 
     camera->priv = UCA_CAMERA_GET_PRIVATE(camera);
     camera->priv->cancelling_recording = FALSE;
+    camera->priv->cancelling_grab = FALSE;
     camera->priv->is_recording = FALSE;
     camera->priv->is_readout = FALSE;
     camera->priv->transfer_async = FALSE;
@@ -613,8 +615,10 @@ buffer_thread (UcaCamera *camera)
 
         buffer = uca_ring_buffer_get_write_pointer (camera->priv->ring_buffer);
 
-        if (!(*klass->grab) (camera, buffer, &error))
+        if (!(*klass->grab) (camera, buffer, &error)) {
+            camera->priv->cancelling_grab = TRUE;
             break;
+        }
 
         uca_ring_buffer_write_advance (camera->priv->ring_buffer);
     }
@@ -803,6 +807,7 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
         priv->is_readout = FALSE;
         priv->is_recording = TRUE;
         priv->cancelling_recording = FALSE;
+        priv->cancelling_grab = FALSE;
         g_object_notify_by_pspec (G_OBJECT (camera), camera_properties[PROP_IS_RECORDING]);
     }
     else
@@ -1172,8 +1177,11 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
          * often, as buffering is usually used in those cases when the camera is
          * faster than the software.
          */
-        while (!uca_ring_buffer_available (camera->priv->ring_buffer))
-            ;
+        while (!uca_ring_buffer_available (camera->priv->ring_buffer)) {
+            if (camera->priv->cancelling_grab) {
+                return FALSE;
+            }
+        }
 
         buffer = uca_ring_buffer_get_read_pointer (camera->priv->ring_buffer);
 
