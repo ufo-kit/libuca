@@ -23,16 +23,6 @@ if (CI_INSTALL_PREFIX)
     set(UCA_PREFIX "${CI_INSTALL_PREFIX}")
 endif()
 #}}}
-#{{{ Configure
-find_program(INTROSPECTION_SCANNER "g-ir-scanner")
-find_program(INTROSPECTION_COMPILER "g-ir-compiler")
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libuca.pc.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/libuca.pc" @ONLY IMMEDIATE)
-#}}}
 #{{{ Target
 include_directories(${CMAKE_CURRENT_BINARY_DIR}
                     ${CMAKE_CURRENT_SOURCE_DIR})
@@ -158,4 +148,14 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME "libuca-${UCA_VERSION_STRING}" CACHE INTERNAL
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${UCA_VERSION_STRING}-${CMAKE_SYSTEM_PROCESSOR}")
 
 include(CPack)
+#}}}
+#{{{ Configure
+find_program(INTROSPECTION_SCANNER "g-ir-scanner")
+find_program(INTROSPECTION_COMPILER "g-ir-compiler")
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libuca.pc.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/libuca.pc" @ONLY IMMEDIATE)
 #}}}
