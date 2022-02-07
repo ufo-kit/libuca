@@ -37,6 +37,7 @@
 #include "uca-ring-buffer.h"
 #include "uca-enums.h"
 
+#define G_LOG_LEVEL_DOMAIN "uca"
 #define UCA_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_CAMERA, UcaCameraPrivate))
 
 G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
@@ -596,6 +597,7 @@ uca_camera_init (UcaCamera *camera)
     uca_camera_set_property_unit (camera_properties[PROP_RECORDED_FRAMES], UCA_UNIT_COUNT);
 
 #ifdef WITH_PYTHON_MULTITHREADING
+    g_log (G_LOG_LEVEL_DOMAIN, G_LOG_LEVEL_DEBUG, "Camera initialized with Python support");
     Py_Initialize();
     if (PY_MAJOR_VERSION == 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7)) {
         PyEval_InitThreads();
