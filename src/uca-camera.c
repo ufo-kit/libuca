@@ -596,8 +596,9 @@ uca_camera_init (UcaCamera *camera)
     uca_camera_set_property_unit (camera_properties[PROP_RECORDED_FRAMES], UCA_UNIT_COUNT);
 
 #ifdef WITH_PYTHON_MULTITHREADING
-    if (!PyEval_ThreadsInitialized ()) {
-        PyEval_InitThreads ();
+    Py_Initialize();
+    if (PY_MAJOR_VERSION == 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7)) {
+        PyEval_InitThreads();
     }
 #endif
 }
