@@ -39,7 +39,11 @@ target_link_libraries(uca ${UCA_DEPS})
 #}}}
 #{{{ Python
 
-pkg_check_modules(PYTHON python)
+pkg_check_modules(PYTHON python3-embed)
+
+if (NOT PYTHON_FOUND)
+    pkg_check_modules(PYTHON python3)
+endif ()
 
 if (PYTHON_FOUND)
     option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
