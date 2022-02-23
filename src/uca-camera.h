@@ -174,6 +174,8 @@ gboolean    uca_camera_grab             (UcaCamera          *camera,
                                          gpointer            data,
                                          GError            **error)
                                         __attribute__((nonnull (2)));
+gint        uca_camera_heavylift        (UcaCamera          *camera,
+                                         gboolean            compute);
 gboolean    uca_camera_readout          (UcaCamera          *camera,
                                          gpointer            data,
                                          guint               index,

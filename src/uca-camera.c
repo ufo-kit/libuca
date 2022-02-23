@@ -29,6 +29,7 @@
 #include <Python.h>
 #endif
 
+#include <math.h>
 #include <glib.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1103,6 +1104,24 @@ uca_camera_write (UcaCamera *camera, const gchar *name, gpointer data, gsize siz
     }
     else {
         (*klass->write) (camera, name, data, size, error);
+    }
+}
+
+gint
+uca_camera_heavylift (UcaCamera *camera, gboolean compute)
+{
+    gdouble result = 0.0;
+
+    if (compute) {
+        for (int i = 0; i < 500; i++) {
+            for (int j = 0; j < 1000000; j++) {
+                result += exp (- i);
+            }
+        }
+        return 1;
+    } else {
+        g_usleep(5000000);
+        return 0;
     }
 }
 

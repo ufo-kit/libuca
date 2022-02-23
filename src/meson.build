@@ -15,6 +15,9 @@ if not python_dep.found()
   python_dep = dependency('python3', required: false)
 endif
 
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required : false)
+
 plugindir = '@0@/@1@/uca'.format(get_option('prefix'), get_option('libdir'))
 
 conf = configuration_data()
@@ -47,7 +50,7 @@ sources += [enums_c, enums_h]
 
 lib = library('uca',
     sources: sources,
-    dependencies: [glib_dep, gobject_dep, gmodule_dep, gio_dep, python_dep],
+    dependencies: [glib_dep, gobject_dep, gmodule_dep, gio_dep, python_dep, m_dep],
     version: version,
     soversion: version_major,
     install: true,
