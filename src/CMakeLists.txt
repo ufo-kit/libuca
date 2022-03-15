@@ -54,6 +54,9 @@ if (PYTHON_FOUND)
     endif ()
 endif ()
 
+if (ZMQ_FOUND AND JSON_GLIB_FOUND)
+    option(WITH_ZMQ_NETWORKING "Enable sending data over network with zmq" ON)
+endif ()
 #}}}
 #{{{ GObject introspection
 pkg_check_modules(GOBJECT_INTROSPECTION gobject-introspection-1.0)

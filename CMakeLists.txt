@@ -73,11 +73,13 @@ pkg_check_modules(GLIB2 glib-2.0>=2.38 REQUIRED)
 pkg_check_modules(GOBJECT2 gobject-2.0>=2.38 REQUIRED)
 pkg_check_modules(GMODULE2 gmodule-2.0>=2.38 REQUIRED)
 pkg_check_modules(GIO2 gio-2.0>=2.38 REQUIRED)
+pkg_check_modules(ZMQ libzmq)
+pkg_check_modules(JSON_GLIB json-glib-1.0)
 
 set(GLIB_VERSION_MIN_REQUIRED "GLIB_VERSION_2_38")
 set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_38")
 
-link_directories(${GLIB2_LIBRARY_DIRS})
+link_directories(${GLIB2_LIBRARY_DIRS} ${ZMQ_LIBRARY_DIRS} ${JSON_GLIB_LIBRARY_DIRS})
 #}}}
 #{{{ Common includes
 include_directories(
@@ -85,14 +87,18 @@ include_directories(
     ${GLIB2_INCLUDE_DIRS}
     ${GOBJECT2_INCLUDE_DIRS}
     ${GMODULE2_INCLUDE_DIRS}
-    ${GIO2_INCLUDE_DIRS})
+    ${GIO2_INCLUDE_DIRS}
+    ${ZMQ_INCLUDE_DIRS}
+    ${JSON_GLIB_INCLUDE_DIRS})
 #}}}
 #{{{ Common variables
 set(UCA_DEPS
     ${GLIB2_LIBRARIES}
     ${GOBJECT2_LIBRARIES}
     ${GMODULE2_LIBRARIES}
-    ${GIO2_LIBRARIES})
+    ${GIO2_LIBRARIES}
+    ${ZMQ_LIBRARIES}
+    ${JSON_GLIB_LIBRARIES})
 
 set(UCA_ENUM_HDRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/uca-camera.h

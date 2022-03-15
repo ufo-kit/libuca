@@ -27,6 +27,10 @@ if python_dep.found()
   conf.set('WITH_PYTHON_MULTITHREADING', get_option('WITH_PYTHON_MULTITHREADING'))
 endif
 
+if zmq_dep.found() and json_dep.found()
+  conf.set('WITH_ZMQ_NETWORKING', true)
+endif
+
 configure_file(
     input: 'config.h.meson.in',
     output: 'config.h',
@@ -48,7 +52,7 @@ sources += [enums_c, enums_h]
 
 lib = library('uca',
     sources: sources,
-    dependencies: [glib_dep, gobject_dep, gmodule_dep, gio_dep, python_dep],
+    dependencies: deps + [python_dep],
     version: version,
     soversion: version_major,
     install: true,

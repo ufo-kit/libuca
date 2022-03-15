@@ -39,6 +39,7 @@ GQuark uca_writable_quark(void);
 
 typedef enum {
     UCA_CAMERA_ERROR_NOT_FOUND,
+    UCA_CAMERA_ERROR_MEMORY_ALLOCATION_FAILURE,
     UCA_CAMERA_ERROR_RECORDING,
     UCA_CAMERA_ERROR_NOT_RECORDING,
     UCA_CAMERA_ERROR_NO_GRAB_FUNC,
@@ -46,6 +47,9 @@ typedef enum {
     UCA_CAMERA_ERROR_WRONG_WRITE_METADATA,
     UCA_CAMERA_ERROR_END_OF_STREAM,
     UCA_CAMERA_ERROR_TIMEOUT,
+    UCA_CAMERA_ERROR_SENDING_UNAVAILABLE,
+    UCA_CAMERA_ERROR_SEND,
+    UCA_CAMERA_ERROR_ENDPOINT_NOT_SPECIFIED,
     UCA_CAMERA_ERROR_DEVICE,
 } UcaCameraError;
 
@@ -104,6 +108,7 @@ enum {
 
     PROP_BUFFERED,
     PROP_NUM_BUFFERS,
+    PROP_ENDPOINT,
     N_BASE_PROPERTIES
 };
 
@@ -144,6 +149,7 @@ struct _UcaCameraClass {
     void (*trigger)         (UcaCamera *camera, GError **error);
     void (*write)           (UcaCamera *camera, const gchar *name, gpointer data, gsize size, GError **error);
     gboolean (*grab)        (UcaCamera *camera, gpointer data, GError **error);
+    gboolean (*grab_send)   (UcaCamera *camera, GError **error);
     gboolean (*readout)     (UcaCamera *camera, gpointer data, guint index, GError **error);
 };
 
@@ -174,6 +180,8 @@ gboolean    uca_camera_grab             (UcaCamera          *camera,
                                          gpointer            data,
                                          GError            **error)
                                         __attribute__((nonnull (2)));
+gboolean    uca_camera_grab_send        (UcaCamera          *camera,
+                                         GError            **error);
 gboolean    uca_camera_readout          (UcaCamera          *camera,
                                          gpointer            data,
                                          guint               index,

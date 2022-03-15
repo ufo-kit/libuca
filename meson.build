@@ -14,8 +14,10 @@ glib_dep = dependency('glib-2.0', version: '>= 2.38')
 gio_dep = dependency('gio-2.0', version: '>= 2.38')
 gobject_dep = dependency('gobject-2.0', version: '>= 2.38')
 gmodule_dep = dependency('gmodule-2.0', version: '>= 2.38')
+zmq_dep = dependency('libzmq', required: false)
+json_dep = dependency('json-glib-1.0', version: '>=1.1.0', required: false)
 
-deps = [glib_dep, gio_dep, gobject_dep, gmodule_dep]
+deps = [glib_dep, gio_dep, gobject_dep, gmodule_dep, zmq_dep, json_dep]
 
 subdir('src')
 

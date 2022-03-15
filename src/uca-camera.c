@@ -25,6 +25,11 @@
 
 #include "config.h"
 
+#ifdef WITH_ZMQ_NETWORKING
+#include <zmq.h>
+#include <json-glib/json-glib.h>
+#endif
+
 #ifdef WITH_PYTHON_MULTITHREADING
 #include <Python.h>
 #endif
@@ -59,6 +64,8 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
 /**
  * UcaCameraError:
  * @UCA_CAMERA_ERROR_NOT_FOUND: Camera type is unknown
+ * @UCA_CAMERA_ERROR_MEMORY_ALLOCATION_FAILURE: Any kind of memory allocation
+ *  failure
  * @UCA_CAMERA_ERROR_RECORDING: Camera is already recording
  * @UCA_CAMERA_ERROR_NOT_RECORDING: Camera is not recording
  * @UCA_CAMERA_ERROR_NO_GRAB_FUNC: No grab callback was set
@@ -66,6 +73,11 @@ G_DEFINE_TYPE(UcaCamera, uca_camera, G_TYPE_OBJECT)
  * @UCA_CAMERA_ERROR_WRONG_WRITE_METADATA: Meta data specified in the name
  *  argument of the write method is not correct.
  * @UCA_CAMERA_ERROR_TIMEOUT: Generic timeout error
+ * @UCA_CAMERA_ERROR_SENDING_UNAVAILABLE: Sending over network unavailable due
+ * to missing prerequisites
+ * @UCA_CAMERA_ERROR_SEND: Error when sending data over network via zmq
+ * @UCA_CAMERA_ERROR_ENDPOINT_NOT_SPECIFIED: grab_send called without endpoint
+ * being specified
  * @UCA_CAMERA_ERROR_END_OF_STREAM: Data stream has ended.
  * @UCA_CAMERA_ERROR_DEVICE: Device-specific error. This is used if the plugin
  *  does not use its own error codes.
@@ -135,6 +147,7 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "is-readout",
     "buffered",
     "num-buffers",
+    "endpoint",
 };
 
 static GParamSpec *camera_properties[N_BASE_PROPERTIES] = { NULL, };
@@ -174,12 +187,28 @@ struct _UcaCameraPrivate {
     UcaRingBuffer *ring_buffer;
     UcaCameraTriggerSource trigger_source;
     UcaCameraTriggerType trigger_type;
+    /* Sending over network */
+    gpointer zmq_context;
+    gpointer socket;
+    gchar *endpoint;
+    gpointer send_array;
+    gint num_sent;
+#ifdef WITH_ZMQ_NETWORKING
+    JsonBuilder *builder;
+    JsonGenerator *generator;
+#endif
 };
 
 static gboolean
 str_to_boolean (const gchar *s)
 {
     return g_ascii_strncasecmp (s, "true", 4) == 0;
+}
+
+static gboolean
+is_endpoint_set (const gchar *s)
+{
+    return (s != NULL && g_strcmp0 (s, ""));
 }
 
 static void
@@ -193,6 +222,99 @@ uca_camera_set_property_unit (GParamSpec *pspec, UcaUnit unit)
         g_warning ("::%s already has a different unit", pspec->name);
     else
         g_param_spec_set_qdata (pspec, UCA_UNIT_QUARK, GINT_TO_POINTER (unit));
+}
+
+static gboolean
+uca_camera_grab_send_impl (UcaCamera *camera, GError **error)
+{
+#ifdef WITH_ZMQ_NETWORKING
+    JsonNode *tree;
+    gchar *header;
+    gsize header_size;
+    guint pixel_size, roi_width, roi_height, bitdepth;
+    GDateTime *dt;
+    gchar *timestamp;
+    gint zmq_retval;
+
+    /* Make sure we have someplace to send the data */
+    if (!is_endpoint_set (camera->priv->endpoint)) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_ENDPOINT_NOT_SPECIFIED,
+                     "Endpoint not specified");
+        return FALSE;
+    }
+
+    /* Get payload */
+    if (!uca_camera_grab (camera, camera->priv->send_array, error)) {
+        /* Consistency check, the error location was either NULL or must have
+         * been set in grab if it returned FALSE */
+        g_assert (error == NULL || *error != NULL);
+        return FALSE;
+    }
+
+    /* Header (metadata) section */
+    g_object_get (camera,
+                  "roi-width", &roi_width,
+                  "roi-height", &roi_height,
+                  "sensor-bitdepth", &bitdepth,
+                  NULL);
+    pixel_size = bitdepth <= 8 ? 1 : 2;
+
+    json_builder_reset (camera->priv->builder);
+    json_builder_begin_object (camera->priv->builder);
+
+    /* Frame number */
+    json_builder_set_member_name (camera->priv->builder, "frame-number");
+    json_builder_add_int_value (camera->priv->builder, camera->priv->num_sent++);
+
+    /* Timestamp */
+    dt = g_date_time_new_now_local ();
+    timestamp = g_strdup_printf ("%ld.%d", g_date_time_to_unix (dt), g_date_time_get_microsecond (dt));
+    json_builder_set_member_name (camera->priv->builder, "timestamp");
+    json_builder_add_string_value (camera->priv->builder, timestamp);
+    g_free (timestamp);
+    g_date_time_unref (dt);
+
+    /* Data type, we assume all detectors having unsigned data types */
+    json_builder_set_member_name (camera->priv->builder, "dtype");
+    json_builder_add_string_value (camera->priv->builder, pixel_size == 1 ? "uint8" : "uint16");
+
+    /* Image shape */
+    json_builder_set_member_name (camera->priv->builder, "shape");
+    json_builder_begin_array (camera->priv->builder);
+    json_builder_add_int_value (camera->priv->builder, (gint) roi_width);
+    json_builder_add_int_value (camera->priv->builder, (gint) roi_height);
+    json_builder_end_array (camera->priv->builder);
+
+    /* Create JSON string */
+    json_builder_end_object (camera->priv->builder);
+    tree = json_builder_get_root (camera->priv->builder);
+    json_generator_set_root (camera->priv->generator, tree);
+    header = json_generator_to_data (camera->priv->generator, &header_size);
+    json_node_unref (tree);
+    /* End of header section */
+
+    /* Transmission section */
+    /* First send the header and then the actual payload */
+    zmq_retval = zmq_send (camera->priv->socket, header, header_size, ZMQ_SNDMORE);
+    g_free (header);
+    if (zmq_retval <= 0) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_SEND,
+                     "sending header failed: %s\n", zmq_strerror (zmq_errno ()));
+        return FALSE;
+    }
+
+    if (zmq_send (camera->priv->socket, camera->priv->send_array, pixel_size * roi_width * roi_height, 0) <= 0) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_SEND,
+                     "sending data failed: %s\n", zmq_strerror (zmq_errno ()));
+        return FALSE;
+    }
+
+    return TRUE;
+#else
+    g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_SENDING_UNAVAILABLE,
+                 "Sending over network unavailable due to missing prerequisites");
+    return FALSE;
+#endif
 }
 
 static void
@@ -232,6 +354,15 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
 
         case PROP_NUM_BUFFERS:
             priv->num_buffers = g_value_get_uint (value);
+            break;
+
+        case PROP_ENDPOINT:
+#ifdef WITH_ZMQ_NETWORKING
+                g_free (priv->endpoint);
+                priv->endpoint = g_value_dup_string (value);
+#else
+                g_warning ("zmq networking prerequisites not installed, cannot set endpoint");
+#endif
             break;
 
         default:
@@ -316,6 +447,10 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
             g_value_set_uint (value, priv->num_buffers);
             break;
 
+        case PROP_ENDPOINT:
+            g_value_set_string (value, priv->endpoint ? priv->endpoint : "");
+            break;
+
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
@@ -332,6 +467,27 @@ uca_camera_dispose (GObject *object)
         g_object_unref (priv->ring_buffer);
         priv->ring_buffer = NULL;
     }
+
+    g_free (priv->endpoint);
+    if (priv->send_array != NULL) {
+        g_free (priv->send_array);
+        priv->send_array = NULL;
+    }
+#ifdef WITH_ZMQ_NETWORKING
+    if (priv->zmq_context != NULL) {
+        if (zmq_close (priv->socket) != 0) {
+            g_error ("closing socket failed: %s\n", zmq_strerror (zmq_errno ()));
+        }
+        priv->socket = NULL;
+        if (zmq_ctx_destroy (priv->zmq_context) != 0) {
+            g_error ("destroying zmq context failed: %s\n", zmq_strerror (zmq_errno ()));
+        }
+        priv->zmq_context = NULL;
+    }
+
+    g_clear_object (&priv->builder);
+    g_clear_object (&priv->generator);
+#endif
 
     G_OBJECT_CLASS (uca_camera_parent_class)->dispose (object);
 }
@@ -366,6 +522,7 @@ uca_camera_class_init (UcaCameraClass *klass)
     klass->start_recording = NULL;
     klass->stop_recording = NULL;
     klass->grab = NULL;
+    klass->grab_send = uca_camera_grab_send_impl;
     klass->readout = NULL;
     klass->write = NULL;
 
@@ -551,6 +708,20 @@ uca_camera_class_init (UcaCameraClass *klass)
             0, G_MAXUINT, 4,
             G_PARAM_READWRITE);
 
+    /**
+     * UcaCamera:endpoint:
+     *
+     * Endpoint for sending images over netowrk with zmq.
+     *
+     * Since: 2.4
+     */
+    camera_properties[PROP_ENDPOINT] =
+        g_param_spec_string (uca_camera_props[PROP_ENDPOINT],
+            "ZMQ endpoint where to send data in form \"protocol://address\"",
+            "ZMQ endpoint where to send data in form \"protocol://address\"",
+            "",
+            G_PARAM_READWRITE);
+
     for (guint id = PROP_0 + 1; id < N_BASE_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, camera_properties[id]);
 
@@ -575,6 +746,14 @@ uca_camera_init (UcaCamera *camera)
     camera->priv->buffered = FALSE;
     camera->priv->num_buffers = 4;
     camera->priv->ring_buffer = NULL;
+    camera->priv->zmq_context = NULL;
+    camera->priv->socket = NULL;
+    camera->priv->endpoint = NULL;
+    camera->priv->send_array = NULL;
+#ifdef WITH_ZMQ_NETWORKING
+    camera->priv->builder = json_builder_new_immutable ();
+    camera->priv->generator = json_generator_new ();
+#endif
 
     g_value_init (&val, G_TYPE_UINT);
     g_value_set_uint (&val, 1);
@@ -816,7 +995,7 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
     else
         g_propagate_error (error, tmp_error);
 
-    if (priv->buffered) {
+    if (priv->buffered || is_endpoint_set (priv->endpoint)) {
         guint width, height, bitdepth;
         guint pixel_size;
 
@@ -827,11 +1006,40 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
                       NULL);
 
         pixel_size = bitdepth <= 8 ? 1 : 2;
-        priv->ring_buffer = uca_ring_buffer_new (width * height * pixel_size,
-                                                         priv->num_buffers);
 
-        /* Let's read out the frames from another thread */
-        priv->read_thread = g_thread_new ("read-thread", (GThreadFunc) buffer_thread, camera);
+        if (priv->buffered) {
+            priv->ring_buffer = uca_ring_buffer_new (width * height * pixel_size,
+                                                             priv->num_buffers);
+
+            /* Let's read out the frames from another thread */
+            priv->read_thread = g_thread_new ("read-thread", (GThreadFunc) buffer_thread, camera);
+        }
+#ifdef WITH_ZMQ_NETWORKING
+        if (is_endpoint_set (priv->endpoint)) {
+            priv->num_sent = 0;
+            if (!priv->zmq_context) {
+                priv->zmq_context = zmq_ctx_new ();
+                if (priv->zmq_context == NULL) {
+                    g_error ("zmq context creation failed: %s\n", zmq_strerror (zmq_errno ()));
+                    goto start_recording_unlock;
+                }
+                priv->socket = zmq_socket (priv->zmq_context, ZMQ_PUSH);
+                if (!priv->socket) {
+                    g_error ("zmq socket creation failed: %s\n", zmq_strerror (zmq_errno ()));
+                    goto start_recording_unlock;
+                }
+                if (zmq_bind (priv->socket, priv->endpoint) != 0) {
+                    g_error ("zmq bind failed: %s\n", zmq_strerror (zmq_errno ()));
+                    goto start_recording_unlock;
+                }
+            }
+            if ((priv->send_array = g_malloc0 (width * height * pixel_size)) == NULL) {
+                g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_MEMORY_ALLOCATION_FAILURE,
+                             "Cannot allocate memory for sending data");
+                goto start_recording_unlock;
+            }
+        }
+#endif
     }
 
 start_recording_unlock:
@@ -1198,6 +1406,40 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
         }
     }
     return result;
+}
+
+/**
+ * uca_camera_grab_send:
+ * @camera: A #UcaCamera object
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Grab a single frame and send the result over network to the endpoint
+ * specified by the respective property.
+ *
+ * You must have called uca_camera_start_recording() before, otherwise you will
+ * get a #UCA_CAMERA_ERROR_NOT_RECORDING error.
+ *
+ * Returns: %TRUE on success.
+ *
+ * Since: 2.4
+ */
+gboolean
+uca_camera_grab_send (UcaCamera *camera, GError **error)
+{
+    UcaCameraClass *klass;
+    g_return_val_if_fail (UCA_IS_CAMERA(camera), FALSE);
+    g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+    klass = UCA_CAMERA_GET_CLASS (camera);
+    g_return_val_if_fail (klass != NULL, FALSE);
+
+    if (!camera->priv->is_recording && !camera->priv->is_readout) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
+                     "Camera is neither recording nor in readout mode");
+        return FALSE;
+    }
+
+    return (*klass->grab_send) (camera, error);
 }
 
 /**
