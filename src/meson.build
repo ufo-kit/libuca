@@ -23,7 +23,8 @@ conf.set('GLIB_VERSION_MIN_REQUIRED', 'GLIB_VERSION_2_38')
 conf.set('GLIB_VERSION_MAX_ALLOWED', 'GLIB_VERSION_2_38')
 
 if python_dep.found()
-  conf.set('WITH_PYTHON_MULTITHREADING', true)
+  message(get_option('WITH_PYTHON_MULTITHREADING'))
+  conf.set('WITH_PYTHON_MULTITHREADING', get_option('WITH_PYTHON_MULTITHREADING'))
 endif
 
 configure_file(

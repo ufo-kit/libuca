@@ -1,3 +1,9 @@
 option('introspection',
     type: 'boolean', value: true,
     description: 'Build introspection data (requires gobject-introspection')
+
+# For historical reasons upper-case
+option('WITH_PYTHON_MULTITHREADING',
+    type : 'boolean',
+    value : false,
+    description: 'Release Python GIL on long operations')
