@@ -364,6 +364,23 @@ uca_camera_finalize (GObject *object)
     G_OBJECT_CLASS (uca_camera_parent_class)->finalize (object);
 }
 
+/**
+ * Make sure the camera reads the actual device state once the child plugin has
+ * been constructed. This allows us to use the camera even if e.g. the actual
+ * device is in the recording state when we construct our object.
+ */
+static void
+uca_camera_constructed (GObject *object)
+{
+    UcaCameraPrivate *priv;
+    g_return_val_if_fail (UCA_IS_CAMERA (object), FALSE);
+
+    priv = UCA_CAMERA_GET_PRIVATE (object);
+
+    g_object_get (object, "is-recording", &priv->is_recording, NULL);
+    g_object_get (object, "is-readout", &priv->is_readout, NULL);
+}
+
 static void
 uca_camera_class_init (UcaCameraClass *klass)
 {
@@ -372,6 +389,7 @@ uca_camera_class_init (UcaCameraClass *klass)
     gobject_class->get_property = uca_camera_get_property;
     gobject_class->dispose = uca_camera_dispose;
     gobject_class->finalize = uca_camera_finalize;
+    gobject_class->constructed = uca_camera_constructed;
 
     klass->start_recording = NULL;
     klass->stop_recording = NULL;
