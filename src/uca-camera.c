@@ -1100,7 +1100,7 @@ uca_camera_trigger (UcaCamera *camera, GError **error)
 
     g_mutex_lock (&mutex);
 
-    if (!uca_camera_is_recording (camera)) {
+    if (!camera->priv->is_recording) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is not recording");
     }
     else {
