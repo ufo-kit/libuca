@@ -818,7 +818,8 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
 
     g_mutex_lock (&mutex);
 
-    if (priv->is_recording) {
+    if (uca_camera_is_recording (camera)) {
+        priv->is_recording = TRUE;
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
                      "Camera is already recording");
         goto start_recording_unlock;
@@ -893,6 +894,7 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
     g_mutex_lock (&mutex);
 
     if (!uca_camera_is_recording (camera)) {
+        priv->is_recording = FALSE;
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
                      "Camera is not recording");
         goto error_stop_recording;
