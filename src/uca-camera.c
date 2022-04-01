@@ -200,7 +200,7 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
 {
     UcaCameraPrivate *priv = UCA_CAMERA_GET_PRIVATE(object);
 
-    if (priv->is_recording) {
+    if (uca_camera_is_recording (UCA_CAMERA (object))) {
         g_warning("You cannot change properties during data acquisition");
         return;
     }
@@ -328,6 +328,16 @@ uca_camera_dispose (GObject *object)
 
     priv = UCA_CAMERA_GET_PRIVATE (object);
 
+    if (uca_camera_is_recording (UCA_CAMERA (object))) {
+        GError *error = NULL;
+
+        uca_camera_stop_recording (UCA_CAMERA (object), &error);
+        if (error != NULL) {
+            g_warning ("Could not stop recording: %s", error->message);
+            g_error_free (error);
+        }
+    }
+
     if (priv->ring_buffer != NULL) {
         g_object_unref (priv->ring_buffer);
         priv->ring_buffer = NULL;
@@ -354,6 +364,23 @@ uca_camera_finalize (GObject *object)
     G_OBJECT_CLASS (uca_camera_parent_class)->finalize (object);
 }
 
+/**
+ * Make sure the camera reads the actual device state once the child plugin has
+ * been constructed. This allows us to use the camera even if e.g. the actual
+ * device is in the recording state when we construct our object.
+ */
+static void
+uca_camera_constructed (GObject *object)
+{
+    UcaCameraPrivate *priv;
+    g_return_val_if_fail (UCA_IS_CAMERA (object), FALSE);
+
+    priv = UCA_CAMERA_GET_PRIVATE (object);
+
+    g_object_get (object, "is-recording", &priv->is_recording, NULL);
+    g_object_get (object, "is-readout", &priv->is_readout, NULL);
+}
+
 static void
 uca_camera_class_init (UcaCameraClass *klass)
 {
@@ -362,6 +389,7 @@ uca_camera_class_init (UcaCameraClass *klass)
     gobject_class->get_property = uca_camera_get_property;
     gobject_class->dispose = uca_camera_dispose;
     gobject_class->finalize = uca_camera_finalize;
+    gobject_class->constructed = uca_camera_constructed;
 
     klass->start_recording = NULL;
     klass->stop_recording = NULL;
@@ -790,7 +818,8 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
 
     g_mutex_lock (&mutex);
 
-    if (priv->is_recording) {
+    if (uca_camera_is_recording (camera)) {
+        priv->is_recording = TRUE;
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
                      "Camera is already recording");
         goto start_recording_unlock;
@@ -864,7 +893,8 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
 
     g_mutex_lock (&mutex);
 
-    if (!priv->is_recording) {
+    if (!uca_camera_is_recording (camera)) {
+        priv->is_recording = FALSE;
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
                      "Camera is not recording");
         goto error_stop_recording;
@@ -913,8 +943,21 @@ error_stop_recording:
 gboolean
 uca_camera_is_recording (UcaCamera *camera)
 {
+    gboolean result;
     g_return_val_if_fail (UCA_IS_CAMERA (camera), FALSE);
-    return camera->priv->is_recording;
+    g_object_get (camera, "is-recording", &result, NULL);
+    return result;
+}
+
+static gboolean
+already_recording (UcaCamera *camera, GError **error)
+{
+    if (uca_camera_is_recording (camera)) {
+        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
+                     "Camera is still recording");
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /**
@@ -957,11 +1000,7 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
 
     g_mutex_lock (&mutex);
 
-    if (camera->priv->is_recording) {
-        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                     "Camera is still recording");
-    }
-    else {
+    if (!already_recording (camera, error)) {
         GError *tmp_error = NULL;
 
         g_mutex_lock (&access_lock);
@@ -1003,11 +1042,7 @@ uca_camera_stop_readout (UcaCamera *camera, GError **error)
 
     g_mutex_lock (&mutex);
 
-    if (camera->priv->is_recording) {
-        g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
-                     "Camera is still recording");
-    }
-    else {
+    if (!already_recording (camera, error)) {
         GError *tmp_error = NULL;
 
         g_mutex_lock (&access_lock);
@@ -1065,8 +1100,9 @@ uca_camera_trigger (UcaCamera *camera, GError **error)
 
     g_mutex_lock (&mutex);
 
-    if (!camera->priv->is_recording)
+    if (!camera->priv->is_recording) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING, "Camera is not recording");
+    }
     else {
         (*klass->trigger) (camera, error);
     }
