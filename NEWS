@@ -1,6 +1,33 @@
 Changelog
 =========
 
+Changes in libuca 2.4.0
+-----------------------
+
+Released on April 1st 2022.
+
+Enhancements:
+
+- info sorts property names
+- Added UCA_CAMERA_ERROR_DEVICE for device-specific errors which are not covered
+  by specific error codes
+- errors are printed on stderr
+- meson does not require gtk
+- added uca_camera_stopped_recording to report that recording was cancelled
+- properly initialize Python 3
+- recording state policy finalized
+    - use real device state in the properties and respective functions
+    - use cached device state in grab and trigger
+    - synchronize camera state on construction
+- meson: add with_python_multithreading option
+
+Fixes:
+
+- minor memory leaks
+- avoid eternal spin-lock if thread ends with error
+- fix error on dispose
+
+
 Changes in libuca 2.3.0
 -----------------------
 
