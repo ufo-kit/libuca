@@ -15,7 +15,7 @@ Enhancements:
 - meson does not require gtk
 - added uca_camera_stopped_recording to report that recording was cancelled
 - properly initialize Python 3
-- recording state policy finalized
+- recording state policy finalized (#44 after almost 8 years :fireworks:)
     - use real device state in the properties and respective functions
     - use cached device state in grab and trigger
     - synchronize camera state on construction
