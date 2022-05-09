@@ -6,3 +6,8 @@ option('with_python_multithreading',
     type : 'boolean',
     value : true,
     description: 'Release Python GIL on long operations')
+
+option('python',
+    type : 'string',
+    value : 'python3',
+    description : 'Name of python executable')

@@ -9,11 +9,9 @@ headers = [
     'uca-plugin-manager.h',
 ]
 
-# Python3.8 requires python3-embed
-python_dep = dependency('python3-embed', required: false)
-if not python_dep.found()
-  python_dep = dependency('python3', required: false)
-endif
+pymod = import('python')
+python = pymod.find_installation(get_option('python'))
+python_dep = python.dependency(required: false, embed: true)
 
 plugindir = '@0@/@1@/uca'.format(get_option('prefix'), get_option('libdir'))
 
