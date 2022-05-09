@@ -364,7 +364,7 @@ uca_camera_finalize (GObject *object)
     G_OBJECT_CLASS (uca_camera_parent_class)->finalize (object);
 }
 
-/**
+/*
  * Make sure the camera reads the actual device state once the child plugin has
  * been constructed. This allows us to use the camera even if e.g. the actual
  * device is in the recording state when we construct our object.
