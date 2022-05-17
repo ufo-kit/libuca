@@ -75,7 +75,7 @@ pkg.generate(
     name: 'libuca',
     description: 'Library for unified scientific camera access',
     requires: ['glib-2.0', 'gobject-2.0'],
-    variables: ['plugindir=${libdir}/uca'],
+    variables: ['plugindir=${libdir}/uca', 'with_python_multithreading=' + '@0@'.format(get_option('with_python_multithreading'))],
 )
 
 install_headers(headers, subdir: 'uca')
