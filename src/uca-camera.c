@@ -626,10 +626,6 @@ uca_camera_init (UcaCamera *camera)
 
 #ifdef WITH_PYTHON_MULTITHREADING
     g_log (G_LOG_LEVEL_DOMAIN, G_LOG_LEVEL_DEBUG, "Camera initialized with Python support");
-    Py_Initialize();
-    if (PY_MAJOR_VERSION == 2 || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7)) {
-        PyEval_InitThreads();
-    }
 #endif
 }
 
