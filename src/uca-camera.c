@@ -802,6 +802,8 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
     UcaCameraPrivate *priv;
     static GMutex mutex;
     GError *tmp_error = NULL;
+    guint width, height, bitdepth;
+    guint pixel_size;
 
     g_return_if_fail (UCA_IS_CAMERA (camera));
 
@@ -819,6 +821,16 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_RECORDING,
                      "Camera is already recording");
         goto start_recording_unlock;
+    }
+
+    if (priv->buffered) {
+        g_object_get (camera,
+                      "roi-width", &width,
+                      "roi-height", &height,
+                      "sensor-bitdepth", &bitdepth,
+                      NULL);
+
+        pixel_size = bitdepth <= 8 ? 1 : 2;
     }
 
     if (priv->transfer_async && (camera->grab_func == NULL)) {
@@ -842,19 +854,7 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
         g_propagate_error (error, tmp_error);
 
     if (priv->buffered) {
-        guint width, height, bitdepth;
-        guint pixel_size;
-
-        g_object_get (camera,
-                      "roi-width", &width,
-                      "roi-height", &height,
-                      "sensor-bitdepth", &bitdepth,
-                      NULL);
-
-        pixel_size = bitdepth <= 8 ? 1 : 2;
-        priv->ring_buffer = uca_ring_buffer_new (width * height * pixel_size,
-                                                         priv->num_buffers);
-
+        priv->ring_buffer = uca_ring_buffer_new (width * height * pixel_size, priv->num_buffers);
         /* Let's read out the frames from another thread */
         priv->read_thread = g_thread_new ("read-thread", (GThreadFunc) buffer_thread, camera);
     }
