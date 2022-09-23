@@ -60,18 +60,23 @@ struct _UcaFileCameraPrivate {
     GList *current;
 };
 
-static void
+static gboolean
 read_tiff_meta_data (UcaFileCameraPrivate *priv, const gchar *fname)
 {
     TIFF *file;
 
     file = TIFFOpen (fname, "r");
+    if (!file) {
+        return FALSE;
+    }
 
     TIFFGetField (file, TIFFTAG_BITSPERSAMPLE, &priv->bitdepth);
     TIFFGetField (file, TIFFTAG_IMAGEWIDTH, &priv->width);
     TIFFGetField (file, TIFFTAG_IMAGELENGTH, &priv->height);
 
     TIFFClose (file);
+
+    return TRUE;
 }
 
 static gboolean
@@ -86,6 +91,9 @@ read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
     int step = priv->width;
 
     file = TIFFOpen (fname, "r");
+    if (!file) {
+        return FALSE;
+    }
 
     TIFFGetField (file, TIFFTAG_BITSPERSAMPLE, &bitdepth);
     TIFFGetField (file, TIFFTAG_IMAGEWIDTH, &width);
@@ -143,8 +151,20 @@ update_fnames (UcaFileCameraPrivate *priv)
     priv->fnames = g_list_sort (priv->fnames, (GCompareFunc) g_strcmp0);
     priv->current = priv->fnames;
 
-    if (priv->current != NULL)
-        read_tiff_meta_data (priv, (const gchar *) priv->current->data);
+    if (priv->current != NULL) {
+        while (TRUE) {
+            fname = (const gchar *) priv->current->data;
+            if (read_tiff_meta_data (priv, fname)) {
+                break;
+            } else {
+                g_warning ("Cannot read %s", fname);
+            }
+            priv->current = g_list_next (priv->current);
+            if (!priv->current) {
+                g_error ("No valid tif files found");
+            }
+        }
+    }
 
     g_dir_close (dir);
     return TRUE;
