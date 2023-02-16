@@ -48,7 +48,11 @@ struct _UcaPluginManagerPrivate {
     GList *funcs;
 };
 
-static const gchar *MODULE_PATTERN = "libuca([A-Za-z0-9]+)";
+#ifdef _WIN32
+    static const gchar *MODULE_PATTERN = "uca([A-Za-z0-9]+)";
+#else
+    static const gchar *MODULE_PATTERN = "libuca([A-Za-z0-9]+)";
+#endif
 
 typedef GType (*GetTypeFunc) (void);
 
@@ -199,7 +203,7 @@ find_camera_module_path (GList *search_paths, const gchar *name)
     GList *paths;
 
 #ifdef _WIN32
-    modname = g_strdup_printf ("libuca%s.dll", name);
+    modname = g_strdup_printf ("uca%s.dll", name);
 #else
     modname = g_strdup_printf ("libuca%s.so", name);
 #endif
