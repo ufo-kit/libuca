@@ -86,7 +86,7 @@ endif()
 #}}}
 #{{{ Subdirectories
 add_subdirectory(src)
-#add_subdirectory(plugins)
+add_subdirectory(plugins)
 add_subdirectory(test)
 add_subdirectory(bin)
 #}}}

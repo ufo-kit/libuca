@@ -19,7 +19,6 @@
 #include <gio/gio.h>
 #include <string.h>
 #include <math.h>
-#include <signal.h>
 #include "uca-mock-camera.h"
 
 #define UCA_MOCK_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_MOCK_CAMERA, UcaMockCameraPrivate))
@@ -262,13 +261,6 @@ mock_grab_func(gpointer data)
     return NULL;
 }
 
-static void
-handle_sigusr1 (int signum)
-{
-    g_mutex_lock (&signal_mutex);
-    g_cond_signal (&signal_cond);
-    g_mutex_unlock (&signal_mutex);
-}
 
 static void
 uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
@@ -278,7 +270,6 @@ uca_mock_camera_start_recording(UcaCamera *camera, GError **error)
     g_return_if_fail(UCA_IS_MOCK_CAMERA(camera));
 
     priv = UCA_MOCK_CAMERA_GET_PRIVATE(camera);
-    signal (SIGUSR1, handle_sigusr1);
 
     /* TODO: check that roi_x + roi_width < priv->width */
     priv->dummy_data = (guint8 *) g_malloc0(priv->roi_width * priv->roi_height * priv->bytes);
@@ -356,12 +347,6 @@ uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     if (trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE)
         g_free (g_async_queue_pop (priv->trigger_queue));
 
-    if (trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL) {
-        /* wait for signal to arrive */
-        g_mutex_lock (&signal_mutex);
-        g_cond_wait (&signal_cond, &signal_mutex);
-        g_mutex_unlock (&signal_mutex);
-    }
 
     g_usleep (G_USEC_PER_SEC * exposure_time);
 
