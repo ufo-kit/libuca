@@ -1,0 +1,36 @@
+name: libuca tests
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-20.04]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up ubuntu ${{ matrix.os }}
+        run: |
+          sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection
+      - name: build
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make
+          sudo make install
+      - name: run test-mock
+        run: |
+          pwd
+          ls
+          build/test/test-mock
+      - name: run test-ring-buffer
+        run: |
+          build/test/test-ring-buffer
