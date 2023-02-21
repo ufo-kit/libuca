@@ -10,22 +10,24 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04]
+        os: [ubuntu-22.04, ubuntu-20.04, windows-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up ubuntu ${{ matrix.os }}
-        run: |
-          sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection
+      - name: get conan
+        uses: turtlebrowser/get-conan@v1.0
+      - name: create conan profile
+        run: conan profile new default --detect
       - name: build
         run: |
           mkdir build
           cd build
+          conan install .. --build missing
           cmake ..
-          make
-          sudo make install
+          cmake --build .
+          cmake --install .
       - name: run test-mock
         run: |
           pwd
