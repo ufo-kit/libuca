@@ -28,11 +28,14 @@ jobs:
           cmake ..
           cmake --build .
           cmake --install .
+      - name: build
+        uses: actions/upload-artifact@v3
+        with:
+          name: build_folder
+          path: build
       - name: run test-mock
         run: |
-          pwd
-          dir
-          build\test\test-mock.exe
+          build\bin\test-mock.exe
       - name: run test-ring-buffer
         run: |
-          build\test\test-ring-buffer
+          build\bin\test-ring-buffer
