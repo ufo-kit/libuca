@@ -31,8 +31,8 @@ jobs:
       - name: run test-mock
         run: |
           pwd
-          ls
-          build/test/test-mock
+          dir
+          build\test\test-mock.exe
       - name: run test-ring-buffer
         run: |
-          build/test/test-ring-buffer
+          build\test\test-ring-buffer
