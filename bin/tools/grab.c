@@ -109,7 +109,7 @@ write_tiff (UcaRingBuffer *buffer,
         TIFFSetField (tif, TIFFTAG_PAGENUMBER, i, n_frames);
 
         for (guint y = 0; y < height; y++, offset += width * bytes_per_pixel)
-            TIFFWriteScanline (tif, data + offset, y, 0);
+            TIFFWriteScanline (tif, (guint8*)data + offset, y, 0);
 
         TIFFWriteDirectory (tif);
     }

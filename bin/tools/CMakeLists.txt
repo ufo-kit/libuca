@@ -2,13 +2,10 @@
 set(libs uca)
 #}}}
 #{{{ Configure
-find_package(TIFF)
 
-if (TIFF_FOUND)
-    set(HAVE_LIBTIFF "1")
-    list(APPEND libs ${TIFF_LIBRARIES})
-    include_directories(${TIFF_INCLUDE_DIRS})
-endif ()
+set(HAVE_LIBTIFF "1")
+list(APPEND libs CONAN_PKG::libtiff)
+
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)

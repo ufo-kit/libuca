@@ -14,7 +14,7 @@ class UcaConan(ConanFile):
     default_options = {"shared":True}
     generators = "cmake"
     exports_sources = "src/*", "include/*", "test/*", "bin/*", "plugins/*", "CMakeLists.txt", "package.sh.in"
-    requires = "glib/2.75.0",
+    requires = "glib/2.75.0", "libtiff/4.4.0",
 
     def _configured_cmake(self):
         cmake = CMake(self)
