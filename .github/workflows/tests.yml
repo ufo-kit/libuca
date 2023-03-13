@@ -19,7 +19,9 @@ jobs:
       - name: get conan
         uses: turtlebrowser/get-conan@v1.0
       - name: create conan profile
-        run: conan profile new default --detect
+        run: |
+          pip install --force-reinstall -v "conan==1.59.0"
+          conan profile new default --detect
       - name: build
         run: |
           mkdir build
