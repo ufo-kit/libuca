@@ -11,15 +11,15 @@ class UcaConan(ConanFile):
     topics = ("utilities",)
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options = {"shared":True}
     generators = "cmake"
-    exports_sources = "src/*", "include/*", "test/*", "bin/*", "CMakeLists.txt", "package.sh.in"
-    requires = "glib/2.68.1",
+    exports_sources = "src/*", "include/*", "test/*", "bin/*", "plugins/*", "CMakeLists.txt", "package.sh.in"
+    requires = "glib/2.75.0",
 
     def _configured_cmake(self):
         cmake = CMake(self)
         cmake.configure(source_folder=".")
-        return cmake
+        return cmake        
 
     def build(self):
         self._configured_cmake().build()
@@ -33,3 +33,8 @@ class UcaConan(ConanFile):
     def imports(self):
         self.copy("*.dll", "bin", "bin")
         self.copy("*.dylib", "lib", "lib")
+        
+    def deploy(self):
+        self.copy("*.exe")
+        self.copy("*.dll")
+        self.copy_deps("*.dll")
