@@ -10,27 +10,34 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04]
+        os: [ubuntu-22.04, ubuntu-20.04, windows-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up ubuntu ${{ matrix.os }}
+      - name: get conan
+        uses: turtlebrowser/get-conan@v1.0
+      - name: create conan profile
         run: |
-          sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection
+          pip install --force-reinstall -v "conan==1.59.0"
+          conan profile new default --detect
       - name: build
         run: |
           mkdir build
           cd build
+          conan install .. -o libuca:shared=True --build missing
           cmake ..
-          make
-          sudo make install
+          cmake --build .
+          cmake --install .
+      - name: build
+        uses: actions/upload-artifact@v3
+        with:
+          name: build_folder
+          path: build
       - name: run test-mock
         run: |
-          pwd
-          ls
-          build/test/test-mock
+          build\bin\test-mock.exe
       - name: run test-ring-buffer
         run: |
-          build/test/test-ring-buffer
+          build\bin\test-ring-buffer
