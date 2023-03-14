@@ -29,6 +29,7 @@ class UcaConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["uca"]
+        self.cpp_info.defines = ["UCA_API_WINDOWS_IMPORT"]
 
     def imports(self):
         self.copy("*.dll", "bin", "bin")

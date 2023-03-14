@@ -124,6 +124,7 @@ endif ()
 #{{{ Installation
 install(TARGETS uca
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         COMPONENT libraries)
 
@@ -131,7 +132,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libuca.pc
         DESTINATION ${CMAKE_INSTALL_PKGCONFIGDIR}
         COMPONENT libraries)
 
-install(FILES ${uca_HDRS}
+install(FILES ${uca_HDRS} uca-api.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/uca
         COMPONENT headers)
 
