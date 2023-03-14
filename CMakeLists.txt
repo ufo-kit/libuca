@@ -65,7 +65,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
                ${CMAKE_CURRENT_BINARY_DIR}/package.sh)
 #}}}
 #{{{ Common dependencies
-find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
+find_program(GLIB2_MKENUMS glib-mkenums REQUIRED HINTS ${CONAN_BIN_DIRS_GLIB})
 
 set(GLIB_VERSION_MIN_REQUIRED "GLIB_VERSION_2_38")
 set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_38")

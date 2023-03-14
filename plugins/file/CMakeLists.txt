@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 2.6)
 project(ucafile C)
 
 set(UCA_CAMERA_NAME "file")

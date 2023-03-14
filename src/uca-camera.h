@@ -33,9 +33,17 @@ G_BEGIN_DECLS
 #define UCA_UNIT_QUARK      uca_unit_quark()
 #define UCA_WRITABLE_QUARK  uca_writable_quark()
 
-GQuark uca_camera_error_quark(void);
-GQuark uca_unit_quark(void);
-GQuark uca_writable_quark(void);
+#if defined(UCA_API_WINDOWS_IMPORT)
+#define UCA_API __declspec(dllimport)
+#elif defined(UCA_API_WINDOWS_EXPORT)
+#define UCA_API __declspec(dllexport)
+#else
+#define UCA_API
+#endif
+
+UCA_API GQuark uca_camera_error_quark(void);
+UCA_API GQuark uca_unit_quark(void);
+UCA_API GQuark uca_writable_quark(void);
 
 typedef enum {
     UCA_CAMERA_ERROR_NOT_FOUND,
@@ -107,7 +115,7 @@ enum {
     N_BASE_PROPERTIES
 };
 
-extern const gchar *uca_camera_props[N_BASE_PROPERTIES];
+UCA_API extern const gchar *uca_camera_props[N_BASE_PROPERTIES];
 
 /**
  * UcaCameraGrabFunc:
@@ -147,56 +155,56 @@ struct _UcaCameraClass {
     gboolean (*readout)     (UcaCamera *camera, gpointer data, guint index, GError **error);
 };
 
-UcaCamera * uca_camera_new              (const gchar        *type,
+UCA_API UcaCamera * uca_camera_new              (const gchar        *type,
                                          GError            **error);
-gboolean    uca_camera_parse_arg_props  (UcaCamera          *camera,
+UCA_API gboolean    uca_camera_parse_arg_props  (UcaCamera          *camera,
                                          gchar             **argv,
                                          guint               argc,
                                          GError            **error);
-void        uca_camera_start_recording  (UcaCamera          *camera,
+UCA_API void        uca_camera_start_recording  (UcaCamera          *camera,
                                          GError            **error);
-void        uca_camera_stop_recording   (UcaCamera          *camera,
+UCA_API void        uca_camera_stop_recording   (UcaCamera          *camera,
                                          GError            **error);
-gboolean    uca_camera_is_recording     (UcaCamera          *camera);
-gboolean    uca_camera_stopped_recording(UcaCamera          *camera);
-void        uca_camera_start_readout    (UcaCamera          *camera,
+UCA_API gboolean    uca_camera_is_recording     (UcaCamera          *camera);
+UCA_API gboolean    uca_camera_stopped_recording(UcaCamera          *camera);
+UCA_API void        uca_camera_start_readout    (UcaCamera          *camera,
                                          GError            **error);
-void        uca_camera_stop_readout     (UcaCamera          *camera,
+UCA_API void        uca_camera_stop_readout     (UcaCamera          *camera,
                                          GError            **error);
-void        uca_camera_trigger          (UcaCamera          *camera,
+UCA_API void        uca_camera_trigger          (UcaCamera          *camera,
                                          GError            **error);
-void        uca_camera_write            (UcaCamera          *camera,
+UCA_API void        uca_camera_write            (UcaCamera          *camera,
                                          const gchar        *name,
                                          gpointer            data,
                                          gsize               size,
                                          GError            **error);
-gboolean    uca_camera_grab             (UcaCamera          *camera,
+UCA_API gboolean    uca_camera_grab             (UcaCamera          *camera,
                                          gpointer            data,
                                          GError            **error);
-gboolean    uca_camera_readout          (UcaCamera          *camera,
+UCA_API gboolean    uca_camera_readout          (UcaCamera          *camera,
                                          gpointer            data,
                                          guint               index,
                                          GError            **error);
-void        uca_camera_set_grab_func    (UcaCamera          *camera,
+UCA_API void        uca_camera_set_grab_func    (UcaCamera          *camera,
                                          UcaCameraGrabFunc   func,
                                          gpointer            user_data);
-void        uca_camera_register_unit    (UcaCamera          *camera,
+UCA_API void        uca_camera_register_unit    (UcaCamera          *camera,
                                          const gchar        *prop_name,
                                          UcaUnit             unit);
-UcaUnit     uca_camera_get_unit         (UcaCamera          *camera,
+UCA_API UcaUnit     uca_camera_get_unit         (UcaCamera          *camera,
                                          const gchar        *prop_name);
-void        uca_camera_set_writable     (UcaCamera          *camera,
+UCA_API void        uca_camera_set_writable     (UcaCamera          *camera,
                                          const gchar        *prop_name,
                                          gboolean            writable);
-void        uca_camera_pspec_set_writable
+UCA_API void        uca_camera_pspec_set_writable
                                         (GParamSpec         *pspec,
                                          gboolean            writable);
-gboolean    uca_camera_is_writable_during_acquisition
+UCA_API gboolean    uca_camera_is_writable_during_acquisition
                                         (UcaCamera          *camera,
                                          const gchar        *prop_name);
 
 
-GType uca_camera_get_type(void);
+UCA_API GType uca_camera_get_type(void);
 
 G_END_DECLS
 

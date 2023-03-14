@@ -21,7 +21,7 @@ if (CI_INSTALL_PREFIX)
 endif()
 #}}}
 #{{{ Target
-add_library(uca STATIC
+add_library(uca SHARED
   ${uca_SRCS}
   ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)
 
@@ -36,6 +36,11 @@ target_include_directories(uca
 target_link_libraries(uca
   PUBLIC CONAN_PKG::glib)
 
+if (MSVC)
+  target_compile_definitions(uca
+    PRIVATE -DUCA_API_WINDOWS_EXPORT
+    INTERFACE -DUCA_API_WINDOWS_IMPORT)
+endif()
 #}}}
 #{{{ Python
 
