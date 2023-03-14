@@ -49,7 +49,7 @@ struct _UcaPluginManagerPrivate {
 };
 
 #ifdef _WIN32
-    static const gchar *MODULE_PATTERN = "uca([A-Za-z0-9]+)";
+    static const gchar *MODULE_PATTERN = "uca([A-Za-z0-9]+).dll";
 #else
     static const gchar *MODULE_PATTERN = "libuca([A-Za-z0-9]+)";
 #endif
