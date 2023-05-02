@@ -38,8 +38,8 @@ target_link_libraries(uca
 
 if (MSVC)
   target_compile_definitions(uca
-    PRIVATE -DUCA_API_WINDOWS_EXPORT
-    INTERFACE -DUCA_API_WINDOWS_IMPORT)
+    PRIVATE -DUCA_API_MSVC_EXPORT
+    INTERFACE -DUCA_API_MSVC_IMPORT)
 endif()
 #}}}
 #{{{ Python

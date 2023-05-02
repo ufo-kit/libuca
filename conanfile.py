@@ -1,5 +1,5 @@
 from conans import ConanFile, CMake, tools
-
+from conan.tools.microsoft.visual import is_msvc
 
 class UcaConan(ConanFile):
     name = "libuca"
@@ -29,7 +29,8 @@ class UcaConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["uca"]
-        self.cpp_info.defines = ["UCA_API_WINDOWS_IMPORT"]
+        if is_msvc(self):
+            self.cpp_info.defines = ["UCA_API_MSVC_IMPORT"]
 
     def imports(self):
         self.copy("*.dll", "bin", "bin")
