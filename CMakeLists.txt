@@ -1,12 +1,52 @@
 cmake_minimum_required(VERSION 3.11)
 project(uca C)
 
-if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-  message(FATAL_ERROR "Please run 'conan install' first!")
-endif()
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+if (UCA_CONAN)
+    message(STATUS "Using conan")
+    if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+        message(FATAL_ERROR "Please run 'conan install' first!")
+    endif()
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup(TARGETS)
+    find_program(GLIB2_MKENUMS glib-mkenums REQUIRED HINTS ${CONAN_BIN_DIRS_GLIB})
+    # These are not supported with conan
+    set(WITH_PYTHON_MULTITHREADING OFF)
+    set(WITH_GIR OFF)
+    set(UCA_DEPS CONAN_PKG::glib)
+    set(LIBTIFF CONAN_PKG::libtiff)
+    set(HAVE_LIBTIFF "1")
+else()
+    option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
+    option(WITH_GIR "Build introspection files" ON)
+    option(WITH_TIFF "Support loading tiff files" ON)
+    message(STATUS "Using pkg-config")
+    find_package(PkgConfig)
+    find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
+    pkg_check_modules(GLIB2 glib-2.0>=2.38 REQUIRED)
+    pkg_check_modules(GOBJECT2 gobject-2.0>=2.38 REQUIRED)
+    pkg_check_modules(GMODULE2 gmodule-2.0>=2.38 REQUIRED)
+    pkg_check_modules(GIO2 gio-2.0>=2.38 REQUIRED)
 
-conan_basic_setup(TARGETS)
+    if (WITH_TIFF)
+        find_package(TIFF REQUIRED)
+        set(HAVE_LIBTIFF "1")
+        set(LIBTIFF TIFF::TIFF)
+    endif()
+    
+    include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${GLIB2_INCLUDE_DIRS}
+        ${GOBJECT2_INCLUDE_DIRS}
+        ${GMODULE2_INCLUDE_DIRS}
+        ${GIO2_INCLUDE_DIRS}
+    )
+    set(UCA_DEPS
+        ${GLIB2_LIBRARIES}
+        ${GOBJECT2_LIBRARIES}
+        ${GMODULE2_LIBRARIES}
+        ${GIO2_LIBRARIES}
+    )
+endif()
 
 #{{{ CMake
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -80,12 +120,6 @@ set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_38")
 link_directories(${GLIB2_LIBRARY_DIRS})
 #}}}
 
-#{{{ Common variables
-
-set(UCA_ENUM_HDRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/uca-camera.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/plugins/pco/uca-pco-camera.h)
-#}}}
 #{{{ Common definitions
 if (GNU)
   add_definitions("-std=c99 -Wall -fPIC")

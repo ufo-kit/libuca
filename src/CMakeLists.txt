@@ -6,10 +6,14 @@ set(uca_SRCS
 )
 
 set(uca_HDRS 
-  uca-api.h
   uca-camera.h
   uca-plugin-manager.h
   uca-ring-buffer.h
+)
+
+set(uca_ALL_HEADERS
+  ${uca_HDRS} 
+  uca-api.h
 )
 
 create_enums(
@@ -38,7 +42,7 @@ target_include_directories(uca
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 target_link_libraries(uca
-  PUBLIC CONAN_PKG::glib)
+  PUBLIC ${UCA_DEPS})
 
 if (MSVC)
   target_compile_definitions(uca
@@ -48,7 +52,6 @@ endif()
 #}}}
 #{{{ Python
 
-option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
 if (WITH_PYTHON_MULTITHREADING)
   pkg_check_modules(PYTHON python)
   if (NOT PYTHON_FOUND)
@@ -61,13 +64,12 @@ endif ()
 
 #}}}
 #{{{ GObject introspection
-option(WITH_GIR "Build introspection files" ON)
-pkg_check_modules(GOBJECT_INTROSPECTION gobject-introspection-1.0)
 
 if (WITH_GIR)
+  pkg_check_modules(GOBJECT_INTROSPECTION gobject-introspection-1.0)
   if (NOT GOBJECT_INTROSPECTION_FOUND)
       message(FATAL_ERROR "gobject-instrospection not found, but required for WITH_GIR")
-  endif
+  endif()
 
   pkg_check_variable(gobject-introspection-1.0 g_ir_scanner)
   pkg_check_variable(gobject-introspection-1.0 g_ir_compiler)
@@ -121,7 +123,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libuca.pc
   DESTINATION ${CMAKE_INSTALL_PKGCONFIGDIR}
   COMPONENT libraries)
 
-install(FILES ${uca_HDRS}
+install(FILES ${uca_ALL_HEADERS}
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/uca
   COMPONENT headers)
 

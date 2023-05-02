@@ -3,9 +3,7 @@ set(libs uca)
 #}}}
 #{{{ Configure
 
-set(HAVE_LIBTIFF "1")
-list(APPEND libs CONAN_PKG::libtiff)
-
+list(APPEND libs ${LIBTIFF})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
