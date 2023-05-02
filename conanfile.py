@@ -18,7 +18,7 @@ class UcaConan(ConanFile):
 
     def _configured_cmake(self):
         cmake = CMake(self)
-        cmake.configure(source_folder=".")
+        cmake.configure(source_folder=".", defs={"UCA_CONAN": True, "WITH_PYTHON_MULTITHREADING": False, "WITH_GIR": False})
         return cmake        
 
     def build(self):
