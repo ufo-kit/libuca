@@ -1,25 +1,25 @@
 #{{{ Sources
 set(uca_SRCS
-  uca-camera.c
-  uca-plugin-manager.c
-  uca-ring-buffer.c
+    uca-camera.c
+    uca-plugin-manager.c
+    uca-ring-buffer.c
 )
 
 set(uca_HDRS 
-  uca-camera.h
-  uca-plugin-manager.h
-  uca-ring-buffer.h
+    uca-camera.h
+    uca-plugin-manager.h
+    uca-ring-buffer.h
 )
 
 set(uca_ALL_HEADERS
-  ${uca_HDRS} 
-  uca-api.h
+    ${uca_HDRS} 
+    uca-api.h
 )
 
 create_enums(
-  uca-enums
-  ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums
-  ${uca_HDRS}
+    uca-enums
+    ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums
+    ${uca_HDRS}
 )
 
 #}}}
@@ -30,111 +30,111 @@ endif()
 #}}}
 #{{{ Target
 add_library(uca SHARED
-  ${uca_SRCS}
-  ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)
+    ${uca_SRCS}
+    ${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c)
 
 set_target_properties(uca PROPERTIES
-  VERSION ${UCA_VERSION_STRING}
-  SOVERSION ${UCA_ABI_VERSION})
+    VERSION ${UCA_VERSION_STRING}
+    SOVERSION ${UCA_ABI_VERSION})
 
 target_include_directories(uca
-  PUBLIC .
-  PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    PUBLIC .
+    PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 target_link_libraries(uca
-  PUBLIC ${UCA_DEPS})
+    PUBLIC ${UCA_DEPS})
 
 if (MSVC)
-  target_compile_definitions(uca
-    PRIVATE -DUCA_API_MSVC_EXPORT
-    INTERFACE -DUCA_API_MSVC_IMPORT)
+    target_compile_definitions(uca
+        PRIVATE -DUCA_API_MSVC_EXPORT
+        INTERFACE -DUCA_API_MSVC_IMPORT)
 endif()
 #}}}
 #{{{ Python
 
 if (WITH_PYTHON_MULTITHREADING)
-  pkg_check_modules(PYTHON python)
-  if (NOT PYTHON_FOUND)
-    message(FATAL_ERROR "python not found, but required for WITH_PYTHON_MULTITHREADING")
-  endif()
+    pkg_check_modules(PYTHON python)
+    if (NOT PYTHON_FOUND)
+        message(FATAL_ERROR "python not found, but required for WITH_PYTHON_MULTITHREADING")
+    endif()
 
-  target_include_directories(uca PRIVATE ${PYTHON_INCLUDE_DIRS})
-  target_link_libraries(uca PUBLIC ${PYTHON_LIBRARIES})
+    target_include_directories(uca PRIVATE ${PYTHON_INCLUDE_DIRS})
+    target_link_libraries(uca PUBLIC ${PYTHON_LIBRARIES})
 endif ()
 
 #}}}
 #{{{ GObject introspection
 
 if (WITH_GIR)
-  pkg_check_modules(GOBJECT_INTROSPECTION gobject-introspection-1.0)
-  if (NOT GOBJECT_INTROSPECTION_FOUND)
-      message(FATAL_ERROR "gobject-instrospection not found, but required for WITH_GIR")
-  endif()
+    pkg_check_modules(GOBJECT_INTROSPECTION gobject-introspection-1.0)
+    if (NOT GOBJECT_INTROSPECTION_FOUND)
+        message(FATAL_ERROR "gobject-instrospection not found, but required for WITH_GIR")
+    endif()
 
-  pkg_check_variable(gobject-introspection-1.0 g_ir_scanner)
-  pkg_check_variable(gobject-introspection-1.0 g_ir_compiler)
+    pkg_check_variable(gobject-introspection-1.0 g_ir_scanner)
+    pkg_check_variable(gobject-introspection-1.0 g_ir_compiler)
 
-  set(GIR_PREFIX "Uca-${UCA_ABI_VERSION}.0")
-  set(GIR_XML "${GIR_PREFIX}.gir")
-  set(GIR_TYPELIB "${GIR_PREFIX}.typelib")
-  set(_gir_input)
+    set(GIR_PREFIX "Uca-${UCA_ABI_VERSION}.0")
+    set(GIR_XML "${GIR_PREFIX}.gir")
+    set(GIR_TYPELIB "${GIR_PREFIX}.typelib")
+    set(_gir_input)
 
-  foreach(_src ${uca_SRCS} ${uca_HDRS})
-    list(APPEND _gir_input "${CMAKE_CURRENT_SOURCE_DIR}/${_src}")
-  endforeach()
+    foreach(_src ${uca_SRCS} ${uca_HDRS})
+        list(APPEND _gir_input "${CMAKE_CURRENT_SOURCE_DIR}/${_src}")
+    endforeach()
 
-  list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h")
-  list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c")
+    list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.h")
+    list(APPEND _gir_input "${CMAKE_CURRENT_BINARY_DIR}/uca-enums.c")
 
-  add_custom_command(OUTPUT ${GIR_XML}
-    COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_SCANNER}
-            --namespace=Uca
-            --nsversion=${UCA_ABI_VERSION}.0
-            --library=uca
-            --no-libtool
-            --include=GObject-2.0
-            --include=GModule-2.0
-            --output ${GIR_XML}
-            --warn-all
-            --quiet
-            ${_gir_input}
-    DEPENDS ${uca_SRCS}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    add_custom_command(OUTPUT ${GIR_XML}
+        COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_SCANNER}
+                --namespace=Uca
+                --nsversion=${UCA_ABI_VERSION}.0
+                --library=uca
+                --no-libtool
+                --include=GObject-2.0
+                --include=GModule-2.0
+                --output ${GIR_XML}
+                --warn-all
+                --quiet
+                ${_gir_input}
+        DEPENDS ${uca_SRCS}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-  add_custom_command(OUTPUT ${GIR_TYPELIB}
-    COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_COMPILER}
-            -o ${GIR_TYPELIB}
-            ${GIR_XML}
-    DEPENDS ${GIR_XML}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    add_custom_command(OUTPUT ${GIR_TYPELIB}
+        COMMAND ${GOBJECT_INTROSPECTION_1.0_G_IR_COMPILER}
+                -o ${GIR_TYPELIB}
+                ${GIR_XML}
+        DEPENDS ${GIR_XML}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-  add_custom_target(gir ALL DEPENDS ${GIR_XML} ${GIR_TYPELIB})
-  add_dependencies(gir uca)
+    add_custom_target(gir ALL DEPENDS ${GIR_XML} ${GIR_TYPELIB})
+    add_dependencies(gir uca)
 endif()
 #}}}
 #{{{ Installation
 install(TARGETS uca
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  COMPONENT libraries)
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT libraries)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libuca.pc
-  DESTINATION ${CMAKE_INSTALL_PKGCONFIGDIR}
-  COMPONENT libraries)
+    DESTINATION ${CMAKE_INSTALL_PKGCONFIGDIR}
+    COMPONENT libraries)
 
 install(FILES ${uca_ALL_HEADERS}
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/uca
-  COMPONENT headers)
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/uca
+    COMPONENT headers)
 
 if(WITH_GIR)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${GIR_XML}
-    DESTINATION ${CMAKE_INSTALL_GIRDIR}
-    COMPONENT libraries)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${GIR_XML}
+        DESTINATION ${CMAKE_INSTALL_GIRDIR}
+        COMPONENT libraries)
 
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${GIR_TYPELIB}
-    DESTINATION ${CMAKE_INSTALL_TYPELIBDIR}
-    COMPONENT libraries)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${GIR_TYPELIB}
+        DESTINATION ${CMAKE_INSTALL_TYPELIBDIR}
+        COMPONENT libraries)
 endif()
 #}}}
 #{{{ CPack

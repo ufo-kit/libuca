@@ -12,6 +12,8 @@ if (UCA_CONAN)
     # These are not supported with conan
     set(WITH_PYTHON_MULTITHREADING OFF)
     set(WITH_GIR OFF)
+    set(WITH_GUI OFF)
+    set(WITH_TOOLS ON)
     set(UCA_DEPS CONAN_PKG::glib)
     set(LIBTIFF CONAN_PKG::libtiff)
     set(HAVE_LIBTIFF "1")
@@ -26,6 +28,7 @@ else()
     pkg_check_modules(GOBJECT2 gobject-2.0>=2.38 REQUIRED)
     pkg_check_modules(GMODULE2 gmodule-2.0>=2.38 REQUIRED)
     pkg_check_modules(GIO2 gio-2.0>=2.38 REQUIRED)
+    include(PkgConfigVars)
 
     if (WITH_TIFF)
         find_package(TIFF REQUIRED)
@@ -93,13 +96,14 @@ macro(create_enums prefix template_prefix header_list)
 endmacro()
 #}}}
 #{{{ Configure
-#include(PkgConfigVars)
 include(GNUInstallDirs)
 
 if (MSVC)
+    # On windows, plugins go next to the applications
     set(CMAKE_INSTALL_PLUGINDIR ${CMAKE_INSTALL_BINDIR})
     set(UCA_PLUGINDIR ".")
 else()
+    # On *NIX systems, they are installed into the system
     set(CMAKE_INSTALL_PLUGINDIR ${CMAKE_INSTALL_LIBDIR}/uca)
     set(UCA_PLUGINDIR ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_PLUGINDIR})
 endif()
