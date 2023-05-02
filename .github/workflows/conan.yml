@@ -1,4 +1,4 @@
-name: conan
+name: libuca with dependencies via conan
 
 on:
   push:
