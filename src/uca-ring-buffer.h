@@ -30,7 +30,7 @@ struct _UcaRingBufferClass {
 };
 
 UCA_API UcaRingBuffer * uca_ring_buffer_new                 (gsize          block_size,
-                                                     guint          n_blocks);
+                                                             guint          n_blocks);
 UCA_API void            uca_ring_buffer_reset               (UcaRingBuffer *buffer);
 UCA_API gsize           uca_ring_buffer_get_block_size      (UcaRingBuffer *buffer);
 UCA_API guint           uca_ring_buffer_get_num_blocks      (UcaRingBuffer *buffer);
@@ -40,10 +40,10 @@ UCA_API gpointer        uca_ring_buffer_get_read_pointer    (UcaRingBuffer *buff
 UCA_API gpointer        uca_ring_buffer_get_write_pointer   (UcaRingBuffer *buffer);
 UCA_API void            uca_ring_buffer_write_advance       (UcaRingBuffer *buffer);
 UCA_API gpointer        uca_ring_buffer_get_pointer         (UcaRingBuffer *buffer,
-                                                     guint          index);
+                                                             guint          index);
 UCA_API gpointer        uca_ring_buffer_peek_pointer        (UcaRingBuffer *buffer);
 
-UCA_API GType uca_ring_buffer_get_type (void);
+UCA_API GType           uca_ring_buffer_get_type (void);
 
 G_END_DECLS
 

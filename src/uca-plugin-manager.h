@@ -50,26 +50,30 @@ struct _UcaPluginManagerClass {
     GObjectClass parent_class;
 };
 
-UCA_API UcaPluginManager    *uca_plugin_manager_new         (void);
-UCA_API void                 uca_plugin_manager_add_path    (UcaPluginManager   *manager,
+UCA_API UcaPluginManager    *uca_plugin_manager_new (void);
+UCA_API void                 uca_plugin_manager_add_path
+                                                    (UcaPluginManager   *manager,
                                                      const gchar        *path);
 UCA_API GList               *uca_plugin_manager_get_available_cameras
                                                     (UcaPluginManager   *manager);
-UCA_API UcaCamera           *uca_plugin_manager_get_camerah (UcaPluginManager   *manager,
+UCA_API UcaCamera           *uca_plugin_manager_get_camerah
+                                                    (UcaPluginManager   *manager,
                                                      const gchar        *name,
                                                      GHashTable         *parameters,
                                                      GError            **error);
-UCA_API UcaCamera           *uca_plugin_manager_get_camerav (UcaPluginManager   *manager,
+UCA_API UcaCamera           *uca_plugin_manager_get_camerav
+                                                    (UcaPluginManager   *manager,
                                                      const gchar        *name,
                                                      guint               n_parameters,
                                                      GParameter         *parameters,
                                                      GError            **error);
-UCA_API UcaCamera           *uca_plugin_manager_get_camera  (UcaPluginManager   *manager,
+UCA_API UcaCamera           *uca_plugin_manager_get_camera 
+                                                    (UcaPluginManager   *manager,
                                                      const gchar        *name,
                                                      GError            **error,
                                                      const gchar        *first_prop_name,
                                                      ...);
-UCA_API GType                uca_plugin_manager_get_type    (void);
+UCA_API GType                uca_plugin_manager_get_type (void);
 
 G_END_DECLS
 
