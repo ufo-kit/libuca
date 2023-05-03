@@ -53,14 +53,10 @@ endif()
 #{{{ Python
 
 if (WITH_PYTHON_MULTITHREADING)
-    pkg_check_modules(PYTHON python3)
-    if (NOT PYTHON_FOUND)
-        pkg_check_modules(PYTHON python)
-    endif()
+    pkg_check_modules(PYTHON python3-embed)
     if (NOT PYTHON_FOUND)
         message(FATAL_ERROR "python not found, but required for WITH_PYTHON_MULTITHREADING")
     endif()
-
     target_include_directories(uca PRIVATE ${PYTHON_INCLUDE_DIRS})
     target_link_libraries(uca PUBLIC ${PYTHON_LIBRARIES})
 endif ()

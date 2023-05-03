@@ -52,6 +52,7 @@ else()
         ${GOBJECT2_LIBRARIES}
         ${GMODULE2_LIBRARIES}
         ${GIO2_LIBRARIES}
+        m # Link the math library libm, it is used by glib
     )
 endif()
 

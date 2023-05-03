@@ -13,10 +13,6 @@ add_library(ucamock SHARED
             uca-mock-camera.c)
 
 target_link_libraries(ucamock PUBLIC uca)
-if (NOT WIN32)
-    # Link the math library on platforms that need it
-    target_link_libraries(ucamock PUBLIC m)
-endif()
 
 install(TARGETS ucamock
         LIBRARY DESTINATION ${CMAKE_INSTALL_PLUGINDIR}
