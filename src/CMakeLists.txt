@@ -53,7 +53,10 @@ endif()
 #{{{ Python
 
 if (WITH_PYTHON_MULTITHREADING)
-    pkg_check_modules(PYTHON python)
+    pkg_check_modules(PYTHON python3)
+    if (NOT PYTHON_FOUND)
+        pkg_check_modules(PYTHON python)
+    endif()
     if (NOT PYTHON_FOUND)
         message(FATAL_ERROR "python not found, but required for WITH_PYTHON_MULTITHREADING")
     endif()
