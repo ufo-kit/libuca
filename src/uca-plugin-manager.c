@@ -49,9 +49,15 @@ struct _UcaPluginManagerPrivate {
 };
 
 #ifdef _WIN32
-    static const gchar *MODULE_PATTERN = "uca([A-Za-z0-9]+).dll";
+
+static const gchar *MODULE_SEARCH_PATTERN = "uca([A-Za-z0-9]+).dll";
+static const gchar *MODULE_PRINT_PATTERN = "uca%s.dll";
+
 #else
-    static const gchar *MODULE_PATTERN = "libuca([A-Za-z0-9]+)";
+
+static const gchar *MODULE_SEARCH_PATTERN = "libuca([A-Za-z0-9]+)";
+static const gchar *MODULE_PRINT_PATTERN = "libuca%s.so";
+
 #endif
 
 typedef GType (*GetTypeFunc) (void);
@@ -119,7 +125,7 @@ get_camera_module_paths (const gchar *path)
     GDir *dir;
     GList *result = NULL;
 
-    pattern = g_regex_new (MODULE_PATTERN, 0, 0, NULL);
+    pattern = g_regex_new (MODULE_SEARCH_PATTERN, 0, 0, NULL);
     dir = g_dir_open (path, 0, NULL);
 
     if (dir != NULL) {
@@ -160,7 +166,7 @@ transform_camera_module_path_to_name (gchar *path, GList **result)
     GRegex *pattern;
     GMatchInfo *match_info;
 
-    pattern = g_regex_new (MODULE_PATTERN, 0, 0, NULL);
+    pattern = g_regex_new (MODULE_SEARCH_PATTERN, 0, 0, NULL);
     g_regex_match (pattern, path, 0, &match_info);
 
     *result = g_list_append (*result, g_match_info_fetch (match_info, 1));
@@ -202,11 +208,7 @@ find_camera_module_path (GList *search_paths, const gchar *name)
     gchar *modname;
     GList *paths;
 
-#ifdef _WIN32
-    modname = g_strdup_printf ("uca%s.dll", name);
-#else
-    modname = g_strdup_printf ("libuca%s.so", name);
-#endif
+    modname = g_strdup_printf (MODULE_PRINT_PATTERN, name);
     paths = scan_search_paths (search_paths);
 
     for (GList *it = g_list_first (paths); it != NULL; it = g_list_next (it)) {
