@@ -23,7 +23,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ..
+          cmake .. -DWITH_GIR=OFF
           make
           sudo make install
       - name: run test-mock
