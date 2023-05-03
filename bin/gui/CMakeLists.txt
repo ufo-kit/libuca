@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.6)
-
 find_package(PkgConfig)
 find_program(GLIB_COMPILE_RESOURCES glib-compile-resources REQUIRED)
 
