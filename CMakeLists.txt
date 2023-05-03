@@ -30,6 +30,8 @@ else()
     pkg_check_modules(GOBJECT2 gobject-2.0>=2.38 REQUIRED)
     pkg_check_modules(GMODULE2 gmodule-2.0>=2.38 REQUIRED)
     pkg_check_modules(GIO2 gio-2.0>=2.38 REQUIRED)
+
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
     include(PkgConfigVars)
 
     if (WITH_TIFF)
@@ -53,9 +55,6 @@ else()
     )
 endif()
 
-#{{{ CMake
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-#}}}
 #{{{ Metadata
 set(UCA_DESCRIPTION "Unified Camera Access")
 
