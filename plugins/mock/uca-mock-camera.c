@@ -376,6 +376,43 @@ uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 }
 
 static gboolean
+uca_mock_camera_grab_live (UcaCamera *camera, gpointer data, GError **error)
+{
+    UcaMockCameraPrivate *priv;
+    UcaCameraTriggerSource trigger_source;
+    gdouble exposure_time;
+
+    g_return_val_if_fail (UCA_IS_MOCK_CAMERA(camera), FALSE);
+
+    priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
+
+    g_object_get (G_OBJECT (camera),
+                  "exposure-time", &exposure_time,
+                  "trigger-source", &trigger_source, NULL);
+
+    if (trigger_source == UCA_CAMERA_TRIGGER_SOURCE_SOFTWARE)
+        g_free (g_async_queue_pop (priv->trigger_queue));
+
+    if (trigger_source == UCA_CAMERA_TRIGGER_SOURCE_EXTERNAL) {
+        /* wait for signal to arrive */
+        g_mutex_lock (&signal_mutex);
+        g_cond_wait (&signal_cond, &signal_mutex);
+        g_mutex_unlock (&signal_mutex);
+    }
+
+    g_usleep (G_USEC_PER_SEC * exposure_time);
+
+    if (priv->fill_data) {
+        print_current_frame (priv, priv->dummy_data, FALSE);
+        g_memmove (data, priv->dummy_data, priv->roi_width * priv->roi_height * priv->bytes);
+    }
+
+    priv->current_frame++;
+
+    return TRUE;
+}
+
+static gboolean
 uca_mock_camera_readout (UcaCamera *camera, gpointer data, guint index, GError **error)
 {
     g_return_val_if_fail (UCA_IS_MOCK_CAMERA(camera), FALSE);
@@ -553,6 +590,7 @@ uca_mock_camera_class_init(UcaMockCameraClass *klass)
     camera_class->start_recording = uca_mock_camera_start_recording;
     camera_class->stop_recording = uca_mock_camera_stop_recording;
     camera_class->grab = uca_mock_camera_grab;
+    camera_class->grab_live = uca_mock_camera_grab_live;
     camera_class->readout = uca_mock_camera_readout;
     camera_class->trigger = uca_mock_camera_trigger;
 
