@@ -1233,6 +1233,101 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 }
 
 /**
+ * uca_camera_grab_live:
+ * @camera: A #UcaCamera object
+ * @data: (type gulong): Pointer to suitably sized data buffer. Must not be
+ *  %NULL.
+ * @error: Location to store a #UcaCameraError error or %NULL
+ *
+ * Graba single frame and store the result in @data.
+ *
+ * You must have called uca_camera_start_recording() before, otherwise you will
+ * get a #UCA_CAMERA_ERROR_NOT_RECORDING error. This function does not interfere
+ * with uca_camera_grab().
+ */
+gboolean
+uca_camera_grab_live (UcaCamera *camera, gpointer data, GError **error)
+{
+    UcaCameraClass *klass;
+    gboolean result = FALSE;
+
+    /* FIXME: this prevents accessing two independent cameras simultanously. */
+    static GMutex mutex;
+
+    g_return_val_if_fail (UCA_IS_CAMERA(camera), FALSE);
+
+    klass = UCA_CAMERA_GET_CLASS (camera);
+
+    g_return_val_if_fail (klass != NULL, FALSE);
+    g_return_val_if_fail (klass->grab_live != NULL, FALSE);
+    g_return_val_if_fail (data != NULL, FALSE);
+
+    if (!camera->priv->buffered) {
+        g_mutex_lock (&mutex);
+
+        if (!camera->priv->is_recording && !camera->priv->is_readout) {
+            g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_NOT_RECORDING,
+                         "Camera is neither recording nor in readout mode");
+        }
+        else {
+#ifdef WITH_PYTHON_MULTITHREADING
+            if (Py_IsInitialized ()) {
+                PyGILState_STATE state = PyGILState_Ensure ();
+                Py_BEGIN_ALLOW_THREADS
+
+                g_mutex_lock (&access_lock);
+                result = (*klass->grab_live) (camera, data, error);
+                g_mutex_unlock (&access_lock);
+
+                Py_END_ALLOW_THREADS
+                PyGILState_Release (state);
+            }
+            else {
+                g_mutex_lock (&access_lock);
+                result = (*klass->grab_live) (camera, data, error);
+                g_mutex_unlock (&access_lock);
+            }
+#else
+            g_mutex_lock (&access_lock);
+            result = (*klass->grab_live) (camera, data, error);
+            g_mutex_unlock (&access_lock);
+#endif
+        }
+
+        g_mutex_unlock (&mutex);
+    }
+    else {
+        gpointer buffer;
+
+        if (camera->priv->ring_buffer == NULL)
+            return FALSE;
+
+        /*
+         * Spin-lock until we can read something. This shouldn't happen to
+         * often, as buffering is usually used in those cases when the camera is
+         * faster than the software.
+         */
+        while (!uca_ring_buffer_available (camera->priv->ring_buffer)) {
+            if (camera->priv->cancelling_grab) {
+                return FALSE;
+            }
+        }
+
+        buffer = uca_ring_buffer_get_read_pointer (camera->priv->ring_buffer);
+
+        if (buffer == NULL) {
+            g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
+                         "Ring buffer is empty");
+        }
+        else {
+            memcpy (data, buffer, uca_ring_buffer_get_block_size (camera->priv->ring_buffer));
+            result = TRUE;
+        }
+    }
+    return result;
+}
+
+/**
  * uca_camera_readout:
  * @camera: A #UcaCamera object
  * @data: (type gulong): Pointer to suitably sized data buffer. Must not be
