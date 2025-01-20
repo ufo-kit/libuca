@@ -24,39 +24,7 @@
 G_BEGIN_DECLS
 
 #define UCA_TYPE_FILE_CAMERA             (uca_file_camera_get_type())
-#define UCA_FILE_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_FILE_CAMERA, UcaFileCamera))
-#define UCA_IS_FILE_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_FILE_CAMERA))
-#define UCA_FILE_CAMERA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), UCA_TYPE_FILE_CAMERA, UcaFileCameraClass))
-#define UCA_IS_FILE_CAMERA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), UCA_TYPE_FILE_CAMERA))
-#define UCA_FILE_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_FILE_CAMERA, UcaFileCameraClass))
-
-typedef struct _UcaFileCamera           UcaFileCamera;
-typedef struct _UcaFileCameraClass      UcaFileCameraClass;
-typedef struct _UcaFileCameraPrivate    UcaFileCameraPrivate;
-
-/**
- * UcaFileCamera:
- *
- * Creates #UcaFileCamera instances by loading corresponding shared objects. The
- * contents of the #UcaFileCamera structure are private and should only be
- * accessed via the provided API.
- */
-struct _UcaFileCamera {
-    /*< private >*/
-    UcaCamera parent;
-
-    UcaFileCameraPrivate *priv;
-};
-
-/**
- * UcaFileCameraClass:
- *
- * #UcaFileCamera class
- */
-struct _UcaFileCameraClass {
-    /*< private >*/
-    UcaCameraClass parent;
-};
+G_DECLARE_FINAL_TYPE(UcaFileCamera, uca_file_camera, UCA, FILE_CAMERA, UcaCamera)
 
 G_END_DECLS
 
