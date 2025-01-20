@@ -331,12 +331,11 @@ uca_camera_dispose (GObject *object)
     UcaCameraPrivate *priv = uca_camera_get_instance_private (camera);
 
     if (uca_camera_is_recording (UCA_CAMERA (object))) {
-        GError *error = NULL;
+        g_autoptr(GError) error = NULL;
 
         uca_camera_stop_recording (UCA_CAMERA (object), &error);
         if (error != NULL) {
             g_warning ("Could not stop recording: %s", error->message);
-            g_error_free (error);
         }
     }
 
@@ -632,7 +631,7 @@ buffer_thread (UcaCamera *camera)
 {
     UcaCameraClass *klass = UCA_CAMERA_GET_CLASS (camera);
     UcaCameraPrivate *priv = uca_camera_get_instance_private (camera);
-    GError *error = NULL;
+    g_autoptr(GError) error = NULL;
 
     while (!priv->cancelling_recording) {
         gpointer buffer;
@@ -797,7 +796,7 @@ uca_camera_start_recording (UcaCamera *camera, GError **error)
 {
     UcaCameraClass *klass;
     static GMutex mutex;
-    GError *tmp_error = NULL;
+    g_autoptr(GError) tmp_error = NULL;
     guint width, height, bitdepth;
     guint pixel_size;
 
@@ -894,7 +893,7 @@ uca_camera_stop_recording (UcaCamera *camera, GError **error)
         priv->read_thread = NULL;
     }
 
-    GError *tmp_error = NULL;
+    g_autoptr(GError) tmp_error = NULL;
     g_mutex_lock (&access_lock);
 
     (*klass->stop_recording)(camera, &tmp_error);
@@ -989,7 +988,7 @@ uca_camera_start_readout (UcaCamera *camera, GError **error)
     g_mutex_lock (&mutex);
 
     if (!already_recording (camera, error)) {
-        GError *tmp_error = NULL;
+        g_autoptr(GError) tmp_error = NULL;
 
         g_mutex_lock (&access_lock);
         (*klass->start_readout) (camera, &tmp_error);
@@ -1031,7 +1030,7 @@ uca_camera_stop_readout (UcaCamera *camera, GError **error)
     g_mutex_lock (&mutex);
 
     if (!already_recording (camera, error)) {
-        GError *tmp_error = NULL;
+        g_autoptr(GError) tmp_error = NULL;
 
         g_mutex_lock (&access_lock);
         (*klass->stop_readout) (camera, &tmp_error);
