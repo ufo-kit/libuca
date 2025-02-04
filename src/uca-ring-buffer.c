@@ -18,11 +18,10 @@
 #include <math.h>
 #include "uca-ring-buffer.h"
 
-#define UCA_RING_BUFFER_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_RING_BUFFER, UcaRingBufferPrivate))
+#define UCA_RING_BUFFER_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_RING_BUFFER, UcaRingBuffer))
 
-G_DEFINE_TYPE(UcaRingBuffer, uca_ring_buffer, G_TYPE_OBJECT)
-
-struct _UcaRingBufferPrivate {
+struct _UcaRingBuffer {
+    GObject parent_instance;
     guchar  *data;
     gsize    block_size;
     guint    n_blocks_total;
@@ -31,6 +30,8 @@ struct _UcaRingBufferPrivate {
     guint    read;
     guint    written;
 };
+
+G_DEFINE_FINAL_TYPE (UcaRingBuffer, uca_ring_buffer, G_TYPE_OBJECT)
 
 enum {
     PROP_0,
@@ -45,13 +46,10 @@ UcaRingBuffer *
 uca_ring_buffer_new (gsize block_size,
                      guint n_blocks)
 {
-    UcaRingBuffer *buffer;
-
-    buffer = g_object_new (UCA_TYPE_RING_BUFFER,
+    return g_object_new (UCA_TYPE_RING_BUFFER,
                            "block-size", (guint64) block_size,
                            "num-blocks", n_blocks,
                            NULL);
-    return buffer;
 }
 
 void
@@ -59,22 +57,22 @@ uca_ring_buffer_reset (UcaRingBuffer *buffer)
 {
     g_return_if_fail (UCA_IS_RING_BUFFER (buffer));
 
-    buffer->priv->write_index = 0;
-    buffer->priv->read_index = 0;
+    buffer->write_index = 0;
+    buffer->read_index = 0;
 }
 
 gsize
 uca_ring_buffer_get_block_size (UcaRingBuffer *buffer)
 {
     g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), 0);
-    return buffer->priv->block_size;
+    return buffer->block_size;
 }
 
 gboolean
 uca_ring_buffer_available (UcaRingBuffer *buffer)
 {
     g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), FALSE);
-    return buffer->priv->read_index < buffer->priv->write_index;
+    return buffer->read_index < buffer->write_index;
 }
 
 /**
@@ -89,15 +87,11 @@ uca_ring_buffer_available (UcaRingBuffer *buffer)
 gpointer
 uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer)
 {
-    UcaRingBufferPrivate *priv;
-    gpointer data;
-
     g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), NULL);
-    priv = buffer->priv;
+    g_return_val_if_fail (buffer->read_index != buffer->write_index, NULL);
 
-    g_return_val_if_fail (priv->read_index != priv->write_index, NULL);
-    data = priv->data + (priv->read_index % priv->n_blocks_total) * priv->block_size;
-    priv->read_index++;
+    gpointer data = buffer->data + (buffer->read_index % buffer->n_blocks_total) * buffer->block_size;
+    buffer->read_index++;
     return data;
 }
 
@@ -112,22 +106,15 @@ uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer)
 gpointer
 uca_ring_buffer_get_write_pointer (UcaRingBuffer *buffer)
 {
-    UcaRingBufferPrivate *priv;
-    gpointer data;
-
     g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), NULL);
-
-    priv = buffer->priv;
-    data = priv->data + (priv->write_index % priv->n_blocks_total) * priv->block_size;
-
-    return data;
+    return buffer->data + (buffer->write_index % buffer->n_blocks_total) * buffer->block_size;
 }
 
 void
 uca_ring_buffer_write_advance (UcaRingBuffer *buffer)
 {
     g_return_if_fail (UCA_IS_RING_BUFFER (buffer));
-    buffer->priv->write_index++;
+    buffer->write_index++;
 }
 
 /**
@@ -141,10 +128,8 @@ uca_ring_buffer_write_advance (UcaRingBuffer *buffer)
 gpointer
 uca_ring_buffer_peek_pointer (UcaRingBuffer *buffer)
 {
-    UcaRingBufferPrivate *priv;
     g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), NULL);
-    priv = buffer->priv;
-    return ((guint8 *) priv->data) + ((priv->write_index % priv->n_blocks_total) * priv->block_size);
+    return ((guint8 *) buffer->data) + ((buffer->write_index % buffer->n_blocks_total) * buffer->block_size);
 }
 
 /**
@@ -160,29 +145,23 @@ gpointer
 uca_ring_buffer_get_pointer (UcaRingBuffer *buffer,
                              guint          index)
 {
-    UcaRingBufferPrivate *priv;
     g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), NULL);
-    priv = buffer->priv;
-    return ((guint8 *) priv->data) + (((priv->read_index + index) % priv->n_blocks_total) * priv->block_size);
+    return ((guint8 *) buffer->data) + (((buffer->read_index + index) % buffer->n_blocks_total) * buffer->block_size);
 }
 
 guint
 uca_ring_buffer_get_num_blocks (UcaRingBuffer *buffer)
 {
-    UcaRingBufferPrivate *priv;
-
-    g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), 0);
-    priv = buffer->priv;
-    return priv->write_index < priv->n_blocks_total ? priv->write_index : priv->n_blocks_total;
+    return buffer->write_index < buffer->n_blocks_total ? buffer->write_index : buffer->n_blocks_total;
 }
 
 static void
-realloc_mem (UcaRingBufferPrivate *priv)
+realloc_mem (UcaRingBuffer *buffer)
 {
-    if (priv->data != NULL)
-        g_free (priv->data);
+    if (buffer->data != NULL)
+        g_free (buffer->data);
 
-    priv->data = g_malloc0_n (priv->n_blocks_total, priv->block_size);
+    buffer->data = g_malloc0_n (buffer->n_blocks_total, buffer->block_size);
 }
 
 static void
@@ -191,18 +170,16 @@ uca_ring_buffer_get_property (GObject *object,
                               GValue *value,
                               GParamSpec *pspec)
 {
-    UcaRingBufferPrivate *priv;
+    UcaRingBuffer *buffer = UCA_RING_BUFFER (object);
 
     g_return_if_fail (UCA_IS_RING_BUFFER (object));
-    priv = UCA_RING_BUFFER_GET_PRIVATE (object);
-
     switch (property_id) {
         case PROP_BLOCK_SIZE:
-            g_value_set_uint64 (value, (guint64) priv->block_size);
+            g_value_set_uint64 (value, (guint64) buffer->block_size);
             break;
 
         case PROP_NUM_BLOCKS:
-            g_value_set_uint (value, priv->n_blocks_total);
+            g_value_set_uint (value, buffer->n_blocks_total);
             break;
 
         default:
@@ -217,20 +194,19 @@ uca_ring_buffer_set_property (GObject *object,
                               const GValue *value,
                               GParamSpec *pspec)
 {
-    UcaRingBufferPrivate *priv;
-
     g_return_if_fail (UCA_IS_RING_BUFFER (object));
-    priv = UCA_RING_BUFFER_GET_PRIVATE (object);
+
+    UcaRingBuffer *buffer = UCA_RING_BUFFER (object);
 
     switch (property_id) {
         case PROP_BLOCK_SIZE:
-            priv->block_size = (gsize) g_value_get_uint64 (value);
-            realloc_mem (priv);
+            buffer->block_size = (gsize) g_value_get_uint64 (value);
+            realloc_mem (buffer);
             break;
 
         case PROP_NUM_BLOCKS:
-            priv->n_blocks_total = g_value_get_uint (value);
-            realloc_mem (priv);
+            buffer->n_blocks_total = g_value_get_uint (value);
+            realloc_mem (buffer);
             break;
 
         default:
@@ -248,11 +224,9 @@ uca_ring_buffer_dispose (GObject *object)
 static void
 uca_ring_buffer_finalize (GObject *object)
 {
-    UcaRingBufferPrivate *priv;
-
-    priv = UCA_RING_BUFFER_GET_PRIVATE (object);
-    g_free (priv->data);
-    priv->data = NULL;
+    UcaRingBuffer *buffer = UCA_RING_BUFFER (object);
+    g_free (buffer->data);
+    buffer->data = NULL;
     G_OBJECT_CLASS (uca_ring_buffer_parent_class)->finalize (object);
 }
 
@@ -284,17 +258,12 @@ uca_ring_buffer_class_init (UcaRingBufferClass *klass)
 
     for (guint i = PROP_0 + 1; i < N_PROPERTIES; i++)
         g_object_class_install_property (oclass, i, properties[i]);
-
-    g_type_class_add_private (klass, sizeof (UcaRingBufferPrivate));
 }
 
 static void
 uca_ring_buffer_init (UcaRingBuffer *buffer)
 {
-    UcaRingBufferPrivate *priv;
-    priv = buffer->priv = UCA_RING_BUFFER_GET_PRIVATE (buffer);
-
-    priv->n_blocks_total = 0;
-    priv->block_size = 0;
-    priv->data = NULL;
+    buffer->n_blocks_total = 0;
+    buffer->block_size = 0;
+    buffer->data = NULL;
 }

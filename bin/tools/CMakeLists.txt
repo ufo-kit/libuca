@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.16...3.22)
 
 #{{{ Variables
 set(libs uca)
 #}}}
 #{{{ Configure
-find_package(TIFF)
+find_package(TIFF REQUIRED)
 
 if (TIFF_FOUND)
     set(HAVE_LIBTIFF "1")
@@ -21,7 +21,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}
 
 set(BINARIES "benchmark" "gen-doc" "info")
 
-foreach (BINARY ${BINARIES})
+foreach (BINARY IN LISTS BINARIES)
     add_executable(uca-${BINARY} ${BINARY}.c common.c)
     target_link_libraries(uca-${BINARY} ${libs})
 endforeach ()

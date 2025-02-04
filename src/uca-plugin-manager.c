@@ -39,14 +39,13 @@
 #include <gmodule.h>
 #include "uca-plugin-manager.h"
 
-G_DEFINE_TYPE (UcaPluginManager, uca_plugin_manager, G_TYPE_OBJECT)
-
-#define UCA_PLUGIN_MANAGER_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_PLUGIN_MANAGER, UcaPluginManagerPrivate))
-
-struct _UcaPluginManagerPrivate {
+struct _UcaPluginManager {
+    GObject parent_instance;
     GList *search_paths;
     GList *funcs;
 };
+
+G_DEFINE_FINAL_TYPE (UcaPluginManager, uca_plugin_manager, G_TYPE_OBJECT)
 
 static const gchar *MODULE_PATTERN = "libuca([A-Za-z0-9]+)";
 
@@ -99,11 +98,8 @@ uca_plugin_manager_add_path (UcaPluginManager   *manager,
 {
     g_return_if_fail (UCA_IS_PLUGIN_MANAGER (manager));
 
-    if (g_file_test (path, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
-        UcaPluginManagerPrivate *priv;
-
-        priv = manager->priv;
-        priv->search_paths = g_list_append (priv->search_paths,
+    if (g_file_test (path, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {        
+        manager->search_paths = g_list_append (manager->search_paths,
                                             g_strdup (path));
     }
 }
@@ -176,14 +172,12 @@ transform_camera_module_path_to_name (gchar *path, GList **result)
 GList *
 uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
 {
-    UcaPluginManagerPrivate *priv;
     GList *camera_paths;
     GList *camera_names = NULL;
 
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager), NULL);
-
-    priv = manager->priv;
-    camera_paths = scan_search_paths (priv->search_paths);
+    
+    camera_paths = scan_search_paths (manager->search_paths);
 
     g_list_foreach (camera_paths, (GFunc) transform_camera_module_path_to_name, &camera_names);
     g_list_free_full (camera_paths, g_free);
@@ -224,7 +218,7 @@ find_camera_module_path (GList *search_paths, const gchar *name)
 }
 
 static GType
-get_camera_type (UcaPluginManagerPrivate *priv,
+get_camera_type (UcaPluginManager *manager,
                  const gchar *name,
                  GError **error)
 {
@@ -233,7 +227,7 @@ get_camera_type (UcaPluginManagerPrivate *priv,
     GetTypeFunc *func;
     const gchar *symbol_name = "camera_plugin_get_type";
 
-    module_path = find_camera_module_path (priv->search_paths, name);
+    module_path = find_camera_module_path (manager->search_paths, name);
     g_debug ("Trying to load `%s' from %s.", name, module_path);
 
     if (module_path == NULL) {
@@ -264,7 +258,7 @@ get_camera_type (UcaPluginManagerPrivate *priv,
         return G_TYPE_NONE;
     }
 
-    priv->funcs = g_list_append (priv->funcs, func);
+    manager->funcs = g_list_append (manager->funcs, func);
 
     return (*func) ();
 }
@@ -353,14 +347,12 @@ uca_plugin_manager_get_camerav (UcaPluginManager *manager,
                                 GParameter *parameters,
                                 GError **error)
 {
-    UcaPluginManagerPrivate *priv;
     UcaCamera *camera;
     GType type;
 
-    g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
+    g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);    
 
-    priv = manager->priv;
-    type = get_camera_type (priv, name, error);
+    type = get_camera_type (manager, name, error);
 
     if (type == G_TYPE_NONE)
         return NULL;
@@ -393,15 +385,13 @@ uca_plugin_manager_get_camera (UcaPluginManager *manager,
                                const gchar *first_prop_name,
                                ...)
 {
-    UcaPluginManagerPrivate *priv;
     UcaCamera *camera;
     GType type;
     va_list var_args;
 
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
-
-    priv = manager->priv;
-    type = get_camera_type (priv, name, error);
+    
+    type = get_camera_type (manager, name, error);
 
     if (type == G_TYPE_NONE)
         return NULL;
@@ -442,11 +432,11 @@ uca_plugin_manager_dispose (GObject *object)
 
 static void
 uca_plugin_manager_finalize (GObject *object)
-{
-    UcaPluginManagerPrivate *priv = UCA_PLUGIN_MANAGER_GET_PRIVATE (object);
-
-    g_list_free_full (priv->search_paths, g_free);
-    g_list_free_full (priv->funcs, g_free);
+{    
+    UcaPluginManager *manager = UCA_PLUGIN_MANAGER (object);
+    
+    g_list_free_full (manager->search_paths, g_free);
+    g_list_free_full (manager->funcs, g_free);
 
     G_OBJECT_CLASS (uca_plugin_manager_parent_class)->finalize (object);
 }
@@ -459,21 +449,16 @@ uca_plugin_manager_class_init (UcaPluginManagerClass *klass)
     gobject_class->set_property = uca_plugin_manager_set_property;
     gobject_class->dispose      = uca_plugin_manager_dispose;
     gobject_class->finalize     = uca_plugin_manager_finalize;
-
-    g_type_class_add_private (klass, sizeof (UcaPluginManagerPrivate));
 }
 
 static void
 uca_plugin_manager_init (UcaPluginManager *manager)
-{
-    UcaPluginManagerPrivate *priv;
-    const gchar *uca_camera_path;
+{    
 
-    manager->priv = priv = UCA_PLUGIN_MANAGER_GET_PRIVATE (manager);
-    priv->search_paths = NULL;
-    priv->funcs = NULL;
+    manager->search_paths = NULL;
+    manager->funcs = NULL;
 
-    uca_camera_path = g_getenv ("UCA_CAMERA_PATH");
+    const gchar *uca_camera_path = g_getenv ("UCA_CAMERA_PATH");
 
     if (uca_camera_path != NULL)
         uca_plugin_manager_add_path (manager, uca_camera_path);

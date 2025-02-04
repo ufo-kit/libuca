@@ -21,13 +21,28 @@
 #include <tiffio.h>
 #include "uca-file-camera.h"
 
-#define UCA_FILE_CAMERA_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), UCA_TYPE_FILE_CAMERA, UcaFileCameraPrivate))
-
 static void uca_file_initable_iface_init (GInitableIface *iface);
 
-G_DEFINE_TYPE_WITH_CODE (UcaFileCamera, uca_file_camera, UCA_TYPE_CAMERA,
-                         G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
-                                                uca_file_initable_iface_init))
+/**
+ * UcaFileCamera:
+ *
+ * Creates #UcaFileCamera instances by loading corresponding shared objects. The
+ * contents of the #UcaFileCamera structure are private and should only be
+ * accessed via the provided API.
+ */
+struct _UcaFileCamera {
+    UcaCamera parent;
+
+    gchar *path;
+    guint width;
+    guint height;
+    guint bitdepth;
+    GList *fnames;
+    GList *current;
+};
+
+G_DEFINE_FINAL_TYPE_WITH_CODE (UcaFileCamera, uca_file_camera, UCA_TYPE_CAMERA,
+                               G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, uca_file_initable_iface_init))
 
 enum {
     PROP_PATH = N_BASE_PROPERTIES,
@@ -51,28 +66,17 @@ static const gint file_overrideables[] = {
 
 static GParamSpec *file_properties[N_PROPERTIES] = { NULL, };
 
-struct _UcaFileCameraPrivate {
-    gchar *path;
-    guint width;
-    guint height;
-    guint bitdepth;
-    GList *fnames;
-    GList *current;
-};
-
 static gboolean
-read_tiff_meta_data (UcaFileCameraPrivate *priv, const gchar *fname)
+read_tiff_meta_data (UcaFileCamera *self, const gchar *fname)
 {
-    TIFF *file;
-
-    file = TIFFOpen (fname, "r");
+    TIFF *file = TIFFOpen (fname, "r");
     if (!file) {
         return FALSE;
     }
 
-    TIFFGetField (file, TIFFTAG_BITSPERSAMPLE, &priv->bitdepth);
-    TIFFGetField (file, TIFFTAG_IMAGEWIDTH, &priv->width);
-    TIFFGetField (file, TIFFTAG_IMAGELENGTH, &priv->height);
+    TIFFGetField (file, TIFFTAG_BITSPERSAMPLE, &self->bitdepth);
+    TIFFGetField (file, TIFFTAG_IMAGEWIDTH, &self->width);
+    TIFFGetField (file, TIFFTAG_IMAGELENGTH, &self->height);
 
     TIFFClose (file);
 
@@ -80,7 +84,7 @@ read_tiff_meta_data (UcaFileCameraPrivate *priv, const gchar *fname)
 }
 
 static gboolean
-read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
+read_tiff_data (UcaFileCamera *self, const gchar *fname, gpointer buffer)
 {
     TIFF *file;
     guint16 bitdepth;
@@ -88,7 +92,7 @@ read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
     guint height;
     tsize_t result;
     int offset = 0;
-    int step = priv->width;
+    int step = self->width;
 
     file = TIFFOpen (fname, "r");
     if (!file) {
@@ -99,16 +103,16 @@ read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
     TIFFGetField (file, TIFFTAG_IMAGEWIDTH, &width);
     TIFFGetField (file, TIFFTAG_IMAGELENGTH, &height);
 
-    if (priv->bitdepth != bitdepth || priv->width != width || priv->height != height) {
+    if (self->bitdepth != bitdepth || self->width != width || self->height != height) {
         g_warning ("Data format not compatible: %ux%u@%u [expected %ux%u@%u]",
-                   width, height, bitdepth, priv->width, priv->height, priv->bitdepth);
+                   width, height, bitdepth, self->width, self->height, self->bitdepth);
         TIFFClose (file);
         return FALSE;
     }
 
-    step *= priv->bitdepth / 8;
+    step *= self->bitdepth / 8;
 
-    for (guint32 i = 0; i < priv->height; i++) {
+    for (guint32 i = 0; i < self->height; i++) {
         result = TIFFReadScanline (file, ((gchar *) buffer) + offset, i, 0);
 
         if (result == -1)
@@ -122,16 +126,16 @@ read_tiff_data (UcaFileCameraPrivate *priv, const gchar *fname, gpointer buffer)
 }
 
 static gboolean
-update_fnames (UcaFileCameraPrivate *priv)
+update_fnames (UcaFileCamera *self)
 {
     GDir *dir;
     const gchar *fname;
     GError *error = NULL;
 
-    g_list_free_full (priv->fnames, g_free);
-    priv->fnames = NULL;
+    g_list_free_full (self->fnames, g_free);
+    self->fnames = NULL;
 
-    dir = g_dir_open (priv->path, 0, &error);
+    dir = g_dir_open (self->path, 0, &error);
 
     if (dir == NULL) {
         g_warning ("%s", error->message);
@@ -145,22 +149,22 @@ update_fnames (UcaFileCameraPrivate *priv)
             break;
 
         if (g_str_has_suffix (fname, ".tiff") || g_str_has_suffix (fname, ".tif"))
-            priv->fnames = g_list_append (priv->fnames, g_build_filename (priv->path, fname, NULL));
+            self->fnames = g_list_append (self->fnames, g_build_filename (self->path, fname, NULL));
     }
 
-    priv->fnames = g_list_sort (priv->fnames, (GCompareFunc) g_strcmp0);
-    priv->current = priv->fnames;
+    self->fnames = g_list_sort (self->fnames, (GCompareFunc) g_strcmp0);
+    self->current = self->fnames;
 
-    if (priv->current != NULL) {
+    if (self->current != NULL) {
         while (TRUE) {
-            fname = (const gchar *) priv->current->data;
-            if (read_tiff_meta_data (priv, fname)) {
+            fname = (const gchar *) self->current->data;
+            if (read_tiff_meta_data (self, fname)) {
                 break;
             } else {
                 g_warning ("Cannot read %s", fname);
             }
-            priv->current = g_list_next (priv->current);
-            if (!priv->current) {
+            self->current = g_list_next (self->current);
+            if (!self->current) {
                 g_error ("No valid tif files found");
             }
         }
@@ -173,17 +177,14 @@ update_fnames (UcaFileCameraPrivate *priv)
 static void
 uca_file_camera_start_recording(UcaCamera *camera, GError **error)
 {
-    UcaFileCameraPrivate *priv;
-    g_return_if_fail (UCA_IS_FILE_CAMERA (camera));
+    UcaFileCamera *self = UCA_FILE_CAMERA (camera);
 
-    priv = UCA_FILE_CAMERA_GET_PRIVATE (camera);
-
-    if (priv->fnames == NULL) {
+    if (self->fnames == NULL) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
                      "No files found");
     }
 
-    priv->current = priv->fnames;
+    self->current = self->fnames;
 }
 
 static void
@@ -199,24 +200,23 @@ uca_file_camera_trigger (UcaCamera *camera, GError **error)
 static gboolean
 uca_file_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 {
-    UcaFileCameraPrivate *priv;
     g_return_val_if_fail (UCA_IS_FILE_CAMERA (camera), FALSE);
 
-    priv = UCA_FILE_CAMERA_GET_PRIVATE (camera);
+    UcaFileCamera *self = UCA_FILE_CAMERA (camera);
 
-    if (priv->current == NULL) {
+    if (self->current == NULL) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
                      "End of stream");
         return FALSE;
     }
 
-    if (!read_tiff_data (priv, (const gchar *) priv->current->data, data)) {
+    if (!read_tiff_data (self, (const gchar *) self->current->data, data)) {
         g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
                      "Error reading file");
         return FALSE;
     }
 
-    priv->current = g_list_next (priv->current);
+    self->current = g_list_next (self->current);
     return TRUE;
 }
 
@@ -224,7 +224,7 @@ static void
 uca_file_camera_set_property (GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
     g_return_if_fail(UCA_IS_FILE_CAMERA(object));
-    UcaFileCameraPrivate *priv = UCA_FILE_CAMERA_GET_PRIVATE(object);
+    UcaFileCamera *self = UCA_FILE_CAMERA(object);
 
     if (uca_camera_is_recording (UCA_CAMERA(object)) &&
         !uca_camera_is_writable_during_acquisition (UCA_CAMERA (object), pspec->name)) {
@@ -234,10 +234,10 @@ uca_file_camera_set_property (GObject *object, guint property_id, const GValue *
 
     switch (property_id) {
         case PROP_PATH:
-            g_free (priv->path);
-            priv->path = g_strdup (g_value_get_string (value));
-            priv->path = g_strstrip (priv->path);
-            update_fnames (priv);
+            g_free (self->path);
+            self->path = g_strdup (g_value_get_string (value));
+            self->path = g_strstrip (self->path);
+            update_fnames (self);
 
             g_object_notify (object, "roi-width");
             g_object_notify (object, "roi-height");
@@ -253,20 +253,20 @@ static void
 uca_file_camera_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
     g_return_if_fail (UCA_IS_FILE_CAMERA (object));
-    UcaFileCameraPrivate *priv = UCA_FILE_CAMERA_GET_PRIVATE (object);
+    UcaFileCamera *self = UCA_FILE_CAMERA (object);
 
     switch (property_id) {
         case PROP_NAME:
             g_value_set_string (value, "file camera");
             break;
         case PROP_SENSOR_WIDTH:
-            g_value_set_uint (value, priv->width);
+            g_value_set_uint (value, self->width);
             break;
         case PROP_SENSOR_HEIGHT:
-            g_value_set_uint (value, priv->height);
+            g_value_set_uint (value, self->height);
             break;
         case PROP_SENSOR_BITDEPTH:
-            g_value_set_uint (value, priv->bitdepth);
+            g_value_set_uint (value, self->bitdepth);
             break;
         case PROP_ROI_X:
             g_value_set_uint (value, 0);
@@ -275,10 +275,10 @@ uca_file_camera_get_property(GObject *object, guint property_id, GValue *value, 
             g_value_set_uint (value, 0);
             break;
         case PROP_ROI_WIDTH:
-            g_value_set_uint (value, priv->width);
+            g_value_set_uint (value, self->width);
             break;
         case PROP_ROI_HEIGHT:
-            g_value_set_uint (value, priv->height);
+            g_value_set_uint (value, self->height);
             break;
         case PROP_EXPOSURE_TIME:
             g_value_set_double (value, 0.1);
@@ -290,7 +290,7 @@ uca_file_camera_get_property(GObject *object, guint property_id, GValue *value, 
             g_value_set_boolean (value, FALSE);
             break;
         case PROP_PATH:
-            g_value_set_string (value, priv->path);
+            g_value_set_string (value, self->path);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -301,14 +301,13 @@ uca_file_camera_get_property(GObject *object, guint property_id, GValue *value, 
 static void
 uca_file_camera_finalize(GObject *object)
 {
-    UcaFileCameraPrivate *priv;
+    UcaFileCamera *self = UCA_FILE_CAMERA (object);
+    UcaCameraClass *klass = UCA_CAMERA_GET_CLASS (object);
 
-    priv = UCA_FILE_CAMERA_GET_PRIVATE(object);
+    g_list_free_full (self->fnames, g_free);
+    self->fnames = NULL;
 
-    g_list_free_full (priv->fnames, g_free);
-    priv->fnames = NULL;
-
-    G_OBJECT_CLASS(uca_file_camera_parent_class)->finalize(object);
+    G_OBJECT_CLASS(klass)->finalize(object);
 }
 
 static gboolean
@@ -352,23 +351,18 @@ uca_file_camera_class_init(UcaFileCameraClass *klass)
 
     for (guint id = N_BASE_PROPERTIES; id < N_PROPERTIES; id++)
         g_object_class_install_property (gobject_class, id, file_properties[id]);
-
-    g_type_class_add_private (klass, sizeof(UcaFileCameraPrivate));
 }
 
 static void
 uca_file_camera_init(UcaFileCamera *self)
 {
-    UcaFileCameraPrivate *priv;
+    self->path = g_strdup (".");
+    self->width = 512;
+    self->height = 512;
+    self->bitdepth = 8;
 
-    self->priv = priv = UCA_FILE_CAMERA_GET_PRIVATE(self);
-    priv->path = g_strdup (".");
-    priv->width = 512;
-    priv->height = 512;
-    priv->bitdepth = 8;
-
-    priv->fnames = NULL;
-    update_fnames (priv);
+    self->fnames = NULL;
+    update_fnames (self);
 }
 
 G_MODULE_EXPORT GType

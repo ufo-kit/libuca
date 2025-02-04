@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.16...3.22)
 
-find_package(PkgConfig)
+find_package(PkgConfig REQUIRED)
 find_program(GLIB_COMPILE_RESOURCES glib-compile-resources REQUIRED)
 
-pkg_check_modules(GTK2 gtk+-2.0>=2.22)
-pkg_check_modules(GTHREAD2 gthread-2.0)
+pkg_check_modules(GTK2 REQUIRED gtk+-2.0>=2.22)
+pkg_check_modules(GTHREAD2 REQUIRED gthread-2.0)
 
 if (GTK2_FOUND)
     set(GRESOURCES_XML "${CMAKE_CURRENT_SOURCE_DIR}/uca-camera-control.gresource.xml")

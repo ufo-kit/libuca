@@ -23,11 +23,7 @@
 G_BEGIN_DECLS
 
 #define UCA_TYPE_CAMERA             (uca_camera_get_type())
-#define UCA_CAMERA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_CAMERA, UcaCamera))
-#define UCA_IS_CAMERA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), UCA_TYPE_CAMERA))
-#define UCA_CAMERA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), UCA_TYPE_CAMERA, UcaCameraClass))
-#define UCA_IS_CAMERA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), UCA_TYPE_CAMERA))
-#define UCA_CAMERA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), UCA_TYPE_CAMERA, UcaCameraClass))
+G_DECLARE_DERIVABLE_TYPE(UcaCamera, uca_camera, UCA, CAMERA, GObject)
 
 #define UCA_CAMERA_ERROR    uca_camera_error_quark()
 #define UCA_UNIT_QUARK      uca_unit_quark()
@@ -118,16 +114,6 @@ extern const gchar *uca_camera_props[N_BASE_PROPERTIES];
  */
 typedef void (*UcaCameraGrabFunc) (gpointer data, gpointer user_data);
 
-struct _UcaCamera {
-    /*< private >*/
-    GObject parent;
-
-    UcaCameraGrabFunc grab_func;
-    gpointer user_data;
-
-    UcaCameraPrivate *priv;
-};
-
 /**
  * UcaCameraInterface:
  *
@@ -182,6 +168,8 @@ gboolean    uca_camera_readout          (UcaCamera          *camera,
 void        uca_camera_set_grab_func    (UcaCamera          *camera,
                                          UcaCameraGrabFunc   func,
                                          gpointer            user_data);
+void        uca_camera_invoke_grab_func (UcaCamera          *camera,
+                                         gpointer            data);
 void        uca_camera_register_unit    (UcaCamera          *camera,
                                          const gchar        *prop_name,
                                          UcaUnit             unit);
@@ -197,8 +185,6 @@ gboolean    uca_camera_is_writable_during_acquisition
                                         (UcaCamera          *camera,
                                          const gchar        *prop_name);
 
-
-GType uca_camera_get_type(void);
 
 G_END_DECLS
 

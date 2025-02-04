@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.16...3.22)
 project(ucafile C)
 
-find_package(TIFF)
+find_package(TIFF REQUIRED)
 
 if (TIFF_FOUND)
     set(UCA_CAMERA_NAME "file")
