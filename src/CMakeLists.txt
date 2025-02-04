@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.16...3.22)
 project(uca C)
 
 #{{{ Sources
@@ -6,13 +6,13 @@ set(uca_SRCS
     uca-camera.c
     uca-plugin-manager.c
     uca-ring-buffer.c
-    )
+)
 
 set(uca_HDRS
     uca-camera.h
     uca-plugin-manager.h
     uca-ring-buffer.h
-    )
+)
 
 create_enums(uca-enums
              ${CMAKE_CURRENT_SOURCE_DIR}/uca-enums

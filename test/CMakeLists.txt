@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.16...3.22)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gtester.xsl
                ${CMAKE_CURRENT_BINARY_DIR}/gtester.xsl)

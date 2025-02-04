@@ -1,12 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
-
-if (POLICY CMP0053)
-cmake_policy(SET CMP0053 OLD)
-endif ()
-
-if (POLICY CMP0054)
-cmake_policy(SET CMP0054 OLD)
-endif ()
+cmake_minimum_required(VERSION 3.16)
 
 project(uca C)
 
@@ -17,29 +9,29 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 set(UCA_DESCRIPTION "Unified Camera Access")
 
 # These are software release versions
-set(UCA_VERSION_MAJOR "2")
-set(UCA_VERSION_MINOR "4")
-set(UCA_VERSION_PATCH "0")
+set(UCA_VERSION_MAJOR 2)
+set(UCA_VERSION_MINOR 4)
+set(UCA_VERSION_PATCH 0)
 set(UCA_VERSION_STRING "${UCA_VERSION_MAJOR}.${UCA_VERSION_MINOR}.${UCA_VERSION_PATCH}")
 
 # Increase the ABI version when binary compatibility cannot be guaranteed, e.g.
 # symbols have been removed, function signatures, structures, constants etc.
 # changed.
-set(UCA_ABI_VERSION "2")
+set(UCA_ABI_VERSION 2)
 #}}}
 #{{{ Macros
 # create_enums
 # @prefix: prefix of the output enum files
 # @template_prefix: prefix of the template (should be src/uca-enums)
 # @header_list: list with header files that should be searched for enums
-macro(create_enums prefix template_prefix header_list)
+function(create_enums prefix template_prefix header_list)
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
         COMMAND ${GLIB2_MKENUMS}
         ARGS
             --template ${template_prefix}.h.template
             ${header_list} > ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${header_list})
 
     add_custom_command(
@@ -48,11 +40,11 @@ macro(create_enums prefix template_prefix header_list)
         ARGS
             --template ${template_prefix}.c.template
             ${header_list} > ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.c
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${header_list}
                 ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
         )
-endmacro()
+endfunction()
 #}}}
 #{{{ Configure
 include(PkgConfigVars)
@@ -67,12 +59,12 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
                ${CMAKE_CURRENT_BINARY_DIR}/package.sh)
 #}}}
 #{{{ Common dependencies
-find_package(PkgConfig)
+find_package(PkgConfig REQUIRED)
 find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
-pkg_check_modules(GLIB2 glib-2.0>=2.38 REQUIRED)
-pkg_check_modules(GOBJECT2 gobject-2.0>=2.38 REQUIRED)
-pkg_check_modules(GMODULE2 gmodule-2.0>=2.38 REQUIRED)
-pkg_check_modules(GIO2 gio-2.0>=2.38 REQUIRED)
+pkg_check_modules(GLIB2 REQUIRED glib-2.0>=2.38)
+pkg_check_modules(GOBJECT2 REQUIRED gobject-2.0>=2.38)
+pkg_check_modules(GMODULE2 REQUIRED gmodule-2.0>=2.38)
+pkg_check_modules(GIO2 REQUIRED gio-2.0>=2.38)
 
 set(GLIB_VERSION_MIN_REQUIRED "GLIB_VERSION_2_38")
 set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_38")
@@ -99,7 +91,7 @@ set(UCA_ENUM_HDRS
     ${CMAKE_CURRENT_SOURCE_DIR}/plugins/pco/uca-pco-camera.h)
 #}}}
 #{{{ Common definitions
-add_definitions("-std=c99 -Wall -fPIC")
+add_compile_options("-std=c99" "-Wall" "-fPIC")
 #}}}
 #{{{ Subdirectories
 add_subdirectory(src)
