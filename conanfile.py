@@ -18,7 +18,7 @@ class UcaConan(ConanFile):
     
     requires = (
         "glib/2.75.0",
-        "libtiff/4.4.0"  # libjpeg is automatically handled as a dependency of libtiff
+        "libtiff/4.4.0"
     )
 
     def config_options(self):
