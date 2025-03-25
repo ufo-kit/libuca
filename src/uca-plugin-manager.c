@@ -57,6 +57,7 @@ typedef struct {
     guint       idx;
 } ParamArray;
 
+unsigned int net_camera_counter = 0;
 
 /**
  * UcaPluginManagerError:
@@ -190,6 +191,23 @@ uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
 
     return camera_names;
 }
+
+unsigned int get_num_net_cameras (UcaPluginManager *manager) {
+    const GList * camera_names = uca_plugin_manager_get_available_cameras (manager);
+    // get number of cameras starting with net and have a number after it
+    const GList * it = camera_names;
+    unsigned int num_net_sub_cameras = 0;
+    while (it != NULL) {
+        const gchar * name = it->data;
+        // check if name is net%d with %d being num_net_sub_cameras
+        const gchar *full_name = g_strdup_printf ("net%d", num_net_sub_cameras);
+        if (g_strcmp0 (name, full_name) == 0) {
+            num_net_sub_cameras++;
+        }
+    }
+    return num_net_sub_cameras-1;
+}
+
 
 static gchar *
 find_camera_module_path (GList *search_paths, const gchar *name)
@@ -360,6 +378,17 @@ uca_plugin_manager_get_camerav (UcaPluginManager *manager,
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
 
     priv = manager->priv;
+
+    // if the camera name is net, we change it to netXX where XX ist the net_camera_counter.
+    if (g_strcmp0 (name, "net") && get_num_net_cameras(manager) != 0) {
+        const gchar *new_name = g_strdup_printf ("net%d", net_camera_counter);
+        name = new_name;
+        net_camera_counter++;
+        if (net_camera_counter >= get_num_net_cameras (manager)) {
+            net_camera_counter = 0;
+        }
+    }
+
     type = get_camera_type (priv, name, error);
 
     if (type == G_TYPE_NONE)
