@@ -135,6 +135,8 @@ const gchar *uca_camera_props[N_BASE_PROPERTIES] = {
     "is-readout",
     "buffered",
     "num-buffers",
+    "mirror",
+    "rotate"
 };
 
 static GParamSpec *camera_properties[N_BASE_PROPERTIES] = { NULL, };
@@ -174,6 +176,8 @@ struct _UcaCameraPrivate {
     UcaRingBuffer *ring_buffer;
     UcaCameraTriggerSource trigger_source;
     UcaCameraTriggerType trigger_type;
+    gboolean mirror;
+    guint rotate;
 };
 
 static gboolean
@@ -233,6 +237,13 @@ uca_camera_set_property (GObject *object, guint property_id, const GValue *value
         case PROP_NUM_BUFFERS:
             priv->num_buffers = g_value_get_uint (value);
             break;
+
+        case PROP_MIRROR:
+            priv->mirror = g_value_get_boolean (value);
+        break;
+        case PROP_ROTATE:
+            priv->rotate = g_value_get_uint (value);
+        break;
 
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -315,6 +326,12 @@ uca_camera_get_property(GObject *object, guint property_id, GValue *value, GPara
         case PROP_NUM_BUFFERS:
             g_value_set_uint (value, priv->num_buffers);
             break;
+        case PROP_MIRROR:
+            g_value_set_boolean(value, priv->mirror);
+        break;
+        case PROP_ROTATE:
+            g_value_set_uint(value, priv->rotate);
+        break;
 
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -578,6 +595,20 @@ uca_camera_class_init (UcaCameraClass *klass)
             "Number of frame buffers in the ring buffer ",
             0, G_MAXUINT, 4,
             G_PARAM_READWRITE);
+
+    camera_properties[PROP_MIRROR] =
+        g_param_spec_boolean(uca_camera_props[PROP_MIRROR],
+            "TRUE if frame should be mirrored by receiver",
+            "TRUE if frame should be mirrored by receiver",
+            FALSE, G_PARAM_READWRITE);
+
+    camera_properties[PROP_ROTATE] =
+        g_param_spec_uint(uca_camera_props[PROP_ROTATE],
+            "Number of rotations by 90 degrees that should be applied by receiver",
+            "Number of rotations by 90 degrees that should be applied by receiver",
+            0, 3, 0,
+            G_PARAM_READWRITE);
+
 
     for (guint id = PROP_0 + 1; id < N_BASE_PROPERTIES; id++)
         g_object_class_install_property(gobject_class, id, camera_properties[id]);
