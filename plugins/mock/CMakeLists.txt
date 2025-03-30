@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 2.6)
 project(ucamock C)
 
 set(UCA_CAMERA_NAME "mock")
@@ -13,7 +12,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../package-plugin.sh.in
 add_library(ucamock SHARED
             uca-mock-camera.c)
 
-target_link_libraries(ucamock uca m ${UCA_DEPS})
+target_link_libraries(ucamock PUBLIC uca)
 
 install(TARGETS ucamock
         LIBRARY DESTINATION ${CMAKE_INSTALL_PLUGINDIR}
