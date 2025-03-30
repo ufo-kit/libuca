@@ -174,13 +174,11 @@ void        uca_camera_write            (UcaCamera          *camera,
                                          GError            **error);
 gboolean    uca_camera_grab             (UcaCamera          *camera,
                                          gpointer            data,
-                                         GError            **error)
-                                        __attribute__((nonnull (2)));
+                                         GError            **error);
 gboolean    uca_camera_readout          (UcaCamera          *camera,
                                          gpointer            data,
                                          guint               index,
-                                         GError            **error)
-                                        __attribute__((nonnull (2)));
+                                         GError            **error);
 void        uca_camera_set_grab_func    (UcaCamera          *camera,
                                          UcaCameraGrabFunc   func,
                                          gpointer            user_data);

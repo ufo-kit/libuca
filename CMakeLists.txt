@@ -1,14 +1,12 @@
-cmake_minimum_required(VERSION 2.6)
-
-if (POLICY CMP0053)
-cmake_policy(SET CMP0053 OLD)
-endif ()
-
-if (POLICY CMP0054)
-cmake_policy(SET CMP0054 OLD)
-endif ()
-
+cmake_minimum_required(VERSION 3.11)
 project(uca C)
+
+if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+  message(FATAL_ERROR "Please run 'conan install' first!")
+endif()
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+
+conan_basic_setup(TARGETS)
 
 #{{{ CMake
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -35,7 +33,7 @@ set(UCA_ABI_VERSION "2")
 macro(create_enums prefix template_prefix header_list)
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
-        COMMAND ${GLIB2_MKENUMS}
+        COMMAND python ${GLIB2_MKENUMS}
         ARGS
             --template ${template_prefix}.h.template
             ${header_list} > ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
@@ -44,7 +42,7 @@ macro(create_enums prefix template_prefix header_list)
 
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.c
-        COMMAND ${GLIB2_MKENUMS}
+        COMMAND python ${GLIB2_MKENUMS}
         ARGS
             --template ${template_prefix}.c.template
             ${header_list} > ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.c
@@ -55,7 +53,7 @@ macro(create_enums prefix template_prefix header_list)
 endmacro()
 #}}}
 #{{{ Configure
-include(PkgConfigVars)
+#include(PkgConfigVars)
 include(GNUInstallDirs)
 
 set(CMAKE_INSTALL_GIRDIR        "${CMAKE_INSTALL_DATAROOTDIR}/gir-1.0")
@@ -67,39 +65,24 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
                ${CMAKE_CURRENT_BINARY_DIR}/package.sh)
 #}}}
 #{{{ Common dependencies
-find_package(PkgConfig)
 find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
-pkg_check_modules(GLIB2 glib-2.0>=2.38 REQUIRED)
-pkg_check_modules(GOBJECT2 gobject-2.0>=2.38 REQUIRED)
-pkg_check_modules(GMODULE2 gmodule-2.0>=2.38 REQUIRED)
-pkg_check_modules(GIO2 gio-2.0>=2.38 REQUIRED)
 
 set(GLIB_VERSION_MIN_REQUIRED "GLIB_VERSION_2_38")
 set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_38")
 
 link_directories(${GLIB2_LIBRARY_DIRS})
 #}}}
-#{{{ Common includes
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${GLIB2_INCLUDE_DIRS}
-    ${GOBJECT2_INCLUDE_DIRS}
-    ${GMODULE2_INCLUDE_DIRS}
-    ${GIO2_INCLUDE_DIRS})
-#}}}
+
 #{{{ Common variables
-set(UCA_DEPS
-    ${GLIB2_LIBRARIES}
-    ${GOBJECT2_LIBRARIES}
-    ${GMODULE2_LIBRARIES}
-    ${GIO2_LIBRARIES})
 
 set(UCA_ENUM_HDRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/uca-camera.h
     ${CMAKE_CURRENT_SOURCE_DIR}/plugins/pco/uca-pco-camera.h)
 #}}}
 #{{{ Common definitions
-add_definitions("-std=c99 -Wall -fPIC")
+if (GNU)
+  add_definitions("-std=c99 -Wall -fPIC")
+endif()
 #}}}
 #{{{ Subdirectories
 add_subdirectory(src)
