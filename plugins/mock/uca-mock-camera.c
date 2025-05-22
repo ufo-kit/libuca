@@ -383,7 +383,6 @@ uca_mock_camera_grab_with_metadata (UcaCamera *camera, gpointer data, gpointer m
     g_return_val_if_fail(metadata != NULL, FALSE);
 
     UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
-    GHashTable *meta = (GHashTable *) metadata;
 
     // normal grab
     guint frame_number = priv->current_frame;
@@ -399,9 +398,8 @@ uca_mock_camera_grab_with_metadata (UcaCamera *camera, gpointer data, gpointer m
 
         // put as string
         gchar *timestamp_str = g_strdup_printf("%" G_GUINT64_FORMAT, timestamp);
-        g_hash_table_insert(meta, g_strdup("timestamp"), &timestamp);
-
-        g_hash_table_insert(meta, g_strdup("frame_number"), &frame_number);
+        g_hash_table_insert(metadata, g_strdup("timestamp"), &timestamp);
+        g_hash_table_insert(metadata, g_strdup("frame_number"), &frame_number);
     }
 
     return success;
