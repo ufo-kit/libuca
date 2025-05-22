@@ -376,6 +376,39 @@ uca_mock_camera_grab (UcaCamera *camera, gpointer data, GError **error)
 }
 
 static gboolean
+uca_mock_camera_grab_with_metadata (UcaCamera *camera, gpointer data, gpointer metadata, GError **error)
+{
+    g_return_val_if_fail(UCA_IS_CAMERA(camera), FALSE);
+    g_return_val_if_fail(data != NULL, FALSE);
+    g_return_val_if_fail(metadata != NULL, FALSE);
+
+    UcaMockCameraPrivate *priv = UCA_MOCK_CAMERA_GET_PRIVATE (camera);
+    GHashTable *meta = (GHashTable *) metadata;
+
+    // normal grab
+    guint frame_number = priv->current_frame;
+    gboolean success = uca_mock_camera_grab(camera, data, error);
+
+    if (success) {
+        // time in epoch
+        GTimeVal current_time;
+        g_get_current_time(&current_time);
+
+        // convert to microseconds
+        guint64 timestamp = (guint64) current_time.tv_sec * 1000000 + current_time.tv_usec;
+
+        // put as string
+        gchar *timestamp_str = g_strdup_printf("%" G_GUINT64_FORMAT, timestamp);
+        g_hash_table_insert(meta, g_strdup("timestamp"), &timestamp);
+
+        g_hash_table_insert(meta, g_strdup("frame_number"), &frame_number);
+    }
+
+    return success;
+}
+
+
+static gboolean
 uca_mock_camera_readout (UcaCamera *camera, gpointer data, guint index, GError **error)
 {
     g_return_val_if_fail (UCA_IS_MOCK_CAMERA(camera), FALSE);
@@ -555,6 +588,7 @@ uca_mock_camera_class_init(UcaMockCameraClass *klass)
     camera_class->grab = uca_mock_camera_grab;
     camera_class->readout = uca_mock_camera_readout;
     camera_class->trigger = uca_mock_camera_trigger;
+    camera_class->grab_with_metadata = uca_mock_camera_grab_with_metadata;
 
     for (guint i = 0; mock_overrideables[i] != 0; i++)
         g_object_class_override_property(gobject_class, mock_overrideables[i], uca_camera_props[mock_overrideables[i]]);

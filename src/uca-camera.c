@@ -1263,6 +1263,27 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     return result;
 }
 
+gboolean uca_camera_grab_with_metadata(UcaCamera *camera, gpointer data, gpointer metadata, GError **error)
+{
+    g_return_val_if_fail(UCA_IS_CAMERA(camera), FALSE);
+    g_return_val_if_fail(data != NULL, FALSE);
+
+    UcaCameraClass *klass;
+    klass = UCA_CAMERA_GET_CLASS(camera);
+
+    if (klass->grab_with_metadata != NULL) {
+        // if plugin implements grab_with_metadata, use it
+        return klass->grab_with_metadata(camera, data, metadata, error);
+    } else {
+       // if plugin does not implement grab_with_metadata, use grab
+        if (metadata != NULL) {
+            memset(metadata, 0, sizeof(metadata));
+        }
+        return klass->grab(camera, data, error);
+    }
+}
+
+
 /**
  * uca_camera_readout:
  * @camera: A #UcaCamera object
