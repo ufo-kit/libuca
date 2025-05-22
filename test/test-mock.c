@@ -183,6 +183,49 @@ test_recording_buffered (Fixture *fixture, gconstpointer data)
     g_free (buffer);
 }
 
+static void
+test_metadata (Fixture *fixture, gconstpointer data)
+{
+    UcaCamera *camera = UCA_CAMERA (fixture->camera);
+    GError *error = NULL;
+    guint width, height, bitdepth;
+    gsize buffer_size;
+    gchar *buffer;
+    GHashTable *metadata = g_hash_table_new (g_str_hash, g_str_equal);
+
+    g_object_get (G_OBJECT (camera),
+                  "roi-width", &width,
+                  "roi-height", &height,
+                  "sensor-bitdepth", &bitdepth,
+                  NULL);
+
+    buffer_size = width * height * (bitdepth <= 8 ? 1 : 2);
+    buffer = g_malloc0 (buffer_size);
+
+    g_object_set (G_OBJECT (camera),
+                  "buffered", FALSE,
+                  NULL);
+
+    uca_camera_start_recording (camera, &error);
+    g_assert_no_error (error);
+
+    for (int i = 0; i < 10; i++) {
+        g_assert (uca_camera_grab_with_metadata (camera, (gpointer) buffer,(gpointer) metadata ,&error));
+        g_assert_no_error (error);
+        g_assert(metadata != NULL);
+        g_assert (g_hash_table_size (metadata) > 0);
+        g_assert (g_hash_table_contains (metadata, "timestamp"));
+        g_assert (g_hash_table_contains (metadata, "frame_number"));
+        const guint f = *(guint *) g_hash_table_lookup(metadata, "frame_number");
+        g_assert (f == i);
+    }
+
+    uca_camera_stop_recording (camera, &error);
+    g_assert_no_error (error);
+
+    g_free (buffer);
+}
+
 
 static void
 test_base_properties (Fixture *fixture, gconstpointer data)
@@ -339,6 +382,7 @@ int main (int argc, char *argv[])
         {"/recording/signal", test_recording_signal},
         {"/recording/asynchronous", test_recording_async},
         {"/recording/buffered", test_recording_buffered},
+        {"/recording/metadata", test_metadata},
         {"/properties/base", test_base_properties},
         {"/properties/recording", test_recording_property},
         {"/properties/frames-per-second", test_fps_property},
