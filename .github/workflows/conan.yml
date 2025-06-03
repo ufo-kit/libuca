@@ -1,0 +1,24 @@
+name: libuca with dependencies via conan
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-2022]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: install conan
+        uses: turtlebrowser/get-conan@main
+
+      - name: create package
+        run: |
+          conan create -pr:a conan/windows_release . --build=missing
