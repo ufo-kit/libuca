@@ -1,26 +1,19 @@
 cmake_minimum_required(VERSION 3.11)
 project(uca C)
 
-if (TRUE)
-    message(STATUS "Using conan")
-    find_program(GLIB2_MKENUMS glib-mkenums REQUIRED HINTS ${CONAN_BIN_DIRS_GLIB})
-    # These are not supported with conan
-    set(WITH_PYTHON_MULTITHREADING OFF)
-    set(WITH_GIR OFF)
-    set(WITH_GUI OFF) # This does not work on windows
-    set(WITH_TOOLS ON)
+option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
+option(WITH_GIR "Build introspection files" ON)
+option(WITH_TIFF "Support loading tiff files" ON)
+option(WITH_GUI "Build the GUI tools" ON)
+option(WITH_TOOLS "Build the CLI tools" ON)
+option(USE_FIND_PACKAGE_FOR_GLIB "Use find_package instead of pkg-config to find GLib dependencies" OFF)
+
+if (USE_FIND_PACKAGE_FOR_GLIB)
+    message(STATUS "Using find_package for GLib")
     find_package(glib REQUIRED)
-    find_package(TIFF REQUIRED)
     set(UCA_DEPS glib::glib)
-    set(LIBTIFF TIFF::TIFF)
-    set(HAVE_LIBTIFF "1")
 else()
-    option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
-    option(WITH_GIR "Build introspection files" ON)
-    option(WITH_TIFF "Support loading tiff files" ON)
-    option(WITH_GUI "Build the GUI tools" ON)
-    option(WITH_TOOLS "Build the CLI tools" ON)
-    message(STATUS "Using pkg-config")
+    message(STATUS "Using pkg-config for GLib")
     find_package(PkgConfig)
     find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
     pkg_check_modules(GLIB2 glib-2.0>=2.38 REQUIRED)
@@ -30,12 +23,6 @@ else()
 
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
     include(PkgConfigVars)
-
-    if (WITH_TIFF)
-        find_package(TIFF REQUIRED)
-        set(HAVE_LIBTIFF "1")
-        set(LIBTIFF TIFF::TIFF)
-    endif()
     
     include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -51,6 +38,11 @@ else()
         ${GIO2_LIBRARIES}
         m # Link the math library libm, it is used by glib
     )
+endif()
+
+if (WITH_TIFF)
+    find_package(TIFF REQUIRED)
+    set(HAVE_LIBTIFF "1")
 endif()
 
 #{{{ Metadata
@@ -115,7 +107,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
                ${CMAKE_CURRENT_BINARY_DIR}/package.sh)
 #}}}
 #{{{ Common dependencies
-find_program(GLIB2_MKENUMS glib-mkenums REQUIRED HINTS ${CONAN_BIN_DIRS_GLIB})
+find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
 
 set(GLIB_VERSION_MIN_REQUIRED "GLIB_VERSION_2_38")
 set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_38")

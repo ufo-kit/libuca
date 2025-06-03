@@ -14,7 +14,7 @@ if (HAVE_LIBTIFF)
 		uca-file-camera.c)
 
 	target_link_libraries(ucafile
-		PUBLIC uca ${LIBTIFF})
+		PUBLIC uca TIFF::TIFF)
 
 	install(TARGETS ucafile
 		LIBRARY DESTINATION ${CMAKE_INSTALL_PLUGINDIR}

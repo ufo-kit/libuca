@@ -22,6 +22,10 @@ class UcaConan(ConanFile):
         tc = CMakeToolchain(self)
         tc.variables["WITH_PYTHON_MULTITHREADING"] = False
         tc.variables["WITH_GIR"] = False
+        tc.variables["WITH_GUI"] = False
+        tc.variables["WITH_TOOLS"] = True
+        tc.variables["WITH_TIFF"] = True
+        tc.variables["USE_FIND_PACKAGE_FOR_GLIB"] = True
         tc.generate()
 
     def package_info(self):
