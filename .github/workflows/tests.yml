@@ -13,12 +13,19 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04]
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    env:
+      PKG_CONFIG_PATH: /usr/local/lib/pkgconfig
+      GI_TYPELIB_PATH: /usr/local/lib/girepository-1.0
 
     steps:
       - uses: actions/checkout@v2
       - name: Set up ubuntu ${{ matrix.os }}
         run: |
-          sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection
+          if [[ "${{ matrix.os }}" == "ubuntu-22.04" ]]; then
+            sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection
+          else
+            sudo apt install -y libglib2.0-dev cmake gcc libgirepository-1.0-dev libglib2.0-0 libgtk+2.0-dev
+          fi
       - name: build
         run: |
           mkdir build
