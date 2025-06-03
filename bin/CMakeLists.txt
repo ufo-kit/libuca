@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 2.6)
+if (WITH_GUI)
+	add_subdirectory(gui)
+endif()
 
-add_subdirectory(gui)
-add_subdirectory(tools)
+if (WITH_TOOLS)
+	add_subdirectory(tools)
+endif()

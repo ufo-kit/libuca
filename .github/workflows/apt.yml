@@ -1,4 +1,4 @@
-name: libuca tests
+name: libuca with dependencies via apt
 
 on:
   push:
@@ -15,15 +15,15 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up ubuntu ${{ matrix.os }}
         run: |
-          sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection
+          sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection libtiff-dev libgtk2.0-dev
       - name: build
         run: |
           mkdir build
           cd build
-          cmake ..
+          cmake .. -DWITH_GIR=OFF
           make
           sudo make install
       - name: run test-mock

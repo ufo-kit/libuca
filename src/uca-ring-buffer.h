@@ -2,6 +2,7 @@
 #define UCA_RING_BUFFER_H
 
 #include <glib-object.h>
+#include "uca-api.h"
 
 #define UCA_TYPE_RING_BUFFER             (uca_ring_buffer_get_type())
 #define UCA_RING_BUFFER(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), UCA_TYPE_RING_BUFFER, UcaRingBuffer))
@@ -28,21 +29,21 @@ struct _UcaRingBufferClass {
     GObjectClass parent;
 };
 
-UcaRingBuffer * uca_ring_buffer_new                 (gsize          block_size,
-                                                     guint          n_blocks);
-void            uca_ring_buffer_reset               (UcaRingBuffer *buffer);
-gsize           uca_ring_buffer_get_block_size      (UcaRingBuffer *buffer);
-guint           uca_ring_buffer_get_num_blocks      (UcaRingBuffer *buffer);
-gboolean        uca_ring_buffer_available           (UcaRingBuffer *buffer);
-void            uca_ring_buffer_proceed             (UcaRingBuffer *buffer);
-gpointer        uca_ring_buffer_get_read_pointer    (UcaRingBuffer *buffer);
-gpointer        uca_ring_buffer_get_write_pointer   (UcaRingBuffer *buffer);
-void            uca_ring_buffer_write_advance       (UcaRingBuffer *buffer);
-gpointer        uca_ring_buffer_get_pointer         (UcaRingBuffer *buffer,
-                                                     guint          index);
-gpointer        uca_ring_buffer_peek_pointer        (UcaRingBuffer *buffer);
+UCA_API UcaRingBuffer * uca_ring_buffer_new                 (gsize          block_size,
+                                                             guint          n_blocks);
+UCA_API void            uca_ring_buffer_reset               (UcaRingBuffer *buffer);
+UCA_API gsize           uca_ring_buffer_get_block_size      (UcaRingBuffer *buffer);
+UCA_API guint           uca_ring_buffer_get_num_blocks      (UcaRingBuffer *buffer);
+UCA_API gboolean        uca_ring_buffer_available           (UcaRingBuffer *buffer);
+UCA_API void            uca_ring_buffer_proceed             (UcaRingBuffer *buffer);
+UCA_API gpointer        uca_ring_buffer_get_read_pointer    (UcaRingBuffer *buffer);
+UCA_API gpointer        uca_ring_buffer_get_write_pointer   (UcaRingBuffer *buffer);
+UCA_API void            uca_ring_buffer_write_advance       (UcaRingBuffer *buffer);
+UCA_API gpointer        uca_ring_buffer_get_pointer         (UcaRingBuffer *buffer,
+                                                             guint          index);
+UCA_API gpointer        uca_ring_buffer_peek_pointer        (UcaRingBuffer *buffer);
 
-GType uca_ring_buffer_get_type (void);
+UCA_API GType           uca_ring_buffer_get_type (void);
 
 G_END_DECLS
 
