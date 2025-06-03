@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Set up ubuntu ${{ matrix.os }}
         run: |
-          sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection
+          sudo apt install -y libglib2.0-dev cmake gcc libgirepository-1.0-dev
       - name: build
         run: |
           mkdir build
