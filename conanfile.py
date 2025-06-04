@@ -1,6 +1,7 @@
 from conan import ConanFile
-from conan.tools.cmake import cmake_layout, CMakeToolchain
+from conan.tools.cmake import cmake_layout, CMakeToolchain, CMake
 from conan.tools.microsoft.visual import is_msvc
+from conan.errors import ConanInvalidConfiguration
 
 class UcaConan(ConanFile):
     name = "libuca"
@@ -12,11 +13,21 @@ class UcaConan(ConanFile):
     topics = ("utilities",)
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False]}
-    default_options = {"shared":True}
+    default_options = {"shared": True}
     generators = "CMakeDeps"
     exports_sources = "src/*", "include/*", "test/*", "bin/*", "plugins/*", "CMakeLists.txt", "package.sh.in"
-    requires = "glib/2.81.0", "libtiff/4.4.0", 
     tool_requires = "glib/2.81.0", 
+
+    def configure(self):
+        # These are not applicable for C libraries
+        self.settings.rm_safe("compiler.libcxx")
+        self.settings.rm_safe("compiler.cppstd")
+        # GLib does not work when linked statically
+        self.options["glib"].shared = True
+
+    def requirements(self):
+        self.requires("libtiff/4.4.0")
+        self.requires("glib/2.81.0", transitive_headers=True)
 
     def generate(self):
         tc = CMakeToolchain(self)
@@ -32,15 +43,19 @@ class UcaConan(ConanFile):
         self.cpp_info.libs = ["uca"]
         if is_msvc(self):
             self.cpp_info.defines = ["UCA_API_MSVC_IMPORT"]
+            
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
 
-    def imports(self):
-        self.copy("*.dll", "bin", "bin")
-        self.copy("*.dylib", "lib", "lib")
-        
-    def deploy(self):
-        self.copy("*.exe")
-        self.copy("*.dll")
-        self.copy_deps("*.dll")
+    def package(self):
+        cmake = CMake(self)
+        cmake.install()
 
     def layout(self):
         cmake_layout(self)
+
+    def validate(self):
+        if self.dependencies["glib"].options.get_safe("shared", None) == False:
+            raise ConanInvalidConfiguration("Static GLib is not supported")
