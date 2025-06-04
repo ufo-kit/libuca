@@ -16,7 +16,6 @@ class UcaConan(ConanFile):
     default_options = {"shared": True}
     generators = "CMakeDeps"
     exports_sources = "src/*", "include/*", "test/*", "bin/*", "plugins/*", "CMakeLists.txt", "package.sh.in"
-    requires = "glib/2.81.0", "libtiff/4.4.0", 
     tool_requires = "glib/2.81.0", 
 
     def configure(self):
@@ -25,6 +24,10 @@ class UcaConan(ConanFile):
         self.settings.rm_safe("compiler.cppstd")
         # GLib does not work when linked statically
         self.options["glib"].shared = True
+
+    def requirements(self):
+        self.requires("libtiff/4.4.0")
+        self.requires("glib/2.81.0", transitive_headers=True)
 
     def generate(self):
         tc = CMakeToolchain(self)
