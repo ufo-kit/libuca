@@ -46,6 +46,7 @@ G_DEFINE_TYPE (UcaPluginManager, uca_plugin_manager, G_TYPE_OBJECT)
 struct _UcaPluginManagerPrivate {
     GList *search_paths;
     GList *funcs;
+    unsigned int net_camera_counter;
 };
 
 #ifdef _WIN32
@@ -200,6 +201,22 @@ uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
 
     return camera_names;
 }
+unsigned int get_num_net_cameras(UcaPluginManager *manager) {
+    const GList *camera_names = uca_plugin_manager_get_available_cameras(manager);
+    unsigned int count = 0;
+
+    for (const GList *it = camera_names; it != NULL; it = g_list_next(it)) {
+        const gchar *name = it->data;
+        g_message("found camera %s", name);
+        if (g_str_has_prefix(name, "net")) {
+            count++;
+        }
+    }
+
+    return count;  // Nicht mehr -1 abziehen
+}
+
+
 
 static gchar *
 find_camera_module_path (GList *search_paths, const gchar *name)
@@ -366,6 +383,17 @@ uca_plugin_manager_get_camerav (UcaPluginManager *manager,
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
 
     priv = manager->priv;
+    // if the camera name is net, we change it to netXX where XX ist the net_camera_counter.
+
+    if (g_strcmp0 (name, "net") ==0 && get_num_net_cameras(manager) != 0) {
+        const gchar *new_name = g_strdup_printf ("net%d", priv->net_camera_counter);
+        name = new_name;
+
+        priv->net_camera_counter+= 1;
+        if (priv->net_camera_counter >= get_num_net_cameras (manager)) {
+            priv->net_camera_counter = 0;
+        }
+    }
     type = get_camera_type (priv, name, error);
 
     if (type == G_TYPE_NONE)
@@ -407,6 +435,15 @@ uca_plugin_manager_get_camera (UcaPluginManager *manager,
     g_return_val_if_fail (UCA_IS_PLUGIN_MANAGER (manager) && (name != NULL), NULL);
 
     priv = manager->priv;
+
+    if (g_strcmp0 (name, "net") == 0 && get_num_net_cameras(manager) != 0) {
+        const gchar *new_name = g_strdup_printf ("net%d", priv->net_camera_counter);
+        name = new_name;
+        priv->net_camera_counter+=1;
+        if (priv->net_camera_counter >= get_num_net_cameras (manager)) {
+            priv->net_camera_counter = 0;
+        }
+    }
     type = get_camera_type (priv, name, error);
 
     if (type == G_TYPE_NONE)
@@ -478,7 +515,7 @@ uca_plugin_manager_init (UcaPluginManager *manager)
     manager->priv = priv = UCA_PLUGIN_MANAGER_GET_PRIVATE (manager);
     priv->search_paths = NULL;
     priv->funcs = NULL;
-
+    priv->net_camera_counter = 0;
     uca_camera_path = g_getenv ("UCA_CAMERA_PATH");
 
     if (uca_camera_path != NULL)
