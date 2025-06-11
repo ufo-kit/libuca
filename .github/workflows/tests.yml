@@ -24,7 +24,7 @@ jobs:
           if [[ "${{ matrix.os }}" == "ubuntu-22.04" ]]; then
             sudo apt install -y libglib2.0-dev cmake gcc gobject-introspection
           else
-            sudo apt install -y libglib2.0-dev cmake gcc libgirepository-1.0-dev libglib2.0-0 libgtk+2.0-dev
+            sudo apt install -y libglib2.0-dev cmake gcc libgirepository-1.0-dev libglib2.0-0 gir1.2-glib-2.0-dev
           fi
       - name: build
         run: |
