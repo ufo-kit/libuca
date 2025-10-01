@@ -30,6 +30,7 @@ struct _UcaRingBufferPrivate {
     guint    read_index;
     guint    read;
     guint    written;
+    GHashTable *metadata;
 };
 
 enum {
@@ -84,10 +85,11 @@ uca_ring_buffer_available (UcaRingBuffer *buffer)
  * Get pointer to current read location. If no data is available, %NULL is
  * returned.
  *
- * Return value: (transfer none): Pointer to current read location
+ * @param image GPointer to image buffer
+ * @param metadata GPointer to metadata has table
  */
-gpointer
-uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer)
+void
+uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer, gpointer image, gpointer metadata)
 {
     UcaRingBufferPrivate *priv;
     gpointer data;
@@ -96,10 +98,11 @@ uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer)
     priv = buffer->priv;
 
     g_return_val_if_fail (priv->read_index != priv->write_index, NULL);
-    data = priv->data + (priv->read_index % priv->n_blocks_total) * priv->block_size;
+    image = priv->data + (priv->read_index % priv->n_blocks_total) * priv->block_size;
+    metadata =  (gpointer) priv->metadata + priv->read_index % priv->n_blocks_total;
     priv->read_index++;
-    return data;
 }
+
 
 /**
  * uca_ring_buffer_get_write_pointer:
@@ -109,8 +112,8 @@ uca_ring_buffer_get_read_pointer (UcaRingBuffer *buffer)
  *
  * Return value: (transfer none): Pointer to current write location
  */
-gpointer
-uca_ring_buffer_get_write_pointer (UcaRingBuffer *buffer)
+void
+uca_ring_buffer_get_write_pointer(UcaRingBuffer *buffer, gpointer image, gpointer metadata)
 {
     UcaRingBufferPrivate *priv;
     gpointer data;
@@ -118,9 +121,9 @@ uca_ring_buffer_get_write_pointer (UcaRingBuffer *buffer)
     g_return_val_if_fail (UCA_IS_RING_BUFFER (buffer), NULL);
 
     priv = buffer->priv;
-    data = priv->data + (priv->write_index % priv->n_blocks_total) * priv->block_size;
+    image = priv->data + (priv->write_index % priv->n_blocks_total) * priv->block_size;
+    metadata = (gpointer) priv->metadata + (priv->write_index % priv->n_blocks_total);
 
-    return data;
 }
 
 void
@@ -181,8 +184,11 @@ realloc_mem (UcaRingBufferPrivate *priv)
 {
     if (priv->data != NULL)
         g_free (priv->data);
+    if (priv->metadata != NULL)
+        g_free (priv->metadata);
 
     priv->data = g_malloc0_n (priv->n_blocks_total, priv->block_size);
+    priv->metadata = g_malloc0_n (priv->n_blocks_total, priv->n_blocks_total);
 }
 
 static void
@@ -253,6 +259,8 @@ uca_ring_buffer_finalize (GObject *object)
     priv = UCA_RING_BUFFER_GET_PRIVATE (object);
     g_free (priv->data);
     priv->data = NULL;
+    g_free (priv->metadata);
+    priv->metadata = NULL;
     G_OBJECT_CLASS (uca_ring_buffer_parent_class)->finalize (object);
 }
 
@@ -297,4 +305,5 @@ uca_ring_buffer_init (UcaRingBuffer *buffer)
     priv->n_blocks_total = 0;
     priv->block_size = 0;
     priv->data = NULL;
+    priv->metadata = NULL;
 }

@@ -14,7 +14,10 @@ test_new_constructor (void)
 
     g_assert (uca_ring_buffer_get_block_size (buffer) == 512);
     g_assert (uca_ring_buffer_get_num_blocks (buffer) == 0);
-    g_assert (uca_ring_buffer_get_write_pointer (buffer) != NULL);
+    gpointer image;
+    gpointer metadata;
+    uca_ring_buffer_get_write_pointer (buffer,image,metadata);
+    g_assert (image != NULL);
 
     g_object_unref (buffer);
 }
@@ -28,7 +31,9 @@ test_new_func (void)
 
     g_assert (uca_ring_buffer_get_block_size (buffer) == 512);
     g_assert (uca_ring_buffer_get_num_blocks (buffer) == 0);
-    g_assert (uca_ring_buffer_get_write_pointer (buffer) != NULL);
+    gpointer image, metadata;
+    uca_ring_buffer_get_write_pointer (buffer, image, metadata);
+    g_assert (image != NULL);
 
     g_object_unref (buffer);
 }
@@ -38,26 +43,26 @@ test_ring (void)
 {
     UcaRingBuffer *buffer;
     guint32 *data;
-
+    gpointer metadata;
     buffer = uca_ring_buffer_new (512, 2);
 
-    data = uca_ring_buffer_get_write_pointer (buffer);
+    uca_ring_buffer_get_write_pointer (buffer, data, metadata);
     data[0] = 0xBADF00D;
     uca_ring_buffer_write_advance (buffer);
 
     g_assert (uca_ring_buffer_available (buffer));
     g_assert (uca_ring_buffer_get_num_blocks (buffer) == 1);
 
-    data = uca_ring_buffer_get_write_pointer (buffer);
+    uca_ring_buffer_get_write_pointer (buffer, data, metadata);
     data[0] = 0xDEADBEEF;
     uca_ring_buffer_write_advance (buffer);
 
     g_assert (uca_ring_buffer_get_num_blocks (buffer) == 2);
 
-    data = uca_ring_buffer_get_read_pointer (buffer);
+    uca_ring_buffer_get_read_pointer (buffer, data, metadata);
     g_assert (data[0] == 0xBADF00D);
 
-    data = uca_ring_buffer_get_read_pointer (buffer);
+    uca_ring_buffer_get_read_pointer (buffer, data, metadata);
     g_assert (data[0] == 0xDEADBEEF);
 
     g_assert (!uca_ring_buffer_available (buffer));
@@ -71,18 +76,18 @@ test_overwrite (void)
 {
     UcaRingBuffer *buffer;
     guint32 *data;
-
+    gpointer metadata;
     buffer = uca_ring_buffer_new (512, 1);
 
-    data = uca_ring_buffer_get_write_pointer (buffer);
+    uca_ring_buffer_get_write_pointer (buffer, data, metadata);
     data[0] = 0xBADF00D;
     uca_ring_buffer_write_advance (buffer);
 
-    data = uca_ring_buffer_get_write_pointer (buffer);
+    uca_ring_buffer_get_write_pointer (buffer, data, metadata);
     data[0] = 0xDEADBEEF;
     uca_ring_buffer_write_advance (buffer);
 
-    data = uca_ring_buffer_get_read_pointer (buffer);
+    uca_ring_buffer_get_read_pointer (buffer, data, metadata);
     g_assert (data[0] == 0xDEADBEEF);
 }
 

@@ -670,10 +670,26 @@ buffer_thread (UcaCamera *camera)
 
     while (!camera->priv->cancelling_recording) {
         gpointer buffer;
+        gpointer metadata;
+        uca_ring_buffer_get_write_pointer (camera->priv->ring_buffer, buffer, metadata);
 
-        buffer = uca_ring_buffer_get_write_pointer (camera->priv->ring_buffer);
+        // select if grab_with_metadata is there.
 
-        if (!(*klass->grab) (camera, buffer, &error)) {
+
+        int grab_success;
+
+        if (klass->grab_with_metadata != NULL) {
+            // if plugin implements grab_with_metadata, use it
+            grab_success =  klass->grab_with_metadata(camera, buffer, metadata, error);
+        } else {
+            // if plugin does not implement grab_with_metadata, use grab
+            if (metadata != NULL) {
+                memset(metadata, 0, sizeof(metadata));
+            }
+            grab_success = klass->grab(camera, buffer, error);
+        }
+
+        if (!grab_success) {
             camera->priv->cancelling_grab = TRUE;
             break;
         }
@@ -1234,6 +1250,7 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
     }
     else {
         gpointer buffer;
+        gpointer metadata;
 
         if (camera->priv->ring_buffer == NULL)
             return FALSE;
@@ -1249,13 +1266,14 @@ uca_camera_grab (UcaCamera *camera, gpointer data, GError **error)
             }
         }
 
-        buffer = uca_ring_buffer_get_read_pointer (camera->priv->ring_buffer);
+        uca_ring_buffer_get_read_pointer (camera->priv->ring_buffer, buffer, metadata);
 
         if (buffer == NULL) {
             g_set_error (error, UCA_CAMERA_ERROR, UCA_CAMERA_ERROR_END_OF_STREAM,
                          "Ring buffer is empty");
         }
         else {
+            // TODO copy metadata
             memcpy (data, buffer, uca_ring_buffer_get_block_size (camera->priv->ring_buffer));
             result = TRUE;
         }

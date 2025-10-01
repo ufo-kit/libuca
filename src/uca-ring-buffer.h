@@ -35,8 +35,8 @@ gsize           uca_ring_buffer_get_block_size      (UcaRingBuffer *buffer);
 guint           uca_ring_buffer_get_num_blocks      (UcaRingBuffer *buffer);
 gboolean        uca_ring_buffer_available           (UcaRingBuffer *buffer);
 void            uca_ring_buffer_proceed             (UcaRingBuffer *buffer);
-gpointer        uca_ring_buffer_get_read_pointer    (UcaRingBuffer *buffer);
-gpointer        uca_ring_buffer_get_write_pointer   (UcaRingBuffer *buffer);
+void        uca_ring_buffer_get_read_pointer    (UcaRingBuffer *buffer, gpointer image, gpointer metadata);
+void uca_ring_buffer_get_write_pointer(UcaRingBuffer *buffer, gpointer image, gpointer metadata);
 void            uca_ring_buffer_write_advance       (UcaRingBuffer *buffer);
 gpointer        uca_ring_buffer_get_pointer         (UcaRingBuffer *buffer,
                                                      guint          index);

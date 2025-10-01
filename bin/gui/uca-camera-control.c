@@ -887,7 +887,7 @@ preview_frames (void *args)
     update_pixbuf (data, data->shadow);
     gdk_threads_leave ();
 
-    gpointer buffer = uca_ring_buffer_get_write_pointer (data->buffer);
+    gpointer buffer = uca_ring_buffer_get_write_pointer (data->buffer, TODO, TODO);
     memcpy (buffer, data->shadow, uca_ring_buffer_get_block_size (data->buffer));
     g_free (data->shadow);
 
@@ -916,7 +916,7 @@ record_frames (gpointer args)
         if (n_max > 0 && n_frames >= n_max)
             break;
 
-        buffer = uca_ring_buffer_get_write_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_write_pointer (data->buffer, TODO, TODO);
         uca_camera_grab (data->camera, buffer, NULL);
         uca_ring_buffer_write_advance (data->buffer);
 
@@ -977,7 +977,7 @@ update_current_frame (ThreadData *data)
     else {
         /* we were in preview mode. Grab the 'next' frame in the buffer */
         uca_ring_buffer_write_advance (data->buffer);
-        buffer = uca_ring_buffer_get_read_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_read_pointer (data->buffer, TODO, TODO);
     }
 
     egg_histogram_view_update (EGG_HISTOGRAM_VIEW (data->histogram_view), buffer);
@@ -1118,7 +1118,7 @@ download_frames (ThreadData *data)
     uca_ring_buffer_reset (data->buffer);
 
     while (error == NULL) {
-        buffer = uca_ring_buffer_get_write_pointer (data->buffer);
+        buffer = uca_ring_buffer_get_write_pointer (data->buffer, TODO, TODO);
         uca_camera_grab (data->camera, buffer, &error);
         uca_ring_buffer_write_advance (data->buffer);
 
