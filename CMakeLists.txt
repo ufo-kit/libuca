@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.11)
 project(uca C)
 
+# Prefer a Python 3 interpreter; keep compatibility with older CMake versions.
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    set(UCA_PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+else()
+    find_package(PythonInterp 3 REQUIRED)
+    set(UCA_PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE})
+endif()
+
 option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
 option(WITH_GIR "Build introspection files" ON)
 option(WITH_TIFF "Support loading tiff files" ON)
@@ -67,7 +76,7 @@ set(UCA_ABI_VERSION "2")
 macro(create_enums prefix template_prefix header_list)
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
-        COMMAND python ${GLIB2_MKENUMS}
+        COMMAND ${UCA_PYTHON_EXECUTABLE} ${GLIB2_MKENUMS}
         ARGS
             --template ${template_prefix}.h.template
             ${header_list} > ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.h
@@ -76,7 +85,7 @@ macro(create_enums prefix template_prefix header_list)
 
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.c
-        COMMAND python ${GLIB2_MKENUMS}
+        COMMAND ${UCA_PYTHON_EXECUTABLE} ${GLIB2_MKENUMS}
         ARGS
             --template ${template_prefix}.c.template
             ${header_list} > ${CMAKE_CURRENT_BINARY_DIR}/${prefix}.c
