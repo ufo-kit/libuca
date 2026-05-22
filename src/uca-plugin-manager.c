@@ -201,13 +201,14 @@ uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
 
     return camera_names;
 }
+
 unsigned int get_num_net_cameras(UcaPluginManager *manager) {
     const GList *camera_names = uca_plugin_manager_get_available_cameras(manager);
     unsigned int count = 0;
 
     for (const GList *it = camera_names; it != NULL; it = g_list_next(it)) {
         const gchar *name = it->data;
-        if (g_str_has_prefix(name, "net")) {
+        if (g_str_has_prefix(name, "net") && g_strcmp0(name, "net") != 0) {
             count++;
         }
     }
