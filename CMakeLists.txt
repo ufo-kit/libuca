@@ -1,5 +1,11 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.16)
 project(uca C)
+
+include(CTest)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 
 # Prefer a Python 3 interpreter; keep compatibility with older CMake versions.
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
@@ -25,10 +31,10 @@ else()
     message(STATUS "Using pkg-config for GLib")
     find_package(PkgConfig)
     find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
-    pkg_check_modules(GLIB2 glib-2.0>=2.38 REQUIRED)
-    pkg_check_modules(GOBJECT2 gobject-2.0>=2.38 REQUIRED)
-    pkg_check_modules(GMODULE2 gmodule-2.0>=2.38 REQUIRED)
-    pkg_check_modules(GIO2 gio-2.0>=2.38 REQUIRED)
+    pkg_check_modules(GLIB2 glib-2.0>=2.56 REQUIRED)
+    pkg_check_modules(GOBJECT2 gobject-2.0>=2.56 REQUIRED)
+    pkg_check_modules(GMODULE2 gmodule-2.0>=2.56 REQUIRED)
+    pkg_check_modules(GIO2 gio-2.0>=2.56 REQUIRED)
 
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
     include(PkgConfigVars)
@@ -50,7 +56,7 @@ else()
 endif()
 
 if (WITH_TIFF)
-    find_package(TIFF REQUIRED)
+    find_package(TIFF 4.3 REQUIRED)
     set(HAVE_LIBTIFF "1")
 endif()
 
@@ -118,15 +124,15 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/package.sh.in
 #{{{ Common dependencies
 find_program(GLIB2_MKENUMS glib-mkenums REQUIRED)
 
-set(GLIB_VERSION_MIN_REQUIRED "GLIB_VERSION_2_38")
-set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_38")
+set(GLIB_VERSION_MIN_REQUIRED "GLIB_VERSION_2_56")
+set(GLIB_VERSION_MAX_ALLOWED "GLIB_VERSION_2_56")
 
 link_directories(${GLIB2_LIBRARY_DIRS})
 #}}}
 
 #{{{ Common definitions
-if (GNU)
-  add_definitions("-std=c99 -Wall -fPIC")
+if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options(-Wall -Wextra)
 endif()
 #}}}
 #{{{ Subdirectories
