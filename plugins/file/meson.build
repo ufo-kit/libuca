@@ -1,4 +1,4 @@
-tiff_dep = dependency('libtiff-4', required: false)
+tiff_dep = dependency('libtiff-4', version: '>= 4.3', required: false)
 
 if tiff_dep.found()
     shared_library('ucafile',

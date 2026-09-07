@@ -1,7 +1,8 @@
 cc = meson.get_compiler('c')
 
 libm = cc.find_library('m')
-gtk_dep = dependency('gtk+-2.0', required: false)
+warning('The GTK 2 camera-control GUI is deprecated and disabled by default')
+gtk_dep = dependency('gtk+-2.0', version: '>= 2.24', required: get_option('gui'))
 gthread_dep = dependency('gthread-2.0')
 
 if gtk_dep.found()

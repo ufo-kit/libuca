@@ -17,8 +17,8 @@ plugindir = '@0@/@1@/uca'.format(get_option('prefix'), get_option('libdir'))
 
 conf = configuration_data()
 conf.set_quoted('UCA_PLUGINDIR', plugindir)
-conf.set('GLIB_VERSION_MIN_REQUIRED', 'GLIB_VERSION_2_38')
-conf.set('GLIB_VERSION_MAX_ALLOWED', 'GLIB_VERSION_2_38')
+conf.set('GLIB_VERSION_MIN_REQUIRED', 'GLIB_VERSION_2_56')
+conf.set('GLIB_VERSION_MAX_ALLOWED', 'GLIB_VERSION_2_56')
 
 if python_dep.found()
   conf.set('WITH_PYTHON_MULTITHREADING', get_option('with_python_multithreading'))
