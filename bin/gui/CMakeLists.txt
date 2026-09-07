@@ -1,7 +1,8 @@
 find_package(PkgConfig)
+message(DEPRECATION "The GTK 2 camera-control GUI is deprecated and disabled by default")
 find_program(GLIB_COMPILE_RESOURCES glib-compile-resources REQUIRED)
 
-pkg_check_modules(GTK2 gtk+-2.0>=2.22)
+pkg_check_modules(GTK2 gtk+-2.0>=2.24)
 pkg_check_modules(GTHREAD2 gthread-2.0)
 
 if (GTK2_FOUND)

@@ -19,7 +19,7 @@ endif()
 option(WITH_PYTHON_MULTITHREADING "Enable Python multithreading support" ON)
 option(WITH_GIR "Build introspection files" ON)
 option(WITH_TIFF "Support loading tiff files" ON)
-option(WITH_GUI "Build the GUI tools" ON)
+option(WITH_GUI "Build the deprecated GTK 2 GUI tools" OFF)
 option(WITH_TOOLS "Build the CLI tools" ON)
 option(USE_FIND_PACKAGE_FOR_GLIB "Use find_package instead of pkg-config to find GLib dependencies" OFF)
 

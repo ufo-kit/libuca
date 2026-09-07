@@ -11,3 +11,7 @@ option('python',
     type : 'string',
     value : 'python3',
     description : 'Name of python executable')
+
+option('gui',
+    type : 'feature', value : 'disabled',
+    description : 'Build the deprecated GTK 2 GUI tools')
