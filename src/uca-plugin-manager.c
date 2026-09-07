@@ -51,12 +51,13 @@ struct _UcaPluginManagerPrivate {
 
 #ifdef _WIN32
 
-static const gchar *MODULE_SEARCH_PATTERN = "uca([A-Za-z0-9]+).dll";
+static const gchar *MODULE_SEARCH_PATTERN = "^uca([A-Za-z0-9_-]+)\\.dll$";
 static const gchar *MODULE_PRINT_PATTERN = "uca%s.dll";
 
 #else
 
-static const gchar *MODULE_SEARCH_PATTERN = "libuca([A-Za-z0-9]+)";
+static const gchar *MODULE_SEARCH_PATTERN =
+    "^libuca([A-Za-z0-9_-]+)\\.so(?:\\.[0-9]+)*$";
 static const gchar *MODULE_PRINT_PATTERN = "libuca%s.so";
 
 #endif
@@ -166,12 +167,16 @@ transform_camera_module_path_to_name (gchar *path, GList **result)
 {
     GRegex *pattern;
     GMatchInfo *match_info;
+    gchar *basename;
 
     pattern = g_regex_new (MODULE_SEARCH_PATTERN, 0, 0, NULL);
-    g_regex_match (pattern, path, 0, &match_info);
+    basename = g_path_get_basename (path);
+    g_regex_match (pattern, basename, 0, &match_info);
 
-    *result = g_list_append (*result, g_match_info_fetch (match_info, 1));
+    if (g_match_info_matches (match_info))
+        *result = g_list_append (*result, g_match_info_fetch (match_info, 1));
     g_match_info_free (match_info);
+    g_free (basename);
     g_regex_unref (pattern);
 }
 
@@ -203,7 +208,7 @@ uca_plugin_manager_get_available_cameras (UcaPluginManager *manager)
 }
 
 unsigned int get_num_net_cameras(UcaPluginManager *manager) {
-    const GList *camera_names = uca_plugin_manager_get_available_cameras(manager);
+    GList *camera_names = uca_plugin_manager_get_available_cameras(manager);
     unsigned int count = 0;
 
     for (const GList *it = camera_names; it != NULL; it = g_list_next(it)) {
@@ -213,6 +218,7 @@ unsigned int get_num_net_cameras(UcaPluginManager *manager) {
         }
     }
 
+    g_list_free_full (camera_names, g_free);
     return count;
 }
 
