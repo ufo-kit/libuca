@@ -12,7 +12,10 @@ set(BINARIES "benchmark" "gen-doc" "info" "grab")
 
 foreach (BINARY ${BINARIES})
     add_executable(uca-${BINARY} ${BINARY}.c common.c)
-    target_link_libraries(uca-${BINARY} PUBLIC uca TIFF::TIFF)
+    target_link_libraries(uca-${BINARY} PUBLIC uca)
+    if (WITH_TIFF)
+        target_link_libraries(uca-${BINARY} PUBLIC TIFF::TIFF)
+    endif ()
 endforeach ()
 
 if (GNU)
