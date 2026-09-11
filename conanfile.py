@@ -1,3 +1,5 @@
+import os
+
 from conan import ConanFile
 from conan.tools.cmake import cmake_layout, CMakeToolchain, CMake
 from conan.tools.microsoft.visual import is_msvc
@@ -36,6 +38,12 @@ class UcaConan(ConanFile):
 
     def generate(self):
         tc = CMakeToolchain(self)
+        # glib-mkenums is a Python script from the GLib library package.
+        # Host dependencies are not necessarily on the build PATH (Windows).
+        # CMake invokes this script using the build machine's Python interpreter.
+        tc.variables["GLIB2_MKENUMS"] = os.path.join(
+            self.dependencies["glib"].package_folder, "bin", "glib-mkenums"
+        ).replace("\\", "/")
         tc.variables["WITH_PYTHON_MULTITHREADING"] = False
         tc.variables["WITH_GIR"] = False
         tc.variables["WITH_GUI"] = False
