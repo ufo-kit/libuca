@@ -1,5 +1,6 @@
 project('libuca', 'c',
-    version: '2.4.0'
+    version: '2.4.0',
+    default_options: ['c_std=c11', 'warning_level=2']
 )
 
 version = meson.project_version()
@@ -10,10 +11,10 @@ version_patch = components[2]
 
 gnome = import('gnome')
 
-glib_dep = dependency('glib-2.0', version: '>= 2.38')
-gio_dep = dependency('gio-2.0', version: '>= 2.38')
-gobject_dep = dependency('gobject-2.0', version: '>= 2.38')
-gmodule_dep = dependency('gmodule-2.0', version: '>= 2.38')
+glib_dep = dependency('glib-2.0', version: '>= 2.56')
+gio_dep = dependency('gio-2.0', version: '>= 2.56')
+gobject_dep = dependency('gobject-2.0', version: '>= 2.56')
+gmodule_dep = dependency('gmodule-2.0', version: '>= 2.56')
 
 deps = [glib_dep, gio_dep, gobject_dep, gmodule_dep]
 

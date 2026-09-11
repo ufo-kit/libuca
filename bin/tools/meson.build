@@ -1,7 +1,7 @@
 cc = meson.get_compiler('c')
 libm = cc.find_library('m')
 
-tiff_dep = dependency('libtiff-4', required: false)
+tiff_dep = dependency('libtiff-4', version: '>= 4.3', required: false)
 
 config = configuration_data()
 config.set('HAVE_LIBTIFF', tiff_dep.found())

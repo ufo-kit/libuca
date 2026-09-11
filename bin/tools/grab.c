@@ -86,25 +86,27 @@ write_tiff (UcaRingBuffer *buffer,
 
     tif = TIFFOpen (opts->filename, "w");
     n_frames = uca_ring_buffer_get_num_blocks (buffer);
-    rows_per_strip = TIFFDefaultStripSize (tif, (guint32) - 1);
     bytes_per_pixel = get_bytes_per_pixel (bits_per_pixel);
     bits_per_sample = bits_per_pixel > 8 ? 16 : 8;
 
-    /* Write multi page TIFF file */
-    TIFFSetField (tif, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);
-
+    /* Write multi page TIFF file.  libtiff needs the image geometry before it
+     * can calculate a valid default strip size, and TIFFWriteDirectory resets
+     * the directory fields for the following page. */
     for (guint i = 0; i < n_frames; i++) {
         gpointer data;
         gsize offset = 0;
 
         data = uca_ring_buffer_get_read_pointer (buffer);
 
+        TIFFSetField (tif, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);
         TIFFSetField (tif, TIFFTAG_IMAGEWIDTH, width);
         TIFFSetField (tif, TIFFTAG_IMAGELENGTH, height);
         TIFFSetField (tif, TIFFTAG_BITSPERSAMPLE, bits_per_sample);
         TIFFSetField (tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
         TIFFSetField (tif, TIFFTAG_SAMPLESPERPIXEL, 1);
+        TIFFSetField (tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
         TIFFSetField (tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+        rows_per_strip = TIFFDefaultStripSize (tif, (guint32) -1);
         TIFFSetField (tif, TIFFTAG_ROWSPERSTRIP, rows_per_strip);
         TIFFSetField (tif, TIFFTAG_PAGENUMBER, i, n_frames);
 

@@ -1,3 +1,5 @@
+import os
+
 from conan import ConanFile
 from conan.tools.cmake import cmake_layout, CMakeToolchain, CMake
 from conan.tools.microsoft.visual import is_msvc
@@ -5,19 +7,23 @@ from conan.errors import ConanInvalidConfiguration
 
 class UcaConan(ConanFile):
     name = "libuca"
-    version = "2.3.0"
-    license = "LGPL-2.1"
+    version = "2.4.0"
+    license = "LGPL-2.1-or-later"
     author = "Marius Elvert marius.elvert@softwareschneiderei.de"
     url = "https://github.com/ufo-kit/libuca"
     description = "GLib-based C library for unified camera access ."
     topics = ("utilities",)
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False]}
-    default_options = {"shared": True}
+    options = {
+        "shared": [True, False],
+        "with_tiff": [True, False],
+    }
+    default_options = {
+        "shared": True,
+        "with_tiff": True,
+    }
     generators = "CMakeDeps"
-    exports_sources = "src/*", "include/*", "test/*", "bin/*", "plugins/*", "CMakeLists.txt", "package.sh.in"
-    tool_requires = "glib/2.81.0", 
-
+    exports_sources = "src/*", "test/*", "bin/*", "plugins/*", "cmake/*", "CMakeLists.txt", "package.sh.in", "COPYING"
     def configure(self):
         # These are not applicable for C libraries
         self.settings.rm_safe("compiler.libcxx")
@@ -26,16 +32,23 @@ class UcaConan(ConanFile):
         self.options["glib"].shared = True
 
     def requirements(self):
-        self.requires("libtiff/4.4.0")
-        self.requires("glib/2.81.0", transitive_headers=True)
+        if self.options.with_tiff:
+            self.requires("libtiff/4.7.2")
+        self.requires("glib/2.86.5", transitive_headers=True)
 
     def generate(self):
         tc = CMakeToolchain(self)
+        # glib-mkenums is a Python script from the GLib library package.
+        # Host dependencies are not necessarily on the build PATH (Windows).
+        # CMake invokes this script using the build machine's Python interpreter.
+        tc.variables["GLIB2_MKENUMS"] = os.path.join(
+            self.dependencies["glib"].package_folder, "bin", "glib-mkenums"
+        ).replace("\\", "/")
         tc.variables["WITH_PYTHON_MULTITHREADING"] = False
         tc.variables["WITH_GIR"] = False
         tc.variables["WITH_GUI"] = False
         tc.variables["WITH_TOOLS"] = True
-        tc.variables["WITH_TIFF"] = True
+        tc.variables["WITH_TIFF"] = bool(self.options.with_tiff)
         tc.variables["USE_FIND_PACKAGE_FOR_GLIB"] = True
         tc.generate()
 
