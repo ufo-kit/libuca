@@ -363,23 +363,6 @@ uca_camera_dispose (GObject *object)
     G_OBJECT_CLASS (uca_camera_parent_class)->dispose (object);
 }
 
-static void
-uca_camera_finalize (GObject *object)
-{
-    GParamSpec **props;
-    guint n_props;
-
-    /* We will reset property units of all subclassed objects  */
-    props = g_object_class_list_properties (G_OBJECT_GET_CLASS (object), &n_props);
-
-    for (guint i = 0; i < n_props; i++) {
-        g_param_spec_set_qdata (props[i], UCA_UNIT_QUARK, NULL);
-    }
-
-    g_free (props);
-
-    G_OBJECT_CLASS (uca_camera_parent_class)->finalize (object);
-}
 
 /*
  * Make sure the camera reads the actual device state once the child plugin has
@@ -405,7 +388,6 @@ uca_camera_class_init (UcaCameraClass *klass)
     gobject_class->set_property = uca_camera_set_property;
     gobject_class->get_property = uca_camera_get_property;
     gobject_class->dispose = uca_camera_dispose;
-    gobject_class->finalize = uca_camera_finalize;
     gobject_class->constructed = uca_camera_constructed;
 
     klass->start_recording = NULL;

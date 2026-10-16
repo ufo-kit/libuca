@@ -316,6 +316,53 @@ test_factory_hashtable (Fixture *fixture, gconstpointer data)
     g_object_unref(camera);
 }
 
+static void
+test_property_units_survive_camera_finalize(Fixture *fixture,
+                                            gconstpointer data)
+{
+    UcaCamera *other_camera;
+    GError *error = NULL;
+
+    /* Verify the shared property metadata before destroying another instance. */
+    g_assert_cmpint(
+        uca_camera_get_unit(fixture->camera, "roi-height"),
+        ==,
+        UCA_UNIT_PIXEL
+    );
+    g_assert_cmpint(
+        uca_camera_get_unit(fixture->camera, "sensor-bitdepth"),
+        ==,
+        UCA_UNIT_COUNT
+    );
+
+    other_camera = uca_plugin_manager_get_camera(
+        fixture->manager,
+        "mock",
+        &error,
+        NULL
+    );
+    g_assert_no_error(error);
+    g_assert_nonnull(other_camera);
+
+    /*
+     * This immediately calls uca_camera_finalize() for other_camera.
+     * Finalizing one instance must not modify class-level GParamSpec metadata
+     * used by the remaining instance.
+     */
+    g_object_unref(other_camera);
+
+    g_assert_cmpint(
+        uca_camera_get_unit(fixture->camera, "roi-height"),
+        ==,
+        UCA_UNIT_PIXEL
+    );
+    g_assert_cmpint(
+        uca_camera_get_unit(fixture->camera, "sensor-bitdepth"),
+        ==,
+        UCA_UNIT_COUNT
+    );
+}
+
 int main (int argc, char *argv[])
 {
     gsize n_tests;
@@ -345,6 +392,7 @@ int main (int argc, char *argv[])
         {"/properties/units", test_property_units},
         {"/properties/units/overwrite", test_overwriting_units},
         {"/properties/can-be-written", test_can_be_written},
+        {"/properties/units/survive-finalize", test_property_units_survive_camera_finalize},
     };
 
     n_tests = sizeof(tests) / sizeof(tests[0]);
